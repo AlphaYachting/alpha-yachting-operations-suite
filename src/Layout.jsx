@@ -19,7 +19,8 @@ import {
   LogOut,
   ChevronDown,
   Anchor,
-  Smartphone
+  Smartphone,
+  Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -146,14 +147,21 @@ export default function Layout({ children, currentPageName }) {
             })}
           </nav>
 
-          {/* Mobile App Link */}
-          <div className="px-3 pb-3">
+          {/* Quick Actions */}
+          <div className="px-3 pb-3 space-y-2">
+            <Link
+              to={createPageUrl('ExcelImport')}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-all"
+            >
+              <Upload className="h-5 w-5" />
+              Excel Import
+            </Link>
             <Link
               to={createPageUrl('MobileHome')}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600 transition-all"
             >
               <Smartphone className="h-5 w-5" />
-              Open Mobile App
+              Mobile App
             </Link>
           </div>
 

@@ -8,6 +8,8 @@ import Technicians from './pages/Technicians';
 import Inventory from './pages/Inventory';
 import Schedule from './pages/Schedule';
 import Reports from './pages/Reports';
+import ExcelImport from './pages/ExcelImport';
+import Settings from './pages/Settings';
 import __Layout from './Layout.jsx';
 
 
@@ -22,6 +24,8 @@ export const PAGES = {
     "Inventory": Inventory,
     "Schedule": Schedule,
     "Reports": Reports,
+    "ExcelImport": ExcelImport,
+    "Settings": Settings,
 }
 
 export const pagesConfig = {
