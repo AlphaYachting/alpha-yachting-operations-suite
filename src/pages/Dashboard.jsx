@@ -1,0 +1,351 @@
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { 
+  Briefcase, 
+  ClipboardList, 
+  Users, 
+  Ship,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  ArrowRight,
+  TrendingUp,
+  Package,
+  MapPin,
+  Calendar
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format, isToday, isTomorrow, parseISO } from 'date-fns';
+
+const StatCard = ({ title, value, icon: Icon, trend, color, loading }) => (
+  <Card className="relative overflow-hidden">
+    <div className={`absolute top-0 right-0 w-24 h-24 rounded-full -mr-8 -mt-8 opacity-10 ${color}`} />
+    <CardContent className="p-6">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-500">{title}</p>
+          {loading ? (
+            <Skeleton className="h-8 w-16 mt-1" />
+          ) : (
+            <p className="text-2xl font-bold text-slate-900 mt-1">{value}</p>
+          )}
+          {trend && (
+            <div className="flex items-center gap-1 mt-2">
+              <TrendingUp className="h-3 w-3 text-emerald-500" />
+              <span className="text-xs text-emerald-600 font-medium">{trend}</span>
+            </div>
+          )}
+        </div>
+        <div className={`p-3 rounded-xl ${color} bg-opacity-10`}>
+          <Icon className={`h-5 w-5 ${color.replace('bg-', 'text-')}`} />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const priorityColors = {
+  Low: 'bg-slate-100 text-slate-700',
+  Normal: 'bg-blue-100 text-blue-700',
+  High: 'bg-amber-100 text-amber-700',
+  Urgent: 'bg-red-100 text-red-700',
+  Express: 'bg-purple-100 text-purple-700'
+};
+
+const statusColors = {
+  New: 'bg-blue-100 text-blue-700',
+  Scheduled: 'bg-cyan-100 text-cyan-700',
+  'In Progress': 'bg-amber-100 text-amber-700',
+  'Waiting for Parts': 'bg-orange-100 text-orange-700',
+  Completed: 'bg-emerald-100 text-emerald-700',
+  Dispatched: 'bg-violet-100 text-violet-700',
+  'In Transit': 'bg-indigo-100 text-indigo-700'
+};
+
+export default function Dashboard() {
+  const [jobs, setJobs] = useState([]);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [boats, setBoats] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [jobsData, workOrdersData, customersData, boatsData] = await Promise.all([
+          base44.entities.Job.list('-created_date', 100),
+          base44.entities.WorkOrder.list('-scheduled_date', 100),
+          base44.entities.Customer.list(),
+          base44.entities.Boat.list()
+        ]);
+        setJobs(jobsData);
+        setWorkOrders(workOrdersData);
+        setCustomers(customersData);
+        setBoats(boatsData);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
+  const urgentJobs = jobs.filter(j => ['Urgent', 'Express'].includes(j.priority) && !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
+  const todayWorkOrders = workOrders.filter(wo => wo.scheduled_date && isToday(parseISO(wo.scheduled_date)));
+  const upcomingWorkOrders = workOrders.filter(wo => {
+    if (!wo.scheduled_date) return false;
+    const date = parseISO(wo.scheduled_date);
+    return (isToday(date) || isTomorrow(date)) && !['Completed', 'Cancelled'].includes(wo.status);
+  }).slice(0, 5);
+
+  const getCustomerName = (customerId) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return 'Unknown';
+    return customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+  };
+
+  const getBoatName = (boatId) => {
+    const boat = boats.find(b => b.id === boatId);
+    return boat?.vessel_name || 'Unknown';
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Welcome back! Here's what's happening today.</p>
+        </div>
+        <div className="flex gap-3">
+          <Button asChild variant="outline">
+            <Link to={createPageUrl('Schedule')}>
+              <Calendar className="h-4 w-4 mr-2" />
+              Schedule
+            </Link>
+          </Button>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700">
+            <Link to={createPageUrl('Jobs') + '?new=true'}>
+              <Briefcase className="h-4 w-4 mr-2" />
+              New Job
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard 
+          title="Active Jobs" 
+          value={activeJobs.length} 
+          icon={Briefcase}
+          color="bg-blue-500"
+          loading={loading}
+        />
+        <StatCard 
+          title="Today's Work Orders" 
+          value={todayWorkOrders.length} 
+          icon={ClipboardList}
+          color="bg-cyan-500"
+          loading={loading}
+        />
+        <StatCard 
+          title="Urgent Items" 
+          value={urgentJobs.length} 
+          icon={AlertTriangle}
+          color="bg-amber-500"
+          loading={loading}
+        />
+        <StatCard 
+          title="Total Customers" 
+          value={customers.length} 
+          icon={Users}
+          color="bg-emerald-500"
+          loading={loading}
+        />
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Upcoming Work Orders */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg font-semibold">Upcoming Work Orders</CardTitle>
+            <Button asChild variant="ghost" size="sm">
+              <Link to={createPageUrl('WorkOrders')}>
+                View all
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : upcomingWorkOrders.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <ClipboardList className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                <p>No upcoming work orders</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {upcomingWorkOrders.map((wo) => {
+                  const job = jobs.find(j => j.id === wo.job_id);
+                  return (
+                    <Link
+                      key={wo.id}
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-4 rounded-xl border border-slate-200 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-900 truncate">{wo.title}</p>
+                          <p className="text-sm text-slate-500 mt-0.5">
+                            {job ? getBoatName(job.boat_id) : 'Unknown boat'}
+                          </p>
+                          <div className="flex items-center gap-3 mt-2">
+                            <div className="flex items-center gap-1 text-xs text-slate-500">
+                              <Clock className="h-3 w-3" />
+                              {wo.scheduled_start_time || 'TBD'}
+                            </div>
+                            {wo.scheduled_date && (
+                              <div className="flex items-center gap-1 text-xs text-slate-500">
+                                <Calendar className="h-3 w-3" />
+                                {isToday(parseISO(wo.scheduled_date)) ? 'Today' : 
+                                 isTomorrow(parseISO(wo.scheduled_date)) ? 'Tomorrow' :
+                                 format(parseISO(wo.scheduled_date), 'MMM d')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                          {wo.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Jobs */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg font-semibold">Recent Jobs</CardTitle>
+            <Button asChild variant="ghost" size="sm">
+              <Link to={createPageUrl('Jobs')}>
+                View all
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => (
+                  <Skeleton key={i} className="h-20 w-full" />
+                ))}
+              </div>
+            ) : jobs.length === 0 ? (
+              <div className="text-center py-8 text-slate-500">
+                <Briefcase className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                <p>No jobs yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {jobs.slice(0, 5).map((job) => (
+                  <Link
+                    key={job.id}
+                    to={createPageUrl('JobDetail') + `?id=${job.id}`}
+                    className="block p-4 rounded-xl border border-slate-200 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-900 truncate">{job.title}</p>
+                          <Badge className={priorityColors[job.priority] || 'bg-slate-100'} variant="secondary">
+                            {job.priority}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                          {getCustomerName(job.customer_id)} • {getBoatName(job.boat_id)}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge className={statusColors[job.status] || 'bg-slate-100 text-slate-700'}>
+                            {job.status}
+                          </Badge>
+                          {job.job_number && (
+                            <span className="text-xs text-slate-400">#{job.job_number}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Link
+              to={createPageUrl('Jobs') + '?new=true'}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+            >
+              <div className="p-3 rounded-xl bg-blue-100">
+                <Briefcase className="h-5 w-5 text-blue-600" />
+              </div>
+              <span className="text-sm font-medium text-slate-700">New Job</span>
+            </Link>
+            <Link
+              to={createPageUrl('Customers') + '?new=true'}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all"
+            >
+              <div className="p-3 rounded-xl bg-emerald-100">
+                <Users className="h-5 w-5 text-emerald-600" />
+              </div>
+              <span className="text-sm font-medium text-slate-700">Add Customer</span>
+            </Link>
+            <Link
+              to={createPageUrl('Boats') + '?new=true'}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-cyan-200 hover:bg-cyan-50/50 transition-all"
+            >
+              <div className="p-3 rounded-xl bg-cyan-100">
+                <Ship className="h-5 w-5 text-cyan-600" />
+              </div>
+              <span className="text-sm font-medium text-slate-700">Add Boat</span>
+            </Link>
+            <Link
+              to={createPageUrl('Inventory')}
+              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-amber-200 hover:bg-amber-50/50 transition-all"
+            >
+              <div className="p-3 rounded-xl bg-amber-100">
+                <Package className="h-5 w-5 text-amber-600" />
+              </div>
+              <span className="text-sm font-medium text-slate-700">Inventory</span>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
