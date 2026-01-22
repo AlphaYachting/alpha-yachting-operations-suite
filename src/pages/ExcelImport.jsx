@@ -162,6 +162,15 @@ export default function ExcelImport() {
     return [text];
   };
 
+  const normalizeRowKeys = (row) => {
+    const normalized = {};
+    Object.keys(row).forEach(key => {
+      const normalizedKey = key.toString().trim().toLowerCase().replace(/\s+/g, '_');
+      normalized[normalizedKey] = row[key];
+    });
+    return normalized;
+  };
+
   const processExcelData = async (data) => {
     const summary = {
       customersCreated: 0,
@@ -180,14 +189,23 @@ export default function ExcelImport() {
     const initialBoatCount = existingBoats.length;
     const initialLocationCount = existingLocations.length;
 
+    // Detect available columns from first row
+    if (data.length > 0) {
+      const detectedColumns = Object.keys(data[0]).join(', ');
+      console.log('📋 Detected Excel columns:', detectedColumns);
+    }
+
     for (let i = 0; i < data.length; i++) {
-      const row = data[i];
+      const originalRow = data[i];
+      const row = normalizeRowKeys(originalRow);
+      
       setProgress(((i + 1) / data.length) * 100);
       setCurrentStep(`Processing row ${i + 1} of ${data.length}`);
 
       try {
-        // Extract customer info
-        const customerName = row.customer || row.kunde || row.client || row['customer name'] || row.name;
+        // Extract customer info (normalized keys)
+        const customerName = row.customer || row.customer_name || row.kunde || row.client || row.name || 
+                            row.customername || row.account || row.account_name;
         
         if (!customerName) {
           reviewList.push({
@@ -199,42 +217,42 @@ export default function ExcelImport() {
           continue;
         }
 
-        // Parse customer data
+        // Parse customer data (normalized keys)
         const customerData = {
           name: customerName,
-          company_name: row['company name'] || row.firma || '',
-          first_name: row['first name'] || row.vorname || '',
-          last_name: row['last name'] || row.nachname || customerName,
-          email: row.email || row['e-mail'] || '',
-          phone: row.phone || row.telefon || row.tel || ''
+          company_name: row.company_name || row.firma || row.company || '',
+          first_name: row.first_name || row.vorname || row.firstname || '',
+          last_name: row.last_name || row.nachname || row.lastname || customerName,
+          email: row.email || row.e_mail || row.mail || '',
+          phone: row.phone || row.telefon || row.tel || row.mobile || ''
         };
 
         const customer = await findOrCreateCustomer(customerData, existingCustomers);
 
-        // Extract boat info
+        // Extract boat info (normalized keys)
         const boatData = {
-          name: row.boat || row.schiff || row.vessel || row['boat name'] || '',
-          type: row['boat type'] || row.typ || row.type || 'Sailboat',
-          manufacturer: row.manufacturer || row.hersteller || '',
+          name: row.boat || row.boat_name || row.schiff || row.vessel || row.vessel_name || '',
+          type: row.boat_type || row.vessel_type || row.typ || row.type || 'Sailboat',
+          manufacturer: row.manufacturer || row.hersteller || row.make || '',
           model: row.model || row.modell || '',
-          length: row.length || row.länge || row['length (m)'] || ''
+          length: row.length || row.length_m || row.laenge || ''
         };
 
         const boat = await findOrCreateBoat(boatData, customer.id, existingBoats);
 
-        // Extract location info
+        // Extract location info (normalized keys)
         const locationData = {
-          name: row.location || row.marina || row.ort || row.hafen || '',
-          type: row['location type'] || 'Marina',
+          name: row.location || row.marina || row.ort || row.hafen || row.port || '',
+          type: row.location_type || row.type || 'Marina',
           city: row.city || row.stadt || '',
           region: row.region || 'Istria'
         };
 
         const location = await findOrCreateLocation(locationData, existingLocations);
 
-        // Extract job info
-        const jobTitle = row.service || row.arbeit || row.job || row.description || row.beschreibung || 'Imported Service';
-        const jobDescription = row.details || row['service details'] || row.notes || row.notizen || '';
+        // Extract job info (normalized keys)
+        const jobTitle = row.service || row.arbeit || row.job || row.work || row.description || row.beschreibung || 'Imported Service';
+        const jobDescription = row.details || row.service_details || row.notes || row.notizen || row.remarks || '';
 
         // Create Job
         const jobNumber = `IMP${Date.now().toString().slice(-6)}${i}`;
@@ -245,8 +263,8 @@ export default function ExcelImport() {
           location_id: location?.id || '',
           title: `${jobTitle} – ${boat.vessel_name} – Imported`,
           description: jobDescription,
-          job_type: row['job type'] || 'Mobile Service',
-          service_category: row.category || 'General Service',
+          job_type: row.job_type || row.service_type || 'Mobile Service',
+          service_category: row.category || row.service_category || 'General Service',
           priority: row.priority || 'Normal',
           status: 'New',
           intake_source: 'Excel Import',
@@ -286,14 +304,18 @@ export default function ExcelImport() {
         }
 
       } catch (error) {
+        console.error(`Row ${i + 1} error:`, error);
         reviewList.push({
           row: i + 1,
           problem: `Import error: ${error.message}`,
-          data: row,
+          data: originalRow,
           suggestion: 'Please review this record manually'
         });
       }
     }
+
+    console.log('✅ Import complete:', summary);
+    console.log('⚠️ Review required:', reviewList.length, 'items');
 
     summary.customersCreated = existingCustomers.length - initialCustomerCount;
     summary.boatsCreated = existingBoats.length - initialBoatCount;
@@ -320,6 +342,12 @@ export default function ExcelImport() {
           // Get first sheet
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+          console.log('📊 Excel file loaded:', jsonData.length, 'rows');
+          if (jsonData.length > 0) {
+            console.log('📋 Column headers detected:', Object.keys(jsonData[0]));
+            console.log('📝 Sample row 1:', jsonData[0]);
+          }
 
           setCurrentStep('Processing data...');
           
