@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Upload, X } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -33,11 +35,13 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
     access_details: boat?.access_details || '',
     known_issues: boat?.known_issues || '',
     systems_notes: boat?.systems_notes || '',
+    photo_url: boat?.photo_url || '',
     registration_number: boat?.registration_number || '',
     flag_country: boat?.flag_country || '',
     status: boat?.status || 'Active'
   });
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,6 +52,27 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      updateField('photo_url', file_url);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const getCustomerDisplayName = (customer) => {
@@ -162,6 +187,47 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
             placeholder="2.1"
           />
         </div>
+      </div>
+
+      {/* Boat Image */}
+      <div className="space-y-4">
+        <h3 className="font-medium text-slate-900">Boat Image</h3>
+        {formData.photo_url ? (
+          <div className="relative w-full h-48 rounded-lg overflow-hidden border border-slate-200">
+            <img 
+              src={formData.photo_url} 
+              alt="Boat" 
+              className="w-full h-full object-cover"
+            />
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              className="absolute top-2 right-2"
+              onClick={() => updateField('photo_url', '')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              id="boat-image-upload"
+              disabled={uploadingImage}
+            />
+            <label htmlFor="boat-image-upload" className="cursor-pointer">
+              <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+              <p className="text-sm text-slate-500">
+                {uploadingImage ? 'Uploading...' : 'Click to upload boat image'}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">Max 10MB, JPG/PNG</p>
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Construction */}

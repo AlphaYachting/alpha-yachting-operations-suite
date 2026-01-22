@@ -11,6 +11,7 @@ import Reports from './pages/Reports';
 import ExcelImport from './pages/ExcelImport';
 import Settings from './pages/Settings';
 import ImportDiagnostics from './pages/ImportDiagnostics';
+import BoatDetail from './pages/BoatDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -28,6 +29,7 @@ export const PAGES = {
     "ExcelImport": ExcelImport,
     "Settings": Settings,
     "ImportDiagnostics": ImportDiagnostics,
+    "BoatDetail": BoatDetail,
 }
 
 export const pagesConfig = {
