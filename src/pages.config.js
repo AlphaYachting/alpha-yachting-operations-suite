@@ -10,6 +10,7 @@ import Schedule from './pages/Schedule';
 import Reports from './pages/Reports';
 import ExcelImport from './pages/ExcelImport';
 import Settings from './pages/Settings';
+import ImportDiagnostics from './pages/ImportDiagnostics';
 import __Layout from './Layout.jsx';
 
 
@@ -26,6 +27,7 @@ export const PAGES = {
     "Reports": Reports,
     "ExcelImport": ExcelImport,
     "Settings": Settings,
+    "ImportDiagnostics": ImportDiagnostics,
 }
 
 export const pagesConfig = {

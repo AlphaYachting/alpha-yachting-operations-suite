@@ -150,6 +150,13 @@ export default function Layout({ children, currentPageName }) {
           {/* Quick Actions */}
           <div className="px-3 pb-3 space-y-2">
             <Link
+              to={createPageUrl('ImportDiagnostics')}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-all"
+            >
+              <Settings className="h-5 w-5" />
+              Import Check
+            </Link>
+            <Link
               to={createPageUrl('ExcelImport')}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-all"
             >
