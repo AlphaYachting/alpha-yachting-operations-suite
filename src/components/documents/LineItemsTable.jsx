@@ -2,9 +2,9 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, GripVertical, Plus } from 'lucide-react';
-import ReactQuill from 'react-quill';
 
 export default function LineItemsTable({ lineItems, onChange, isLocked, currency }) {
   const calculateLineTotals = (item) => {
@@ -146,23 +146,14 @@ export default function LineItemsTable({ lineItems, onChange, isLocked, currency
                     </div>
 
                     {/* Row 2: Description */}
-                    <div>
-                      <ReactQuill
-                        value={item.description || ''}
-                        onChange={(value) => updateLineItem(index, { description: value })}
-                        readOnly={isLocked}
-                        theme="snow"
-                        modules={{
-                          toolbar: [
-                            ['bold', 'italic', 'underline'],
-                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                            ['clean']
-                          ]
-                        }}
-                        placeholder="Description"
-                        className="bg-white rounded-md"
-                      />
-                    </div>
+                    <Textarea
+                      placeholder="Description"
+                      value={item.description || ''}
+                      onChange={(e) => updateLineItem(index, { description: e.target.value })}
+                      disabled={isLocked}
+                      className="min-h-[60px] resize-y"
+                      rows={3}
+                    />
 
                     {/* Row 3: Quantity, Unit, Price, Tax, Discount */}
                     <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
