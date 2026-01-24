@@ -392,6 +392,7 @@ export default function OfferDetail() {
           />
         </div>
       </div>
+    </div>
 
       {/* Add from Operations Drawer */}
       {showOperationsDrawer && (

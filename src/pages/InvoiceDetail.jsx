@@ -445,6 +445,7 @@ export default function InvoiceDetail() {
           )}
         </div>
       </div>
+    </div>
 
       {/* Add from Operations Drawer */}
       {showOperationsDrawer && (
