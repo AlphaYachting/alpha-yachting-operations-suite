@@ -34,7 +34,7 @@ export default function TasklistImport() {
     dueDateMode: 'single', // 'single', 'priority-based', 'column'
     baseDueDate: null,
     priorityOffsets: { High: 2, Medium: 5, Low: 10 },
-    dryRunOnly: true
+    dryRunOnly: false
   });
   const [validationResults, setValidationResults] = useState(null);
   const [importResults, setImportResults] = useState(null);
@@ -172,16 +172,16 @@ export default function TasklistImport() {
       
       jobGroups[groupKey].tasks.push({ rowNum, data: row });
 
-      // Soft validations (warnings)
+      // Soft validations (warnings) - these don't block import
       if (!locationMarina || locationMarina.toLowerCase() === 'unknown') {
-        warnings.push({ row: rowNum, field: 'Location', message: 'Location is empty or unknown' });
+        warnings.push({ row: rowNum, field: 'Location', message: 'Location is empty or unknown - will be left blank' });
       }
 
       const assignedPerson = row[getHeaderByMapping(mapping, 'assignedPerson')]?.trim();
       if (assignedPerson && !technicians.find(t => 
         `${t.first_name} ${t.last_name}`.toLowerCase() === assignedPerson.toLowerCase()
       )) {
-        warnings.push({ row: rowNum, field: 'Assigned Person', message: `Person "${assignedPerson}" not found in system` });
+        warnings.push({ row: rowNum, field: 'Assigned Person', message: `Person "${assignedPerson}" not found - task will be unassigned` });
       }
 
       const priority = row[getHeaderByMapping(mapping, 'priority')]?.trim();
@@ -461,7 +461,7 @@ export default function TasklistImport() {
       dueDateMode: 'single',
       baseDueDate: null,
       priorityOffsets: { High: 2, Medium: 5, Low: 10 },
-      dryRunOnly: true
+      dryRunOnly: false
     });
   };
 
