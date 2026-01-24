@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Send, CheckCircle, XCircle, FileText, ArrowRight, Printer, Download } from 'lucide-react';
+import { ArrowLeft, Save, Send, CheckCircle, XCircle, FileText, ArrowRight } from 'lucide-react';
+import PDFExportButton from '@/components/pdf/PDFExportButton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import DocumentHeader from '@/components/documents/DocumentHeader';
 import LineItemsTable from '@/components/documents/LineItemsTable';
@@ -309,16 +310,10 @@ export default function OfferDetail() {
         </div>
         <div className="flex gap-3">
           {offer.status !== 'Draft' && (
-            <>
-              <Button variant="outline" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </Button>
-              <Button variant="outline" onClick={handleExportPDF}>
-                <Download className="h-4 w-4 mr-2" />
-                Export PDF
-              </Button>
-            </>
+            <PDFExportButton 
+              document={offer}
+              lineItems={lineItems}
+            />
           )}
           {!isLocked && offer.customer_id && (
             <Button variant="outline" onClick={() => setShowOperationsDrawer(true)}>

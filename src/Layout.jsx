@@ -46,8 +46,9 @@ const navItems = [
   { name: 'Technicians', icon: Wrench, page: 'Technicians' },
   { name: 'Inventory', icon: Package, page: 'Inventory' },
   { name: 'Offers', icon: FileText, page: 'Offers' },
-  { name: 'Invoices', icon: Receipt, page: 'Invoices' },
-  { name: 'Reports', icon: BarChart3, page: 'Reports' },
+        { name: 'Invoices', icon: Receipt, page: 'Invoices' },
+        { name: 'Reports', icon: BarChart3, page: 'Reports' },
+        { name: 'Settings', icon: Settings, page: 'Settings' },
 ];
 
 export default function Layout({ children, currentPageName }) {

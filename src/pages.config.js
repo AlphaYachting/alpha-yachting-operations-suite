@@ -18,6 +18,7 @@ import Offers from './pages/Offers';
 import Invoices from './pages/Invoices';
 import OfferDetail from './pages/OfferDetail';
 import InvoiceDetail from './pages/InvoiceDetail';
+import PDFTemplateSettings from './pages/PDFTemplateSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -42,6 +43,7 @@ export const PAGES = {
     "Invoices": Invoices,
     "OfferDetail": OfferDetail,
     "InvoiceDetail": InvoiceDetail,
+    "PDFTemplateSettings": PDFTemplateSettings,
 }
 
 export const pagesConfig = {

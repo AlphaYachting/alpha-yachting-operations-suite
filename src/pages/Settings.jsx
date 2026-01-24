@@ -1,26 +1,54 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings as SettingsIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileText, ChevronRight } from 'lucide-react';
 
 export default function Settings() {
+  const navigate = useNavigate();
+
+  const settingsCategories = [
+    {
+      title: 'PDF Templates',
+      description: 'Configure document templates for offers and invoices',
+      icon: FileText,
+      page: 'PDFTemplateSettings'
+    }
+  ];
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-500 mt-1">System configuration and preferences</p>
+        <p className="text-slate-500 mt-1">Manage your application settings</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <SettingsIcon className="h-5 w-5" />
-            Application Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-slate-500">Settings page coming soon...</p>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {settingsCategories.map((category) => (
+          <Card 
+            key={category.title}
+            className="cursor-pointer hover:shadow-lg transition-shadow"
+            onClick={() => navigate(createPageUrl(category.page))}
+          >
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <category.icon className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{category.title}</CardTitle>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-slate-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <CardDescription>{category.description}</CardDescription>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
