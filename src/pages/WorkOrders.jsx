@@ -66,6 +66,7 @@ export default function WorkOrders() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [boatFilter, setBoatFilter] = useState('all');
   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
   const preselectedJobId = searchParams.get('job');
@@ -176,7 +177,10 @@ export default function WorkOrders() {
     
     const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    const job = jobs.find(j => j.id === wo.job_id);
+    const matchesBoat = boatFilter === 'all' || job?.boat_id === boatFilter;
+    
+    return matchesSearch && matchesStatus && matchesBoat;
   });
 
   return (
@@ -218,6 +222,19 @@ export default function WorkOrders() {
             <SelectItem value="Dispatched">Dispatched</SelectItem>
             <SelectItem value="In Progress">In Progress</SelectItem>
             <SelectItem value="Completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={boatFilter} onValueChange={setBoatFilter}>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="All Boats" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Boats</SelectItem>
+            {boats.map(boat => (
+              <SelectItem key={boat.id} value={boat.id}>
+                {boat.vessel_name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
