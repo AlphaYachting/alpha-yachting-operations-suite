@@ -291,6 +291,29 @@ export default function WorkOrders() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          <Select
+                            value={wo.status}
+                            onValueChange={(value) => handleQuickUpdate(wo.id, 'status', value)}
+                          >
+                            <SelectTrigger className="h-8 w-40 text-xs">
+                              <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Draft">Draft</SelectItem>
+                              <SelectItem value="Scheduled">Scheduled</SelectItem>
+                              <SelectItem value="Dispatched">Dispatched</SelectItem>
+                              <SelectItem value="In Transit">In Transit</SelectItem>
+                              <SelectItem value="In Progress">In Progress</SelectItem>
+                              <SelectItem value="Paused">Paused</SelectItem>
+                              <SelectItem value="Waiting for Parts">Waiting for Parts</SelectItem>
+                              <SelectItem value="Waiting for Approval">Waiting for Approval</SelectItem>
+                              <SelectItem value="Completed">Completed</SelectItem>
+                              <SelectItem value="Cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-slate-400" />
                           <Select
                             value={wo.assigned_technicians?.[0] || ''}

@@ -5,20 +5,20 @@ import Dashboard from './pages/Dashboard';
 import ExcelImport from './pages/ExcelImport';
 import ImportDiagnostics from './pages/ImportDiagnostics';
 import Inventory from './pages/Inventory';
+import InvoiceDetail from './pages/InvoiceDetail';
+import Invoices from './pages/Invoices';
 import JobDetail from './pages/JobDetail';
 import Jobs from './pages/Jobs';
 import Locations from './pages/Locations';
+import OfferDetail from './pages/OfferDetail';
+import Offers from './pages/Offers';
+import PDFTemplateSettings from './pages/PDFTemplateSettings';
 import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import TasklistImport from './pages/TasklistImport';
 import Technicians from './pages/Technicians';
 import WorkOrders from './pages/WorkOrders';
-import Offers from './pages/Offers';
-import Invoices from './pages/Invoices';
-import OfferDetail from './pages/OfferDetail';
-import InvoiceDetail from './pages/InvoiceDetail';
-import PDFTemplateSettings from './pages/PDFTemplateSettings';
 import __Layout from './Layout.jsx';
 
 
@@ -30,20 +30,20 @@ export const PAGES = {
     "ExcelImport": ExcelImport,
     "ImportDiagnostics": ImportDiagnostics,
     "Inventory": Inventory,
+    "InvoiceDetail": InvoiceDetail,
+    "Invoices": Invoices,
     "JobDetail": JobDetail,
     "Jobs": Jobs,
     "Locations": Locations,
+    "OfferDetail": OfferDetail,
+    "Offers": Offers,
+    "PDFTemplateSettings": PDFTemplateSettings,
     "Reports": Reports,
     "Schedule": Schedule,
     "Settings": Settings,
     "TasklistImport": TasklistImport,
     "Technicians": Technicians,
     "WorkOrders": WorkOrders,
-    "Offers": Offers,
-    "Invoices": Invoices,
-    "OfferDetail": OfferDetail,
-    "InvoiceDetail": InvoiceDetail,
-    "PDFTemplateSettings": PDFTemplateSettings,
 }
 
 export const pagesConfig = {
