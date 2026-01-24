@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Send, CheckCircle, XCircle, FileText, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Save, Send, CheckCircle, XCircle, FileText, ArrowRight, Printer, Download } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import DocumentHeader from '@/components/documents/DocumentHeader';
 import LineItemsTable from '@/components/documents/LineItemsTable';
@@ -195,6 +195,14 @@ export default function OfferDetail() {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   const handleConvertToInvoice = async () => {
     if (!window.confirm('Convert this offer to an invoice?')) return;
 
@@ -280,6 +288,18 @@ export default function OfferDetail() {
           </Badge>
         </div>
         <div className="flex gap-3">
+          {offer.status !== 'Draft' && (
+            <>
+              <Button variant="outline" onClick={handlePrint}>
+                <Printer className="h-4 w-4 mr-2" />
+                Print
+              </Button>
+              <Button variant="outline" onClick={handleExportPDF}>
+                <Download className="h-4 w-4 mr-2" />
+                Export PDF
+              </Button>
+            </>
+          )}
           {!isLocked && offer.customer_id && (
             <Button variant="outline" onClick={() => setShowOperationsDrawer(true)}>
               <FileText className="h-4 w-4 mr-2" />
