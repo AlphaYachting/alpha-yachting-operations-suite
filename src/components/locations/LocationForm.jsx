@@ -20,8 +20,8 @@ export default function LocationForm({ location, onSave, onCancel }) {
     address: location?.address || '',
     city: location?.city || '',
     country: location?.country || '',
-    latitude: location?.latitude || '',
-    longitude: location?.longitude || '',
+    latitude: location?.latitude ?? null,
+    longitude: location?.longitude ?? null,
     access_notes: location?.access_notes || '',
     contact_person: location?.contact_person || '',
     contact_phone: location?.contact_phone || '',
@@ -143,7 +143,7 @@ export default function LocationForm({ location, onSave, onCancel }) {
             type="number"
             step="0.000001"
             value={formData.latitude}
-            onChange={(e) => updateField('latitude', parseFloat(e.target.value) || '')}
+            onChange={(e) => updateField('latitude', e.target.value ? parseFloat(e.target.value) : null)}
             placeholder="45.123456"
           />
         </div>
@@ -153,7 +153,7 @@ export default function LocationForm({ location, onSave, onCancel }) {
             type="number"
             step="0.000001"
             value={formData.longitude}
-            onChange={(e) => updateField('longitude', parseFloat(e.target.value) || '')}
+            onChange={(e) => updateField('longitude', e.target.value ? parseFloat(e.target.value) : null)}
             placeholder="13.654321"
           />
         </div>
