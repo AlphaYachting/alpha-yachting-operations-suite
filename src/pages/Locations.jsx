@@ -79,6 +79,8 @@ export default function Locations() {
       setEditingLocation(null);
     } catch (error) {
       console.error('Error saving location:', error);
+      alert('Failed to save location: ' + error.message);
+      throw error;
     }
   };
 
