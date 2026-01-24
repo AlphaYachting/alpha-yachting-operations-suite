@@ -14,6 +14,8 @@ import Settings from './pages/Settings';
 import TasklistImport from './pages/TasklistImport';
 import Technicians from './pages/Technicians';
 import WorkOrders from './pages/WorkOrders';
+import Offers from './pages/Offers';
+import Invoices from './pages/Invoices';
 import __Layout from './Layout.jsx';
 
 
@@ -34,6 +36,8 @@ export const PAGES = {
     "TasklistImport": TasklistImport,
     "Technicians": Technicians,
     "WorkOrders": WorkOrders,
+    "Offers": Offers,
+    "Invoices": Invoices,
 }
 
 export const pagesConfig = {

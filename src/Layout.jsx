@@ -20,7 +20,9 @@ import {
   ChevronDown,
   Anchor,
   Smartphone,
-  Upload
+  Upload,
+  FileText,
+  Receipt
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -43,6 +45,8 @@ const navItems = [
   { name: 'Schedule', icon: Clock, page: 'Schedule' },
   { name: 'Technicians', icon: Wrench, page: 'Technicians' },
   { name: 'Inventory', icon: Package, page: 'Inventory' },
+  { name: 'Offers', icon: FileText, page: 'Offers' },
+  { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
 ];
 
