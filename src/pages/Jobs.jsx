@@ -99,20 +99,16 @@ export default function Jobs() {
   };
 
   const handleSave = async (jobData) => {
-    try {
-      if (editingJob) {
-        await base44.entities.Job.update(editingJob.id, jobData);
-      } else {
-        const jobNumber = `J${Date.now().toString().slice(-6)}`;
-        await base44.entities.Job.create({ ...jobData, job_number: jobNumber, intake_date: new Date().toISOString() });
-      }
-      await loadData();
-      setShowForm(false);
-      setEditingJob(null);
-      setSearchParams({});
-    } catch (error) {
-      console.error('Error saving job:', error);
+    if (editingJob) {
+      await base44.entities.Job.update(editingJob.id, jobData);
+    } else {
+      const jobNumber = `J${Date.now().toString().slice(-6)}`;
+      await base44.entities.Job.create({ ...jobData, job_number: jobNumber, intake_date: new Date().toISOString() });
     }
+    await loadData();
+    setShowForm(false);
+    setEditingJob(null);
+    setSearchParams({});
   };
 
   const handleDelete = async (id) => {

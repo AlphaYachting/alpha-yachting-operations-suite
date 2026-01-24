@@ -60,6 +60,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
     setSaving(true);
     try {
       await onSave(formData);
+      setSaving(false);
     } catch (err) {
       setError(err.message || 'Failed to save job. Please try again.');
       setSaving(false);
