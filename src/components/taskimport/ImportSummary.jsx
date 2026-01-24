@@ -7,6 +7,12 @@ import { CheckCircle2, Users, Ship, MapPin, Briefcase, ListTodo, AlertTriangle, 
 import { createPageUrl } from '@/utils';
 
 export default function ImportSummary({ results, onStartNew }) {
+  const handleViewJob = () => {
+    const jobId = results.parentJobId || results.createdJobs[0]?.id;
+    if (jobId) {
+      window.location.href = `/jobs?id=${jobId}`;
+    }
+  };
   return (
     <div className="space-y-6">
       <Card className="bg-green-50 border-green-200">

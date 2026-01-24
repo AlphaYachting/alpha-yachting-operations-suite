@@ -29,6 +29,9 @@ export default function TasklistImport() {
   const [headers, setHeaders] = useState([]);
   const [columnMapping, setColumnMapping] = useState({});
   const [config, setConfig] = useState({
+    importMode: 'single-job', // 'grouped-jobs' or 'single-job'
+    parentJobId: null,
+    newJobTitle: 'Winter Service',
     jobStatus: 'Imported – Review Required',
     taskStatus: 'Draft',
     dueDateMode: 'single', // 'single', 'priority-based', 'column'
@@ -263,13 +266,146 @@ export default function TasklistImport() {
     const reviewList = [];
 
     // Load existing data
-    const [existingCustomers, existingBoats, existingLocations, technicians] = await Promise.all([
+    const [existingCustomers, existingBoats, existingLocations, technicians, existingJobs] = await Promise.all([
       base44.entities.Customer.list(),
       base44.entities.Boat.list(),
       base44.entities.Location.list(),
-      base44.entities.Technician.list()
+      base44.entities.Technician.list(),
+      base44.entities.Job.list()
     ]);
 
+    // SINGLE JOB MODE: Create or use one parent job for all tasks
+    if (cfg.importMode === 'single-job') {
+      let parentJob;
+      
+      if (cfg.parentJobId) {
+        // Use existing job
+        parentJob = existingJobs.find(j => j.id === cfg.parentJobId);
+        if (!parentJob) {
+          throw new Error('Selected parent job not found');
+        }
+      } else {
+        // Create new parent job
+        parentJob = await base44.entities.Job.create({
+          customer_id: existingCustomers[0]?.id || null,
+          boat_id: null,
+          location_id: null,
+          title: cfg.newJobTitle || 'Imported Service',
+          description: 'Excel import - tasks grouped under main job',
+          job_type: 'Mobile Service',
+          service_category: 'General Service',
+          status: cfg.jobStatus,
+          priority: 'Normal',
+          internal_notes: 'Created via Excel import'
+        });
+        createdJobs.push(parentJob);
+      }
+
+      // Import all rows as tasks under this parent job
+      for (const [groupKey, group] of Object.entries(jobGroups)) {
+        for (const { rowNum, data } of group.tasks) {
+          const taskTitle = data[getHeaderByMapping(mapping, 'taskTitle')]?.trim();
+          const taskDesc = data[getHeaderByMapping(mapping, 'taskDescription')]?.trim();
+          const taskId = data[getHeaderByMapping(mapping, 'taskId')]?.trim();
+          const priority = data[getHeaderByMapping(mapping, 'priority')]?.trim() || 'Medium';
+          const estimatedHours = parseFloat(data[getHeaderByMapping(mapping, 'estimatedHours')]) || null;
+          const assignedPerson = data[getHeaderByMapping(mapping, 'assignedPerson')]?.trim();
+
+          // Build context information
+          const contextInfo = [
+            group.customerName ? `Customer: ${group.customerName}` : '',
+            group.boatModel ? `Boat: ${group.boatModel}` : '',
+            group.locationMarina ? `Location: ${group.locationMarina}` : '',
+            group.serviceArea ? `Service Area: ${group.serviceArea}` : '',
+            group.module ? `Module: ${group.module}` : '',
+            taskId ? `Task ID: ${taskId}` : ''
+          ].filter(Boolean).join(' | ');
+
+          // Calculate due date
+          let dueDate = null;
+          if (cfg.dueDateMode === 'column') {
+            const dueDateStr = data[getHeaderByMapping(mapping, 'dueDate')];
+            if (dueDateStr) dueDate = new Date(dueDateStr).toISOString().split('T')[0];
+          } else if (cfg.dueDateMode === 'single' && cfg.baseDueDate) {
+            dueDate = cfg.baseDueDate;
+          } else if (cfg.dueDateMode === 'priority-based' && cfg.baseDueDate) {
+            const baseDate = new Date(cfg.baseDueDate);
+            const offset = cfg.priorityOffsets[priority] || 5;
+            baseDate.setDate(baseDate.getDate() + offset);
+            dueDate = baseDate.toISOString().split('T')[0];
+          }
+
+          // Find assigned technician
+          let assignedTechId = null;
+          if (assignedPerson) {
+            const tech = technicians.find(t => 
+              `${t.first_name} ${t.last_name}`.toLowerCase() === assignedPerson.toLowerCase()
+            );
+            if (tech) {
+              assignedTechId = tech.id;
+            } else {
+              reviewList.push({
+                jobId: parentJob.id,
+                taskTitle: taskTitle || taskDesc,
+                issue: `Assigned person "${assignedPerson}" not found`,
+                rowNum
+              });
+            }
+          }
+
+          // Build full description with context
+          const fullDescription = [
+            `[${contextInfo}]`,
+            '',
+            taskDesc || '',
+            '',
+            data[getHeaderByMapping(mapping, 'category')] ? `Category: ${data[getHeaderByMapping(mapping, 'category')]}` : '',
+            data[getHeaderByMapping(mapping, 'requiredQualification')] ? `Qualification: ${data[getHeaderByMapping(mapping, 'requiredQualification')]}` : '',
+            data[getHeaderByMapping(mapping, 'materialRequired')] ? `Materials: ${data[getHeaderByMapping(mapping, 'materialRequired')]}` : '',
+            data[getHeaderByMapping(mapping, 'materialDescription')] ? `Material Details: ${data[getHeaderByMapping(mapping, 'materialDescription')]}` : '',
+            data[getHeaderByMapping(mapping, 'dependencies')] ? `Dependencies: ${data[getHeaderByMapping(mapping, 'dependencies')]}` : '',
+            data[getHeaderByMapping(mapping, 'workLocation')] ? `Work Location: ${data[getHeaderByMapping(mapping, 'workLocation')]}` : '',
+            data[getHeaderByMapping(mapping, 'riskNotes')] ? `Risk Notes: ${data[getHeaderByMapping(mapping, 'riskNotes')]}` : '',
+            data[getHeaderByMapping(mapping, 'billingType')] ? `Billing: ${data[getHeaderByMapping(mapping, 'billingType')]}` : '',
+            data[getHeaderByMapping(mapping, 'assumptionUncertainty')] ? `Assumptions: ${data[getHeaderByMapping(mapping, 'assumptionUncertainty')]}` : ''
+          ].filter(Boolean).join('\n');
+
+          // Create work order
+          const workOrder = await base44.entities.WorkOrder.create({
+            job_id: parentJob.id,
+            title: taskTitle || taskDesc || `Task from row ${rowNum}`,
+            description: fullDescription,
+            status: cfg.taskStatus,
+            assigned_technicians: assignedTechId ? [assignedTechId] : [],
+            estimated_duration_hours: estimatedHours,
+            scheduled_date: dueDate
+          });
+
+          const task = await base44.entities.Task.create({
+            work_order_id: workOrder.id,
+            title: taskTitle || taskDesc || `Task from row ${rowNum}`,
+            description: fullDescription,
+            status: 'Not Started',
+            estimated_minutes: estimatedHours ? Math.round(estimatedHours * 60) : null,
+            notes: data[getHeaderByMapping(mapping, 'riskNotes')] || ''
+          });
+          
+          createdTasks.push(task);
+        }
+      }
+
+      return {
+        createdCustomers,
+        createdBoats,
+        createdLocations,
+        createdJobs,
+        createdTasks,
+        reviewList,
+        parentJobId: parentJob.id
+      };
+    }
+
+    // GROUPED JOBS MODE: Original behavior
     for (const [groupKey, group] of Object.entries(jobGroups)) {
       // Find or create customer
       let customer = existingCustomers.find(c => 
@@ -444,7 +580,8 @@ export default function TasklistImport() {
       createdLocations,
       createdJobs,
       createdTasks,
-      reviewList
+      reviewList,
+      parentJobId: null
     };
   };
 
@@ -456,6 +593,9 @@ export default function TasklistImport() {
     setValidationResults(null);
     setImportResults(null);
     setConfig({
+      importMode: 'single-job',
+      parentJobId: null,
+      newJobTitle: 'Winter Service',
       jobStatus: 'Imported – Review Required',
       taskStatus: 'Draft',
       dueDateMode: 'single',

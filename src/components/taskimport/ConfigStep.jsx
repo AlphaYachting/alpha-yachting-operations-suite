@@ -8,6 +8,17 @@ import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export default function ConfigStep({ config, onConfigChange, onNext, onBack, isProcessing }) {
+  const [existingJobs, setExistingJobs] = React.useState([]);
+  
+  React.useEffect(() => {
+    const loadJobs = async () => {
+      const { base44 } = await import('@/api/base44Client');
+      const jobs = await base44.entities.Job.list();
+      setExistingJobs(jobs);
+    };
+    loadJobs();
+  }, []);
+
   const updateConfig = (key, value) => {
     onConfigChange({ ...config, [key]: value });
   };
@@ -21,6 +32,69 @@ export default function ConfigStep({ config, onConfigChange, onNext, onBack, isP
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Import Mode */}
+        <div className="border rounded-lg p-4 space-y-4 bg-blue-50">
+          <Label className="text-base font-semibold">Import Mode</Label>
+          
+          <Select
+            value={config.importMode}
+            onValueChange={(value) => updateConfig('importMode', value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="grouped-jobs">Create Jobs + Tasks (grouped by project/boat)</SelectItem>
+              <SelectItem value="single-job">Attach all Tasks to One Main Job</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {config.importMode === 'single-job' && (
+            <div className="space-y-4 mt-4">
+              <div>
+                <Label>Parent Job</Label>
+                <Select
+                  value={config.parentJobId || 'new'}
+                  onValueChange={(value) => updateConfig('parentJobId', value === 'new' ? null : value)}
+                >
+                  <SelectTrigger className="mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">➕ Create New Job</SelectItem>
+                    {existingJobs.map(job => (
+                      <SelectItem key={job.id} value={job.id}>
+                        {job.title} ({job.job_number || job.id.slice(0, 8)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {!config.parentJobId && (
+                <div>
+                  <Label>New Job Title</Label>
+                  <Input
+                    value={config.newJobTitle}
+                    onChange={(e) => updateConfig('newJobTitle', e.target.value)}
+                    className="mt-2"
+                    placeholder="e.g., Winter Service"
+                  />
+                  <p className="text-xs text-gray-600 mt-1">
+                    All imported rows will become tasks under this main job
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <p className="text-xs text-gray-600">
+            {config.importMode === 'single-job' 
+              ? '📌 All Excel rows will be imported as Tasks under one main Job. Customer/Boat info stored in task details.'
+              : '📌 Creates separate Jobs grouped by Project/Customer/Boat/Location/Service/Module.'}
+          </p>
+        </div>
+
         {/* Job Status */}
         <div>
           <Label>Default Job Status</Label>
