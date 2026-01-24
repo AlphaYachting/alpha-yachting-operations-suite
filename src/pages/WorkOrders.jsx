@@ -125,6 +125,15 @@ export default function WorkOrders() {
     }
   };
 
+  const handleQuickUpdate = async (woId, field, value) => {
+    try {
+      await base44.entities.WorkOrder.update(woId, { [field]: value });
+      await loadData();
+    } catch (error) {
+      console.error('Error updating work order:', error);
+    }
+  };
+
   const getJobInfo = (jobId) => {
     const job = jobs.find(j => j.id === jobId);
     if (!job) return { title: 'Unknown', customer: '', boat: '', location: '' };
@@ -253,44 +262,44 @@ export default function WorkOrders() {
                         {jobInfo.customer} • {jobInfo.boat}
                       </p>
 
-                      <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-slate-500">
-                        {wo.scheduled_date && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {getDateLabel(wo.scheduled_date)}
-                          </div>
-                        )}
-                        {wo.scheduled_start_time && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            {wo.scheduled_start_time}
-                          </div>
-                        )}
+                      <div className="flex flex-wrap items-center gap-4 mt-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-slate-400" />
+                          <Input
+                            type="date"
+                            value={wo.scheduled_date || ''}
+                            onChange={(e) => handleQuickUpdate(wo.id, 'scheduled_date', e.target.value)}
+                            className="h-8 w-36 text-xs"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-slate-400" />
+                          <Select
+                            value={wo.assigned_technicians?.[0] || ''}
+                            onValueChange={(value) => handleQuickUpdate(wo.id, 'assigned_technicians', value ? [value] : [])}
+                          >
+                            <SelectTrigger className="h-8 w-40 text-xs">
+                              <SelectValue placeholder="Assign tech" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={null}>Unassigned</SelectItem>
+                              {technicians.map(tech => (
+                                <SelectItem key={tech.id} value={tech.id}>
+                                  {tech.first_name} {tech.last_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
                         {jobInfo.location && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 text-sm text-slate-500">
                             <MapPin className="h-4 w-4" />
                             {jobInfo.location}
                           </div>
                         )}
                       </div>
-
-                      {techNames.length > 0 && (
-                        <div className="flex items-center gap-2 mt-3">
-                          <Users className="h-4 w-4 text-slate-400" />
-                          <div className="flex -space-x-2">
-                            {techNames.slice(0, 3).map((name, idx) => (
-                              <Avatar key={idx} className="h-6 w-6 border-2 border-white">
-                                <AvatarFallback className="text-[10px] bg-blue-100 text-blue-700">
-                                  {name.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                            ))}
-                          </div>
-                          <span className="text-xs text-slate-500">
-                            {techNames.join(', ')}
-                          </span>
-                        </div>
-                      )}
                     </div>
 
                     <div className="flex items-center gap-2">

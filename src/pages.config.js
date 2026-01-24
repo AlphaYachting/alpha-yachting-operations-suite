@@ -10,9 +10,9 @@ import Locations from './pages/Locations';
 import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
+import TasklistImport from './pages/TasklistImport';
 import Technicians from './pages/Technicians';
 import WorkOrders from './pages/WorkOrders';
-import TasklistImport from './pages/TasklistImport';
 import __Layout from './Layout.jsx';
 
 
@@ -29,9 +29,9 @@ export const PAGES = {
     "Reports": Reports,
     "Schedule": Schedule,
     "Settings": Settings,
+    "TasklistImport": TasklistImport,
     "Technicians": Technicians,
     "WorkOrders": WorkOrders,
-    "TasklistImport": TasklistImport,
 }
 
 export const pagesConfig = {
