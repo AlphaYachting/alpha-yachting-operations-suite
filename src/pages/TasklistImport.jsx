@@ -39,6 +39,7 @@ export default function TasklistImport() {
   const [validationResults, setValidationResults] = useState(null);
   const [importResults, setImportResults] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleFileUpload = (file) => {
     const reader = new FileReader();
@@ -231,8 +232,14 @@ export default function TasklistImport() {
       return;
     }
 
+    if (config.dryRunOnly) {
+      setError('Dry Run Mode is enabled. Please disable it in Step 4 to perform actual import.');
+      return;
+    }
+
     setIsProcessing(true);
     setCurrentStep(6);
+    setError(null);
 
     try {
       const results = await performImport(validationResults.jobGroups, columnMapping, config);
@@ -240,6 +247,8 @@ export default function TasklistImport() {
       setCurrentStep(7);
     } catch (error) {
       console.error('Import error:', error);
+      setError(error.message || 'Import failed. Please check console for details.');
+      setCurrentStep(5);
     } finally {
       setIsProcessing(false);
     }
@@ -512,12 +521,21 @@ export default function TasklistImport() {
         )}
 
         {currentStep === 5 && validationResults && (
-          <ValidationStep 
-            results={validationResults}
-            onExecute={executeImport}
-            onBack={() => setCurrentStep(4)}
-            isProcessing={isProcessing}
-          />
+          <>
+            {error && (
+              <Alert className="mb-4 bg-red-50 border-red-200">
+                <AlertCircle className="w-4 h-4 text-red-600" />
+                <AlertDescription className="text-red-800">{error}</AlertDescription>
+              </Alert>
+            )}
+            <ValidationStep 
+              results={validationResults}
+              onExecute={executeImport}
+              onBack={() => setCurrentStep(4)}
+              isProcessing={isProcessing}
+              dryRunMode={config.dryRunOnly}
+            />
+          </>
         )}
 
         {currentStep === 6 && (
