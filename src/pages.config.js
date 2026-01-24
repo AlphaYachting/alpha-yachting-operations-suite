@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import ExcelImport from './pages/ExcelImport';
 import ImportDiagnostics from './pages/ImportDiagnostics';
 import Inventory from './pages/Inventory';
+import JobDetail from './pages/JobDetail';
 import Jobs from './pages/Jobs';
 import Locations from './pages/Locations';
 import Reports from './pages/Reports';
@@ -13,7 +14,6 @@ import Settings from './pages/Settings';
 import TasklistImport from './pages/TasklistImport';
 import Technicians from './pages/Technicians';
 import WorkOrders from './pages/WorkOrders';
-import JobDetail from './pages/JobDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -25,6 +25,7 @@ export const PAGES = {
     "ExcelImport": ExcelImport,
     "ImportDiagnostics": ImportDiagnostics,
     "Inventory": Inventory,
+    "JobDetail": JobDetail,
     "Jobs": Jobs,
     "Locations": Locations,
     "Reports": Reports,
@@ -33,7 +34,6 @@ export const PAGES = {
     "TasklistImport": TasklistImport,
     "Technicians": Technicians,
     "WorkOrders": WorkOrders,
-    "JobDetail": JobDetail,
 }
 
 export const pagesConfig = {

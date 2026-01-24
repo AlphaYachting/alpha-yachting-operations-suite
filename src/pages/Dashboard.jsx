@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, isToday, isTomorrow, parseISO } from 'date-fns';
+import { format, isToday, isTomorrow, parseISO, addDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 const StatCard = ({ title, value, icon: Icon, trend, color, loading }) => (
   <Card className="relative overflow-hidden">
@@ -70,6 +70,7 @@ const statusColors = {
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -77,14 +78,16 @@ export default function Dashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [jobsData, workOrdersData, customersData, boatsData] = await Promise.all([
+        const [jobsData, workOrdersData, tasksData, customersData, boatsData] = await Promise.all([
           base44.entities.Job.list('-created_date', 100),
           base44.entities.WorkOrder.list('-scheduled_date', 100),
+          base44.entities.Task.list(),
           base44.entities.Customer.list(),
           base44.entities.Boat.list()
         ]);
         setJobs(jobsData);
         setWorkOrders(workOrdersData);
+        setTasks(tasksData);
         setCustomers(customersData);
         setBoats(boatsData);
       } catch (error) {
@@ -104,6 +107,27 @@ export default function Dashboard() {
     const date = parseISO(wo.scheduled_date);
     return (isToday(date) || isTomorrow(date)) && !['Completed', 'Cancelled'].includes(wo.status);
   }).slice(0, 5);
+
+  // Unfinished tasks in next 3 days
+  const today = startOfDay(new Date());
+  const threeDaysFromNow = endOfDay(addDays(today, 3));
+  
+  const upcomingUnfinishedWorkOrders = workOrders.filter(wo => {
+    if (!wo.scheduled_date) return false;
+    const date = parseISO(wo.scheduled_date);
+    const isInRange = isWithinInterval(date, { start: today, end: threeDaysFromNow });
+    const isUnfinished = !['Completed', 'Cancelled'].includes(wo.status);
+    return isInRange && isUnfinished;
+  });
+
+  const unfinishedTasksCount = tasks.filter(task => {
+    const wo = workOrders.find(w => w.id === task.work_order_id);
+    if (!wo?.scheduled_date) return false;
+    const date = parseISO(wo.scheduled_date);
+    const isInRange = isWithinInterval(date, { start: today, end: threeDaysFromNow });
+    const isUnfinished = !['Completed', 'Skipped'].includes(task.status);
+    return isInRange && isUnfinished;
+  }).length;
 
   const getCustomerName = (customerId) => {
     const customer = customers.find(c => c.id === customerId);
@@ -171,6 +195,77 @@ export default function Dashboard() {
           loading={loading}
         />
       </div>
+
+      {/* Unfinished Items Alert */}
+      {upcomingUnfinishedWorkOrders.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-100">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold text-amber-900">
+                  Unfinished Work in Next 3 Days
+                </CardTitle>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  {upcomingUnfinishedWorkOrders.length} work order{upcomingUnfinishedWorkOrders.length !== 1 ? 's' : ''} • {unfinishedTasksCount} task{unfinishedTasksCount !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {upcomingUnfinishedWorkOrders.slice(0, 5).map((wo) => {
+                const job = jobs.find(j => j.id === wo.job_id);
+                const woTasks = tasks.filter(t => t.work_order_id === wo.id && !['Completed', 'Skipped'].includes(t.status));
+                return (
+                  <Link
+                    key={wo.id}
+                    to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                    className="block p-3 rounded-lg border border-amber-200 bg-white hover:border-amber-300 hover:bg-amber-50 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-900 truncate">{wo.title}</p>
+                        <p className="text-sm text-slate-600 mt-0.5">
+                          {job ? getBoatName(job.boat_id) : 'Unknown boat'}
+                        </p>
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                          <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                            {wo.status}
+                          </Badge>
+                          {wo.scheduled_date && (
+                            <div className="flex items-center gap-1 text-xs text-slate-600">
+                              <Calendar className="h-3 w-3" />
+                              {isToday(parseISO(wo.scheduled_date)) ? 'Today' : 
+                               isTomorrow(parseISO(wo.scheduled_date)) ? 'Tomorrow' :
+                               format(parseISO(wo.scheduled_date), 'MMM d')}
+                            </div>
+                          )}
+                          {woTasks.length > 0 && (
+                            <div className="flex items-center gap-1 text-xs text-amber-700">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {woTasks.length} task{woTasks.length !== 1 ? 's' : ''} pending
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+              {upcomingUnfinishedWorkOrders.length > 5 && (
+                <Button asChild variant="outline" size="sm" className="w-full mt-2">
+                  <Link to={createPageUrl('WorkOrders')}>
+                    View all {upcomingUnfinishedWorkOrders.length} work orders
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
