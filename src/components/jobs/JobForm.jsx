@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function JobForm({ job, customers, boats, locations, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -30,6 +32,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
     customer_notes: job?.customer_notes || ''
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   const customerBoats = useMemo(() => {
     if (!formData.customer_id) return [];
@@ -38,9 +41,29 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+
+    // Validate required fields
+    if (!formData.customer_id) {
+      setError('Customer is required');
+      return;
+    }
+    if (!formData.boat_id) {
+      setError('Boat is required');
+      return;
+    }
+    if (!formData.title?.trim()) {
+      setError('Job title is required');
+      return;
+    }
+
     setSaving(true);
-    await onSave(formData);
-    setSaving(false);
+    try {
+      await onSave(formData);
+    } catch (err) {
+      setError(err.message || 'Failed to save job. Please try again.');
+      setSaving(false);
+    }
   };
 
   const updateField = (field, value) => {
@@ -57,6 +80,13 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Customer & Boat Selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
