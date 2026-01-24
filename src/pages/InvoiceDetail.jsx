@@ -446,6 +446,7 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
+        </div>
       </div>
 
       {/* Add from Operations Drawer */}
@@ -521,7 +522,6 @@ export default function InvoiceDetail() {
           </Card>
         </div>
       )}
-    </div>
     </>
   );
 }

@@ -393,6 +393,7 @@ export default function OfferDetail() {
         </div>
       </div>
 
+        </div>
       </div>
 
       {/* Add from Operations Drawer */}
@@ -404,7 +405,6 @@ export default function OfferDetail() {
           onClose={() => setShowOperationsDrawer(false)}
         />
       )}
-    </div>
     </>
   );
 }
