@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Upload } from 'lucide-react';
 
-export default function ValidationStep({ results, onExecute, onBack, isProcessing }) {
+export default function ValidationStep({ results, onExecute, onBack, isProcessing, dryRunMode }) {
   return (
     <Card>
       <CardHeader>
@@ -125,14 +125,21 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Config
           </Button>
-          <Button 
-            onClick={onExecute} 
-            disabled={!results.valid || isProcessing}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {isProcessing ? 'Importing...' : 'Execute Import'}
-            <Upload className="w-4 h-4 ml-2" />
-          </Button>
+          <div className="flex flex-col items-end gap-2">
+            {dryRunMode && (
+              <p className="text-xs text-amber-600 font-medium">
+                ⚠️ Dry Run Mode enabled - disable in Step 4 to import
+              </p>
+            )}
+            <Button 
+              onClick={onExecute} 
+              disabled={!results.valid || isProcessing}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? 'Importing...' : dryRunMode ? 'Import (Dry Run Enabled)' : 'Execute Import'}
+              <Upload className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
