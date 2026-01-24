@@ -12,7 +12,8 @@ import {
   MapPin,
   Calendar,
   Clock,
-  ChevronRight
+  ChevronRight,
+  CheckCircle2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,8 @@ export default function Jobs() {
   const [customers, setCustomers] = useState([]);
   const [boats, setBoats] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -81,16 +84,20 @@ export default function Jobs() {
 
   const loadData = async () => {
     try {
-      const [jobsData, customersData, boatsData, locationsData] = await Promise.all([
+      const [jobsData, customersData, boatsData, locationsData, workOrdersData, tasksData] = await Promise.all([
         base44.entities.Job.list('-created_date'),
         base44.entities.Customer.list(),
         base44.entities.Boat.list(),
-        base44.entities.Location.list()
+        base44.entities.Location.list(),
+        base44.entities.WorkOrder.list(),
+        base44.entities.Task.list()
       ]);
       setJobs(jobsData);
       setCustomers(customersData);
       setBoats(boatsData);
       setLocations(locationsData);
+      setWorkOrders(workOrdersData);
+      setTasks(tasksData);
     } catch (error) {
       console.error('Error loading jobs:', error);
     } finally {
@@ -136,6 +143,18 @@ export default function Jobs() {
   const getLocationName = (locationId) => {
     const location = locations.find(l => l.id === locationId);
     return location?.name || '';
+  };
+
+  const getJobTaskStats = (jobId) => {
+    const jobWorkOrders = workOrders.filter(wo => wo.job_id === jobId);
+    const workOrderIds = jobWorkOrders.map(wo => wo.id);
+    const jobTasks = tasks.filter(task => workOrderIds.includes(task.work_order_id));
+    
+    const totalTasks = jobTasks.length;
+    const completedTasks = jobTasks.filter(task => task.status === 'Completed').length;
+    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    
+    return { totalTasks, completedTasks, progress };
   };
 
   const filteredJobs = jobs.filter(job => {
@@ -231,7 +250,10 @@ export default function Jobs() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {filteredJobs.map((job) => (
+          {filteredJobs.map((job) => {
+            const taskStats = getJobTaskStats(job.id);
+            
+            return (
             <Card key={job.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -276,6 +298,24 @@ export default function Jobs() {
                         </div>
                       )}
                     </div>
+
+                    {taskStats.totalTasks > 0 && (
+                      <div className="mt-3 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5 text-slate-600">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>{taskStats.completedTasks} of {taskStats.totalTasks} tasks completed</span>
+                          </div>
+                          <span className="font-medium text-slate-700">{taskStats.progress}%</span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-600 transition-all rounded-full"
+                            style={{ width: `${taskStats.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -311,7 +351,8 @@ export default function Jobs() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
