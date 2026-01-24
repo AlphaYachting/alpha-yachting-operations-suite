@@ -50,8 +50,11 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await onSave(formData);
-    setSaving(false);
+    try {
+      await onSave(formData);
+    } catch (error) {
+      setSaving(false);
+    }
   };
 
   const updateField = (field, value) => {

@@ -92,6 +92,8 @@ export default function Technicians() {
       setEditingTechnician(null);
     } catch (error) {
       console.error('Error saving technician:', error);
+      alert('Failed to save technician: ' + error.message);
+      throw error;
     }
   };
 
