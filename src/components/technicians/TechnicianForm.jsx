@@ -182,11 +182,16 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
                   ? 'border-blue-500 bg-blue-50' 
                   : 'border-slate-200 hover:border-slate-300'
               }`}
-              onClick={() => toggleSkill(skill)}
+              onClick={(e) => {
+                e.preventDefault();
+                toggleSkill(skill);
+              }}
             >
               <Checkbox
                 checked={formData.skills?.includes(skill)}
-                onCheckedChange={() => toggleSkill(skill)}
+                onCheckedChange={(checked) => {
+                  toggleSkill(skill);
+                }}
               />
               <span className="text-sm">{skill}</span>
             </div>
@@ -206,11 +211,16 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
                   ? 'border-blue-500 bg-blue-50' 
                   : 'border-slate-200 hover:border-slate-300'
               }`}
-              onClick={() => toggleLanguage(lang)}
+              onClick={(e) => {
+                e.preventDefault();
+                toggleLanguage(lang);
+              }}
             >
               <Checkbox
                 checked={formData.languages?.includes(lang)}
-                onCheckedChange={() => toggleLanguage(lang)}
+                onCheckedChange={(checked) => {
+                  toggleLanguage(lang);
+                }}
               />
               <span className="text-sm">{lang}</span>
             </div>
