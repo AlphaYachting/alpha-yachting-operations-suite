@@ -86,6 +86,8 @@ export default function Boats() {
       setSearchParams({});
     } catch (error) {
       console.error('Error saving boat:', error);
+      alert('Failed to save boat: ' + error.message);
+      throw error;
     }
   };
 

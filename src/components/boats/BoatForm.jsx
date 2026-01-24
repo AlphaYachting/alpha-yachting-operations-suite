@@ -47,8 +47,11 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await onSave(formData);
-    setSaving(false);
+    try {
+      await onSave(formData);
+    } catch (error) {
+      setSaving(false);
+    }
   };
 
   const updateField = (field, value) => {
