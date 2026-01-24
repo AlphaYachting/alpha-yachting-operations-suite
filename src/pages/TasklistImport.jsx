@@ -277,52 +277,71 @@ export default function TasklistImport() {
         c.company_name?.toLowerCase() === group.customerName?.toLowerCase()
       );
 
-      if (!customer) {
+      if (!customer && group.customerName) {
         const isCompany = group.customerType === 'Business' || group.customerType === 'Charter Company';
+        const nameParts = group.customerName.split(' ');
         customer = await base44.entities.Customer.create({
           [isCompany ? 'company_name' : 'last_name']: group.customerName,
-          first_name: isCompany ? '' : group.customerName.split(' ')[0] || '',
-          email: `${group.customerName.replace(/\s+/g, '').toLowerCase()}@import.placeholder`,
+          first_name: !isCompany && nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : '',
+          email: `import-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@temp.placeholder`,
           customer_type: group.customerType || 'Private',
           status: 'Active'
         });
         createdCustomers.push(customer);
       }
 
-      // Find or create location
-      let location = existingLocations.find(l => 
-        l.name?.toLowerCase() === group.locationMarina?.toLowerCase()
-      );
+      // Find or create location - only if name exists
+      let location = null;
+      if (group.locationMarina && group.locationMarina.toLowerCase() !== 'unknown') {
+        location = existingLocations.find(l => 
+          l.name?.toLowerCase() === group.locationMarina?.toLowerCase()
+        );
 
-      if (!location && group.locationMarina) {
-        location = await base44.entities.Location.create({
-          name: group.locationMarina,
-          location_type: 'Marina',
-          status: 'Active'
-        });
-        createdLocations.push(location);
+        if (!location) {
+          location = await base44.entities.Location.create({
+            name: group.locationMarina,
+            location_type: 'Marina',
+            status: 'Active'
+          });
+          createdLocations.push(location);
+        }
       }
 
-      // Find or create boat
-      let boat = existingBoats.find(b => 
-        b.customer_id === customer.id && 
-        b.model?.toLowerCase() === group.boatModel?.toLowerCase()
-      );
+      // Find or create boat - only if model exists
+      let boat = null;
+      if (customer && group.boatModel) {
+        boat = existingBoats.find(b => 
+          b.customer_id === customer.id && 
+          b.model?.toLowerCase() === group.boatModel?.toLowerCase()
+        );
 
-      if (!boat && group.boatModel) {
-        boat = await base44.entities.Boat.create({
-          customer_id: customer.id,
-          vessel_name: group.boatModel,
-          model: group.boatModel,
-          length_m: parseFloat(group.boatLength) || null,
-          current_location_id: location?.id || null,
-          status: 'Active'
-        });
-        createdBoats.push(boat);
+        if (!boat) {
+          boat = await base44.entities.Boat.create({
+            customer_id: customer.id,
+            vessel_name: group.boatModel,
+            model: group.boatModel,
+            length_m: parseFloat(group.boatLength) || null,
+            current_location_id: location?.id || null,
+            status: 'Active'
+          });
+          createdBoats.push(boat);
+        }
       }
 
-      // Create Job
-      const jobTitle = `Service – ${group.projectName} – ${group.boatModel} – ${group.serviceArea}${group.module ? ' – ' + group.module : ''}`;
+      // Create Job - skip if no customer
+      if (!customer) {
+        continue;
+      }
+
+      const jobTitleParts = [
+        'Service',
+        group.projectName || '',
+        group.boatModel || '',
+        group.serviceArea || '',
+        group.module || ''
+      ].filter(Boolean);
+      const jobTitle = jobTitleParts.join(' – ');
+      
       const jobNotes = [
         group.serviceArea ? `Service Area: ${group.serviceArea}` : '',
         group.module ? `Module: ${group.module}` : ''
@@ -332,8 +351,8 @@ export default function TasklistImport() {
         customer_id: customer.id,
         boat_id: boat?.id || null,
         location_id: location?.id || null,
-        title: jobTitle,
-        description: jobNotes,
+        title: jobTitle || 'Imported Service',
+        description: jobNotes || '',
         job_type: 'Mobile Service',
         service_category: 'General Service',
         status: cfg.jobStatus,
