@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, GripVertical, Plus } from 'lucide-react';
+import ReactQuill from 'react-quill';
 
 export default function LineItemsTable({ lineItems, onChange, isLocked, currency }) {
   const calculateLineTotals = (item) => {
@@ -145,12 +146,23 @@ export default function LineItemsTable({ lineItems, onChange, isLocked, currency
                     </div>
 
                     {/* Row 2: Description */}
-                    <Input
-                      placeholder="Description"
-                      value={item.description || ''}
-                      onChange={(e) => updateLineItem(index, { description: e.target.value })}
-                      disabled={isLocked}
-                    />
+                    <div>
+                      <ReactQuill
+                        value={item.description || ''}
+                        onChange={(value) => updateLineItem(index, { description: value })}
+                        readOnly={isLocked}
+                        theme="snow"
+                        modules={{
+                          toolbar: [
+                            ['bold', 'italic', 'underline'],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                            ['clean']
+                          ]
+                        }}
+                        placeholder="Description"
+                        className="bg-white rounded-md"
+                      />
+                    </div>
 
                     {/* Row 3: Quantity, Unit, Price, Tax, Discount */}
                     <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
