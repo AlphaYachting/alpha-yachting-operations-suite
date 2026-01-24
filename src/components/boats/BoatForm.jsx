@@ -28,6 +28,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
     engine_type: boat?.engine_type || 'Inboard Diesel',
     engine_manufacturer: boat?.engine_manufacturer || '',
     engine_model: boat?.engine_model || '',
+    engine_number: boat?.engine_number || '',
     engine_hours: boat?.engine_hours || '',
     electrical_system: boat?.electrical_system || '12V',
     current_location_id: boat?.current_location_id || '',
@@ -309,6 +310,14 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
               placeholder="0"
             />
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Engine Number</Label>
+          <Input
+            value={formData.engine_number}
+            onChange={(e) => updateField('engine_number', e.target.value.trim())}
+            placeholder="Engine serial / engine number as found on the engine plate"
+          />
         </div>
       </div>
 

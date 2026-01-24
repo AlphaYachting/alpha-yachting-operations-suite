@@ -319,6 +319,12 @@ export default function BoatDetail() {
                     <p className="font-medium">{boat.engine_manufacturer} {boat.engine_model}</p>
                   </div>
                 )}
+                {boat.engine_number && (
+                  <div>
+                    <p className="text-sm text-slate-500">Engine Number</p>
+                    <p className="font-medium">{boat.engine_number}</p>
+                  </div>
+                )}
                 {boat.engine_hours !== null && boat.engine_hours !== undefined && (
                   <div>
                     <p className="text-sm text-slate-500">Engine Hours</p>

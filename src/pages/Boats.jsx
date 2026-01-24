@@ -116,6 +116,7 @@ export default function Boats() {
     return boat.vessel_name?.toLowerCase().includes(searchLower) ||
       boat.model?.toLowerCase().includes(searchLower) ||
       boat.manufacturer?.toLowerCase().includes(searchLower) ||
+      boat.engine_number?.toLowerCase().includes(searchLower) ||
       getCustomerName(boat.customer_id).toLowerCase().includes(searchLower);
   });
 
