@@ -19,15 +19,14 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
     <div id="pdf-content" style={{
       fontFamily: 'Arial, sans-serif',
       width: '100%',
-      maxWidth: '210mm',
-      minHeight: '297mm',
-      padding: '20mm 25mm',
-      margin: '0 auto',
+      minHeight: '100%',
+      padding: '0',
+      margin: '0',
       backgroundColor: 'white',
       color: '#000',
-      fontSize: '10pt',
+      fontSize: '11pt',
       boxSizing: 'border-box',
-      lineHeight: '1.4'
+      lineHeight: '1.5'
     }}>
       {/* Header */}
       <div style={{ marginBottom: '25px', borderBottom: `2px solid ${template.primary_color || '#2563eb'}`, paddingBottom: '15px' }}>

@@ -286,34 +286,40 @@ export default function InvoiceDetail() {
       <style>{`
         @media print {
           @page {
-            size: A4;
-            margin: 0;
+            size: A4 portrait;
+            margin: 15mm 20mm;
           }
-          body {
-            margin: 0;
-            padding: 0;
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
           }
           .no-print {
             display: none !important;
           }
-          #pdf-print-template {
-            display: block !important;
-          }
           body * {
             visibility: hidden;
           }
-          #pdf-print-template, #pdf-print-template * {
-            visibility: visible;
-          }
           #pdf-print-template {
+            display: block !important;
+            visibility: visible;
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
+            height: 100%;
+          }
+          #pdf-print-template * {
+            visibility: visible;
           }
           #pdf-content {
-            width: 210mm !important;
-            min-height: 297mm !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            transform: scale(1) !important;
+            transform-origin: top left !important;
           }
         }
       `}</style>
