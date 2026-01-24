@@ -285,10 +285,46 @@ export default function TasklistImport() {
           throw new Error('Selected parent job not found');
         }
       } else {
-        // Create new parent job
+        // Create new parent job - need to ensure we have customer and boat
+        // Get first customer from the data
+        const firstGroup = Object.values(jobGroups)[0];
+        let customer = existingCustomers.find(c => 
+          c.last_name?.toLowerCase() === firstGroup.customerName?.toLowerCase() ||
+          c.company_name?.toLowerCase() === firstGroup.customerName?.toLowerCase()
+        );
+
+        if (!customer && firstGroup.customerName) {
+          const isCompany = firstGroup.customerType === 'Business' || firstGroup.customerType === 'Charter Company';
+          const nameParts = firstGroup.customerName.split(' ');
+          customer = await base44.entities.Customer.create({
+            [isCompany ? 'company_name' : 'last_name']: firstGroup.customerName,
+            first_name: !isCompany && nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : '',
+            email: `import-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@temp.placeholder`,
+            customer_type: firstGroup.customerType || 'Private',
+            status: 'Active'
+          });
+          createdCustomers.push(customer);
+        }
+
+        // Create a placeholder boat for the parent job
+        let boat = null;
+        if (customer) {
+          boat = await base44.entities.Boat.create({
+            customer_id: customer.id,
+            vessel_name: 'Multiple Boats - See Tasks',
+            model: 'Various',
+            status: 'Active'
+          });
+          createdBoats.push(boat);
+        }
+
+        if (!customer || !boat) {
+          throw new Error('Failed to create customer or boat for parent job');
+        }
+
         parentJob = await base44.entities.Job.create({
-          customer_id: existingCustomers[0]?.id || null,
-          boat_id: null,
+          customer_id: customer.id,
+          boat_id: boat.id,
           location_id: null,
           title: cfg.newJobTitle || 'Imported Service',
           description: 'Excel import - tasks grouped under main job',
