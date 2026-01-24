@@ -175,17 +175,13 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
         <Label>Skills</Label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {SKILLS.map(skill => (
-            <div 
+            <label 
               key={skill}
               className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
                 formData.skills?.includes(skill) 
                   ? 'border-blue-500 bg-blue-50' 
                   : 'border-slate-200 hover:border-slate-300'
               }`}
-              onClick={(e) => {
-                e.preventDefault();
-                toggleSkill(skill);
-              }}
             >
               <Checkbox
                 checked={formData.skills?.includes(skill)}
@@ -194,7 +190,7 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
                 }}
               />
               <span className="text-sm">{skill}</span>
-            </div>
+            </label>
           ))}
         </div>
       </div>
@@ -204,17 +200,13 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
         <Label>Languages</Label>
         <div className="flex flex-wrap gap-2">
           {LANGUAGES.map(lang => (
-            <div 
+            <label 
               key={lang}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${
                 formData.languages?.includes(lang) 
                   ? 'border-blue-500 bg-blue-50' 
                   : 'border-slate-200 hover:border-slate-300'
               }`}
-              onClick={(e) => {
-                e.preventDefault();
-                toggleLanguage(lang);
-              }}
             >
               <Checkbox
                 checked={formData.languages?.includes(lang)}
@@ -223,7 +215,7 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
                 }}
               />
               <span className="text-sm">{lang}</span>
-            </div>
+            </label>
           ))}
         </div>
       </div>
