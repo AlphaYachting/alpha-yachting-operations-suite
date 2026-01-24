@@ -276,20 +276,23 @@ export default function OfferDetail() {
     <>
       <style>{`
         @media print {
+          .no-print {
+            display: none !important;
+          }
+          #pdf-print-template {
+            display: block !important;
+          }
           body * {
             visibility: hidden;
           }
-          #printable-content, #printable-content * {
+          #pdf-print-template, #pdf-print-template * {
             visibility: visible;
           }
-          #printable-content {
+          #pdf-print-template {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
-          }
-          .no-print {
-            display: none !important;
           }
         }
       `}</style>
