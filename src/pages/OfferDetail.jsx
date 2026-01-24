@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Send, CheckCircle, XCircle, FileText, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Save, Send, CheckCircle, XCircle, FileText, ArrowRight, Edit3 } from 'lucide-react';
 import PDFExportButton from '@/components/pdf/PDFExportButton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import DocumentHeader from '@/components/documents/DocumentHeader';
@@ -344,6 +344,12 @@ export default function OfferDetail() {
               document={offer}
               lineItems={lineItems}
             />
+          )}
+          {isLocked && (offer.status === 'Sent' || offer.status === 'Accepted' || offer.status === 'Rejected') && (
+            <Button variant="outline" onClick={() => handleSave('Draft')} disabled={saving}>
+              <Edit3 className="h-4 w-4 mr-2" />
+              Reopen for Editing
+            </Button>
           )}
           {!isLocked && offer.customer_id && (
             <Button variant="outline" onClick={() => setShowOperationsDrawer(true)}>
