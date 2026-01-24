@@ -399,21 +399,19 @@ export default function InvoiceDetail() {
       )}
 
       {/* PDF Template for Print */}
-      <div className="no-print">
-        {template && (
-          <div style={{ display: 'none' }}>
-            <PDFDocumentTemplate 
-              document={invoice}
-              lineItems={lineItems}
-              template={template}
-              payments={payments}
-            />
-          </div>
-        )}
-      </div>
+      {template && (
+        <div id="pdf-print-template" style={{ display: 'none' }}>
+          <PDFDocumentTemplate 
+            document={invoice}
+            lineItems={lineItems}
+            template={template}
+            payments={payments}
+          />
+        </div>
+      )}
 
       {/* Document Editor */}
-      <div id="printable-content" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div id="printable-content" className="no-print grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <DocumentHeader
             document={invoice}
