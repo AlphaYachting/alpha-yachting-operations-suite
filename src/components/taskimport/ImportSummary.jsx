@@ -152,15 +152,21 @@ export default function ImportSummary({ results, onStartNew }) {
 
       {/* Actions */}
       <div className="flex gap-4">
+        {results.parentJobId && (
+          <Button onClick={handleViewJob} className="flex-1 bg-green-600 hover:bg-green-700">
+            <Briefcase className="w-4 h-4 mr-2" />
+            View Main Job
+          </Button>
+        )}
         <Link to={createPageUrl('Jobs')} className="flex-1">
           <Button className="w-full" variant="outline">
             <Briefcase className="w-4 h-4 mr-2" />
-            Go to Jobs
+            All Jobs
           </Button>
         </Link>
         <Button onClick={onStartNew} className="flex-1 bg-blue-600 hover:bg-blue-700">
           <Home className="w-4 h-4 mr-2" />
-          Start New Import
+          New Import
         </Button>
       </div>
     </div>
