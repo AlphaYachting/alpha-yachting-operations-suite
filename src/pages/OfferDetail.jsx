@@ -276,6 +276,14 @@ export default function OfferDetail() {
     <>
       <style>{`
         @media print {
+          @page {
+            size: A4;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            padding: 0;
+          }
           .no-print {
             display: none !important;
           }
@@ -293,6 +301,10 @@ export default function OfferDetail() {
             left: 0;
             top: 0;
             width: 100%;
+          }
+          #pdf-content {
+            width: 210mm !important;
+            min-height: 297mm !important;
           }
         }
       `}</style>
