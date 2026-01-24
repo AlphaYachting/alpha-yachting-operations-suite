@@ -48,85 +48,9 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
     }
   };
 
-  const generatePDF = async () => {
-    setIsGenerating(true);
-    try {
-      const templateData = await loadTemplate();
-      setTemplate(templateData);
-
-      // Create a temporary container
-      const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.top = '0';
-      document.body.appendChild(container);
-
-      // Render the template
-      const root = document.createElement('div');
-      container.appendChild(root);
-      
-      const { createRoot } = await import('react-dom/client');
-      const reactRoot = createRoot(root);
-      
-      await new Promise((resolve) => {
-        reactRoot.render(
-          <PDFDocumentTemplate 
-            document={document} 
-            lineItems={lineItems}
-            template={templateData}
-            payments={payments}
-          />
-        );
-        setTimeout(resolve, 500);
-      });
-
-      // Generate PDF
-      const content = root.querySelector('#pdf-content');
-      const canvas = await html2canvas(content, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      let position = 0;
-
-      // Add first page
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // Add additional pages if needed
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      // Generate filename
-      const docType = document.document_type === 'Invoice' ? 'INV' : 'OFF';
-      const docNumber = document.document_number || 'DRAFT';
-      const filename = `${docType}_${docNumber}_${new Date().getTime()}.pdf`;
-
-      // Download
-      pdf.save(filename);
-
-      // Cleanup
-      reactRoot.unmount();
-      document.body.removeChild(container);
-
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
-    } finally {
-      setIsGenerating(false);
-    }
+  const generatePDF = () => {
+    // Use browser's print to PDF functionality
+    window.print();
   };
 
   const handlePreview = async () => {

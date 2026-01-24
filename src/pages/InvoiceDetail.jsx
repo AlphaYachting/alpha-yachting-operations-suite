@@ -14,6 +14,7 @@ import DocumentHeader from '@/components/documents/DocumentHeader';
 import LineItemsTable from '@/components/documents/LineItemsTable';
 import TotalsSection from '@/components/documents/TotalsSection';
 import AddFromOperationsDrawer from '@/components/documents/AddFromOperationsDrawer';
+import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
 import { addDays, format } from 'date-fns';
 
 export default function InvoiceDetail() {
@@ -22,6 +23,7 @@ export default function InvoiceDetail() {
   const invoiceId = urlParams.get('id');
   const isNew = urlParams.get('new') === 'true';
 
+  const [template, setTemplate] = useState(null);
   const [invoice, setInvoice] = useState({
     document_type: 'Invoice',
     status: 'Draft',
@@ -55,10 +57,23 @@ export default function InvoiceDetail() {
 
   useEffect(() => {
     loadMasterData();
+    loadTemplate();
     if (!isNew && invoiceId) {
       loadInvoice();
     }
   }, [invoiceId, isNew]);
+
+  const loadTemplate = async () => {
+    try {
+      const templates = await base44.entities.PDFTemplate.list();
+      const defaultTemplate = templates.find(t => t.is_default) || templates[0];
+      if (defaultTemplate) {
+        setTemplate(defaultTemplate);
+      }
+    } catch (error) {
+      console.error('Error loading template:', error);
+    }
+  };
 
   const loadMasterData = async () => {
     try {
@@ -211,14 +226,7 @@ export default function InvoiceDetail() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
 
-  const handleExportPDF = () => {
-    // Use browser print to PDF
-    window.print();
-  };
 
   const handleAddPayment = async () => {
     if (!newPayment.amount || newPayment.amount <= 0) {
@@ -389,6 +397,20 @@ export default function InvoiceDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* PDF Template for Print */}
+      <div className="no-print">
+        {template && (
+          <div style={{ display: 'none' }}>
+            <PDFDocumentTemplate 
+              document={invoice}
+              lineItems={lineItems}
+              template={template}
+              payments={payments}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Document Editor */}
       <div id="printable-content" className="grid grid-cols-1 lg:grid-cols-3 gap-6">

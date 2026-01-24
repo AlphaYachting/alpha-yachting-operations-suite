@@ -11,6 +11,7 @@ import DocumentHeader from '@/components/documents/DocumentHeader';
 import LineItemsTable from '@/components/documents/LineItemsTable';
 import TotalsSection from '@/components/documents/TotalsSection';
 import AddFromOperationsDrawer from '@/components/documents/AddFromOperationsDrawer';
+import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
 import { addDays, format } from 'date-fns';
 
 export default function OfferDetail() {
@@ -19,6 +20,7 @@ export default function OfferDetail() {
   const offerId = urlParams.get('id');
   const isNew = urlParams.get('new') === 'true';
 
+  const [template, setTemplate] = useState(null);
   const [offer, setOffer] = useState({
     document_type: 'Offer',
     status: 'Draft',
@@ -42,10 +44,23 @@ export default function OfferDetail() {
 
   useEffect(() => {
     loadMasterData();
+    loadTemplate();
     if (!isNew && offerId) {
       loadOffer();
     }
   }, [offerId, isNew]);
+
+  const loadTemplate = async () => {
+    try {
+      const templates = await base44.entities.PDFTemplate.list();
+      const defaultTemplate = templates.find(t => t.is_default) || templates[0];
+      if (defaultTemplate) {
+        setTemplate(defaultTemplate);
+      }
+    } catch (error) {
+      console.error('Error loading template:', error);
+    }
+  };
 
   const loadMasterData = async () => {
     try {
@@ -196,13 +211,7 @@ export default function OfferDetail() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
 
-  const handleExportPDF = () => {
-    window.print();
-  };
 
   const handleConvertToInvoice = async () => {
     if (!window.confirm('Convert this offer to an invoice?')) return;
@@ -359,6 +368,19 @@ export default function OfferDetail() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {/* PDF Template for Print */}
+      <div className="no-print">
+        {template && (
+          <div style={{ display: 'none' }}>
+            <PDFDocumentTemplate 
+              document={offer}
+              lineItems={lineItems}
+              template={template}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Document Editor */}
       <div id="printable-content" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
