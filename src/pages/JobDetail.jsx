@@ -1,0 +1,355 @@
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Link, useSearchParams } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { 
+  ArrowLeft,
+  Building2,
+  Ship,
+  MapPin,
+  Calendar,
+  User,
+  Briefcase,
+  ClipboardList,
+  CheckCircle2,
+  Circle,
+  Clock,
+  DollarSign,
+  FileText,
+  AlertCircle
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { format } from 'date-fns';
+
+const statusColors = {
+  New: 'bg-slate-100 text-slate-700',
+  Quoted: 'bg-blue-100 text-blue-700',
+  Approved: 'bg-green-100 text-green-700',
+  Scheduled: 'bg-purple-100 text-purple-700',
+  'In Progress': 'bg-amber-100 text-amber-700',
+  'Waiting for Parts': 'bg-orange-100 text-orange-700',
+  'On Hold': 'bg-red-100 text-red-700',
+  Completed: 'bg-emerald-100 text-emerald-700',
+  Invoiced: 'bg-teal-100 text-teal-700',
+  Cancelled: 'bg-slate-100 text-slate-700'
+};
+
+const taskStatusColors = {
+  'Not Started': 'bg-slate-100 text-slate-700',
+  'In Progress': 'bg-blue-100 text-blue-700',
+  'Completed': 'bg-green-100 text-green-700',
+  'Not Possible': 'bg-red-100 text-red-700',
+  'Needs Approval': 'bg-yellow-100 text-yellow-700',
+  'Skipped': 'bg-slate-100 text-slate-700'
+};
+
+export default function JobDetail() {
+  const [searchParams] = useSearchParams();
+  const jobId = searchParams.get('id');
+  
+  const [job, setJob] = useState(null);
+  const [customer, setCustomer] = useState(null);
+  const [boat, setBoat] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (jobId) {
+      loadJobData();
+    }
+  }, [jobId]);
+
+  const loadJobData = async () => {
+    try {
+      const [jobData, allWOs, allTasks, customers, boats, locations] = await Promise.all([
+        base44.entities.Job.list(),
+        base44.entities.WorkOrder.list(),
+        base44.entities.Task.list(),
+        base44.entities.Customer.list(),
+        base44.entities.Boat.list(),
+        base44.entities.Location.list()
+      ]);
+
+      const currentJob = jobData.find(j => j.id === jobId);
+      if (currentJob) {
+        setJob(currentJob);
+        setCustomer(customers.find(c => c.id === currentJob.customer_id));
+        setBoat(boats.find(b => b.id === currentJob.boat_id));
+        setLocation(locations.find(l => l.id === currentJob.location_id));
+        
+        const jobWOs = allWOs.filter(wo => wo.job_id === jobId);
+        setWorkOrders(jobWOs);
+        
+        const woIds = jobWOs.map(wo => wo.id);
+        const jobTasks = allTasks.filter(task => woIds.includes(task.work_order_id));
+        setTasks(jobTasks);
+      }
+    } catch (error) {
+      console.error('Error loading job data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getTasksForWO = (woId) => {
+    return tasks.filter(t => t.work_order_id === woId).sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-12 w-64" />
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+        <h3 className="text-lg font-medium text-slate-900">Job not found</h3>
+        <Button asChild className="mt-4">
+          <Link to={createPageUrl('Jobs')}>Back to Jobs</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const completedTasks = tasks.filter(t => t.status === 'Completed').length;
+  const totalTasks = tasks.length;
+  const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" asChild>
+          <Link to={createPageUrl('Jobs')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
+        <div className="flex-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold text-slate-900">{job.title}</h1>
+            <Badge className={statusColors[job.status]}>{job.status}</Badge>
+            <Badge variant="outline">{job.job_number}</Badge>
+          </div>
+          <p className="text-slate-500 mt-1">{job.service_category} • {job.job_type}</p>
+        </div>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500">Customer</p>
+                <p className="font-medium text-slate-900 truncate">
+                  {customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'N/A'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
+                <Ship className="h-5 w-5 text-cyan-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500">Boat</p>
+                <p className="font-medium text-slate-900 truncate">{boat?.vessel_name || 'N/A'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-purple-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500">Location</p>
+                <p className="font-medium text-slate-900 truncate">{location?.name || 'N/A'}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500">Progress</p>
+                <p className="font-medium text-slate-900">{progress}% ({completedTasks}/{totalTasks})</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Job Details */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Job Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <p className="text-sm text-slate-500">Priority</p>
+              <p className="font-medium">{job.priority}</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Intake Date</p>
+              <p className="font-medium">
+                {job.intake_date ? format(new Date(job.intake_date), 'MMM d, yyyy') : 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Requested Date</p>
+              <p className="font-medium">
+                {job.requested_date ? format(new Date(job.requested_date), 'MMM d, yyyy') : 'N/A'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">Estimated Hours</p>
+              <p className="font-medium">{job.estimated_hours || 'N/A'}</p>
+            </div>
+            {job.quote_amount && (
+              <div>
+                <p className="text-sm text-slate-500">Quote Amount</p>
+                <p className="font-medium">€{job.quote_amount.toFixed(2)}</p>
+              </div>
+            )}
+          </div>
+
+          {job.description && (
+            <>
+              <Separator />
+              <div>
+                <p className="text-sm text-slate-500 mb-1">Description</p>
+                <p className="text-slate-700">{job.description}</p>
+              </div>
+            </>
+          )}
+
+          {job.internal_notes && (
+            <div>
+              <p className="text-sm text-slate-500 mb-1">Internal Notes</p>
+              <p className="text-slate-700">{job.internal_notes}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Work Orders & Tasks */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-slate-900">Work Orders & Tasks</h2>
+          <Button asChild size="sm">
+            <Link to={createPageUrl('WorkOrders') + `?job=${jobId}&new=true`}>
+              Add Work Order
+            </Link>
+          </Button>
+        </div>
+
+        {workOrders.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <ClipboardList className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+              <h3 className="text-lg font-medium text-slate-900">No work orders yet</h3>
+              <p className="text-slate-500 mt-1">Create a work order to get started</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {workOrders.map((wo) => {
+              const woTasks = getTasksForWO(wo.id);
+              const woCompleted = woTasks.filter(t => t.status === 'Completed').length;
+              
+              return (
+                <Card key={wo.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <CardTitle className="text-lg">{wo.title}</CardTitle>
+                          <Badge className={statusColors[wo.status]}>{wo.status}</Badge>
+                          <Badge variant="outline">{wo.work_order_number}</Badge>
+                        </div>
+                        {wo.scheduled_date && (
+                          <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            {format(new Date(wo.scheduled_date), 'MMM d, yyyy')}
+                            {wo.scheduled_start_time && ` at ${wo.scheduled_start_time}`}
+                          </p>
+                        )}
+                      </div>
+                      <Button asChild variant="outline" size="sm">
+                        <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}>
+                          View Details
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  
+                  {woTasks.length > 0 && (
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-slate-500">Tasks</span>
+                          <span className="text-slate-700 font-medium">
+                            {woCompleted} of {woTasks.length} completed
+                          </span>
+                        </div>
+                        <div className="space-y-1">
+                          {woTasks.map((task) => (
+                            <div 
+                              key={task.id}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                            >
+                              {task.status === 'Completed' ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                              ) : (
+                                <Circle className="h-4 w-4 text-slate-300 flex-shrink-0" />
+                              )}
+                              <span className={`flex-1 text-sm ${task.status === 'Completed' ? 'text-slate-500 line-through' : 'text-slate-700'}`}>
+                                {task.title}
+                              </span>
+                              <Badge variant="outline" className={`text-xs ${taskStatusColors[task.status]}`}>
+                                {task.status}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
