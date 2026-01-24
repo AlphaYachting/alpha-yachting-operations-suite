@@ -17,6 +17,7 @@ import WorkOrders from './pages/WorkOrders';
 import Offers from './pages/Offers';
 import Invoices from './pages/Invoices';
 import OfferDetail from './pages/OfferDetail';
+import InvoiceDetail from './pages/InvoiceDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -40,6 +41,7 @@ export const PAGES = {
     "Offers": Offers,
     "Invoices": Invoices,
     "OfferDetail": OfferDetail,
+    "InvoiceDetail": InvoiceDetail,
 }
 
 export const pagesConfig = {
