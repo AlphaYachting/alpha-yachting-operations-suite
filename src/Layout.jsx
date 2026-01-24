@@ -164,6 +164,13 @@ export default function Layout({ children, currentPageName }) {
               Excel Import
             </Link>
             <Link
+              to={createPageUrl('TasklistImport')}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 transition-all"
+            >
+              <Upload className="h-5 w-5" />
+              Tasklist Import
+            </Link>
+            <Link
               to={createPageUrl('MobileHome')}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600 transition-all"
             >
