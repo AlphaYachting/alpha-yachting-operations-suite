@@ -273,9 +273,29 @@ export default function InvoiceDetail() {
   }
 
   return (
+    <>
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-content, #printable-content * {
+            visibility: visible;
+          }
+          #printable-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl('Invoices'))}>
             <ArrowLeft className="h-5 w-5" />
@@ -339,14 +359,14 @@ export default function InvoiceDetail() {
       </div>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="no-print">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {/* Payment Status */}
       {invoice.status !== 'Draft' && (
-        <Card className={outstanding > 0 ? 'border-amber-200 bg-amber-50/30' : 'border-emerald-200 bg-emerald-50/30'}>
+        <Card className={`no-print ${outstanding > 0 ? 'border-amber-200 bg-amber-50/30' : 'border-emerald-200 bg-emerald-50/30'}`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -375,7 +395,7 @@ export default function InvoiceDetail() {
       )}
 
       {/* Document Editor */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div id="printable-content" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <DocumentHeader
             document={invoice}
@@ -424,6 +444,8 @@ export default function InvoiceDetail() {
             </Card>
           )}
         </div>
+      </div>
+
       </div>
 
       {/* Add from Operations Drawer */}
@@ -500,5 +522,6 @@ export default function InvoiceDetail() {
         </div>
       )}
     </div>
+    </>
   );
 }
