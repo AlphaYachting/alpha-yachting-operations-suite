@@ -12,6 +12,7 @@ import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import Technicians from './pages/Technicians';
 import WorkOrders from './pages/WorkOrders';
+import TasklistImport from './pages/TasklistImport';
 import __Layout from './Layout.jsx';
 
 
@@ -30,6 +31,7 @@ export const PAGES = {
     "Settings": Settings,
     "Technicians": Technicians,
     "WorkOrders": WorkOrders,
+    "TasklistImport": TasklistImport,
 }
 
 export const pagesConfig = {

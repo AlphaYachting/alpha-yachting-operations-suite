@@ -1,0 +1,140 @@
+import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Upload } from 'lucide-react';
+
+export default function ValidationStep({ results, onExecute, onBack, isProcessing }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Step 5: Validation Results</CardTitle>
+        <CardDescription>
+          {results.valid ? 
+            'All validation checks passed! Ready to import.' :
+            'Validation found issues that must be fixed before import.'
+          }
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <div className="text-2xl font-bold text-blue-900">{results.jobCount}</div>
+            <div className="text-sm text-blue-700">Jobs to be created</div>
+          </div>
+          <div className="p-4 bg-green-50 rounded-lg">
+            <div className="text-2xl font-bold text-green-900">{results.taskCount}</div>
+            <div className="text-sm text-green-700">Tasks to be created</div>
+          </div>
+        </div>
+
+        {/* Validation Status */}
+        {results.valid ? (
+          <Alert className="bg-green-50 border-green-200">
+            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              <strong>Validation Passed</strong> - No blocking errors found
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="bg-red-50 border-red-200">
+            <XCircle className="w-4 h-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <strong>Validation Failed</strong> - {results.errors.length} error(s) must be fixed
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Errors */}
+        {results.errors.length > 0 && (
+          <div>
+            <h3 className="font-semibold text-sm text-red-900 mb-3 flex items-center gap-2">
+              <XCircle className="w-4 h-4" />
+              Errors ({results.errors.length})
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {results.errors.map((error, idx) => (
+                <div key={idx} className="p-3 bg-red-50 border border-red-200 rounded text-sm">
+                  <div className="flex items-start gap-2">
+                    <Badge variant="destructive" className="text-xs">Row {error.row}</Badge>
+                    <div>
+                      <div className="font-medium text-red-900">{error.field}</div>
+                      <div className="text-red-700">{error.message}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Warnings */}
+        {results.warnings.length > 0 && (
+          <div>
+            <h3 className="font-semibold text-sm text-amber-900 mb-3 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Warnings ({results.warnings.length})
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {results.warnings.slice(0, 20).map((warning, idx) => (
+                <div key={idx} className="p-3 bg-amber-50 border border-amber-200 rounded text-sm">
+                  <div className="flex items-start gap-2">
+                    <Badge className="text-xs bg-amber-500">Row {warning.row}</Badge>
+                    <div>
+                      <div className="font-medium text-amber-900">{warning.field}</div>
+                      <div className="text-amber-700">{warning.message}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {results.warnings.length > 20 && (
+                <p className="text-xs text-amber-600 text-center">
+                  ...and {results.warnings.length - 20} more warnings
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Job Groups Preview */}
+        <div>
+          <h3 className="font-semibold text-sm text-gray-900 mb-3">Job Groups Preview</h3>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {Object.entries(results.jobGroups).slice(0, 5).map(([key, group], idx) => (
+              <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
+                <div className="font-medium text-gray-900">
+                  {group.projectName || 'Unnamed Project'} - {group.customerName}
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  {group.boatModel} • {group.locationMarina} • {group.tasks.length} tasks
+                </div>
+              </div>
+            ))}
+            {Object.keys(results.jobGroups).length > 5 && (
+              <p className="text-xs text-gray-500 text-center">
+                ...and {Object.keys(results.jobGroups).length - 5} more job groups
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-between mt-6">
+          <Button variant="outline" onClick={onBack}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Config
+          </Button>
+          <Button 
+            onClick={onExecute} 
+            disabled={!results.valid || isProcessing}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isProcessing ? 'Importing...' : 'Execute Import'}
+            <Upload className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
