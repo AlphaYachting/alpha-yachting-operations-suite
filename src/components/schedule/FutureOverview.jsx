@@ -221,9 +221,9 @@ export default function FutureOverview({
 
   return (
     <div className="border rounded-lg bg-white overflow-hidden">
-      <div className="flex">
+      <div className="flex" style={{ maxHeight: 'calc(100vh - 300px)' }}>
         {/* Left column - Technician names with stats */}
-        <div className="w-64 flex-shrink-0 border-r bg-slate-50 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+        <div className="w-64 flex-shrink-0 border-r bg-slate-50 overflow-y-auto">
           <div className="h-24 border-b flex items-center px-4 font-medium text-sm text-slate-700 sticky top-0 bg-slate-50 z-10">
             <div>
               <div>Mechanic</div>
@@ -235,7 +235,7 @@ export default function FutureOverview({
           {visibleTechnicians.map(tech => {
             const stats = technicianStats.get(tech.id);
             return (
-              <div key={tech.id} className="border-b p-4">
+              <div key={tech.id} className="border-b p-4 min-h-[120px] flex items-center">
                 <div className="flex items-start gap-3">
                   <Avatar className="h-10 w-10 mt-1">
                     <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
@@ -273,7 +273,7 @@ export default function FutureOverview({
         </div>
 
         {/* Right area - Date grid */}
-        <div className="flex-1 overflow-x-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+        <div className="flex-1 overflow-x-auto overflow-y-auto">
           {/* Date header */}
           <div className="h-24 border-b flex bg-slate-50 sticky top-0 z-10">
             {visibleDates.map(date => {
@@ -321,7 +321,7 @@ export default function FutureOverview({
             const techData = aggregatedData.get(tech.id);
             
             return (
-              <div key={tech.id} className="border-b flex min-h-[80px]">
+              <div key={tech.id} className="border-b flex min-h-[120px] h-[120px]">
                 {visibleDates.map(date => {
                   const dateStr = format(date, 'yyyy-MM-dd');
                   const dayData = techData?.get(dateStr);
