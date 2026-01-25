@@ -168,7 +168,7 @@ export default function TaskTemplates() {
           <p className="text-slate-500 mt-1">Reusable task lists for recurring work orders</p>
         </div>
         <Button 
-          onClick={() => navigate(createPageUrl('TemplateDetail').replace(':templateId', 'new'))}
+          onClick={() => navigate(createPageUrl('TemplateDetail'))}
           className="bg-blue-600 hover:bg-blue-700"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -276,7 +276,7 @@ export default function TaskTemplates() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(createPageUrl('TemplateDetail').replace(':templateId', template.id))}
+                        onClick={() => navigate(`${createPageUrl('TemplateDetail')}?id=${template.id}`)}
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit

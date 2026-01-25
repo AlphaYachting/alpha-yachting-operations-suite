@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { 
   ArrowLeft, 
@@ -33,7 +33,8 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import TemplateItemForm from '@/components/templates/TemplateItemForm';
 
 export default function TemplateDetail() {
-  const { templateId } = useParams();
+  const [searchParams] = useSearchParams();
+  const templateId = searchParams.get('id');
   const navigate = useNavigate();
   const [template, setTemplate] = useState(null);
   const [items, setItems] = useState([]);
@@ -56,7 +57,7 @@ export default function TemplateDetail() {
 
   useEffect(() => {
     loadCurrentUser();
-    if (templateId && templateId !== 'new') {
+    if (templateId) {
       loadTemplate();
       loadItems();
     } else {
@@ -121,13 +122,12 @@ export default function TemplateDetail() {
     setError(null);
     
     try {
-      if (templateId && templateId !== 'new') {
+      if (templateId) {
         await base44.entities.TaskTemplateList.update(templateId, formData);
         await loadTemplate();
       } else {
         const newTemplate = await base44.entities.TaskTemplateList.create(formData);
-        // Navigate to the new template detail page
-        window.location.href = `/TemplateDetail?templateId=${newTemplate.id}`;
+        navigate(`${createPageUrl('TemplateDetail')}?id=${newTemplate.id}`);
       }
       setHasChanges(false);
     } catch (error) {
@@ -220,7 +220,7 @@ export default function TemplateDetail() {
         });
       }
 
-      navigate(createPageUrl('TemplateDetail').replace(':templateId', newTemplate.id));
+      navigate(`${createPageUrl('TemplateDetail')}?id=${newTemplate.id}`);
     } catch (error) {
       console.error('Error duplicating template:', error);
       setError('Failed to duplicate template');
@@ -274,7 +274,7 @@ export default function TemplateDetail() {
     );
   }
 
-  const isNewTemplate = templateId === 'new' || !template;
+  const isNewTemplate = !templateId || !template;
 
   return (
     <div className="space-y-6">
