@@ -185,14 +185,13 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         <Label>Assigned Technicians</Label>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {activeTechnicians.map(tech => (
-            <div 
+            <label 
               key={tech.id}
               className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                 formData.assigned_technicians?.includes(tech.id) 
                   ? 'border-blue-500 bg-blue-50' 
                   : 'border-slate-200 hover:border-slate-300'
               }`}
-              onClick={() => toggleTechnician(tech.id)}
             >
               <Checkbox
                 checked={formData.assigned_technicians?.includes(tech.id)}
@@ -202,7 +201,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
                 <p className="font-medium text-sm">{tech.first_name} {tech.last_name}</p>
                 <p className="text-xs text-slate-500">{tech.role}</p>
               </div>
-            </div>
+            </label>
           ))}
         </div>
       </div>
