@@ -28,15 +28,21 @@ export default function TemplateItemForm({ item, onSave, onCancel }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    
     setSaving(true);
 
-    const payload = {
-      ...formData,
-      default_estimated_hours: formData.default_estimated_hours ? parseFloat(formData.default_estimated_hours) : null
-    };
+    try {
+      const payload = {
+        ...formData,
+        default_estimated_hours: formData.default_estimated_hours ? parseFloat(formData.default_estimated_hours) : null
+      };
 
-    await onSave(payload);
-    setSaving(false);
+      await onSave(payload);
+    } catch (error) {
+      console.error('Form submit error:', error);
+      setSaving(false);
+    }
   };
 
   return (
