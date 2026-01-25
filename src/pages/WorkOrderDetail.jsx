@@ -43,6 +43,7 @@ import VehicleReservation from '@/components/workorders/VehicleReservation';
 import TaskForm from '@/components/tasks/TaskForm';
 import QuickTaskUpdate from '@/components/tasks/QuickTaskUpdate';
 import TemplateSelector from '@/components/templates/TemplateSelector';
+import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -251,8 +252,9 @@ export default function WorkOrderDetail() {
             WO #{workOrder.work_order_number || workOrder.id.slice(-6)}
           </p>
         </div>
-        <Button asChild>
-          <Link to={createPageUrl('WorkOrders')}>Edit Work Order</Link>
+        <Button onClick={() => setShowEditWorkOrder(true)}>
+          <Edit className="h-4 w-4 mr-2" />
+          Edit Work Order
         </Button>
       </div>
 
@@ -606,6 +608,34 @@ export default function WorkOrderDetail() {
             }}
             onCancel={() => setShowTemplateSelector(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Work Order Dialog */}
+      <Dialog open={showEditWorkOrder} onOpenChange={setShowEditWorkOrder}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Work Order</DialogTitle>
+          </DialogHeader>
+          {workOrder && job && (
+            <WorkOrderForm
+              workOrder={workOrder}
+              jobs={job ? [job] : []}
+              technicians={technicians}
+              customers={customer ? [customer] : []}
+              boats={boat ? [boat] : []}
+              onSave={async (formData) => {
+                try {
+                  await base44.entities.WorkOrder.update(workOrderId, formData);
+                  await loadWorkOrderDetails();
+                  setShowEditWorkOrder(false);
+                } catch (error) {
+                  console.error('Error updating work order:', error);
+                }
+              }}
+              onCancel={() => setShowEditWorkOrder(false)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
