@@ -31,8 +31,10 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
   };
 
   useEffect(() => {
-    loadData();
-  }, [workOrder.id]);
+    if (workOrder?.id) {
+      loadData();
+    }
+  }, [workOrder?.id]);
 
   const loadData = async () => {
     try {
@@ -173,7 +175,21 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
     return vehicle ? `${vehicle.name} ${vehicle.license_plate ? `(${vehicle.license_plate})` : ''}` : 'Unknown';
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <Truck className="h-5 w-5 text-blue-600" />
+            Vehicle Reservation
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-12 bg-slate-100 rounded animate-pulse"></div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
