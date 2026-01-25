@@ -23,6 +23,7 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import TaskTemplates from './pages/TaskTemplates';
+import TemplateDetail from './pages/TemplateDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -52,6 +53,7 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "TaskTemplates": TaskTemplates,
+    "TemplateDetail": TemplateDetail,
 }
 
 export const pagesConfig = {

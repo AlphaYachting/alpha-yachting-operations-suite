@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { 
   Plus, 
@@ -19,12 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,17 +34,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { format } from 'date-fns';
-import TemplateEditor from '@/components/templates/TemplateEditor';
 
 export default function TaskTemplates() {
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState([]);
   const [templateItems, setTemplateItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [showEditor, setShowEditor] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
@@ -175,7 +168,7 @@ export default function TaskTemplates() {
           <p className="text-slate-500 mt-1">Reusable task lists for recurring work orders</p>
         </div>
         <Button 
-          onClick={() => { setEditingTemplate(null); setShowEditor(true); }}
+          onClick={() => navigate(createPageUrl('TemplateDetail').replace(':templateId', 'new'))}
           className="bg-blue-600 hover:bg-blue-700"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -283,7 +276,7 @@ export default function TaskTemplates() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => { setEditingTemplate(template); setShowEditor(true); }}
+                        onClick={() => navigate(createPageUrl('TemplateDetail').replace(':templateId', template.id))}
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
@@ -320,26 +313,7 @@ export default function TaskTemplates() {
         </div>
       )}
 
-      {/* Template Editor Dialog */}
-      <Dialog open={showEditor} onOpenChange={setShowEditor}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingTemplate ? 'Edit Template' : 'Create Template'}</DialogTitle>
-          </DialogHeader>
-          <TemplateEditor
-            template={editingTemplate}
-            onSave={async () => {
-              await loadTemplates();
-              setShowEditor(false);
-              setEditingTemplate(null);
-            }}
-            onCancel={() => {
-              setShowEditor(false);
-              setEditingTemplate(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }
