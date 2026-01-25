@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
+import BoatDocuments from '@/components/boats/BoatDocuments';
 
 export default function BoatDetail() {
   const [searchParams] = useSearchParams();
@@ -34,10 +35,23 @@ export default function BoatDetail() {
   const [customer, setCustomer] = useState(null);
   const [location, setLocation] = useState(null);
   const [jobs, setJobs] = useState([]);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await base44.auth.me();
+        setUser(userData);
+      } catch (e) {
+        console.log('User not logged in');
+      }
+    };
+    loadUser();
+  }, []);
 
   useEffect(() => {
     if (boatId) {
@@ -209,6 +223,7 @@ export default function BoatDetail() {
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="images">Images</TabsTrigger>
           <TabsTrigger value="history">Service History ({jobs.length})</TabsTrigger>
         </TabsList>
@@ -392,6 +407,11 @@ export default function BoatDetail() {
               )}
             </div>
           )}
+        </TabsContent>
+
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-6">
+          {user && <BoatDocuments boatId={boatId} userRole={user.role} />}
         </TabsContent>
 
         {/* Images Tab */}
