@@ -156,7 +156,7 @@ export default function WorkOrders() {
     }
   };
 
-  const handleSave = async (workOrderData, templateId) => {
+  const handleSave = async (workOrderData, templateId, suggestedTasks) => {
     try {
       let createdWoId;
       
@@ -170,6 +170,26 @@ export default function WorkOrders() {
         });
         createdWoId = newWo.id;
 
+        // If AI-suggested tasks, add them first
+        if (suggestedTasks && suggestedTasks.length > 0) {
+          try {
+            await Promise.all(
+              suggestedTasks.map((task, idx) =>
+                base44.entities.Task.create({
+                  work_order_id: createdWoId,
+                  title: task.title,
+                  description: task.description,
+                  estimated_minutes: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
+                  sequence_order: idx,
+                  status: 'Not Started'
+                })
+              )
+            );
+          } catch (aiTaskError) {
+            console.error('Error adding AI-suggested tasks:', aiTaskError);
+          }
+        }
+
         // If template selected, apply it immediately
         if (templateId) {
           try {
@@ -182,13 +202,13 @@ export default function WorkOrders() {
             if (templateItems.length > 0) {
               // Create all tasks in parallel
               await Promise.all(
-                templateItems.map(item =>
+                templateItems.map((item, idx) =>
                   base44.entities.Task.create({
                     work_order_id: createdWoId,
                     title: item.title,
                     description: item.description,
                     estimated_minutes: item.default_estimated_hours ? Math.round(item.default_estimated_hours * 60) : null,
-                    sequence_order: item.sort_order,
+                    sequence_order: (suggestedTasks?.length || 0) + idx,
                     status: 'Not Started',
                     notes: item.required_tools_note || '',
                     requires_approval: item.requires_customer_approval
