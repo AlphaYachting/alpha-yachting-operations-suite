@@ -14,7 +14,8 @@ import {
   TrendingUp,
   Package,
   MapPin,
-  Calendar
+  Calendar,
+  User
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -73,23 +74,26 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [boats, setBoats] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [jobsData, workOrdersData, tasksData, customersData, boatsData] = await Promise.all([
+        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData] = await Promise.all([
           base44.entities.Job.list('-created_date', 100),
           base44.entities.WorkOrder.list('-scheduled_date', 100),
           base44.entities.Task.list(),
           base44.entities.Customer.list(),
-          base44.entities.Boat.list()
+          base44.entities.Boat.list(),
+          base44.entities.Technician.list()
         ]);
         setJobs(jobsData);
         setWorkOrders(workOrdersData);
         setTasks(tasksData);
         setCustomers(customersData);
         setBoats(boatsData);
+        setTechnicians(techniciansData);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -107,10 +111,23 @@ export default function Dashboard() {
   const draftWorkOrders = workOrders.filter(wo => wo.status === 'Draft');
   
   // Active work orders (not draft, not completed/cancelled, with scheduled dates)
+  // Sort: overdue first, then by scheduled date
   const upcomingWorkOrders = workOrders.filter(wo => {
     if (!wo.scheduled_date) return false;
     return wo.status !== 'Draft' && !['Completed', 'Cancelled'].includes(wo.status);
-  }).sort((a, b) => parseISO(a.scheduled_date) - parseISO(b.scheduled_date)).slice(0, 10);
+  }).sort((a, b) => {
+    const aDate = parseISO(a.scheduled_date);
+    const bDate = parseISO(b.scheduled_date);
+    const aOverdue = aDate < today;
+    const bOverdue = bDate < today;
+    
+    // Overdue items first
+    if (aOverdue && !bOverdue) return -1;
+    if (!aOverdue && bOverdue) return 1;
+    
+    // Then sort by date
+    return aDate - bDate;
+  }).slice(0, 10);
 
   // Overdue and urgent work orders (past dates not completed)
   const today = startOfDay(new Date());
@@ -150,6 +167,12 @@ export default function Dashboard() {
   const getBoatName = (boatId) => {
     const boat = boats.find(b => b.id === boatId);
     return boat?.vessel_name || 'Unknown';
+  };
+
+  const getTechnicianName = (technicianId) => {
+    const tech = technicians.find(t => t.id === technicianId);
+    if (!tech) return null;
+    return `${tech.first_name || ''} ${tech.last_name || ''}`.trim();
   };
 
   return (
@@ -377,7 +400,7 @@ export default function Dashboard() {
                 {upcomingWorkOrders.map((wo) => {
                   const job = jobs.find(j => j.id === wo.job_id);
                   const isOverdue = wo.scheduled_date && parseISO(wo.scheduled_date) < today;
-                  const isPast = wo.scheduled_date && parseISO(wo.scheduled_date) < today;
+                  const leadTechName = wo.lead_technician_id ? getTechnicianName(wo.lead_technician_id) : null;
                   
                   return (
                     <Link
@@ -403,6 +426,12 @@ export default function Dashboard() {
                                 {isToday(parseISO(wo.scheduled_date)) ? 'Today' : 
                                  isTomorrow(parseISO(wo.scheduled_date)) ? 'Tomorrow' :
                                  format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
+                              </div>
+                            )}
+                            {leadTechName && (
+                              <div className="flex items-center gap-1 text-xs text-blue-700">
+                                <User className="h-3 w-3" />
+                                {leadTechName}
                               </div>
                             )}
                           </div>
