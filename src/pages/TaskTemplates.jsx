@@ -139,7 +139,7 @@ export default function TaskTemplates() {
 
   const isAdmin = currentUser?.role === 'admin';
 
-  if (!isAdmin) {
+  if (!isAdmin && currentUser) {
     return (
       <div className="text-center py-12">
         <ClipboardList className="h-12 w-12 mx-auto text-slate-300 mb-4" />
