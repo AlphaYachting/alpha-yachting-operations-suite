@@ -23,6 +23,7 @@ import { format, parseISO } from 'date-fns';
 import TimeEntriesSection from '@/components/timeentries/TimeEntriesSection';
 import PhotoUpload from '@/components/photos/PhotoUpload';
 import PhotoGallery from '@/components/photos/PhotoGallery';
+import VehicleReservation from '@/components/workorders/VehicleReservation';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -301,6 +302,12 @@ export default function WorkOrderDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Vehicle Reservation Section */}
+      <VehicleReservation 
+        workOrder={workOrder}
+        onReservationChange={loadWorkOrderDetails}
+      />
 
       {/* Time Entries Section */}
       <div id="time">
