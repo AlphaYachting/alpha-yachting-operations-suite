@@ -29,8 +29,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { format, addDays, startOfWeek, isSameDay, parseISO } from 'date-fns';
+import { format, addDays, startOfWeek, isSameDay, parseISO, startOfDay } from 'date-fns';
 import DispatchTimeline from '@/components/schedule/DispatchTimeline';
+import FutureOverview from '@/components/schedule/FutureOverview';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -61,6 +62,12 @@ export default function Schedule() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [technicianFilter, setTechnicianFilter] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Future overview state
+  const [rangeWeeks, setRangeWeeks] = useState(8);
+  const [showBlockedOnly, setShowBlockedOnly] = useState(false);
+  const [focusBlockedDays, setFocusBlockedDays] = useState(false);
+  const [overviewStartDate, setOverviewStartDate] = useState(startOfDay(new Date()));
 
   useEffect(() => {
     loadData();
@@ -129,6 +136,17 @@ export default function Schedule() {
   const prevDay = () => setDispatchDate(addDays(dispatchDate, -1));
   const nextDay = () => setDispatchDate(addDays(dispatchDate, 1));
   const goToDispatchToday = () => setDispatchDate(new Date());
+  
+  // Future overview navigation
+  const prevRange = () => setOverviewStartDate(addDays(overviewStartDate, -rangeWeeks * 7));
+  const nextRange = () => setOverviewStartDate(addDays(overviewStartDate, rangeWeeks * 7));
+  const goToOverviewToday = () => setOverviewStartDate(startOfDay(new Date()));
+  
+  // Handle drill-down from overview to day view
+  const handleOverviewDateClick = (date, technicianId) => {
+    setDispatchDate(date);
+    setDispatchViewMode('day');
+  };
 
   return (
     <div className="space-y-6">
@@ -145,21 +163,33 @@ export default function Schedule() {
         <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
-            onClick={viewMode === 'calendar' ? goToToday : goToDispatchToday}
+            onClick={() => {
+              if (viewMode === 'calendar') goToToday();
+              else if (dispatchViewMode === 'day') goToDispatchToday();
+              else goToOverviewToday();
+            }}
           >
             Today
           </Button>
           <Button 
             variant="outline" 
             size="icon" 
-            onClick={viewMode === 'calendar' ? prevWeek : prevDay}
+            onClick={() => {
+              if (viewMode === 'calendar') prevWeek();
+              else if (dispatchViewMode === 'day') prevDay();
+              else prevRange();
+            }}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button 
             variant="outline" 
             size="icon" 
-            onClick={viewMode === 'calendar' ? nextWeek : nextDay}
+            onClick={() => {
+              if (viewMode === 'calendar') nextWeek();
+              else if (dispatchViewMode === 'day') nextDay();
+              else nextRange();
+            }}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -307,78 +337,195 @@ export default function Schedule() {
 
         {/* Dispatch View */}
         <TabsContent value="dispatch" className="space-y-6 mt-6">
-          {/* Filters */}
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search by job, boat, or customer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <div className="flex gap-2 flex-wrap">
-              <Select value={gridSize} onValueChange={setGridSize}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Grid size" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30m">30 minutes</SelectItem>
-                  <SelectItem value="1h">1 hour</SelectItem>
-                  <SelectItem value="2h">2 hours</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={locationFilter} onValueChange={setLocationFilter}>
-                <SelectTrigger className="w-44">
-                  <SelectValue placeholder="All Locations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  {locations.map(loc => (
-                    <SelectItem key={loc.id} value={loc.id}>
-                      {loc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-44">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Scheduled">Scheduled</SelectItem>
-                  <SelectItem value="Dispatched">Dispatched</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Dispatch Mode Toggle */}
+          <div className="flex items-center gap-4">
+            <Tabs value={dispatchViewMode} onValueChange={setDispatchViewMode} className="w-full max-w-md">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="day">Day Timeline</TabsTrigger>
+                <TabsTrigger value="future">Future Overview</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
-          {/* Timeline */}
-          {loading ? (
-            <Skeleton className="h-96" />
-          ) : (
-            <DispatchTimeline
-              technicians={technicians}
-              workOrders={workOrders}
-              jobs={jobs}
-              customers={customers}
-              boats={boats}
-              locations={locations}
-              selectedDate={dispatchDate}
-              viewMode={dispatchViewMode}
-              gridSize={gridSize}
-              locationFilter={locationFilter}
-              statusFilter={statusFilter}
-              technicianFilter={technicianFilter}
-              searchTerm={searchTerm}
-            />
+          {/* Day View Filters */}
+          {dispatchViewMode === 'day' && (
+            <>
+          <div className="flex flex-col lg:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search by job, boat, or customer..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <div className="flex gap-2 flex-wrap">
+                <Select value={gridSize} onValueChange={setGridSize}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Grid size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30m">30 minutes</SelectItem>
+                    <SelectItem value="1h">1 hour</SelectItem>
+                    <SelectItem value="2h">2 hours</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={locationFilter} onValueChange={setLocationFilter}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue placeholder="All Locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Locations</SelectItem>
+                    {locations.map(loc => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="Scheduled">Scheduled</SelectItem>
+                    <SelectItem value="Dispatched">Dispatched</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            {loading ? (
+              <Skeleton className="h-96" />
+            ) : (
+              <DispatchTimeline
+                technicians={technicians}
+                workOrders={workOrders}
+                jobs={jobs}
+                customers={customers}
+                boats={boats}
+                locations={locations}
+                selectedDate={dispatchDate}
+                viewMode={dispatchViewMode}
+                gridSize={gridSize}
+                locationFilter={locationFilter}
+                statusFilter={statusFilter}
+                technicianFilter={technicianFilter}
+                searchTerm={searchTerm}
+              />
+            )}
+            </>
+          )}
+
+          {/* Future Overview Filters */}
+          {dispatchViewMode === 'future' && (
+            <>
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search by job, boat, or customer..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <div className="flex gap-2 flex-wrap">
+                <Select value={rangeWeeks.toString()} onValueChange={(val) => setRangeWeeks(Number(val))}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="4">4 weeks</SelectItem>
+                    <SelectItem value="8">8 weeks</SelectItem>
+                    <SelectItem value="12">12 weeks</SelectItem>
+                    <SelectItem value="26">6 months</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={locationFilter} onValueChange={setLocationFilter}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue placeholder="All Locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Locations</SelectItem>
+                    {locations.map(loc => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="Scheduled">Scheduled</SelectItem>
+                    <SelectItem value="Dispatched">Dispatched</SelectItem>
+                    <SelectItem value="In Progress">In Progress</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Toggles */}
+            <div className="flex gap-4 items-center flex-wrap">
+              <Button
+                variant={showBlockedOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowBlockedOnly(!showBlockedOnly)}
+                className={showBlockedOnly ? "bg-blue-600" : ""}
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Blocked only
+              </Button>
+              
+              <Button
+                variant={focusBlockedDays ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFocusBlockedDays(!focusBlockedDays)}
+                className={focusBlockedDays ? "bg-green-600" : ""}
+              >
+                Focus blocked days
+              </Button>
+            </div>
+
+            {/* Future Overview */}
+            {loading ? (
+              <Skeleton className="h-96" />
+            ) : (
+              <FutureOverview
+                technicians={technicians}
+                workOrders={workOrders}
+                jobs={jobs}
+                customers={customers}
+                boats={boats}
+                locations={locations}
+                startDate={overviewStartDate}
+                rangeWeeks={rangeWeeks}
+                locationFilter={locationFilter}
+                statusFilter={statusFilter}
+                technicianFilter={technicianFilter}
+                searchTerm={searchTerm}
+                showBlockedOnly={showBlockedOnly}
+                focusBlockedDays={focusBlockedDays}
+                onDateClick={handleOverviewDateClick}
+              />
+            )}
+            </>
           )}
         </TabsContent>
       </Tabs>
