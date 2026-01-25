@@ -103,6 +103,9 @@ export default function Dashboard() {
     loadData();
   }, []);
 
+  const today = startOfDay(new Date());
+  const threeDaysFromNow = endOfDay(addDays(today, 3));
+  
   const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
   const urgentJobs = jobs.filter(j => ['Urgent', 'Express'].includes(j.priority) && !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
   const todayWorkOrders = workOrders.filter(wo => wo.scheduled_date && isToday(parseISO(wo.scheduled_date)));
@@ -128,10 +131,6 @@ export default function Dashboard() {
     // Then sort by date
     return aDate - bDate;
   }).slice(0, 10);
-
-  // Overdue and urgent work orders (past dates not completed)
-  const today = startOfDay(new Date());
-  const threeDaysFromNow = endOfDay(addDays(today, 3));
   
   const overdueWorkOrders = workOrders.filter(wo => {
     if (!wo.scheduled_date) return false;
