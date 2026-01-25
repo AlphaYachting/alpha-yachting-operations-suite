@@ -62,6 +62,15 @@ export default function TemplateDetail() {
       loadTemplate();
       loadItems();
     } else {
+      // Restore draft from localStorage if creating new template
+      const savedDraft = localStorage.getItem('template_draft');
+      if (savedDraft) {
+        try {
+          setFormData(JSON.parse(savedDraft));
+        } catch (e) {
+          console.error('Failed to restore draft:', e);
+        }
+      }
       setLoading(false);
     }
   }, [templateId]);
@@ -114,8 +123,13 @@ export default function TemplateDetail() {
   };
 
   const handleFormChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    const updated = { ...formData, [field]: value };
+    setFormData(updated);
     setHasChanges(true);
+    // Auto-save draft for new templates
+    if (!templateId) {
+      localStorage.setItem('template_draft', JSON.stringify(updated));
+    }
   };
 
   const handleSaveTemplate = async () => {
@@ -128,6 +142,7 @@ export default function TemplateDetail() {
         await loadTemplate();
       } else {
         const newTemplate = await base44.entities.TaskTemplateList.create(formData);
+        localStorage.removeItem('template_draft');
         navigate(`${createPageUrl('TemplateDetail')}?id=${newTemplate.id}`);
       }
       setHasChanges(false);
