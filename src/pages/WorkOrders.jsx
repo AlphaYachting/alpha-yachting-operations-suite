@@ -20,7 +20,9 @@ import {
   Truck,
   Ship,
   LayoutList,
-  Grip
+  Grip,
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -274,19 +276,25 @@ export default function WorkOrders() {
       .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))[0];
     
     const totalOpenTasks = boatWorkOrders.reduce((sum, wo) => sum + (wo._aggregates?.openTasks || 0), 0);
+    const totalBlocked = boatWorkOrders.reduce((sum, wo) => sum + (wo._aggregates?.blockedTasks || 0), 0);
+    const unassignedCount = boatWorkOrders.filter(wo => !wo.assigned_technicians || wo.assigned_technicians.length === 0).length;
     
     // Get customer via first work order's job
     const firstJob = boatWorkOrders.length > 0 ? jobs.find(j => j.id === boatWorkOrders[0].job_id) : null;
     const customer = firstJob ? customers.find(c => c.id === firstJob.customer_id) : null;
     const location = firstJob ? locations.find(l => l.id === firstJob.location_id) : null;
     
+    const openWOCount = boatWorkOrders.filter(wo => wo.status !== 'Completed' && wo.status !== 'Cancelled').length;
+    
     return {
       boat,
       customer,
       location,
       workOrderCount: boatWorkOrders.length,
+      openWOCount,
       nextScheduledDate: nextScheduledWO?.scheduled_date,
-      totalOpenTasks
+      totalOpenTasks,
+      attentionCount: totalBlocked + unassignedCount
     };
   };
 
@@ -696,25 +704,28 @@ export default function WorkOrders() {
                         <p className="text-sm text-slate-600">{customerName}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      {boatInfo.location && (
-                        <div className="flex items-center gap-1 text-sm text-slate-600">
-                          <MapPin className="h-4 w-4" />
-                          {boatInfo.location.name}
-                        </div>
+                    <div className="flex items-center gap-3">
+                      {boatInfo.attentionCount > 0 && (
+                        <Badge className="bg-red-100 text-red-700 border-red-200">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          {boatInfo.attentionCount} need attention
+                        </Badge>
                       )}
-                      <Badge variant="outline" className="bg-white">
-                        {boatInfo.workOrderCount} work order{boatInfo.workOrderCount !== 1 ? 's' : ''}
-                      </Badge>
-                      {boatInfo.totalOpenTasks > 0 && (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                          {boatInfo.totalOpenTasks} open tasks
+                      {boatInfo.openWOCount > 0 && (
+                        <Badge variant="outline" className="bg-white">
+                          {boatInfo.openWOCount} open
                         </Badge>
                       )}
                       {boatInfo.nextScheduledDate && (
-                        <div className="flex items-center gap-1 text-sm text-slate-600">
+                        <div className="flex items-center gap-1 text-sm font-medium text-slate-700">
                           <Calendar className="h-4 w-4" />
-                          Next: {format(parseISO(boatInfo.nextScheduledDate), 'MMM d')}
+                          {format(parseISO(boatInfo.nextScheduledDate), 'MMM d')}
+                        </div>
+                      )}
+                      {boatInfo.location && (
+                        <div className="flex items-center gap-1 text-sm text-slate-500">
+                          <MapPin className="h-3 w-3" />
+                          {boatInfo.location.name}
                         </div>
                       )}
                     </div>
@@ -737,114 +748,171 @@ export default function WorkOrders() {
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
+                              {/* A) Header Line - Highest Priority */}
                               <div className="flex items-center gap-2 flex-wrap mb-2">
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-6 w-6 p-0"
+                                  className="h-6 w-6 p-0 -ml-1"
                                   onClick={() => toggleWorkOrderExpand(wo.id)}
                                 >
                                   <ChevronRight className={`h-4 w-4 transition-transform ${isWoExpanded ? 'rotate-90' : ''}`} />
                                 </Button>
                                 <Link 
                                   to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                                  className="font-medium text-slate-900 hover:text-blue-600 transition-colors"
+                                  className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
                                 >
                                   {wo.title}
                                 </Link>
                                 <Badge className={statusColors[wo.status]}>{wo.status}</Badge>
-                                {wo.scheduled_date && (
-                                  <div className="flex items-center gap-1 text-sm text-slate-600">
-                                    <Calendar className="h-3 w-3" />
-                                    {format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
-                                    {wo.scheduled_start_time && ` • ${wo.scheduled_start_time}`}
-                                  </div>
+                                
+                                {/* Critical Warnings - Only if present */}
+                                {agg.blockedTasks > 0 && (
+                                  <Badge className="bg-red-100 text-red-700 border-red-200">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    {agg.blockedTasks} blocked
+                                  </Badge>
+                                )}
+                                {(!wo.assigned_technicians || wo.assigned_technicians.length === 0) && wo.status !== 'Completed' && wo.status !== 'Cancelled' && (
+                                  <Badge className="bg-amber-100 text-amber-700 border-amber-200">
+                                    <AlertTriangle className="h-3 w-3 mr-1" />
+                                    Unassigned
+                                  </Badge>
                                 )}
                               </div>
 
-                              {/* Inline Details Row */}
-                              <div className="flex flex-wrap items-center gap-3 ml-8 text-sm">
-                                {techNames.length > 0 && (
-                                  <div className="flex items-center gap-1 text-slate-600">
-                                    <Users className="h-4 w-4" />
-                                    {techNames.join(', ')}
+                              {/* B) Schedule & Responsibility Line - Second Priority */}
+                              <div className="flex flex-wrap items-center gap-3 ml-7 mb-2 text-sm">
+                                {wo.scheduled_date ? (
+                                  <div className="flex items-center gap-1 text-slate-700 font-medium">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
+                                    {wo.scheduled_start_time && wo.scheduled_end_time && (
+                                      <span className="text-slate-500 ml-1">
+                                        {wo.scheduled_start_time}–{wo.scheduled_end_time}
+                                      </span>
+                                    )}
                                   </div>
+                                ) : (
+                                  <Badge variant="outline" className="bg-slate-50 text-slate-600">
+                                    Not scheduled
+                                  </Badge>
                                 )}
+                                
+                                <div className="flex items-center gap-1 text-slate-600">
+                                  <Users className="h-3.5 w-3.5" />
+                                  {techNames.length > 0 ? techNames.join(', ') : (
+                                    <span className="text-slate-400 italic">Unassigned</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* C) Resources Line - Third Priority */}
+                              <div className="flex flex-wrap items-center gap-2 ml-7 mb-2">
                                 {(() => {
                                   const vehicleInfo = getVehicleDisplay(agg.vehicleReservations);
                                   return vehicleInfo && (
-                                    <div className="flex items-center gap-1 text-emerald-700">
-                                      <Truck className="h-4 w-4" />
+                                    <div className="flex items-center gap-1 text-sm text-emerald-700 font-medium">
+                                      <Truck className="h-3.5 w-3.5" />
                                       {vehicleInfo.display}
                                     </div>
                                   );
                                 })()}
-                                {agg.timeEntryCount > 0 && (
-                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                    <Timer className="h-3 w-3 mr-1" />
-                                    {agg.timeEntryCount} entries • {Math.floor(agg.timeEntryTotalMinutes / 60)}h {agg.timeEntryTotalMinutes % 60}m
-                                  </Badge>
-                                )}
-                                {agg.photoCount > 0 && (
-                                  <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200">
-                                    <Camera className="h-3 w-3 mr-1" />
-                                    {agg.photoCount} photos
-                                  </Badge>
-                                )}
-                                {agg.hasNotes && (
-                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                    <FileText className="h-3 w-3 mr-1" />
-                                    Notes
-                                  </Badge>
-                                )}
-                                {agg.totalTasks > 0 && (
-                                  <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
-                                    {agg.completedTasks}/{agg.totalTasks} tasks done
-                                  </Badge>
-                                )}
                               </div>
 
-                              {/* Task Summary */}
-                              {agg.nextOpenTasks && agg.nextOpenTasks.length > 0 && (
-                                <div className="ml-8 mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                                  <p className="text-xs font-medium text-slate-600 mb-2">Next Open Tasks:</p>
-                                  <div className="space-y-1">
-                                    {agg.nextOpenTasks.map((task, tidx) => (
-                                      <div key={task.id} className="flex items-center gap-2 text-sm">
-                                        <div className={`h-2 w-2 rounded-full ${task.status === 'In Progress' ? 'bg-blue-500' : 'bg-slate-300'}`} />
-                                        <span className="text-slate-700">{task.title}</span>
-                                        <Badge variant="outline" className="text-xs">
-                                          {task.status}
-                                        </Badge>
-                                      </div>
-                                    ))}
-                                    {agg.openTasks > 3 && (
-                                      <Link 
-                                        to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                                        className="text-xs text-blue-600 hover:underline"
+                              {/* D) Documentation Line - Fourth Priority (compact chips) */}
+                              {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes) && (
+                                <div className="flex flex-wrap items-center gap-2 ml-7 mb-2">
+                                  {agg.timeEntryCount > 0 && (
+                                    <Link 
+                                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}#time`}
+                                      className="group"
+                                    >
+                                      <Badge 
+                                        variant="outline" 
+                                        className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors text-xs cursor-pointer"
                                       >
-                                        +{agg.openTasks - 3} more tasks
-                                      </Link>
-                                    )}
-                                  </div>
+                                        <Timer className="h-3 w-3 mr-1" />
+                                        {Math.floor(agg.timeEntryTotalMinutes / 60)}h {agg.timeEntryTotalMinutes % 60}m
+                                      </Badge>
+                                    </Link>
+                                  )}
+                                  {agg.photoCount > 0 && (
+                                    <Link 
+                                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}#photos`}
+                                      className="group"
+                                    >
+                                      <Badge 
+                                        variant="outline" 
+                                        className="bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 transition-colors text-xs cursor-pointer"
+                                      >
+                                        <Camera className="h-3 w-3 mr-1" />
+                                        {agg.photoCount}
+                                      </Badge>
+                                    </Link>
+                                  )}
+                                  {agg.hasNotes && (
+                                    <Link 
+                                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}#notes`}
+                                      className="group"
+                                    >
+                                      <Badge 
+                                        variant="outline" 
+                                        className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 transition-colors text-xs cursor-pointer"
+                                      >
+                                        <FileText className="h-3 w-3 mr-1" />
+                                        Notes
+                                      </Badge>
+                                    </Link>
+                                  )}
                                 </div>
                               )}
 
-                              {/* Expanded Inline Detail Panel */}
-                              {isWoExpanded && (
-                                <div className="ml-8 mt-3 space-y-3">
-                                  {agg.timeEntryCount > 0 && (
-                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                      <p className="text-xs font-medium text-blue-900 mb-2">Recent Time Entries</p>
-                                      <div className="text-sm text-blue-800">
-                                        {agg.timeEntryCount} entries totaling {Math.floor(agg.timeEntryTotalMinutes / 60)}h {agg.timeEntryTotalMinutes % 60}m
-                                      </div>
+                              {/* E) Task Preview - Collapsible, only show if blocked or expanded */}
+                              {(agg.blockedTasks > 0 || (agg.nextOpenTasks && agg.nextOpenTasks.length > 0 && (isWoExpanded || wo.status === 'In Progress'))) && (
+                                <div className="ml-7 mt-2 p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-medium text-slate-600">
+                                      Tasks: {agg.completedTasks}/{agg.totalTasks} done
+                                      {agg.blockedTasks > 0 && (
+                                        <span className="text-red-600 ml-2">• {agg.blockedTasks} blocked</span>
+                                      )}
+                                    </p>
+                                  </div>
+                                  {agg.nextOpenTasks && agg.nextOpenTasks.length > 0 && (
+                                    <div className="space-y-1">
+                                      {agg.nextOpenTasks.slice(0, 2).map((task) => (
+                                        <div key={task.id} className="flex items-center gap-2 text-xs">
+                                          <div className={`h-1.5 w-1.5 rounded-full ${task.status === 'In Progress' ? 'bg-blue-500' : 'bg-slate-400'}`} />
+                                          <span className="text-slate-700 line-clamp-1">{task.title}</span>
+                                        </div>
+                                      ))}
+                                      {agg.openTasks > 2 && (
+                                        <Link 
+                                          to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                                          className="text-xs text-blue-600 hover:underline inline-block mt-1"
+                                        >
+                                          +{agg.openTasks - 2} more
+                                        </Link>
+                                      )}
                                     </div>
                                   )}
+                                </div>
+                              )}
+
+                              {/* F) Expanded Inline Detail Panel - On demand */}
+                              {isWoExpanded && (
+                                <div className="ml-7 mt-2 space-y-2">
                                   {agg.hasNotes && wo.internal_notes && (
-                                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                                      <p className="text-xs font-medium text-amber-900 mb-2">Notes</p>
-                                      <p className="text-sm text-amber-800 line-clamp-3">{wo.internal_notes}</p>
+                                    <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200">
+                                      <p className="text-xs font-medium text-amber-900 mb-1">Internal Notes</p>
+                                      <p className="text-xs text-amber-800 line-clamp-2">{wo.internal_notes}</p>
+                                    </div>
+                                  )}
+                                  {wo.work_summary && (
+                                    <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                                      <p className="text-xs font-medium text-slate-900 mb-1">Work Summary</p>
+                                      <p className="text-xs text-slate-700 line-clamp-2">{wo.work_summary}</p>
                                     </div>
                                   )}
                                 </div>
