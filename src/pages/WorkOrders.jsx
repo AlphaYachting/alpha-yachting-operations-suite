@@ -12,7 +12,10 @@ import {
   Clock,
   Users,
   ChevronRight,
-  MapPin
+  MapPin,
+  Timer,
+  Camera,
+  FileText
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,6 +77,7 @@ export default function WorkOrders() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [boatFilter, setBoatFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date-asc');
+  const [detailsFilter, setDetailsFilter] = useState('all');
   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
   const preselectedJobId = searchParams.get('job');
@@ -84,15 +88,32 @@ export default function WorkOrders() {
 
   const loadData = async () => {
     try {
-      const [woData, jobsData, techData, custData, boatsData, locData] = await Promise.all([
+      const [woData, jobsData, techData, custData, boatsData, locData, timeEntries, photos] = await Promise.all([
         base44.entities.WorkOrder.list('scheduled_date'),
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
         base44.entities.Customer.list(),
         base44.entities.Boat.list(),
-        base44.entities.Location.list()
+        base44.entities.Location.list(),
+        base44.entities.TimeEntry.list(),
+        base44.entities.WorkOrderPhoto.list()
       ]);
-      setWorkOrders(woData);
+
+      // Calculate aggregates per work order
+      const woAggregates = {};
+      woData.forEach(wo => {
+        const woTimeEntries = timeEntries.filter(te => te.work_order_id === wo.id);
+        const woPhotos = photos.filter(p => p.work_order_id === wo.id);
+        
+        woAggregates[wo.id] = {
+          timeEntryCount: woTimeEntries.length,
+          timeEntryTotalMinutes: woTimeEntries.reduce((sum, te) => sum + (te.duration_minutes || 0), 0),
+          photoCount: woPhotos.length,
+          hasNotes: !!(wo.internal_notes && wo.internal_notes.trim().length > 0)
+        };
+      });
+
+      setWorkOrders(woData.map(wo => ({ ...wo, _aggregates: woAggregates[wo.id] })));
       setJobs(jobsData);
       setTechnicians(techData);
       setCustomers(custData);
@@ -187,7 +208,13 @@ export default function WorkOrders() {
     const job = jobs.find(j => j.id === wo.job_id);
     const matchesBoat = boatFilter === 'all' || job?.boat_id === boatFilter;
     
-    return matchesSearch && matchesStatus && matchesBoat;
+    const agg = wo._aggregates || {};
+    const matchesDetails = detailsFilter === 'all' ||
+      (detailsFilter === 'time' && agg.timeEntryCount > 0) ||
+      (detailsFilter === 'photos' && agg.photoCount > 0) ||
+      (detailsFilter === 'notes' && agg.hasNotes);
+    
+    return matchesSearch && matchesStatus && matchesBoat && matchesDetails;
   }).sort((a, b) => {
     if (sortBy === 'date-asc') {
       return (a.scheduled_date || '').localeCompare(b.scheduled_date || '');
@@ -238,6 +265,17 @@ export default function WorkOrders() {
             <SelectItem value="Completed">Completed</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={detailsFilter} onValueChange={setDetailsFilter}>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="All Details" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Details</SelectItem>
+            <SelectItem value="time">Has Time Entries</SelectItem>
+            <SelectItem value="photos">Has Photos</SelectItem>
+            <SelectItem value="notes">Has Notes</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={boatFilter} onValueChange={setBoatFilter}>
           <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="All Boats" />
@@ -282,6 +320,7 @@ export default function WorkOrders() {
           {filteredWorkOrders.map((wo) => {
             const jobInfo = getJobInfo(wo.job_id);
             const techNames = getTechnicianNames(wo.assigned_technicians);
+            const agg = wo._aggregates || {};
             
             return (
               <Card key={wo.id} className="hover:shadow-md transition-shadow">
@@ -376,6 +415,54 @@ export default function WorkOrders() {
                           </div>
                         )}
                       </div>
+
+                      {/* Details Chips */}
+                      {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes) && (
+                        <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                          {agg.timeEntryCount > 0 && (
+                            <Link 
+                              to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}#time`}
+                              className="group"
+                            >
+                              <Badge 
+                                variant="outline" 
+                                className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                              >
+                                <Timer className="h-3 w-3 mr-1" />
+                                Time · {agg.timeEntryCount} · {Math.floor(agg.timeEntryTotalMinutes / 60)}h {agg.timeEntryTotalMinutes % 60}m
+                              </Badge>
+                            </Link>
+                          )}
+                          {agg.photoCount > 0 && (
+                            <Link 
+                              to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}#photos`}
+                              className="group"
+                            >
+                              <Badge 
+                                variant="outline" 
+                                className="bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 transition-colors cursor-pointer"
+                              >
+                                <Camera className="h-3 w-3 mr-1" />
+                                Photos · {agg.photoCount}
+                              </Badge>
+                            </Link>
+                          )}
+                          {agg.hasNotes && (
+                            <Link 
+                              to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}#notes`}
+                              className="group"
+                            >
+                              <Badge 
+                                variant="outline" 
+                                className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+                              >
+                                <FileText className="h-3 w-3 mr-1" />
+                                Notes
+                              </Badge>
+                            </Link>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2">

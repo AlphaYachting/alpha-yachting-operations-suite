@@ -294,7 +294,7 @@ export default function WorkOrderDetail() {
           )}
 
           {workOrder.internal_notes && (
-            <div>
+            <div id="notes">
               <p className="text-sm font-medium text-slate-700 mb-1">Internal Notes</p>
               <p className="text-sm text-slate-600 whitespace-pre-wrap">{workOrder.internal_notes}</p>
             </div>
@@ -303,40 +303,44 @@ export default function WorkOrderDetail() {
       </Card>
 
       {/* Time Entries Section */}
-      <TimeEntriesSection 
-        workOrderId={workOrderId}
-        workOrder={workOrder}
-        tasks={tasks}
-        technicians={technicians}
-      />
+      <div id="time">
+        <TimeEntriesSection 
+          workOrderId={workOrderId}
+          workOrder={workOrder}
+          tasks={tasks}
+          technicians={technicians}
+        />
+      </div>
 
       {/* Photo Documentation Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Camera className="h-5 w-5 text-blue-600" />
-              Photo Documentation
-            </CardTitle>
-            <p className="text-sm text-slate-500 mt-1">
-              Before, during, and after photos
-            </p>
-          </div>
-          <PhotoUpload 
-            workOrderId={workOrderId}
-            tasks={tasks}
-            onSuccess={loadWorkOrderDetails}
-          />
-        </CardHeader>
-        <CardContent>
-          <PhotoGallery 
-            photos={photos}
-            tasks={tasks}
-            onPhotoDeleted={loadWorkOrderDetails}
-            onPhotoUpdated={loadWorkOrderDetails}
-          />
-        </CardContent>
-      </Card>
+      <div id="photos">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Camera className="h-5 w-5 text-blue-600" />
+                Photo Documentation
+              </CardTitle>
+              <p className="text-sm text-slate-500 mt-1">
+                Before, during, and after photos
+              </p>
+            </div>
+            <PhotoUpload 
+              workOrderId={workOrderId}
+              tasks={tasks}
+              onSuccess={loadWorkOrderDetails}
+            />
+          </CardHeader>
+          <CardContent>
+            <PhotoGallery 
+              photos={photos}
+              tasks={tasks}
+              onPhotoDeleted={loadWorkOrderDetails}
+              onPhotoUpdated={loadWorkOrderDetails}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Tasks Section */}
       {tasks.length > 0 && (
