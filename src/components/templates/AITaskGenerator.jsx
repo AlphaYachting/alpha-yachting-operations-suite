@@ -28,7 +28,7 @@ export default function AITaskGenerator({ onTasksGenerated }) {
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: `You are a marine service expert. Generate a detailed task list for the following job: "${jobDescription}"
 
-Return ONLY a valid JSON array of tasks. Each task must have:
+Return ONLY a valid JSON object with a "tasks" array. Each task must have:
 - title: brief task name (string)
 - description: detailed description (string)
 - default_estimated_hours: estimated duration in hours (number)
@@ -38,26 +38,31 @@ Return ONLY a valid JSON array of tasks. Each task must have:
 - requires_customer_approval: whether task needs approval (boolean)
 
 Generate 4-8 realistic, actionable tasks. Ensure variety in roles and realistic time estimates.
-Return ONLY the JSON array, no other text.`,
+Return ONLY the JSON object, no other text.`,
         response_json_schema: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              title: { type: "string" },
-              description: { type: "string" },
-              default_estimated_hours: { type: "number" },
-              default_role: { type: "string" },
-              required_tools_note: { type: "string" },
-              is_optional: { type: "boolean" },
-              requires_customer_approval: { type: "boolean" }
+          type: "object",
+          properties: {
+            tasks: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  default_estimated_hours: { type: "number" },
+                  default_role: { type: "string" },
+                  required_tools_note: { type: "string" },
+                  is_optional: { type: "boolean" },
+                  requires_customer_approval: { type: "boolean" }
+                }
+              }
             }
           }
         }
       });
 
-      if (Array.isArray(response)) {
-        setGeneratedTasks(response);
+      if (response?.tasks && Array.isArray(response.tasks)) {
+        setGeneratedTasks(response.tasks);
       } else {
         setError('Unexpected response format from AI');
       }
