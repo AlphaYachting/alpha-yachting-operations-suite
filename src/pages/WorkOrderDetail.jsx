@@ -16,7 +16,8 @@ import {
   Camera,
   Plus,
   Edit,
-  MoreVertical
+  MoreVertical,
+  ClipboardList
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
