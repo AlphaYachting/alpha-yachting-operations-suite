@@ -39,6 +39,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parseISO, isToday, isTomorrow } from 'date-fns';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 
@@ -281,13 +287,26 @@ export default function WorkOrders() {
 
                       <div className="flex flex-wrap items-center gap-4 mt-3">
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-slate-400" />
-                          <Input
-                            type="date"
-                            value={wo.scheduled_date || ''}
-                            onChange={(e) => handleQuickUpdate(wo.id, 'scheduled_date', e.target.value)}
-                            className="h-8 w-36 text-xs"
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 w-44 justify-start text-xs">
+                                <Calendar className="h-3 w-3 mr-2" />
+                                {wo.scheduled_date ? format(parseISO(wo.scheduled_date), 'MMM d, yyyy') : 'Set date'}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <CalendarComponent
+                                mode="single"
+                                selected={wo.scheduled_date ? parseISO(wo.scheduled_date) : undefined}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    handleQuickUpdate(wo.id, 'scheduled_date', format(date, 'yyyy-MM-dd'));
+                                  }
+                                }}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </div>
 
                         <div className="flex items-center gap-2">
