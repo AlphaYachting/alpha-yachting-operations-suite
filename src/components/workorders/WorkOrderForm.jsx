@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import TemplateFromCreation from './TemplateFromCreation';
 
 export default function WorkOrderForm({ workOrder, jobs, technicians, customers, boats, preselectedJobId, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -29,6 +31,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     billable: workOrder?.billable !== false
   });
   const [saving, setSaving] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   const getJobLabel = (job) => {
     const customer = customers.find(c => c.id === job.customer_id);
@@ -42,8 +45,13 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await onSave(formData);
-    setSaving(false);
+    
+    try {
+      // Pass template ID to parent for post-creation handling
+      await onSave(formData, selectedTemplateId);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateField = (field, value) => {
@@ -63,6 +71,15 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Creation Mode - Only show for new work orders */}
+      {!workOrder && (
+        <TemplateFromCreation
+          onTemplateChange={setSelectedTemplateId}
+          selectedTemplateId={selectedTemplateId}
+          setTitle={(title) => updateField('title', title)}
+        />
+      )}
+
       {/* Job Selection */}
       <div className="space-y-2">
         <Label>Parent Job *</Label>
