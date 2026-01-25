@@ -87,25 +87,25 @@ export default function Dashboard() {
 
   useEffect(() => {
     const loadData = async () => {
-    try {
-      const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData] = await Promise.all([
-        base44.entities.Job.list('-created_date', 100),
-        base44.entities.WorkOrder.list('-scheduled_date', 100),
-        base44.entities.Task.list(),
-        base44.entities.Customer.list(),
-        base44.entities.Boat.list(),
-        base44.entities.Technician.list(),
-        base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-        base44.entities.InventoryItem.filter({ category: 'Vehicles' })
-      ]);
-      setJobs(jobsData);
-      setWorkOrders(workOrdersData);
-      setTasks(tasksData);
-      setCustomers(customersData);
-      setBoats(boatsData);
-      setTechnicians(techniciansData);
-      setReservations(reservationsData);
-      setVehicles(vehiclesData);
+      try {
+        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData] = await Promise.all([
+          base44.entities.Job.list('-created_date', 100),
+          base44.entities.WorkOrder.list('-scheduled_date', 100),
+          base44.entities.Task.list(),
+          base44.entities.Customer.list(),
+          base44.entities.Boat.list(),
+          base44.entities.Technician.list(),
+          base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
+          base44.entities.InventoryItem.filter({ category: 'Vehicles' })
+        ]);
+        setJobs(jobsData);
+        setWorkOrders(workOrdersData);
+        setTasks(tasksData);
+        setCustomers(customersData);
+        setBoats(boatsData);
+        setTechnicians(techniciansData);
+        setReservations(reservationsData);
+        setVehicles(vehiclesData);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
