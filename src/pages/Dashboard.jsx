@@ -103,10 +103,13 @@ export default function Dashboard() {
   const urgentJobs = jobs.filter(j => ['Urgent', 'Express'].includes(j.priority) && !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
   const todayWorkOrders = workOrders.filter(wo => wo.scheduled_date && isToday(parseISO(wo.scheduled_date)));
   
-  // Show all work orders with scheduled dates until completed/cancelled
+  // Draft work orders (unplanned)
+  const draftWorkOrders = workOrders.filter(wo => wo.status === 'Draft');
+  
+  // Active work orders (not draft, not completed/cancelled, with scheduled dates)
   const upcomingWorkOrders = workOrders.filter(wo => {
     if (!wo.scheduled_date) return false;
-    return !['Completed', 'Cancelled'].includes(wo.status);
+    return wo.status !== 'Draft' && !['Completed', 'Cancelled'].includes(wo.status);
   }).sort((a, b) => parseISO(a.scheduled_date) - parseISO(b.scheduled_date)).slice(0, 10);
 
   // Overdue and urgent work orders (past dates not completed)
@@ -116,14 +119,14 @@ export default function Dashboard() {
   const overdueWorkOrders = workOrders.filter(wo => {
     if (!wo.scheduled_date) return false;
     const date = parseISO(wo.scheduled_date);
-    return date < today && !['Completed', 'Cancelled'].includes(wo.status);
+    return date < today && wo.status !== 'Draft' && !['Completed', 'Cancelled'].includes(wo.status);
   });
   
   const upcomingUnfinishedWorkOrders = workOrders.filter(wo => {
     if (!wo.scheduled_date) return false;
     const date = parseISO(wo.scheduled_date);
     const isInRange = isWithinInterval(date, { start: today, end: threeDaysFromNow });
-    const isUnfinished = !['Completed', 'Cancelled'].includes(wo.status);
+    const isUnfinished = wo.status !== 'Draft' && !['Completed', 'Cancelled'].includes(wo.status);
     return isInRange && isUnfinished;
   });
   
@@ -272,6 +275,70 @@ export default function Dashboard() {
                 <Button asChild variant="outline" size="sm" className="w-full mt-2">
                   <Link to={createPageUrl('WorkOrders')}>
                     View all {allPendingWorkOrders.length} work orders
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Unplanned Work Orders */}
+      {draftWorkOrders.length > 0 && (
+        <Card className="border-slate-200 bg-slate-50/50">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-slate-100">
+                <ClipboardList className="h-5 w-5 text-slate-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold text-slate-900">
+                  Unplanned Work Orders
+                </CardTitle>
+                <p className="text-sm text-slate-600 mt-0.5">
+                  {draftWorkOrders.length} draft work order{draftWorkOrders.length !== 1 ? 's' : ''} need scheduling
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {draftWorkOrders.slice(0, 5).map((wo) => {
+                const job = jobs.find(j => j.id === wo.job_id);
+                const woTasks = tasks.filter(t => t.work_order_id === wo.id);
+                
+                return (
+                  <Link
+                    key={wo.id}
+                    to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                    className="block p-3 rounded-lg border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-900 truncate">{wo.title}</p>
+                        <p className="text-sm text-slate-600 mt-0.5">
+                          {job ? getBoatName(job.boat_id) : 'Unknown boat'}
+                        </p>
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                          <Badge className="bg-slate-100 text-slate-700">
+                            Draft
+                          </Badge>
+                          {woTasks.length > 0 && (
+                            <div className="flex items-center gap-1 text-xs text-slate-600">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {woTasks.length} task{woTasks.length !== 1 ? 's' : ''}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+              {draftWorkOrders.length > 5 && (
+                <Button asChild variant="outline" size="sm" className="w-full mt-2">
+                  <Link to={createPageUrl('WorkOrders')}>
+                    View all {draftWorkOrders.length} draft work orders
                   </Link>
                 </Button>
               )}
