@@ -73,6 +73,7 @@ export default function WorkOrders() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [boatFilter, setBoatFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('date-asc');
   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
   const preselectedJobId = searchParams.get('job');
@@ -84,7 +85,7 @@ export default function WorkOrders() {
   const loadData = async () => {
     try {
       const [woData, jobsData, techData, custData, boatsData, locData] = await Promise.all([
-        base44.entities.WorkOrder.list('-scheduled_date'),
+        base44.entities.WorkOrder.list('scheduled_date'),
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
         base44.entities.Customer.list(),
@@ -187,6 +188,13 @@ export default function WorkOrders() {
     const matchesBoat = boatFilter === 'all' || job?.boat_id === boatFilter;
     
     return matchesSearch && matchesStatus && matchesBoat;
+  }).sort((a, b) => {
+    if (sortBy === 'date-asc') {
+      return (a.scheduled_date || '').localeCompare(b.scheduled_date || '');
+    } else if (sortBy === 'date-desc') {
+      return (b.scheduled_date || '').localeCompare(a.scheduled_date || '');
+    }
+    return 0;
   });
 
   return (
@@ -241,9 +249,18 @@ export default function WorkOrders() {
                 {boat.vessel_name}
               </SelectItem>
             ))}
-          </SelectContent>
-        </Select>
-      </div>
+            </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+            <SelectItem value="date-asc">Date: Earliest First</SelectItem>
+            <SelectItem value="date-desc">Date: Latest First</SelectItem>
+            </SelectContent>
+            </Select>
+            </div>
 
       {/* Work Orders List */}
       {loading ? (
