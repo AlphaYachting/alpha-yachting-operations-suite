@@ -73,6 +73,11 @@ export default function TemplateEditor({ template, onSave, onCancel }) {
   };
 
   const handleSaveItem = async (itemData) => {
+    if (!template?.id) {
+      alert('Please save the template first before adding tasks.');
+      return;
+    }
+
     try {
       if (editingItem) {
         await base44.entities.TaskTemplateItem.update(editingItem.id, itemData);
