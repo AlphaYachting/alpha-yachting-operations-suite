@@ -41,6 +41,7 @@ import PhotoGallery from '@/components/photos/PhotoGallery';
 import VehicleReservation from '@/components/workorders/VehicleReservation';
 import TaskForm from '@/components/tasks/TaskForm';
 import QuickTaskUpdate from '@/components/tasks/QuickTaskUpdate';
+import TemplateSelector from '@/components/templates/TemplateSelector';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -81,6 +82,7 @@ export default function WorkOrderDetail() {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [quickUpdateTask, setQuickUpdateTask] = useState(null);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
@@ -427,17 +429,27 @@ export default function WorkOrderDetail() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg font-semibold">Tasks ({tasks.length})</CardTitle>
           {canEditTasks && (
-            <Button
-              onClick={() => {
-                setEditingTask(null);
-                setShowTaskForm(true);
-              }}
-              className="bg-blue-600 hover:bg-blue-700"
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Task
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowTemplateSelector(true)}
+                variant="outline"
+                size="sm"
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                From Template
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditingTask(null);
+                  setShowTaskForm(true);
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+                size="sm"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Task
+              </Button>
+            </div>
           )}
         </CardHeader>
         <CardContent>
@@ -575,6 +587,23 @@ export default function WorkOrderDetail() {
               onCancel={() => setQuickUpdateTask(null)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Selector Dialog */}
+      <Dialog open={showTemplateSelector} onOpenChange={setShowTemplateSelector}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Tasks from Template</DialogTitle>
+          </DialogHeader>
+          <TemplateSelector
+            workOrderId={workOrderId}
+            onApplied={() => {
+              loadWorkOrderDetails();
+              setShowTemplateSelector(false);
+            }}
+            onCancel={() => setShowTemplateSelector(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

@@ -46,6 +46,7 @@ const navItems = [
   { name: 'Technicians', icon: Wrench, page: 'Technicians' },
   { name: 'Tools & Inventory', icon: Package, page: 'Inventory' },
   { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
+  { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates', adminOnly: true },
   { name: 'Offers', icon: FileText, page: 'Offers' },
         { name: 'Invoices', icon: Receipt, page: 'Invoices' },
         { name: 'Reports', icon: BarChart3, page: 'Reports' },
@@ -129,7 +130,7 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {navItems.map((item) => {
+            {navItems.filter(item => !item.adminOnly || user?.role === 'admin').map((item) => {
               const isActive = currentPageName === item.page;
               return (
                 <Link
