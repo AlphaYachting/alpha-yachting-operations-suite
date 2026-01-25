@@ -111,7 +111,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>Work Order Title *</Label>
-          {!workOrder && formData.title && formData.job_id && (
+          {!workOrder && formData.job_id && formData.description && formData.description.split(/\s+/).filter(word => word.length > 0).length >= 5 && (
             <AITaskSuggestions
               formData={formData}
               jobs={jobs}
