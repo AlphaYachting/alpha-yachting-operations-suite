@@ -88,6 +88,7 @@ export default function TemplateEditor({ template, onSave, onCancel }) {
       setEditingItem(null);
     } catch (error) {
       console.error('Error saving item:', error);
+      alert('Failed to save task: ' + error.message);
     }
   };
 
@@ -104,29 +105,20 @@ export default function TemplateEditor({ template, onSave, onCancel }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    
     setSaving(true);
 
     try {
       if (template?.id) {
         await base44.entities.TaskTemplateList.update(template.id, formData);
       } else {
-        const newTemplate = await base44.entities.TaskTemplateList.create(formData);
-        if (items.length > 0) {
-          await Promise.all(
-            items.map((item, index) =>
-              base44.entities.TaskTemplateItem.create({
-                ...item,
-                template_list_id: newTemplate.id,
-                sort_order: index
-              })
-            )
-          );
-        }
+        await base44.entities.TaskTemplateList.create(formData);
       }
-      onSave();
+      await onSave();
     } catch (error) {
       console.error('Error saving template:', error);
-    } finally {
+      alert('Failed to save template: ' + error.message);
       setSaving(false);
     }
   };
