@@ -103,6 +103,21 @@ export default function DispatchTimeline({
     return slots;
   }, [gridSize]);
 
+  const getJobInfo = (jobId) => {
+    const job = jobs.find(j => j.id === jobId);
+    if (!job) return { customer: '', boat: '', location: '' };
+    
+    const customer = customers.find(c => c.id === job.customer_id);
+    const boat = boats.find(b => b.id === job.boat_id);
+    const location = locations.find(l => l.id === job.location_id);
+    
+    return {
+      customer: customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || '',
+      boat: boat?.vessel_name || '',
+      location: location?.name || ''
+    };
+  };
+
   /**
    * Map work orders to technicians and filter by date/filters
    */
@@ -155,22 +170,7 @@ export default function DispatchTimeline({
     }
 
     return rows;
-  }, [technicians, workOrders, selectedDate, locationFilter, statusFilter, technicianFilter, searchTerm, jobs]);
-
-  const getJobInfo = (jobId) => {
-    const job = jobs.find(j => j.id === jobId);
-    if (!job) return { customer: '', boat: '', location: '' };
-    
-    const customer = customers.find(c => c.id === job.customer_id);
-    const boat = boats.find(b => b.id === job.boat_id);
-    const location = locations.find(l => l.id === job.location_id);
-    
-    return {
-      customer: customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || '',
-      boat: boat?.vessel_name || '',
-      location: location?.name || ''
-    };
-  };
+  }, [technicians, workOrders, selectedDate, locationFilter, statusFilter, technicianFilter, searchTerm, jobs, customers, boats, locations]);
 
   return (
     <div className="border rounded-lg bg-white overflow-hidden">
