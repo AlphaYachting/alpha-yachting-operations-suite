@@ -102,15 +102,22 @@ export default function Dashboard() {
   const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
   const urgentJobs = jobs.filter(j => ['Urgent', 'Express'].includes(j.priority) && !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
   const todayWorkOrders = workOrders.filter(wo => wo.scheduled_date && isToday(parseISO(wo.scheduled_date)));
+  
+  // Show all work orders with scheduled dates until completed/cancelled
   const upcomingWorkOrders = workOrders.filter(wo => {
     if (!wo.scheduled_date) return false;
-    const date = parseISO(wo.scheduled_date);
-    return (isToday(date) || isTomorrow(date)) && !['Completed', 'Cancelled'].includes(wo.status);
-  }).slice(0, 5);
+    return !['Completed', 'Cancelled'].includes(wo.status);
+  }).sort((a, b) => parseISO(a.scheduled_date) - parseISO(b.scheduled_date)).slice(0, 10);
 
-  // Unfinished tasks in next 3 days
+  // Overdue and urgent work orders (past dates not completed)
   const today = startOfDay(new Date());
   const threeDaysFromNow = endOfDay(addDays(today, 3));
+  
+  const overdueWorkOrders = workOrders.filter(wo => {
+    if (!wo.scheduled_date) return false;
+    const date = parseISO(wo.scheduled_date);
+    return date < today && !['Completed', 'Cancelled'].includes(wo.status);
+  });
   
   const upcomingUnfinishedWorkOrders = workOrders.filter(wo => {
     if (!wo.scheduled_date) return false;
@@ -119,6 +126,8 @@ export default function Dashboard() {
     const isUnfinished = !['Completed', 'Cancelled'].includes(wo.status);
     return isInRange && isUnfinished;
   });
+  
+  const allPendingWorkOrders = [...overdueWorkOrders, ...upcomingUnfinishedWorkOrders];
 
   const unfinishedTasksCount = tasks.filter(task => {
     const wo = workOrders.find(w => w.id === task.work_order_id);
@@ -197,7 +206,7 @@ export default function Dashboard() {
       </div>
 
       {/* Unfinished Items Alert */}
-      {upcomingUnfinishedWorkOrders.length > 0 && (
+      {allPendingWorkOrders.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/50">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -206,24 +215,27 @@ export default function Dashboard() {
               </div>
               <div>
                 <CardTitle className="text-lg font-semibold text-amber-900">
-                  Unfinished Work in Next 3 Days
+                  {overdueWorkOrders.length > 0 ? 'Overdue & ' : ''}Unfinished Work
                 </CardTitle>
                 <p className="text-sm text-amber-700 mt-0.5">
-                  {upcomingUnfinishedWorkOrders.length} work order{upcomingUnfinishedWorkOrders.length !== 1 ? 's' : ''} • {unfinishedTasksCount} task{unfinishedTasksCount !== 1 ? 's' : ''}
+                  {overdueWorkOrders.length > 0 && `${overdueWorkOrders.length} overdue • `}
+                  {upcomingUnfinishedWorkOrders.length} upcoming • {unfinishedTasksCount} task{unfinishedTasksCount !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {upcomingUnfinishedWorkOrders.slice(0, 5).map((wo) => {
+              {allPendingWorkOrders.slice(0, 5).map((wo) => {
                 const job = jobs.find(j => j.id === wo.job_id);
                 const woTasks = tasks.filter(t => t.work_order_id === wo.id && !['Completed', 'Skipped'].includes(t.status));
+                const isOverdue = wo.scheduled_date && parseISO(wo.scheduled_date) < today;
+                
                 return (
                   <Link
                     key={wo.id}
                     to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                    className="block p-3 rounded-lg border border-amber-200 bg-white hover:border-amber-300 hover:bg-amber-50 transition-all"
+                    className={`block p-3 rounded-lg border ${isOverdue ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-white'} hover:border-amber-300 hover:bg-amber-50 transition-all`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -236,8 +248,9 @@ export default function Dashboard() {
                             {wo.status}
                           </Badge>
                           {wo.scheduled_date && (
-                            <div className="flex items-center gap-1 text-xs text-slate-600">
+                            <div className={`flex items-center gap-1 text-xs ${isOverdue ? 'text-red-700 font-medium' : 'text-slate-600'}`}>
                               <Calendar className="h-3 w-3" />
+                              {isOverdue && 'OVERDUE: '}
                               {isToday(parseISO(wo.scheduled_date)) ? 'Today' : 
                                isTomorrow(parseISO(wo.scheduled_date)) ? 'Tomorrow' :
                                format(parseISO(wo.scheduled_date), 'MMM d')}
@@ -255,10 +268,10 @@ export default function Dashboard() {
                   </Link>
                 );
               })}
-              {upcomingUnfinishedWorkOrders.length > 5 && (
+              {allPendingWorkOrders.length > 5 && (
                 <Button asChild variant="outline" size="sm" className="w-full mt-2">
                   <Link to={createPageUrl('WorkOrders')}>
-                    View all {upcomingUnfinishedWorkOrders.length} work orders
+                    View all {allPendingWorkOrders.length} work orders
                   </Link>
                 </Button>
               )}
@@ -269,10 +282,10 @@ export default function Dashboard() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Work Orders */}
+        {/* Active Work Orders */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-semibold">Upcoming Work Orders</CardTitle>
+            <CardTitle className="text-lg font-semibold">Active Work Orders</CardTitle>
             <Button asChild variant="ghost" size="sm">
               <Link to={createPageUrl('WorkOrders')}>
                 View all
@@ -290,17 +303,20 @@ export default function Dashboard() {
             ) : upcomingWorkOrders.length === 0 ? (
               <div className="text-center py-8 text-slate-500">
                 <ClipboardList className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-                <p>No upcoming work orders</p>
+                <p>No active work orders</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {upcomingWorkOrders.map((wo) => {
                   const job = jobs.find(j => j.id === wo.job_id);
+                  const isOverdue = wo.scheduled_date && parseISO(wo.scheduled_date) < today;
+                  const isPast = wo.scheduled_date && parseISO(wo.scheduled_date) < today;
+                  
                   return (
                     <Link
                       key={wo.id}
                       to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                      className="block p-4 rounded-xl border border-slate-200 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                      className={`block p-4 rounded-xl border ${isOverdue ? 'border-red-200 bg-red-50/50 hover:border-red-300 hover:bg-red-50' : 'border-slate-200 hover:border-blue-200 hover:bg-blue-50/50'} transition-all`}
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
@@ -308,17 +324,18 @@ export default function Dashboard() {
                           <p className="text-sm text-slate-500 mt-0.5">
                             {job ? getBoatName(job.boat_id) : 'Unknown boat'}
                           </p>
-                          <div className="flex items-center gap-3 mt-2">
+                          <div className="flex items-center gap-3 mt-2 flex-wrap">
                             <div className="flex items-center gap-1 text-xs text-slate-500">
                               <Clock className="h-3 w-3" />
                               {wo.scheduled_start_time || 'TBD'}
                             </div>
                             {wo.scheduled_date && (
-                              <div className="flex items-center gap-1 text-xs text-slate-500">
+                              <div className={`flex items-center gap-1 text-xs ${isOverdue ? 'text-red-700 font-semibold' : 'text-slate-500'}`}>
                                 <Calendar className="h-3 w-3" />
+                                {isOverdue && 'OVERDUE: '}
                                 {isToday(parseISO(wo.scheduled_date)) ? 'Today' : 
                                  isTomorrow(parseISO(wo.scheduled_date)) ? 'Tomorrow' :
-                                 format(parseISO(wo.scheduled_date), 'MMM d')}
+                                 format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
                               </div>
                             )}
                           </div>
