@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import TemplateFromCreation from './TemplateFromCreation';
+import AITaskSuggestions from './AITaskSuggestions';
 
 export default function WorkOrderForm({ workOrder, jobs, technicians, customers, boats, preselectedJobId, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -32,6 +33,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
   });
   const [saving, setSaving] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [suggestedTasks, setSuggestedTasks] = useState([]);
 
   const getJobLabel = (job) => {
     const customer = customers.find(c => c.id === job.customer_id);
@@ -47,8 +49,8 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     setSaving(true);
     
     try {
-      // Pass template ID to parent for post-creation handling
-      await onSave(formData, selectedTemplateId);
+      // Pass template ID and suggested tasks to parent for post-creation handling
+      await onSave(formData, selectedTemplateId, suggestedTasks);
     } finally {
       setSaving(false);
     }
@@ -56,6 +58,14 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddSuggestedTasks = (tasks) => {
+    setSuggestedTasks(tasks);
+  };
+
+  const handleNotesUpdate = (field, value) => {
+    updateField(field, value);
   };
 
   const toggleTechnician = (techId) => {
@@ -97,9 +107,21 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         </Select>
       </div>
 
-      {/* Title */}
+      {/* Title & AI Suggestions */}
       <div className="space-y-2">
-        <Label>Work Order Title *</Label>
+        <div className="flex items-center justify-between">
+          <Label>Work Order Title *</Label>
+          {!workOrder && formData.title && formData.job_id && (
+            <AITaskSuggestions
+              formData={formData}
+              jobs={jobs}
+              boats={boats}
+              customers={customers}
+              onTasksAdd={handleAddSuggestedTasks}
+              onNotesUpdate={handleNotesUpdate}
+            />
+          )}
+        </div>
         <Input
           value={formData.title}
           onChange={(e) => updateField('title', e.target.value)}
@@ -244,6 +266,22 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
           />
         </div>
       </div>
+
+      {/* Suggested Tasks Preview */}
+      {suggestedTasks.length > 0 && (
+        <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <p className="font-medium text-purple-900 mb-2">
+            📋 {suggestedTasks.length} tasks will be added after creation
+          </p>
+          <ul className="space-y-1">
+            {suggestedTasks.map((task, idx) => (
+              <li key={idx} className="text-sm text-purple-800">
+                • {task.title}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Billable */}
       <div className="flex items-center gap-3">
