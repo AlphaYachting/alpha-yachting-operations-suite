@@ -244,9 +244,13 @@ export default function DispatchTimeline({
                   const jobInfo = getJobInfo(wo.job_id);
 
                   return (
-                    <Link
+                    <button
                       key={wo.id}
-                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onWorkOrderClick && onWorkOrderClick(wo.id);
+                      }}
                       className="group absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden"
                       style={{
                         left: `${position.left}%`,
@@ -305,7 +309,7 @@ export default function DispatchTimeline({
                           )}
                         </div>
                       </div>
-                    </Link>
+                    </button>
                   );
                 })}
               </div>
