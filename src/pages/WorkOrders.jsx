@@ -56,6 +56,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parseISO, isToday, isTomorrow } from 'date-fns';
+import { toast } from 'sonner';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 
 const statusColors = {
@@ -162,6 +163,7 @@ export default function WorkOrders() {
       
       if (editingWorkOrder) {
         await base44.entities.WorkOrder.update(editingWorkOrder.id, workOrderData);
+        toast.success('Work order updated');
       } else {
         const woNumber = `WO${Date.now().toString().slice(-6)}`;
         const newWo = await base44.entities.WorkOrder.create({ 
@@ -170,7 +172,7 @@ export default function WorkOrders() {
         });
         createdWoId = newWo.id;
 
-        // If AI-suggested tasks, add them first
+        // If AI-suggested tasks, add them
         if (suggestedTasks && suggestedTasks.length > 0) {
           try {
             await Promise.all(
@@ -185,12 +187,19 @@ export default function WorkOrders() {
                 })
               )
             );
+            toast.success(`Work order created with ${suggestedTasks.length} AI-suggested tasks`);
           } catch (aiTaskError) {
             console.error('Error adding AI-suggested tasks:', aiTaskError);
+            toast.error('Work order created, but failed to add AI tasks');
           }
+        } else if (templateId) {
+          // Template will be applied below
+          toast.success('Work order created');
+        } else {
+          toast.success('Work order created');
         }
 
-        // If template selected, apply it immediately
+        // If template selected, apply it
         if (templateId) {
           try {
             const user = await base44.auth.me();
@@ -200,7 +209,6 @@ export default function WorkOrders() {
             );
 
             if (templateItems.length > 0) {
-              // Create all tasks in parallel
               await Promise.all(
                 templateItems.map((item, idx) =>
                   base44.entities.Task.create({
@@ -216,7 +224,6 @@ export default function WorkOrders() {
                 )
               );
 
-              // Record usage
               await base44.entities.WorkOrderTemplateUsage.create({
                 work_order_id: createdWoId,
                 template_list_id: templateId,
@@ -228,7 +235,7 @@ export default function WorkOrders() {
             }
           } catch (templateError) {
             console.error('Error applying template:', templateError);
-            // Continue anyway - WO was created successfully
+            toast.error('Template tasks failed to apply');
           }
         }
       }
@@ -239,6 +246,7 @@ export default function WorkOrders() {
       setSearchParams({});
     } catch (error) {
       console.error('Error saving work order:', error);
+      toast.error(`Failed to save work order: ${error.message || 'Unknown error'}`);
     }
   };
 
