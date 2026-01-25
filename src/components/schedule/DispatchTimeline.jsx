@@ -87,7 +87,8 @@ export default function DispatchTimeline({
   locationFilter,
   statusFilter,
   technicianFilter,
-  searchTerm
+  searchTerm,
+  onWorkOrderClick
 }) {
   const startHour = 6;
   const endHour = 18;

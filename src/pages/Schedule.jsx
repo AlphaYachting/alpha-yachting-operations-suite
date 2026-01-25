@@ -32,6 +32,13 @@ import {
 import { format, addDays, startOfWeek, isSameDay, parseISO, startOfDay } from 'date-fns';
 import DispatchTimeline from '@/components/schedule/DispatchTimeline';
 import FutureOverview from '@/components/schedule/FutureOverview';
+import WorkOrderForm from '@/components/workorders/WorkOrderForm';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700 border-slate-200',
@@ -68,6 +75,10 @@ export default function Schedule() {
   const [showBlockedOnly, setShowBlockedOnly] = useState(false);
   const [focusBlockedDays, setFocusBlockedDays] = useState(false);
   const [overviewStartDate, setOverviewStartDate] = useState(startOfDay(new Date()));
+  
+  // Work order editing state
+  const [editingWorkOrder, setEditingWorkOrder] = useState(null);
+  const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -146,6 +157,29 @@ export default function Schedule() {
   const handleOverviewDateClick = (date, technicianId) => {
     setDispatchDate(date);
     setDispatchViewMode('day');
+  };
+  
+  // Handle work order click in dispatch view
+  const handleWorkOrderClick = (workOrderId) => {
+    const wo = workOrders.find(w => w.id === workOrderId);
+    if (wo) {
+      setEditingWorkOrder(wo);
+      setShowWorkOrderDialog(true);
+    }
+  };
+  
+  // Handle work order save
+  const handleWorkOrderSave = async (workOrderData) => {
+    try {
+      if (editingWorkOrder) {
+        await base44.entities.WorkOrder.update(editingWorkOrder.id, workOrderData);
+      }
+      await loadData();
+      setShowWorkOrderDialog(false);
+      setEditingWorkOrder(null);
+    } catch (error) {
+      console.error('Error saving work order:', error);
+    }
   };
 
   return (
@@ -420,6 +454,7 @@ export default function Schedule() {
                 statusFilter={statusFilter}
                 technicianFilter={technicianFilter}
                 searchTerm={searchTerm}
+                onWorkOrderClick={handleWorkOrderClick}
               />
             )}
             </>
@@ -529,6 +564,30 @@ export default function Schedule() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Work Order Edit Dialog */}
+      <Dialog open={showWorkOrderDialog} onOpenChange={(open) => {
+        setShowWorkOrderDialog(open);
+        if (!open) setEditingWorkOrder(null);
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Work Order</DialogTitle>
+          </DialogHeader>
+          <WorkOrderForm
+            workOrder={editingWorkOrder}
+            jobs={jobs}
+            technicians={technicians}
+            customers={customers}
+            boats={boats}
+            onSave={handleWorkOrderSave}
+            onCancel={() => {
+              setShowWorkOrderDialog(false);
+              setEditingWorkOrder(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
