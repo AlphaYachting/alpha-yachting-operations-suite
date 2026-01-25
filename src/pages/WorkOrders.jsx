@@ -920,11 +920,11 @@ export default function WorkOrders() {
                             </div>
 
                             <div className="flex items-center gap-2">
-                              <Button asChild variant="ghost" size="sm">
-                                <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}>
+                              <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}>
+                                <Button variant="ghost" size="sm">
                                   View
-                                </Link>
-                              </Button>
+                                </Button>
+                              </Link>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon">
