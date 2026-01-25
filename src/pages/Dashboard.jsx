@@ -15,13 +15,16 @@ import {
   Package,
   MapPin,
   Calendar,
-  User
+  User,
+  Pencil
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, isToday, isTomorrow, parseISO, addDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 
 const StatCard = ({ title, value, icon: Icon, trend, color, loading }) => (
   <Card className="relative overflow-hidden">
@@ -76,6 +79,8 @@ export default function Dashboard() {
   const [boats, setBoats] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingWorkOrder, setEditingWorkOrder] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -172,6 +177,27 @@ export default function Dashboard() {
     const tech = technicians.find(t => t.id === technicianId);
     if (!tech) return null;
     return `${tech.first_name || ''} ${tech.last_name || ''}`.trim();
+  };
+
+  const handleEditWorkOrder = (wo, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingWorkOrder(wo);
+    setShowEditDialog(true);
+  };
+
+  const handleSaveWorkOrder = async (workOrderData) => {
+    try {
+      await base44.entities.WorkOrder.update(editingWorkOrder.id, workOrderData);
+      const [workOrdersData] = await Promise.all([
+        base44.entities.WorkOrder.list('-scheduled_date', 100)
+      ]);
+      setWorkOrders(workOrdersData);
+      setShowEditDialog(false);
+      setEditingWorkOrder(null);
+    } catch (error) {
+      console.error('Error updating work order:', error);
+    }
   };
 
   return (
@@ -371,9 +397,19 @@ export default function Dashboard() {
                             )}
                           </div>
                         </div>
-                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
-                          {wo.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => handleEditWorkOrder(wo, e)}
+                          >
+                            <Pencil className="h-4 w-4 text-slate-500" />
+                          </Button>
+                          <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                            {wo.status}
+                          </Badge>
+                        </div>
                       </div>
                     </Link>
                   );
@@ -553,6 +589,24 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Work Order Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Work Order</DialogTitle>
+          </DialogHeader>
+          <WorkOrderForm
+            workOrder={editingWorkOrder}
+            jobs={jobs}
+            technicians={technicians}
+            customers={customers}
+            boats={boats}
+            onSave={handleSaveWorkOrder}
+            onCancel={() => setShowEditDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

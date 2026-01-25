@@ -1,6 +1,7 @@
 import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
 import Customers from './pages/Customers';
+import Dashboard from './pages/Dashboard';
 import ExcelImport from './pages/ExcelImport';
 import ImportDiagnostics from './pages/ImportDiagnostics';
 import Inventory from './pages/Inventory';
@@ -18,7 +19,6 @@ import Settings from './pages/Settings';
 import TasklistImport from './pages/TasklistImport';
 import Technicians from './pages/Technicians';
 import WorkOrders from './pages/WorkOrders';
-import Dashboard from './pages/Dashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -26,6 +26,7 @@ export const PAGES = {
     "BoatDetail": BoatDetail,
     "Boats": Boats,
     "Customers": Customers,
+    "Dashboard": Dashboard,
     "ExcelImport": ExcelImport,
     "ImportDiagnostics": ImportDiagnostics,
     "Inventory": Inventory,
@@ -43,7 +44,6 @@ export const PAGES = {
     "TasklistImport": TasklistImport,
     "Technicians": Technicians,
     "WorkOrders": WorkOrders,
-    "Dashboard": Dashboard,
 }
 
 export const pagesConfig = {
