@@ -76,7 +76,7 @@ export default function Inventory() {
 
   const loadData = async () => {
     try {
-      const itemsData = await base44.entities.InventoryItem.list('name');
+      const itemsData = await base44.entities.InventoryItem.filter({ item_type: 'TOOL' }, 'name');
       setItems(itemsData);
     } catch (error) {
       console.error('Error loading inventory:', error);
@@ -116,6 +116,7 @@ export default function Inventory() {
   };
 
   const isLowStock = (item) => {
+    if (item.item_type !== 'TOOL') return false;
     const total = getTotalStock(item);
     return total <= (item.min_stock_level || 1);
   };
@@ -139,7 +140,7 @@ export default function Inventory() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Inventory</h1>
+          <h1 className="text-2xl font-bold text-slate-900">Tools & Inventory</h1>
           <p className="text-slate-500 mt-1">{items.length} items in stock</p>
         </div>
         <Button 

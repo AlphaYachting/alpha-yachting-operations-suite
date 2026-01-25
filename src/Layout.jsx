@@ -44,7 +44,7 @@ const navItems = [
   { name: 'Work Orders', icon: ClipboardList, page: 'WorkOrders' },
   { name: 'Schedule', icon: Clock, page: 'Schedule' },
   { name: 'Technicians', icon: Wrench, page: 'Technicians' },
-  { name: 'Inventory', icon: Package, page: 'Inventory' },
+  { name: 'Tools & Inventory', icon: Package, page: 'Inventory' },
   { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
   { name: 'Offers', icon: FileText, page: 'Offers' },
         { name: 'Invoices', icon: Receipt, page: 'Invoices' },

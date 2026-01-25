@@ -101,7 +101,7 @@ export default function WorkOrders() {
         base44.entities.TimeEntry.list(),
         base44.entities.WorkOrderPhoto.list(),
         base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-        base44.entities.InventoryItem.filter({ category: 'Vehicles' })
+        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
       ]);
 
       // Calculate aggregates per work order

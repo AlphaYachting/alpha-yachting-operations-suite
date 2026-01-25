@@ -96,7 +96,7 @@ export default function Dashboard() {
           base44.entities.Boat.list(),
           base44.entities.Technician.list(),
           base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-          base44.entities.InventoryItem.filter({ category: 'Vehicles' })
+          base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
         ]);
         setJobs(jobsData);
         setWorkOrders(workOrdersData);

@@ -41,7 +41,7 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
           work_order_id: workOrder.id, 
           status: 'Reserved' 
         }),
-        base44.entities.InventoryItem.filter({ category: 'Vehicles', status: 'Active' })
+        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE', status: 'Active' })
       ]);
       if (reservationsData.length > 0) setReservation(reservationsData[0]);
       setVehicles(vehiclesData);

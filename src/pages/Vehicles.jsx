@@ -35,7 +35,7 @@ export default function Vehicles() {
   const loadData = async () => {
     try {
       const [vehiclesData, assignmentsData, techsData] = await Promise.all([
-        base44.entities.InventoryItem.filter({ category: 'Vehicles' }),
+        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' }),
         base44.entities.InventoryAssignment.filter({ status: 'Active' }),
         base44.entities.Technician.list()
       ]);

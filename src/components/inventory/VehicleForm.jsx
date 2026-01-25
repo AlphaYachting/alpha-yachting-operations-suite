@@ -9,7 +9,8 @@ export default function VehicleForm({ vehicle, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     name: vehicle?.name || '',
     description: vehicle?.description || '',
-    category: 'Vehicles',
+    item_type: 'VEHICLE',
+    category: vehicle?.category || 'Van',
     quantity_mode: 'unique',
     status: vehicle?.status || 'Active',
     license_plate: vehicle?.license_plate || '',
