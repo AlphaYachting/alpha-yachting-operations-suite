@@ -15,7 +15,8 @@ import {
   MapPin,
   Timer,
   Camera,
-  FileText
+  FileText,
+  Truck
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,6 +81,8 @@ export default function WorkOrders() {
   const [detailsFilter, setDetailsFilter] = useState('all');
   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
+  const [reservations, setReservations] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
   const preselectedJobId = searchParams.get('job');
 
   useEffect(() => {
@@ -88,7 +91,7 @@ export default function WorkOrders() {
 
   const loadData = async () => {
     try {
-      const [woData, jobsData, techData, custData, boatsData, locData, timeEntries, photos] = await Promise.all([
+      const [woData, jobsData, techData, custData, boatsData, locData, timeEntries, photos, reservationsData, vehiclesData] = await Promise.all([
         base44.entities.WorkOrder.list('scheduled_date'),
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
@@ -96,7 +99,9 @@ export default function WorkOrders() {
         base44.entities.Boat.list(),
         base44.entities.Location.list(),
         base44.entities.TimeEntry.list(),
-        base44.entities.WorkOrderPhoto.list()
+        base44.entities.WorkOrderPhoto.list(),
+        base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
+        base44.entities.InventoryItem.filter({ category: 'Vehicles' })
       ]);
 
       // Calculate aggregates per work order
@@ -104,12 +109,14 @@ export default function WorkOrders() {
       woData.forEach(wo => {
         const woTimeEntries = timeEntries.filter(te => te.work_order_id === wo.id);
         const woPhotos = photos.filter(p => p.work_order_id === wo.id);
+        const woReservations = reservationsData.filter(r => r.work_order_id === wo.id);
         
         woAggregates[wo.id] = {
           timeEntryCount: woTimeEntries.length,
           timeEntryTotalMinutes: woTimeEntries.reduce((sum, te) => sum + (te.duration_minutes || 0), 0),
           photoCount: woPhotos.length,
-          hasNotes: !!(wo.internal_notes && wo.internal_notes.trim().length > 0)
+          hasNotes: !!(wo.internal_notes && wo.internal_notes.trim().length > 0),
+          vehicleReservations: woReservations
         };
       });
 
@@ -119,6 +126,8 @@ export default function WorkOrders() {
       setCustomers(custData);
       setBoats(boatsData);
       setLocations(locData);
+      setReservations(reservationsData);
+      setVehicles(vehiclesData);
     } catch (error) {
       console.error('Error loading work orders:', error);
     } finally {
@@ -193,6 +202,30 @@ export default function WorkOrders() {
     if (isToday(date)) return 'Today';
     if (isTomorrow(date)) return 'Tomorrow';
     return format(date, 'MMM d, yyyy');
+  };
+
+  const getVehicleDisplay = (woReservations) => {
+    if (!woReservations || woReservations.length === 0) return null;
+    
+    const uniqueVehicleIds = [...new Set(woReservations.map(r => r.inventory_item_id))];
+    
+    if (uniqueVehicleIds.length === 1) {
+      const vehicle = vehicles.find(v => v.id === uniqueVehicleIds[0]);
+      if (!vehicle) return null;
+      return {
+        display: vehicle.license_plate || `${vehicle.make || ''} ${vehicle.model || ''}`.trim() || vehicle.name,
+        count: 1,
+        vehicleId: vehicle.id,
+        reservation: woReservations[0]
+      };
+    } else {
+      return {
+        display: 'Multiple',
+        count: uniqueVehicleIds.length,
+        vehicleId: null,
+        reservations: woReservations
+      };
+    }
   };
 
   const filteredWorkOrders = workOrders.filter(wo => {
@@ -417,8 +450,25 @@ export default function WorkOrders() {
                       </div>
 
                       {/* Details Chips */}
-                      {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes) && (
+                      {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes || (agg.vehicleReservations && agg.vehicleReservations.length > 0)) && (
                         <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                          {(() => {
+                            const vehicleInfo = getVehicleDisplay(agg.vehicleReservations);
+                            return vehicleInfo && (
+                              <Link 
+                                to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                                className="group"
+                              >
+                                <Badge 
+                                  variant="outline" 
+                                  className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+                                >
+                                  <Truck className="h-3 w-3 mr-1" />
+                                  {vehicleInfo.display} {vehicleInfo.count > 1 && `(+${vehicleInfo.count})`}
+                                </Badge>
+                              </Link>
+                            );
+                          })()}
                           {agg.timeEntryCount > 0 && (
                             <Link 
                               to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}#time`}

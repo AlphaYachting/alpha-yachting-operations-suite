@@ -16,7 +16,8 @@ import {
   MapPin,
   Calendar,
   User,
-  Pencil
+  Pencil,
+  Truck
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,27 +79,33 @@ export default function Dashboard() {
   const [customers, setCustomers] = useState([]);
   const [boats, setBoats] = useState([]);
   const [technicians, setTechnicians] = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
-      try {
-        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData] = await Promise.all([
-          base44.entities.Job.list('-created_date', 100),
-          base44.entities.WorkOrder.list('-scheduled_date', 100),
-          base44.entities.Task.list(),
-          base44.entities.Customer.list(),
-          base44.entities.Boat.list(),
-          base44.entities.Technician.list()
-        ]);
-        setJobs(jobsData);
-        setWorkOrders(workOrdersData);
-        setTasks(tasksData);
-        setCustomers(customersData);
-        setBoats(boatsData);
-        setTechnicians(techniciansData);
+    try {
+      const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData] = await Promise.all([
+        base44.entities.Job.list('-created_date', 100),
+        base44.entities.WorkOrder.list('-scheduled_date', 100),
+        base44.entities.Task.list(),
+        base44.entities.Customer.list(),
+        base44.entities.Boat.list(),
+        base44.entities.Technician.list(),
+        base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
+        base44.entities.InventoryItem.filter({ category: 'Vehicles' })
+      ]);
+      setJobs(jobsData);
+      setWorkOrders(workOrdersData);
+      setTasks(tasksData);
+      setCustomers(customersData);
+      setBoats(boatsData);
+      setTechnicians(techniciansData);
+      setReservations(reservationsData);
+      setVehicles(vehiclesData);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -177,6 +184,21 @@ export default function Dashboard() {
     const tech = technicians.find(t => t.id === technicianId);
     if (!tech) return null;
     return `${tech.first_name || ''} ${tech.last_name || ''}`.trim();
+  };
+
+  const getVehicleDisplay = (workOrderId) => {
+    const woReservations = reservations.filter(r => r.work_order_id === workOrderId);
+    if (woReservations.length === 0) return null;
+    
+    const uniqueVehicleIds = [...new Set(woReservations.map(r => r.inventory_item_id))];
+    
+    if (uniqueVehicleIds.length === 1) {
+      const vehicle = vehicles.find(v => v.id === uniqueVehicleIds[0]);
+      if (!vehicle) return null;
+      return vehicle.license_plate || `${vehicle.make || ''} ${vehicle.model || ''}`.trim() || vehicle.name;
+    } else {
+      return `Multiple (+${uniqueVehicleIds.length})`;
+    }
   };
 
   const handleEditWorkOrder = (wo, e) => {
@@ -395,6 +417,15 @@ export default function Dashboard() {
                                 {leadTechName}
                               </div>
                             )}
+                            {(() => {
+                              const vehicleDisplay = getVehicleDisplay(wo.id);
+                              return vehicleDisplay && (
+                                <div className="flex items-center gap-1 text-xs text-emerald-700">
+                                  <Truck className="h-3 w-3" />
+                                  {vehicleDisplay}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -525,6 +556,15 @@ export default function Dashboard() {
                               {woTasks.length} task{woTasks.length !== 1 ? 's' : ''}
                             </div>
                           )}
+                          {(() => {
+                            const vehicleDisplay = getVehicleDisplay(wo.id);
+                            return vehicleDisplay && (
+                              <div className="flex items-center gap-1 text-xs text-emerald-700">
+                                <Truck className="h-3 w-3" />
+                                {vehicleDisplay}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
