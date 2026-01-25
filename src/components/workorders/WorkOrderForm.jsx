@@ -107,10 +107,21 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         </Select>
       </div>
 
-      {/* Title & AI Suggestions */}
+      {/* Title */}
+      <div className="space-y-2">
+        <Label>Work Order Title *</Label>
+        <Input
+          value={formData.title}
+          onChange={(e) => updateField('title', e.target.value)}
+          placeholder="What work will be done in this visit"
+          required
+        />
+      </div>
+
+      {/* Description & AI Suggestions */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label>Work Order Title *</Label>
+          <Label>Description</Label>
           {!workOrder && formData.job_id && formData.description && formData.description.split(/\s+/).filter(word => word.length > 0).length >= 5 && (
             <AITaskSuggestions
               formData={formData}
@@ -122,17 +133,6 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             />
           )}
         </div>
-        <Input
-          value={formData.title}
-          onChange={(e) => updateField('title', e.target.value)}
-          placeholder="What work will be done in this visit"
-          required
-        />
-      </div>
-
-      {/* Description */}
-      <div className="space-y-2">
-        <Label>Description</Label>
         <Textarea
           value={formData.description}
           onChange={(e) => updateField('description', e.target.value)}
