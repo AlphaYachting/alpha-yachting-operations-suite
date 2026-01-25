@@ -28,6 +28,7 @@ export default function TemplateItemForm({ item, onSave, onCancel }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation(); // CRITICAL: Stop event from bubbling to parent form
     if (saving) return;
     
     setSaving(true);
@@ -41,6 +42,7 @@ export default function TemplateItemForm({ item, onSave, onCancel }) {
       await onSave(payload);
     } catch (error) {
       console.error('Form submit error:', error);
+      alert('Failed to save task: ' + error.message);
       setSaving(false);
     }
   };
@@ -144,7 +146,12 @@ export default function TemplateItemForm({ item, onSave, onCancel }) {
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+        <Button 
+          type="submit" 
+          disabled={saving} 
+          className="bg-blue-600 hover:bg-blue-700"
+          onClick={(e) => e.stopPropagation()} // Extra safeguard
+        >
           {saving ? 'Saving...' : item ? 'Update Task' : 'Add Task'}
         </Button>
       </div>
