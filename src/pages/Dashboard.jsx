@@ -114,21 +114,13 @@ export default function Dashboard() {
   const draftWorkOrders = workOrders.filter(wo => wo.status === 'Draft');
   
   // Active work orders (not draft, not completed/cancelled, with scheduled dates)
-  // Sort: overdue first, then by scheduled date
+  // Sort by scheduled date ascending (today first, then future dates)
   const upcomingWorkOrders = workOrders.filter(wo => {
     if (!wo.scheduled_date) return false;
     return wo.status !== 'Draft' && !['Completed', 'Cancelled'].includes(wo.status);
   }).sort((a, b) => {
     const aDate = parseISO(a.scheduled_date);
     const bDate = parseISO(b.scheduled_date);
-    const aOverdue = aDate < today;
-    const bOverdue = bDate < today;
-    
-    // Overdue items first
-    if (aOverdue && !bOverdue) return -1;
-    if (!aOverdue && bOverdue) return 1;
-    
-    // Then sort by date
     return aDate - bDate;
   }).slice(0, 10);
   
