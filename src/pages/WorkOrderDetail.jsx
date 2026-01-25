@@ -13,17 +13,34 @@ import {
   Circle,
   AlertCircle,
   Package,
-  Camera
+  Camera,
+  Plus,
+  Edit,
+  MoreVertical
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { format, parseISO } from 'date-fns';
 import TimeEntriesSection from '@/components/timeentries/TimeEntriesSection';
 import PhotoUpload from '@/components/photos/PhotoUpload';
 import PhotoGallery from '@/components/photos/PhotoGallery';
 import VehicleReservation from '@/components/workorders/VehicleReservation';
+import TaskForm from '@/components/tasks/TaskForm';
+import QuickTaskUpdate from '@/components/tasks/QuickTaskUpdate';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -60,12 +77,26 @@ export default function WorkOrderDetail() {
   const [technicians, setTechnicians] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [quickUpdateTask, setQuickUpdateTask] = useState(null);
 
   useEffect(() => {
+    loadCurrentUser();
     if (workOrderId) {
       loadWorkOrderDetails();
     }
   }, [workOrderId]);
+
+  const loadCurrentUser = async () => {
+    try {
+      const user = await base44.auth.me();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error loading user:', error);
+    }
+  };
 
   const loadWorkOrderDetails = async () => {
     try {
@@ -123,6 +154,45 @@ export default function WorkOrderDetail() {
     const tech = technicians.find(t => t.id === techId);
     return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
   };
+
+  const handleTaskSave = async (taskData) => {
+    try {
+      if (editingTask) {
+        await base44.entities.Task.update(editingTask.id, taskData);
+      } else {
+        await base44.entities.Task.create(taskData);
+      }
+      await loadWorkOrderDetails();
+      setShowTaskForm(false);
+      setEditingTask(null);
+    } catch (error) {
+      console.error('Error saving task:', error);
+    }
+  };
+
+  const handleQuickTaskUpdate = async (taskData) => {
+    try {
+      await base44.entities.Task.update(quickUpdateTask.id, taskData);
+      await loadWorkOrderDetails();
+      setQuickUpdateTask(null);
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await base44.entities.Task.delete(taskId);
+        await loadWorkOrderDetails();
+      } catch (error) {
+        console.error('Error deleting task:', error);
+      }
+    }
+  };
+
+  const isAdmin = currentUser?.role === 'admin';
+  const canEditTasks = isAdmin;
 
   if (loading) {
     return (
@@ -350,54 +420,160 @@ export default function WorkOrderDetail() {
       </div>
 
       {/* Tasks Section */}
-      {tasks.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Tasks ({tasks.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg font-semibold">Tasks ({tasks.length})</CardTitle>
+          {canEditTasks && (
+            <Button
+              onClick={() => {
+                setEditingTask(null);
+                setShowTaskForm(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {tasks.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <p>No tasks yet. {canEditTasks && 'Click "Add Task" to create one.'}</p>
+            </div>
+          ) : (
             <div className="space-y-3">
-              {tasks.map((task) => (
-                <div key={task.id} className="p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className="mt-0.5">
-                        {task.status === 'Completed' ? (
-                          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                        ) : task.status === 'In Progress' ? (
-                          <Clock className="h-5 w-5 text-blue-500" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-slate-300" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900">{task.title}</p>
-                        {task.description && (
-                          <p className="text-sm text-slate-600 mt-1">{task.description}</p>
-                        )}
-                        {task.notes && (
-                          <p className="text-sm text-slate-500 mt-2 italic">{task.notes}</p>
-                        )}
-                        {task.estimated_minutes && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <Clock className="h-3 w-3 text-slate-400" />
-                            <span className="text-xs text-slate-500">
-                              Est: {Math.floor(task.estimated_minutes / 60)}h {task.estimated_minutes % 60}m
-                            </span>
+              {tasks
+                .sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0))
+                .map((task) => (
+                  <div key={task.id} className="p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="mt-0.5">
+                          {task.status === 'Completed' ? (
+                            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                          ) : task.status === 'In Progress' ? (
+                            <Clock className="h-5 w-5 text-blue-500" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-slate-300" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-slate-900">{task.title}</p>
+                            {task.sequence_order > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                #{task.sequence_order}
+                              </Badge>
+                            )}
                           </div>
+                          {task.description && (
+                            <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+                          )}
+                          {task.notes && (
+                            <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-100">
+                              <p className="text-xs font-medium text-blue-900">Notes:</p>
+                              <p className="text-sm text-blue-800 mt-0.5">{task.notes}</p>
+                            </div>
+                          )}
+                          {task.issue_notes && (
+                            <div className="mt-2 p-2 bg-red-50 rounded border border-red-100">
+                              <p className="text-xs font-medium text-red-900">Issues:</p>
+                              <p className="text-sm text-red-800 mt-0.5">{task.issue_notes}</p>
+                            </div>
+                          )}
+                          {task.estimated_minutes && (
+                            <div className="flex items-center gap-2 mt-2">
+                              <Clock className="h-3 w-3 text-slate-400" />
+                              <span className="text-xs text-slate-500">
+                                Est: {Math.floor(task.estimated_minutes / 60)}h {task.estimated_minutes % 60}m
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={taskStatusColors[task.status]}>
+                          {task.status}
+                        </Badge>
+                        {canEditTasks ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditingTask(task);
+                                  setShowTaskForm(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Task
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteTask(task.id)}
+                                className="text-red-600"
+                              >
+                                Delete Task
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setQuickUpdateTask(task)}
+                          >
+                            Update
+                          </Button>
                         )}
                       </div>
                     </div>
-                    <Badge className={taskStatusColors[task.status]}>
-                      {task.status}
-                    </Badge>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Task Form Dialog */}
+      <Dialog open={showTaskForm} onOpenChange={setShowTaskForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingTask ? 'Edit Task' : 'Add New Task'}</DialogTitle>
+          </DialogHeader>
+          <TaskForm
+            task={editingTask}
+            workOrderId={workOrderId}
+            technicians={technicians}
+            onSave={handleTaskSave}
+            onCancel={() => {
+              setShowTaskForm(false);
+              setEditingTask(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Update Dialog (for non-admin users) */}
+      <Dialog open={!!quickUpdateTask} onOpenChange={(open) => !open && setQuickUpdateTask(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update Task Status</DialogTitle>
+          </DialogHeader>
+          {quickUpdateTask && (
+            <QuickTaskUpdate
+              task={quickUpdateTask}
+              onSave={handleQuickTaskUpdate}
+              onCancel={() => setQuickUpdateTask(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
