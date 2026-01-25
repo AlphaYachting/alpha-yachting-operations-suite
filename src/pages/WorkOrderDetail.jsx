@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Circle,
   AlertCircle,
-  Package
+  Package,
+  Camera
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import TimeEntriesSection from '@/components/timeentries/TimeEntriesSection';
+import PhotoUpload from '@/components/photos/PhotoUpload';
+import PhotoGallery from '@/components/photos/PhotoGallery';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -54,6 +57,7 @@ export default function WorkOrderDetail() {
   const [location, setLocation] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [technicians, setTechnicians] = useState([]);
+  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,10 +68,11 @@ export default function WorkOrderDetail() {
 
   const loadWorkOrderDetails = async () => {
     try {
-      const [woData, allTasks, allTechs] = await Promise.all([
+      const [woData, allTasks, allTechs, allPhotos] = await Promise.all([
         base44.entities.WorkOrder.filter({ id: workOrderId }),
         base44.entities.Task.filter({ work_order_id: workOrderId }),
-        base44.entities.Technician.list()
+        base44.entities.Technician.list(),
+        base44.entities.WorkOrderPhoto.filter({ work_order_id: workOrderId }, '-created_date')
       ]);
 
       if (woData.length === 0) {
@@ -79,6 +84,7 @@ export default function WorkOrderDetail() {
       setWorkOrder(wo);
       setTasks(allTasks);
       setTechnicians(allTechs);
+      setPhotos(allPhotos);
 
       if (wo.job_id) {
         const [jobData] = await base44.entities.Job.filter({ id: wo.job_id });
@@ -303,6 +309,34 @@ export default function WorkOrderDetail() {
         tasks={tasks}
         technicians={technicians}
       />
+
+      {/* Photo Documentation Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Camera className="h-5 w-5 text-blue-600" />
+              Photo Documentation
+            </CardTitle>
+            <p className="text-sm text-slate-500 mt-1">
+              Before, during, and after photos
+            </p>
+          </div>
+          <PhotoUpload 
+            workOrderId={workOrderId}
+            tasks={tasks}
+            onSuccess={loadWorkOrderDetails}
+          />
+        </CardHeader>
+        <CardContent>
+          <PhotoGallery 
+            photos={photos}
+            tasks={tasks}
+            onPhotoDeleted={loadWorkOrderDetails}
+            onPhotoUpdated={loadWorkOrderDetails}
+          />
+        </CardContent>
+      </Card>
 
       {/* Tasks Section */}
       {tasks.length > 0 && (
