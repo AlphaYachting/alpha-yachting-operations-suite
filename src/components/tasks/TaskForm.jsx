@@ -24,9 +24,13 @@ export default function TaskForm({ task, workOrderId, technicians, onSave, onCan
     requires_approval: false,
     ...task
   });
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    
+    setSaving(true);
     
     const payload = {
       ...formData,
@@ -34,7 +38,11 @@ export default function TaskForm({ task, workOrderId, technicians, onSave, onCan
       sequence_order: formData.sequence_order ? parseInt(formData.sequence_order) : 0,
     };
     
-    onSave(payload);
+    try {
+      await onSave(payload);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -144,11 +152,11 @@ export default function TaskForm({ task, workOrderId, technicians, onSave, onCan
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-          {task ? 'Update Task' : 'Create Task'}
+        <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saving}>
+          {saving ? 'Saving...' : task ? 'Update Task' : 'Create Task'}
         </Button>
       </div>
     </form>
