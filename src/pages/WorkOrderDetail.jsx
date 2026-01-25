@@ -84,6 +84,7 @@ export default function WorkOrderDetail() {
   const [editingTask, setEditingTask] = useState(null);
   const [quickUpdateTask, setQuickUpdateTask] = useState(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [showEditWorkOrder, setShowEditWorkOrder] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
