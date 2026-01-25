@@ -20,6 +20,8 @@ import TasklistImport from './pages/TasklistImport';
 import Technicians from './pages/Technicians';
 import WorkOrders from './pages/WorkOrders';
 import WorkOrderDetail from './pages/WorkOrderDetail';
+import Vehicles from './pages/Vehicles';
+import VehicleDetail from './pages/VehicleDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -46,6 +48,8 @@ export const PAGES = {
     "Technicians": Technicians,
     "WorkOrders": WorkOrders,
     "WorkOrderDetail": WorkOrderDetail,
+    "Vehicles": Vehicles,
+    "VehicleDetail": VehicleDetail,
 }
 
 export const pagesConfig = {
