@@ -194,6 +194,9 @@ export default function WorkOrderDetail() {
   const isAdmin = currentUser?.role === 'admin';
   const canEditTasks = isAdmin;
 
+  // Debug: log current user role
+  console.log('Current user role:', currentUser?.role, 'isAdmin:', isAdmin);
+
   if (loading) {
     return (
       <div className="space-y-6">
