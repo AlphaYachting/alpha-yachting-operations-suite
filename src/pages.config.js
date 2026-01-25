@@ -16,14 +16,14 @@ import PDFTemplateSettings from './pages/PDFTemplateSettings';
 import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
+import TaskTemplates from './pages/TaskTemplates';
 import TasklistImport from './pages/TasklistImport';
 import Technicians from './pages/Technicians';
+import TemplateDetail from './pages/TemplateDetail';
 import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import TaskTemplates from './pages/TaskTemplates';
-import TemplateDetail from './pages/TemplateDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -46,14 +46,14 @@ export const PAGES = {
     "Reports": Reports,
     "Schedule": Schedule,
     "Settings": Settings,
+    "TaskTemplates": TaskTemplates,
     "TasklistImport": TasklistImport,
     "Technicians": Technicians,
+    "TemplateDetail": TemplateDetail,
     "VehicleDetail": VehicleDetail,
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "TaskTemplates": TaskTemplates,
-    "TemplateDetail": TemplateDetail,
 }
 
 export const pagesConfig = {

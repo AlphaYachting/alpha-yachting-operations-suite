@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import TemplateItemForm from '@/components/templates/TemplateItemForm';
+import AITaskGenerator from '@/components/templates/AITaskGenerator';
 
 export default function TemplateDetail() {
   const [searchParams] = useSearchParams();
@@ -179,6 +180,26 @@ export default function TemplateDetail() {
       console.error('Error saving item:', error);
       setError('Failed to save task: ' + error.message);
       throw error; // Re-throw so form doesn't close
+    }
+  };
+
+  const handleTasksGenerated = async (generatedTasks) => {
+    setError(null);
+    try {
+      const nextSortOrder = items.length;
+      await Promise.all(
+        generatedTasks.map((task, index) =>
+          base44.entities.TaskTemplateItem.create({
+            ...task,
+            template_list_id: templateId,
+            sort_order: nextSortOrder + index
+          })
+        )
+      );
+      await loadItems();
+    } catch (error) {
+      console.error('Error adding AI generated tasks:', error);
+      setError('Failed to add tasks: ' + error.message);
     }
   };
 
@@ -415,6 +436,13 @@ export default function TemplateDetail() {
       {/* Template Items Section */}
       {!isNewTemplate && (
         <div className="space-y-4">
+          {/* AI Task Generator */}
+          <Card>
+            <CardContent className="p-6">
+              <AITaskGenerator onTasksGenerated={handleTasksGenerated} />
+            </CardContent>
+          </Card>
+
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-slate-900">Template Tasks ({items.length})</h2>
