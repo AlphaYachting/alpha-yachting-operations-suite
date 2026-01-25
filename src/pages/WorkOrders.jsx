@@ -12,11 +12,15 @@ import {
   Clock,
   Users,
   ChevronRight,
+  ChevronDown,
   MapPin,
   Timer,
   Camera,
   FileText,
-  Truck
+  Truck,
+  Ship,
+  LayoutList,
+  Grip
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -83,6 +87,10 @@ export default function WorkOrders() {
   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
   const [reservations, setReservations] = useState([]);
   const [vehicles, setVehicles] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('workOrdersViewMode') || 'list');
+  const [expandedBoats, setExpandedBoats] = useState({});
+  const [expandedWorkOrders, setExpandedWorkOrders] = useState({});
   const preselectedJobId = searchParams.get('job');
 
   useEffect(() => {
@@ -91,7 +99,7 @@ export default function WorkOrders() {
 
   const loadData = async () => {
     try {
-      const [woData, jobsData, techData, custData, boatsData, locData, timeEntries, photos, reservationsData, vehiclesData] = await Promise.all([
+      const [woData, jobsData, techData, custData, boatsData, locData, timeEntries, photos, reservationsData, vehiclesData, tasksData] = await Promise.all([
         base44.entities.WorkOrder.list('scheduled_date'),
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
@@ -101,7 +109,8 @@ export default function WorkOrders() {
         base44.entities.TimeEntry.list(),
         base44.entities.WorkOrderPhoto.list(),
         base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
+        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' }),
+        base44.entities.Task.list()
       ]);
 
       // Calculate aggregates per work order
@@ -110,13 +119,22 @@ export default function WorkOrders() {
         const woTimeEntries = timeEntries.filter(te => te.work_order_id === wo.id);
         const woPhotos = photos.filter(p => p.work_order_id === wo.id);
         const woReservations = reservationsData.filter(r => r.work_order_id === wo.id);
+        const woTasks = tasksData.filter(t => t.work_order_id === wo.id);
+        
+        const openTasks = woTasks.filter(t => t.status === 'Not Started' || t.status === 'In Progress');
+        const blockedTasks = woTasks.filter(t => t.status === 'Needs Approval' || t.status === 'Not Possible');
         
         woAggregates[wo.id] = {
           timeEntryCount: woTimeEntries.length,
           timeEntryTotalMinutes: woTimeEntries.reduce((sum, te) => sum + (te.duration_minutes || 0), 0),
           photoCount: woPhotos.length,
           hasNotes: !!(wo.internal_notes && wo.internal_notes.trim().length > 0),
-          vehicleReservations: woReservations
+          vehicleReservations: woReservations,
+          totalTasks: woTasks.length,
+          openTasks: openTasks.length,
+          blockedTasks: blockedTasks.length,
+          completedTasks: woTasks.filter(t => t.status === 'Completed').length,
+          nextOpenTasks: openTasks.slice(0, 3)
         };
       });
 
@@ -128,6 +146,7 @@ export default function WorkOrders() {
       setLocations(locData);
       setReservations(reservationsData);
       setVehicles(vehiclesData);
+      setTasks(tasksData);
     } catch (error) {
       console.error('Error loading work orders:', error);
     } finally {
@@ -228,6 +247,78 @@ export default function WorkOrders() {
     }
   };
 
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('workOrdersViewMode', mode);
+  };
+
+  const toggleBoatExpand = (boatId) => {
+    setExpandedBoats(prev => ({ ...prev, [boatId]: !prev[boatId] }));
+  };
+
+  const toggleWorkOrderExpand = (woId) => {
+    setExpandedWorkOrders(prev => ({ ...prev, [woId]: !prev[woId] }));
+  };
+
+  const getBoatInfo = (boatId) => {
+    const boat = boats.find(b => b.id === boatId);
+    if (!boat) return null;
+    
+    const boatWorkOrders = filteredWorkOrders.filter(wo => {
+      const job = jobs.find(j => j.id === wo.job_id);
+      return job?.boat_id === boatId;
+    });
+    
+    const nextScheduledWO = boatWorkOrders
+      .filter(wo => wo.scheduled_date && wo.status !== 'Completed' && wo.status !== 'Cancelled')
+      .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))[0];
+    
+    const totalOpenTasks = boatWorkOrders.reduce((sum, wo) => sum + (wo._aggregates?.openTasks || 0), 0);
+    
+    // Get customer via first work order's job
+    const firstJob = boatWorkOrders.length > 0 ? jobs.find(j => j.id === boatWorkOrders[0].job_id) : null;
+    const customer = firstJob ? customers.find(c => c.id === firstJob.customer_id) : null;
+    const location = firstJob ? locations.find(l => l.id === firstJob.location_id) : null;
+    
+    return {
+      boat,
+      customer,
+      location,
+      workOrderCount: boatWorkOrders.length,
+      nextScheduledDate: nextScheduledWO?.scheduled_date,
+      totalOpenTasks
+    };
+  };
+
+  const groupedByBoat = () => {
+    const groups = {};
+    
+    filteredWorkOrders.forEach(wo => {
+      const job = jobs.find(j => j.id === wo.job_id);
+      const boatId = job?.boat_id || 'unknown';
+      
+      if (!groups[boatId]) {
+        groups[boatId] = [];
+      }
+      groups[boatId].push(wo);
+    });
+    
+    // Sort work orders within each boat group by scheduled date, then priority
+    Object.keys(groups).forEach(boatId => {
+      groups[boatId].sort((a, b) => {
+        const dateCompare = (a.scheduled_date || '').localeCompare(b.scheduled_date || '');
+        if (dateCompare !== 0) return dateCompare;
+        
+        const priorityOrder = { 'Urgent': 0, 'Express': 1, 'High': 2, 'Normal': 3, 'Low': 4 };
+        const jobA = jobs.find(j => j.id === a.job_id);
+        const jobB = jobs.find(j => j.id === b.job_id);
+        return (priorityOrder[jobA?.priority] || 99) - (priorityOrder[jobB?.priority] || 99);
+      });
+    });
+    
+    return groups;
+  };
+
   const filteredWorkOrders = workOrders.filter(wo => {
     const jobInfo = getJobInfo(wo.job_id);
     const searchLower = searchTerm.toLowerCase();
@@ -265,13 +356,36 @@ export default function WorkOrders() {
           <h1 className="text-2xl font-bold text-slate-900">Work Orders</h1>
           <p className="text-slate-500 mt-1">{workOrders.length} total work orders</p>
         </div>
-        <Button 
-          onClick={() => { setEditingWorkOrder(null); setShowForm(true); }}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Work Order
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* View Toggle */}
+          <div className="flex items-center bg-slate-100 rounded-lg p-1">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => handleViewModeChange('list')}
+              className={viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}
+            >
+              <LayoutList className="h-4 w-4 mr-2" />
+              List
+            </Button>
+            <Button
+              variant={viewMode === 'byboat' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => handleViewModeChange('byboat')}
+              className={viewMode === 'byboat' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}
+            >
+              <Ship className="h-4 w-4 mr-2" />
+              By Boat
+            </Button>
+          </div>
+          <Button 
+            onClick={() => { setEditingWorkOrder(null); setShowForm(true); }}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Work Order
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -348,7 +462,7 @@ export default function WorkOrders() {
             <p className="text-slate-500 mt-1">Create your first work order to get started</p>
           </CardContent>
         </Card>
-      ) : (
+      ) : viewMode === 'list' ? (
         <div className="grid gap-4">
           {filteredWorkOrders.map((wo) => {
             const jobInfo = getJobInfo(wo.job_id);
@@ -542,6 +656,232 @@ export default function WorkOrders() {
                     </div>
                   </div>
                 </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        /* By Boat View */
+        <div className="space-y-4">
+          {Object.entries(groupedByBoat()).map(([boatId, boatWorkOrders]) => {
+            const boatInfo = getBoatInfo(boatId);
+            const isExpanded = expandedBoats[boatId] !== false; // Default expanded
+            
+            if (!boatInfo) return null;
+            
+            const customerName = boatInfo.customer?.company_name || 
+              `${boatInfo.customer?.first_name || ''} ${boatInfo.customer?.last_name || ''}`.trim() || 
+              'Unknown Customer';
+            
+            return (
+              <Card key={boatId} className="overflow-hidden">
+                {/* Boat Header */}
+                <div 
+                  className="bg-slate-50 border-b border-slate-200 p-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                  onClick={() => toggleBoatExpand(boatId)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      <Ship className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-slate-900">{boatInfo.boat.vessel_name}</h3>
+                          {boatInfo.boat.manufacturer && boatInfo.boat.model && (
+                            <span className="text-sm text-slate-500">
+                              {boatInfo.boat.manufacturer} {boatInfo.boat.model}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-600">{customerName}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {boatInfo.location && (
+                        <div className="flex items-center gap-1 text-sm text-slate-600">
+                          <MapPin className="h-4 w-4" />
+                          {boatInfo.location.name}
+                        </div>
+                      )}
+                      <Badge variant="outline" className="bg-white">
+                        {boatInfo.workOrderCount} work order{boatInfo.workOrderCount !== 1 ? 's' : ''}
+                      </Badge>
+                      {boatInfo.totalOpenTasks > 0 && (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                          {boatInfo.totalOpenTasks} open tasks
+                        </Badge>
+                      )}
+                      {boatInfo.nextScheduledDate && (
+                        <div className="flex items-center gap-1 text-sm text-slate-600">
+                          <Calendar className="h-4 w-4" />
+                          Next: {format(parseISO(boatInfo.nextScheduledDate), 'MMM d')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Work Orders for this boat */}
+                {isExpanded && (
+                  <CardContent className="p-0">
+                    {boatWorkOrders.map((wo, idx) => {
+                      const jobInfo = getJobInfo(wo.job_id);
+                      const techNames = getTechnicianNames(wo.assigned_technicians);
+                      const agg = wo._aggregates || {};
+                      const isWoExpanded = expandedWorkOrders[wo.id];
+                      
+                      return (
+                        <div 
+                          key={wo.id} 
+                          className={`p-4 ${idx < boatWorkOrders.length - 1 ? 'border-b border-slate-100' : ''}`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => toggleWorkOrderExpand(wo.id)}
+                                >
+                                  <ChevronRight className={`h-4 w-4 transition-transform ${isWoExpanded ? 'rotate-90' : ''}`} />
+                                </Button>
+                                <Link 
+                                  to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                                  className="font-medium text-slate-900 hover:text-blue-600 transition-colors"
+                                >
+                                  {wo.title}
+                                </Link>
+                                <Badge className={statusColors[wo.status]}>{wo.status}</Badge>
+                                {wo.scheduled_date && (
+                                  <div className="flex items-center gap-1 text-sm text-slate-600">
+                                    <Calendar className="h-3 w-3" />
+                                    {format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
+                                    {wo.scheduled_start_time && ` • ${wo.scheduled_start_time}`}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Inline Details Row */}
+                              <div className="flex flex-wrap items-center gap-3 ml-8 text-sm">
+                                {techNames.length > 0 && (
+                                  <div className="flex items-center gap-1 text-slate-600">
+                                    <Users className="h-4 w-4" />
+                                    {techNames.join(', ')}
+                                  </div>
+                                )}
+                                {(() => {
+                                  const vehicleInfo = getVehicleDisplay(agg.vehicleReservations);
+                                  return vehicleInfo && (
+                                    <div className="flex items-center gap-1 text-emerald-700">
+                                      <Truck className="h-4 w-4" />
+                                      {vehicleInfo.display}
+                                    </div>
+                                  );
+                                })()}
+                                {agg.timeEntryCount > 0 && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                    <Timer className="h-3 w-3 mr-1" />
+                                    {agg.timeEntryCount} entries • {Math.floor(agg.timeEntryTotalMinutes / 60)}h {agg.timeEntryTotalMinutes % 60}m
+                                  </Badge>
+                                )}
+                                {agg.photoCount > 0 && (
+                                  <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-200">
+                                    <Camera className="h-3 w-3 mr-1" />
+                                    {agg.photoCount} photos
+                                  </Badge>
+                                )}
+                                {agg.hasNotes && (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                    <FileText className="h-3 w-3 mr-1" />
+                                    Notes
+                                  </Badge>
+                                )}
+                                {agg.totalTasks > 0 && (
+                                  <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
+                                    {agg.completedTasks}/{agg.totalTasks} tasks done
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Task Summary */}
+                              {agg.nextOpenTasks && agg.nextOpenTasks.length > 0 && (
+                                <div className="ml-8 mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                  <p className="text-xs font-medium text-slate-600 mb-2">Next Open Tasks:</p>
+                                  <div className="space-y-1">
+                                    {agg.nextOpenTasks.map((task, tidx) => (
+                                      <div key={task.id} className="flex items-center gap-2 text-sm">
+                                        <div className={`h-2 w-2 rounded-full ${task.status === 'In Progress' ? 'bg-blue-500' : 'bg-slate-300'}`} />
+                                        <span className="text-slate-700">{task.title}</span>
+                                        <Badge variant="outline" className="text-xs">
+                                          {task.status}
+                                        </Badge>
+                                      </div>
+                                    ))}
+                                    {agg.openTasks > 3 && (
+                                      <Link 
+                                        to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                                        className="text-xs text-blue-600 hover:underline"
+                                      >
+                                        +{agg.openTasks - 3} more tasks
+                                      </Link>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Expanded Inline Detail Panel */}
+                              {isWoExpanded && (
+                                <div className="ml-8 mt-3 space-y-3">
+                                  {agg.timeEntryCount > 0 && (
+                                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                      <p className="text-xs font-medium text-blue-900 mb-2">Recent Time Entries</p>
+                                      <div className="text-sm text-blue-800">
+                                        {agg.timeEntryCount} entries totaling {Math.floor(agg.timeEntryTotalMinutes / 60)}h {agg.timeEntryTotalMinutes % 60}m
+                                      </div>
+                                    </div>
+                                  )}
+                                  {agg.hasNotes && wo.internal_notes && (
+                                    <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                      <p className="text-xs font-medium text-amber-900 mb-2">Notes</p>
+                                      <p className="text-sm text-amber-800 line-clamp-3">{wo.internal_notes}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <Button asChild variant="ghost" size="sm">
+                                <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}>
+                                  View
+                                </Link>
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => { setEditingWorkOrder(wo); setShowForm(true); }}>
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDelete(wo.id)}
+                                    className="text-red-600"
+                                  >
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                )}
               </Card>
             );
           })}

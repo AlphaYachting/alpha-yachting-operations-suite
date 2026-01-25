@@ -18,10 +18,10 @@ import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import TasklistImport from './pages/TasklistImport';
 import Technicians from './pages/Technicians';
-import WorkOrders from './pages/WorkOrders';
-import WorkOrderDetail from './pages/WorkOrderDetail';
-import Vehicles from './pages/Vehicles';
 import VehicleDetail from './pages/VehicleDetail';
+import Vehicles from './pages/Vehicles';
+import WorkOrderDetail from './pages/WorkOrderDetail';
+import WorkOrders from './pages/WorkOrders';
 import __Layout from './Layout.jsx';
 
 
@@ -46,10 +46,10 @@ export const PAGES = {
     "Settings": Settings,
     "TasklistImport": TasklistImport,
     "Technicians": Technicians,
-    "WorkOrders": WorkOrders,
-    "WorkOrderDetail": WorkOrderDetail,
-    "Vehicles": Vehicles,
     "VehicleDetail": VehicleDetail,
+    "Vehicles": Vehicles,
+    "WorkOrderDetail": WorkOrderDetail,
+    "WorkOrders": WorkOrders,
 }
 
 export const pagesConfig = {
