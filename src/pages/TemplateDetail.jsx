@@ -126,7 +126,8 @@ export default function TemplateDetail() {
         await loadTemplate();
       } else {
         const newTemplate = await base44.entities.TaskTemplateList.create(formData);
-        navigate(createPageUrl('TemplateDetail').replace(':templateId', newTemplate.id));
+        // Navigate to the new template detail page
+        window.location.href = `/TemplateDetail?templateId=${newTemplate.id}`;
       }
       setHasChanges(false);
     } catch (error) {
