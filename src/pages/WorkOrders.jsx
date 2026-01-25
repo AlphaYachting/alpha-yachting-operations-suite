@@ -156,14 +156,63 @@ export default function WorkOrders() {
     }
   };
 
-  const handleSave = async (workOrderData) => {
+  const handleSave = async (workOrderData, templateId) => {
     try {
+      let createdWoId;
+      
       if (editingWorkOrder) {
         await base44.entities.WorkOrder.update(editingWorkOrder.id, workOrderData);
       } else {
         const woNumber = `WO${Date.now().toString().slice(-6)}`;
-        await base44.entities.WorkOrder.create({ ...workOrderData, work_order_number: woNumber });
+        const newWo = await base44.entities.WorkOrder.create({ 
+          ...workOrderData, 
+          work_order_number: woNumber 
+        });
+        createdWoId = newWo.id;
+
+        // If template selected, apply it immediately
+        if (templateId) {
+          try {
+            const user = await base44.auth.me();
+            const templateItems = await base44.entities.TaskTemplateItem.filter(
+              { template_list_id: templateId },
+              'sort_order'
+            );
+
+            if (templateItems.length > 0) {
+              // Create all tasks in parallel
+              await Promise.all(
+                templateItems.map(item =>
+                  base44.entities.Task.create({
+                    work_order_id: createdWoId,
+                    title: item.title,
+                    description: item.description,
+                    estimated_minutes: item.default_estimated_hours ? Math.round(item.default_estimated_hours * 60) : null,
+                    sequence_order: item.sort_order,
+                    status: 'Not Started',
+                    notes: item.required_tools_note || '',
+                    requires_approval: item.requires_customer_approval
+                  })
+                )
+              );
+
+              // Record usage
+              await base44.entities.WorkOrderTemplateUsage.create({
+                work_order_id: createdWoId,
+                template_list_id: templateId,
+                applied_at: new Date().toISOString(),
+                applied_by: user.email,
+                mode: 'full',
+                selected_item_ids: templateItems.map(t => t.id)
+              });
+            }
+          } catch (templateError) {
+            console.error('Error applying template:', templateError);
+            // Continue anyway - WO was created successfully
+          }
+        }
       }
+      
       await loadData();
       setShowForm(false);
       setEditingWorkOrder(null);
