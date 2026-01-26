@@ -33,6 +33,7 @@ import { format, addDays, startOfWeek, isSameDay, parseISO, startOfDay } from 'd
 import DispatchTimeline from '@/components/schedule/DispatchTimeline';
 import FutureOverview from '@/components/schedule/FutureOverview';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
+import DragDropCalendar from '@/components/schedule/DragDropCalendar';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +58,7 @@ export default function Schedule() {
   const [customers, setCustomers] = useState([]);
   const [boats, setBoats] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [inventoryReservations, setInventoryReservations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   
@@ -86,13 +88,14 @@ export default function Schedule() {
 
   const loadData = async () => {
     try {
-      const [woData, jobsData, techData, custData, boatsData, locData] = await Promise.all([
+      const [woData, jobsData, techData, custData, boatsData, locData, invResData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date'),
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
         base44.entities.Customer.list(),
         base44.entities.Boat.list(),
-        base44.entities.Location.list()
+        base44.entities.Location.list(),
+        base44.entities.InventoryReservation.list()
       ]);
       setWorkOrders(woData);
       setJobs(jobsData);
@@ -100,6 +103,7 @@ export default function Schedule() {
       setCustomers(custData);
       setBoats(boatsData);
       setLocations(locData);
+      setInventoryReservations(invResData);
     } catch (error) {
       console.error('Error loading schedule:', error);
     } finally {
@@ -181,6 +185,16 @@ export default function Schedule() {
       console.error('Error saving work order:', error);
     }
   };
+  
+  // Handle drag-drop work order update
+  const handleWorkOrderUpdate = async (workOrderId, updates) => {
+    try {
+      await base44.entities.WorkOrder.update(workOrderId, updates);
+      await loadData();
+    } catch (error) {
+      console.error('Error updating work order:', error);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -252,7 +266,7 @@ export default function Schedule() {
         {/* Calendar View */}
         <TabsContent value="calendar" className="space-y-6 mt-6">
 
-        {/* Calendar Grid */}
+        {/* Drag-Drop Calendar Grid */}
         {loading ? (
         <div className="grid grid-cols-7 gap-4">
             {[1,2,3,4,5,6,7].map(i => (
@@ -260,75 +274,18 @@ export default function Schedule() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-          {weekDays.map((day) => {
-            const dayWorkOrders = getWorkOrdersForDay(day);
-            const isToday = isSameDay(day, new Date());
-            
-            return (
-              <Card 
-                key={day.toISOString()} 
-                className={`min-h-[300px] ${isToday ? 'ring-2 ring-blue-500' : ''}`}
-              >
-                <CardHeader className={`py-3 px-4 ${isToday ? 'bg-blue-50' : 'bg-slate-50'}`}>
-                  <div className="text-center">
-                    <p className="text-xs font-medium text-slate-500 uppercase">
-                      {format(day, 'EEE')}
-                    </p>
-                    <p className={`text-lg font-bold ${isToday ? 'text-blue-600' : 'text-slate-900'}`}>
-                      {format(day, 'd')}
-                    </p>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-2 space-y-2">
-                    {dayWorkOrders.length === 0 ? (
-                      <p className="text-xs text-slate-400 text-center py-4">No work orders</p>
-                    ) : (
-                      dayWorkOrders.map((wo) => {
-                        const jobInfo = getJobInfo(wo.job_id);
-                        const techs = getTechnicianInitials(wo.assigned_technicians);
-                        
-                        return (
-                          <Link
-                            key={wo.id}
-                            to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                            className={`block p-2 rounded-lg border text-xs hover:shadow-md transition-shadow ${statusColors[wo.status]}`}
-                          >
-                            <p className="font-medium truncate">{wo.title}</p>
-                            {wo.scheduled_start_time && (
-                              <div className="flex items-center gap-1 mt-1 text-[10px] opacity-80">
-                                <Clock className="h-3 w-3" />
-                                {wo.scheduled_start_time}
-                              </div>
-                            )}
-                            {jobInfo.boat && (
-                              <p className="truncate mt-1 opacity-80">{jobInfo.boat}</p>
-                            )}
-                            {techs.length > 0 && (
-                              <div className="flex -space-x-1 mt-2">
-                                {techs.slice(0, 2).map((tech, idx) => (
-                                  <Avatar key={idx} className="h-5 w-5 border border-white">
-                                    <AvatarFallback className="text-[8px] bg-white">
-                                      {tech.initials}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                ))}
-                                {techs.length > 2 && (
-                                  <div className="h-5 w-5 rounded-full bg-slate-200 border border-white flex items-center justify-center text-[8px]">
-                                    +{techs.length - 2}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </Link>
-                        );
-                      })
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <DragDropCalendar
+            currentWeekStart={currentWeekStart}
+            workOrders={workOrders}
+            jobs={jobs}
+            technicians={technicians}
+            customers={customers}
+            boats={boats}
+            locations={locations}
+            inventoryReservations={inventoryReservations}
+            onWorkOrderUpdate={handleWorkOrderUpdate}
+            loading={loading}
+          />
         )}
 
         {/* Unscheduled Work Orders */}
