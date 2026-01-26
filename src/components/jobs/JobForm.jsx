@@ -11,8 +11,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { base44 } from '@/api/base44Client';
 
 export default function JobForm({ job, customers, boats, locations, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -37,6 +45,14 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
   const [error, setError] = useState(null);
   const [isEstimatedHoursTouched, setIsEstimatedHoursTouched] = useState(false);
   const [isQuoteAmountTouched, setIsQuoteAmountTouched] = useState(false);
+  
+  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
+  const [showBoatDialog, setShowBoatDialog] = useState(false);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ first_name: '', last_name: '', email: '', phone: '' });
+  const [newBoat, setNewBoat] = useState({ vessel_name: '', manufacturer: '', model: '' });
+  const [newLocation, setNewLocation] = useState({ name: '', location_type: 'Marina', city: '' });
+  const [creating, setCreating] = useState(false);
 
   const customerBoats = useMemo(() => {
     if (!formData.customer_id) return [];
@@ -91,6 +107,67 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
     return `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
   };
 
+  const handleCreateCustomer = async () => {
+    if (!newCustomer.last_name || !newCustomer.email) {
+      setError('Last name and email are required for customer');
+      return;
+    }
+    setCreating(true);
+    try {
+      const created = await base44.entities.Customer.create(newCustomer);
+      customers.push(created);
+      setFormData(prev => ({ ...prev, customer_id: created.id }));
+      setShowCustomerDialog(false);
+      setNewCustomer({ first_name: '', last_name: '', email: '', phone: '' });
+    } catch (err) {
+      setError('Failed to create customer');
+    }
+    setCreating(false);
+  };
+
+  const handleCreateBoat = async () => {
+    if (!newBoat.vessel_name) {
+      setError('Vessel name is required');
+      return;
+    }
+    if (!formData.customer_id) {
+      setError('Please select a customer first');
+      return;
+    }
+    setCreating(true);
+    try {
+      const created = await base44.entities.Boat.create({
+        ...newBoat,
+        customer_id: formData.customer_id
+      });
+      boats.push(created);
+      setFormData(prev => ({ ...prev, boat_id: created.id }));
+      setShowBoatDialog(false);
+      setNewBoat({ vessel_name: '', manufacturer: '', model: '' });
+    } catch (err) {
+      setError('Failed to create boat');
+    }
+    setCreating(false);
+  };
+
+  const handleCreateLocation = async () => {
+    if (!newLocation.name) {
+      setError('Location name is required');
+      return;
+    }
+    setCreating(true);
+    try {
+      const created = await base44.entities.Location.create(newLocation);
+      locations.push(created);
+      setFormData(prev => ({ ...prev, location_id: created.id }));
+      setShowLocationDialog(false);
+      setNewLocation({ name: '', location_type: 'Marina', city: '' });
+    } catch (err) {
+      setError('Failed to create location');
+    }
+    setCreating(false);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
@@ -104,55 +181,89 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Customer *</Label>
-          <Select value={formData.customer_id} onValueChange={(v) => updateField('customer_id', v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select customer" />
-            </SelectTrigger>
-            <SelectContent>
-              {customers.map(customer => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {getCustomerDisplayName(customer)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={formData.customer_id} onValueChange={(v) => updateField('customer_id', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select customer" />
+              </SelectTrigger>
+              <SelectContent>
+                {customers.map(customer => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {getCustomerDisplayName(customer)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="icon"
+              onClick={() => setShowCustomerDialog(true)}
+              title="Add new customer"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="space-y-2">
           <Label>Boat *</Label>
-          <Select 
-            value={formData.boat_id} 
-            onValueChange={(v) => updateField('boat_id', v)}
-            disabled={!formData.customer_id}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={formData.customer_id ? "Select boat" : "Select customer first"} />
-            </SelectTrigger>
-            <SelectContent>
-              {customerBoats.map(boat => (
-                <SelectItem key={boat.id} value={boat.id}>
-                  {boat.vessel_name} {boat.model && `(${boat.model})`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select 
+              value={formData.boat_id} 
+              onValueChange={(v) => updateField('boat_id', v)}
+              disabled={!formData.customer_id}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={formData.customer_id ? "Select boat" : "Select customer first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {customerBoats.map(boat => (
+                  <SelectItem key={boat.id} value={boat.id}>
+                    {boat.vessel_name} {boat.model && `(${boat.model})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="icon"
+              onClick={() => setShowBoatDialog(true)}
+              disabled={!formData.customer_id}
+              title="Add new boat"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Location */}
       <div className="space-y-2">
         <Label>Location</Label>
-        <Select value={formData.location_id} onValueChange={(v) => updateField('location_id', v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select location (optional)" />
-          </SelectTrigger>
-          <SelectContent>
-            {locations.map(location => (
-              <SelectItem key={location.id} value={location.id}>
-                {location.name} - {location.region}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={formData.location_id} onValueChange={(v) => updateField('location_id', v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select location (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              {locations.map(location => (
+                <SelectItem key={location.id} value={location.id}>
+                  {location.name} - {location.region}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="icon"
+            onClick={() => setShowLocationDialog(true)}
+            title="Add new location"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Job Title */}
@@ -354,6 +465,145 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
           {saving ? 'Saving...' : (job ? 'Update Job' : 'Create Job')}
         </Button>
       </div>
+
+      {/* Quick Add Customer Dialog */}
+      <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quick Add Customer</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>First Name</Label>
+                <Input
+                  value={newCustomer.first_name}
+                  onChange={(e) => setNewCustomer({...newCustomer, first_name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Last Name *</Label>
+                <Input
+                  value={newCustomer.last_name}
+                  onChange={(e) => setNewCustomer({...newCustomer, last_name: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input
+                type="email"
+                value={newCustomer.email}
+                onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input
+                value={newCustomer.phone}
+                onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCustomerDialog(false)}>Cancel</Button>
+            <Button onClick={handleCreateCustomer} disabled={creating}>
+              {creating ? 'Creating...' : 'Add Customer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Add Boat Dialog */}
+      <Dialog open={showBoatDialog} onOpenChange={setShowBoatDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quick Add Boat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Vessel Name *</Label>
+              <Input
+                value={newBoat.vessel_name}
+                onChange={(e) => setNewBoat({...newBoat, vessel_name: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Manufacturer</Label>
+                <Input
+                  value={newBoat.manufacturer}
+                  onChange={(e) => setNewBoat({...newBoat, manufacturer: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Model</Label>
+                <Input
+                  value={newBoat.model}
+                  onChange={(e) => setNewBoat({...newBoat, model: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBoatDialog(false)}>Cancel</Button>
+            <Button onClick={handleCreateBoat} disabled={creating}>
+              {creating ? 'Creating...' : 'Add Boat'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Add Location Dialog */}
+      <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quick Add Location</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Location Name *</Label>
+              <Input
+                value={newLocation.name}
+                onChange={(e) => setNewLocation({...newLocation, name: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select 
+                  value={newLocation.location_type} 
+                  onValueChange={(v) => setNewLocation({...newLocation, location_type: v})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Marina">Marina</SelectItem>
+                    <SelectItem value="Dry Marina">Dry Marina</SelectItem>
+                    <SelectItem value="Anchorage">Anchorage</SelectItem>
+                    <SelectItem value="Yard">Yard</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>City</Label>
+                <Input
+                  value={newLocation.city}
+                  onChange={(e) => setNewLocation({...newLocation, city: e.target.value})}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLocationDialog(false)}>Cancel</Button>
+            <Button onClick={handleCreateLocation} disabled={creating}>
+              {creating ? 'Creating...' : 'Add Location'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }
