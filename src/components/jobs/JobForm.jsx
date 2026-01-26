@@ -63,6 +63,10 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
       setError('Job title is required');
       return;
     }
+    if (!formData.estimated_hours && !formData.quote_amount) {
+      setError('Please provide either Estimated Hours or Quote Amount');
+      return;
+    }
 
     setSaving(true);
     try {
