@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { format, parseISO, isSameDay, addDays, startOfWeek } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { format, parseISO, isSameDay, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Clock, AlertTriangle, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -14,15 +14,19 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-const statusColors = {
-  Draft: 'bg-slate-100 text-slate-700 border-slate-200',
-  Scheduled: 'bg-blue-100 text-blue-700 border-blue-200',
-  Dispatched: 'bg-violet-100 text-violet-700 border-violet-200',
-  'In Transit': 'bg-indigo-100 text-indigo-700 border-indigo-200',
-  'In Progress': 'bg-amber-100 text-amber-700 border-amber-200',
-  Completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  Cancelled: 'bg-slate-100 text-slate-700 border-slate-200'
-};
+// Vibrant color palette for technicians
+const TECHNICIAN_COLORS = [
+  { bg: 'bg-blue-500', text: 'text-white', border: 'border-blue-600' },
+  { bg: 'bg-green-500', text: 'text-white', border: 'border-green-600' },
+  { bg: 'bg-purple-500', text: 'text-white', border: 'border-purple-600' },
+  { bg: 'bg-orange-500', text: 'text-white', border: 'border-orange-600' },
+  { bg: 'bg-pink-500', text: 'text-white', border: 'border-pink-600' },
+  { bg: 'bg-cyan-500', text: 'text-white', border: 'border-cyan-600' },
+  { bg: 'bg-red-500', text: 'text-white', border: 'border-red-600' },
+  { bg: 'bg-indigo-500', text: 'text-white', border: 'border-indigo-600' },
+  { bg: 'bg-teal-500', text: 'text-white', border: 'border-teal-600' },
+  { bg: 'bg-amber-500', text: 'text-white', border: 'border-amber-600' },
+];
 
 export default function DragDropCalendar({
   currentWeekStart,
@@ -34,10 +38,29 @@ export default function DragDropCalendar({
   locations,
   inventoryReservations,
   onWorkOrderUpdate,
-  loading
+  loading,
+  viewType = 'month' // 'week' or 'month'
 }) {
+  const navigate = useNavigate();
   const [conflicts, setConflicts] = useState({});
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  const [technicianColorMap, setTechnicianColorMap] = useState({});
+  
+  // Generate calendar days based on view type
+  const calendarDays = viewType === 'month' 
+    ? eachDayOfInterval({
+        start: startOfWeek(startOfMonth(currentWeekStart), { weekStartsOn: 1 }),
+        end: endOfWeek(endOfMonth(currentWeekStart), { weekStartsOn: 1 })
+      })
+    : Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  
+  // Assign colors to technicians
+  useEffect(() => {
+    const colorMap = {};
+    technicians.forEach((tech, index) => {
+      colorMap[tech.id] = TECHNICIAN_COLORS[index % TECHNICIAN_COLORS.length];
+    });
+    setTechnicianColorMap(colorMap);
+  }, [technicians]);
 
   useEffect(() => {
     detectConflicts();
@@ -194,9 +217,22 @@ export default function DragDropCalendar({
     if (source.droppableId === destination.droppableId) return;
 
     const workOrderId = draggableId;
-    const newDate = format(weekDays[parseInt(destination.droppableId)], 'yyyy-MM-dd');
+    const newDate = format(calendarDays[parseInt(destination.droppableId)], 'yyyy-MM-dd');
     
     await onWorkOrderUpdate(workOrderId, { scheduled_date: newDate });
+  };
+  
+  const getTechnicianColor = (techIds) => {
+    if (!techIds || techIds.length === 0) return TECHNICIAN_COLORS[0];
+    // Use lead technician color or first assigned technician
+    const leadTechId = techIds[0];
+    return technicianColorMap[leadTechId] || TECHNICIAN_COLORS[0];
+  };
+  
+  const handleWorkOrderClick = (e, woId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(createPageUrl('WorkOrderDetail') + `?id=${woId}`);
   };
 
   const getConflictTooltip = (woId) => {
@@ -219,42 +255,46 @@ export default function DragDropCalendar({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-        {weekDays.map((day, dayIndex) => {
+      <div className={`grid gap-2 ${viewType === 'month' ? 'grid-cols-7' : 'grid-cols-1 md:grid-cols-7'}`}>
+        {calendarDays.map((day, dayIndex) => {
           const dayWorkOrders = getWorkOrdersForDay(day);
           const isToday = isSameDay(day, new Date());
+          const isCurrentMonth = viewType === 'week' || format(day, 'M') === format(currentWeekStart, 'M');
           
           return (
             <Droppable key={dayIndex} droppableId={dayIndex.toString()}>
               {(provided, snapshot) => (
-                <Card 
+                <div 
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`min-h-[300px] transition-colors ${
-                    isToday ? 'ring-2 ring-blue-500' : ''
+                  className={`min-h-[120px] border rounded-lg transition-all ${
+                    isToday ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-white'
                   } ${
-                    snapshot.isDraggingOver ? 'bg-blue-50 border-blue-300' : ''
+                    !isCurrentMonth ? 'opacity-40' : ''
+                  } ${
+                    snapshot.isDraggingOver ? 'bg-blue-100 border-blue-400 ring-2 ring-blue-300' : 'border-slate-200'
                   }`}
                 >
-                  <CardHeader className={`py-3 px-4 ${isToday ? 'bg-blue-50' : 'bg-slate-50'}`}>
-                    <div className="text-center">
-                      <p className="text-xs font-medium text-slate-500 uppercase">
-                        {format(day, 'EEE')}
-                      </p>
-                      <p className={`text-lg font-bold ${isToday ? 'text-blue-600' : 'text-slate-900'}`}>
+                  <div className={`p-2 border-b ${isToday ? 'bg-blue-100 border-blue-200' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-medium ${isToday ? 'text-blue-700' : 'text-slate-600'}`}>
+                        {format(day, viewType === 'month' ? 'EEE' : 'EEEE')}
+                      </span>
+                      <span className={`text-sm font-bold ${isToday ? 'text-blue-700' : 'text-slate-900'}`}>
                         {format(day, 'd')}
-                      </p>
+                      </span>
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-2 space-y-2">
+                  </div>
+                  <div className="p-1 space-y-1 min-h-[80px]">
                     {dayWorkOrders.length === 0 ? (
-                      <p className="text-xs text-slate-400 text-center py-4">
-                        {snapshot.isDraggingOver ? 'Drop here' : 'No work orders'}
+                      <p className="text-[10px] text-slate-400 text-center py-2">
+                        {snapshot.isDraggingOver ? 'Drop here' : ''}
                       </p>
                     ) : (
                       dayWorkOrders.map((wo, index) => {
                         const jobInfo = getJobInfo(wo.job_id);
                         const techs = getTechnicianInitials(wo.assigned_technicians);
+                        const techColor = getTechnicianColor(wo.assigned_technicians);
                         const hasConflict = conflicts[wo.id] && (
                           conflicts[wo.id].technicians.length > 0 || 
                           conflicts[wo.id].vehicles.length > 0
@@ -263,71 +303,64 @@ export default function DragDropCalendar({
                         
                         return (
                           <Draggable key={wo.id} draggableId={wo.id} index={index}>
-                            {(provided, snapshot) => (
-                              <TooltipProvider>
+                            {(provided, dragSnapshot) => (
+                              <TooltipProvider key={wo.id}>
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
                                   {...provided.dragHandleProps}
-                                  className={`${
-                                    snapshot.isDragging ? 'opacity-50 rotate-2' : ''
-                                  }`}
                                 >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <Link
-                                        to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                                        className={`block p-2 rounded-lg border text-xs hover:shadow-md transition-all ${statusColors[wo.status]} ${
+                                      <div
+                                        onClick={(e) => !dragSnapshot.isDragging && handleWorkOrderClick(e, wo.id)}
+                                        className={`p-1.5 rounded-md border-l-4 text-[10px] cursor-pointer hover:shadow-md transition-all ${
+                                          techColor.bg
+                                        } ${techColor.text} ${techColor.border} ${
+                                          dragSnapshot.isDragging ? 'opacity-80 shadow-lg scale-105 rotate-2' : ''
+                                        } ${
                                           hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
                                         } relative`}
-                                        onClick={(e) => snapshot.isDragging && e.preventDefault()}
                                       >
                                         {hasConflict && (
-                                          <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1">
-                                            <AlertTriangle className="h-3 w-3 text-white" />
+                                          <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">
+                                            <AlertTriangle className="h-2 w-2 text-white" />
                                           </div>
                                         )}
-                                        <p className="font-medium truncate">{wo.title}</p>
+                                        <p className="font-semibold truncate leading-tight">{wo.title}</p>
                                         {wo.scheduled_start_time && (
-                                          <div className="flex items-center gap-1 mt-1 text-[10px] opacity-80">
-                                            <Clock className="h-3 w-3" />
-                                            {wo.scheduled_start_time}
-                                            {wo.scheduled_end_time && ` - ${wo.scheduled_end_time}`}
+                                          <div className="flex items-center gap-0.5 mt-0.5 opacity-90">
+                                            <Clock className="h-2 w-2" />
+                                            <span>{wo.scheduled_start_time}</span>
                                           </div>
                                         )}
                                         {jobInfo.boat && (
-                                          <p className="truncate mt-1 opacity-80">{jobInfo.boat}</p>
+                                          <p className="truncate mt-0.5 opacity-80 leading-tight">{jobInfo.boat}</p>
                                         )}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className={hasConflict ? "bg-red-50 border-red-200" : ""}>
+                                      <div className="text-xs max-w-xs">
+                                        <p className="font-semibold">{wo.title}</p>
+                                        {wo.scheduled_start_time && (
+                                          <p className="text-slate-600">{wo.scheduled_start_time} {wo.scheduled_end_time && `- ${wo.scheduled_end_time}`}</p>
+                                        )}
+                                        {jobInfo.boat && <p className="text-slate-600">{jobInfo.boat}</p>}
                                         {techs.length > 0 && (
-                                          <div className="flex items-center gap-1 mt-2">
-                                            <div className="flex -space-x-1">
-                                              {techs.slice(0, 2).map((tech, idx) => (
-                                                <Avatar key={idx} className="h-5 w-5 border border-white">
-                                                  <AvatarFallback className="text-[8px] bg-white">
-                                                    {tech.initials}
-                                                  </AvatarFallback>
-                                                </Avatar>
-                                              ))}
-                                              {techs.length > 2 && (
-                                                <div className="h-5 w-5 rounded-full bg-slate-200 border border-white flex items-center justify-center text-[8px]">
-                                                  +{techs.length - 2}
-                                                </div>
-                                              )}
+                                          <p className="text-slate-600 mt-1">
+                                            👤 {techs.map(t => t.name).join(', ')}
+                                          </p>
+                                        )}
+                                        {hasConflict && conflictTooltip && (
+                                          <div className="mt-2 pt-2 border-t border-red-200">
+                                            <div className="flex items-start gap-1 text-red-700">
+                                              <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                              <span className="whitespace-pre-line">{conflictTooltip}</span>
                                             </div>
                                           </div>
                                         )}
-                                      </Link>
-                                    </TooltipTrigger>
-                                    {hasConflict && conflictTooltip && (
-                                      <TooltipContent side="top" className="bg-red-50 border-red-200">
-                                        <div className="flex items-start gap-2">
-                                          <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
-                                          <div className="text-xs text-red-900 whitespace-pre-line">
-                                            {conflictTooltip}
-                                          </div>
-                                        </div>
-                                      </TooltipContent>
-                                    )}
+                                      </div>
+                                    </TooltipContent>
                                   </Tooltip>
                                 </div>
                               </TooltipProvider>
@@ -337,8 +370,8 @@ export default function DragDropCalendar({
                       })
                     )}
                     {provided.placeholder}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
             </Droppable>
           );

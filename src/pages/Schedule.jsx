@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { format, addDays, startOfWeek, isSameDay, parseISO, startOfDay } from 'date-fns';
+import { format, addDays, startOfWeek, addMonths, startOfMonth, isSameDay, parseISO, startOfDay } from 'date-fns';
 import DispatchTimeline from '@/components/schedule/DispatchTimeline';
 import FutureOverview from '@/components/schedule/FutureOverview';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
@@ -60,7 +60,8 @@ export default function Schedule() {
   const [locations, setLocations] = useState([]);
   const [inventoryReservations, setInventoryReservations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [currentWeekStart, setCurrentWeekStart] = useState(startOfMonth(new Date()));
+  const [calendarViewType, setCalendarViewType] = useState('month'); // 'week' or 'month'
   
   // Dispatch view state
   const [viewMode, setViewMode] = useState('calendar');
@@ -143,9 +144,9 @@ export default function Schedule() {
     }).filter(Boolean);
   };
 
-  const prevWeek = () => setCurrentWeekStart(addDays(currentWeekStart, -7));
-  const nextWeek = () => setCurrentWeekStart(addDays(currentWeekStart, 7));
-  const goToToday = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const prevWeek = () => setCurrentWeekStart(calendarViewType === 'month' ? addMonths(currentWeekStart, -1) : addDays(currentWeekStart, -7));
+  const nextWeek = () => setCurrentWeekStart(calendarViewType === 'month' ? addMonths(currentWeekStart, 1) : addDays(currentWeekStart, 7));
+  const goToToday = () => setCurrentWeekStart(calendarViewType === 'month' ? startOfMonth(new Date()) : startOfWeek(new Date(), { weekStartsOn: 1 }));
   
   // Dispatch navigation
   const prevDay = () => setDispatchDate(addDays(dispatchDate, -1));
@@ -204,7 +205,7 @@ export default function Schedule() {
           <h1 className="text-2xl font-bold text-slate-900">Schedule</h1>
           <p className="text-slate-500 mt-1">
             {viewMode === 'calendar' 
-              ? `${format(currentWeekStart, 'MMM d')} - ${format(addDays(currentWeekStart, 6), 'MMM d, yyyy')}`
+              ? format(currentWeekStart, 'MMMM yyyy')
               : format(dispatchDate, 'EEEE, MMM d, yyyy')}
           </p>
         </div>
@@ -285,6 +286,7 @@ export default function Schedule() {
             inventoryReservations={inventoryReservations}
             onWorkOrderUpdate={handleWorkOrderUpdate}
             loading={loading}
+            viewType={calendarViewType}
           />
         )}
 
