@@ -485,7 +485,7 @@ export default function Dashboard() {
                 {jobs.slice(0, 5).map((job) => {
                   const isDueOverdue = job.requested_date && isPast(parseISO(job.requested_date)) && !isToday(parseISO(job.requested_date));
                   const isDueToday = job.requested_date && isToday(parseISO(job.requested_date));
-                  const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), today) <= 3 && differenceInDays(parseISO(job.requested_date), today) > 0;
+                  const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), today) <= 7 && differenceInDays(parseISO(job.requested_date), today) > 0;
                   
                   return (
                   <Link
@@ -494,6 +494,7 @@ export default function Dashboard() {
                     className={`block p-4 rounded-xl border-2 transition-all ${
                       isDueOverdue ? 'border-red-500 bg-red-50 hover:border-red-600 hover:bg-red-100' : 
                       isDueToday ? 'border-amber-500 bg-amber-50 hover:border-amber-600 hover:bg-amber-100' : 
+                      isDueSoon ? 'border-yellow-400 bg-yellow-50 hover:border-yellow-500 hover:bg-yellow-100' :
                       'border-slate-200 hover:border-blue-200 hover:bg-blue-50/50'
                     }`}
                   >
@@ -508,11 +509,11 @@ export default function Dashboard() {
                             <Badge className={`${
                               isDueOverdue ? 'bg-red-600 text-white border-red-700' : 
                               isDueToday ? 'bg-amber-600 text-white border-amber-700' : 
-                              isDueSoon ? 'bg-orange-100 text-orange-800' : 
+                              isDueSoon ? 'bg-yellow-500 text-white border-yellow-600' : 
                               'bg-blue-100 text-blue-700'
                             }`}>
-                              <Flag className={`h-3 w-3 mr-1 ${isDueOverdue || isDueToday ? 'animate-pulse' : ''}`} />
-                              {isDueOverdue ? 'OVERDUE' : isDueToday ? 'DUE TODAY' : `Due ${format(parseISO(job.requested_date), 'MMM d')}`}
+                              <Flag className={`h-3 w-3 mr-1 ${isDueOverdue || isDueToday || isDueSoon ? 'animate-pulse' : ''}`} />
+                              {isDueOverdue ? 'OVERDUE' : isDueToday ? 'DUE TODAY' : isDueSoon ? `Due ${format(parseISO(job.requested_date), 'MMM d')}` : `Due ${format(parseISO(job.requested_date), 'MMM d')}`}
                             </Badge>
                           )}
                         </div>

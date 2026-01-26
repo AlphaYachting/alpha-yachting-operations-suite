@@ -255,12 +255,13 @@ export default function Jobs() {
             const taskStats = getJobTaskStats(job.id);
             const isDueOverdue = job.requested_date && isPast(parseISO(job.requested_date)) && !isToday(parseISO(job.requested_date));
             const isDueToday = job.requested_date && isToday(parseISO(job.requested_date));
-            const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), new Date()) <= 3 && differenceInDays(parseISO(job.requested_date), new Date()) > 0;
+            const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), new Date()) <= 7 && differenceInDays(parseISO(job.requested_date), new Date()) > 0;
             
             return (
             <Card key={job.id} className={`hover:shadow-md transition-shadow ${
-              isDueOverdue ? 'border-red-300 border-2' : 
-              isDueToday ? 'border-amber-300 border-2' : ''
+              isDueOverdue ? 'border-red-500 border-2 bg-red-50/30' : 
+              isDueToday ? 'border-amber-500 border-2 bg-amber-50/30' : 
+              isDueSoon ? 'border-yellow-400 border-2 bg-yellow-50/30' : ''
             }`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -276,12 +277,12 @@ export default function Jobs() {
                       <Badge className={statusColors[job.status]}>{job.status}</Badge>
                       {job.requested_date && (
                         <Badge className={`${
-                          isDueOverdue ? 'bg-red-100 text-red-800 border-red-300' : 
-                          isDueToday ? 'bg-amber-100 text-amber-800 border-amber-300' : 
-                          isDueSoon ? 'bg-orange-100 text-orange-800' : 
+                          isDueOverdue ? 'bg-red-600 text-white border-red-700' : 
+                          isDueToday ? 'bg-amber-600 text-white border-amber-700' : 
+                          isDueSoon ? 'bg-yellow-500 text-white border-yellow-600' : 
                           'bg-slate-100 text-slate-700'
                         }`}>
-                          <AlertTriangle className={`h-3 w-3 mr-1 ${isDueOverdue || isDueToday ? 'animate-pulse' : ''}`} />
+                          <AlertTriangle className={`h-3 w-3 mr-1 ${isDueOverdue || isDueToday || isDueSoon ? 'animate-pulse' : ''}`} />
                           {isDueOverdue ? 'OVERDUE' : isDueToday ? 'DUE TODAY' : `Due ${format(parseISO(job.requested_date), 'MMM d')}`}
                         </Badge>
                       )}
@@ -313,7 +314,7 @@ export default function Jobs() {
                         <div className={`flex items-center gap-1 font-medium ${
                           isDueOverdue ? 'text-red-700' : 
                           isDueToday ? 'text-amber-700' : 
-                          isDueSoon ? 'text-orange-600' : 
+                          isDueSoon ? 'text-yellow-700' : 
                           'text-slate-600'
                         }`}>
                           <AlertTriangle className="h-3 w-3" />

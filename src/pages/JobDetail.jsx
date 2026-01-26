@@ -130,7 +130,7 @@ export default function JobDetail() {
 
   const isDueOverdue = job.requested_date && isPast(parseISO(job.requested_date)) && !isToday(parseISO(job.requested_date));
   const isDueToday = job.requested_date && isToday(parseISO(job.requested_date));
-  const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), new Date()) <= 3 && differenceInDays(parseISO(job.requested_date), new Date()) > 0;
+  const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), new Date()) <= 7 && differenceInDays(parseISO(job.requested_date), new Date()) > 0;
 
   return (
     <div className="space-y-6">
@@ -168,9 +168,9 @@ export default function JobDetail() {
             <Badge variant="outline">{job.job_number}</Badge>
             {job.requested_date && (
               <Badge className={`${
-                isDueOverdue ? 'bg-red-100 text-red-800 border-red-300 border-2' : 
-                isDueToday ? 'bg-amber-100 text-amber-800 border-amber-300 border-2' : 
-                isDueSoon ? 'bg-orange-100 text-orange-800' : 
+                isDueOverdue ? 'bg-red-600 text-white border-red-700 border-2' : 
+                isDueToday ? 'bg-amber-600 text-white border-amber-700 border-2' : 
+                isDueSoon ? 'bg-yellow-500 text-white border-yellow-600 border-2' : 
                 'bg-blue-100 text-blue-700'
               }`}>
                 <Calendar className="h-3 w-3 mr-1" />
@@ -268,7 +268,7 @@ export default function JobDetail() {
               <p className={`font-bold text-lg ${
                 isDueOverdue ? 'text-red-700' : 
                 isDueToday ? 'text-amber-700' : 
-                isDueSoon ? 'text-orange-700' : 
+                isDueSoon ? 'text-yellow-700' : 
                 'text-slate-900'
               }`}>
                 {job.requested_date ? (
