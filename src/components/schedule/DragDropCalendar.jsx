@@ -54,7 +54,7 @@ export default function DragDropCalendar({
         start: startOfWeek(startOfMonth(currentWeekStart), { weekStartsOn: 1 }),
         end: endOfWeek(endOfMonth(currentWeekStart), { weekStartsOn: 1 })
       })
-    : Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+    : Array.from({ length: 35 }, (_, i) => addDays(currentWeekStart, i));
   
   // Assign colors to technicians
   useEffect(() => {
@@ -270,7 +270,7 @@ export default function DragDropCalendar({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className={`grid gap-2 ${viewType === 'month' ? 'grid-cols-7' : 'grid-cols-1 md:grid-cols-7'}`}>
+      <div className={`grid gap-2 grid-cols-7`}>
         {calendarDays.map((day, dayIndex) => {
           const dayWorkOrders = getWorkOrdersForDay(day);
           const isToday = isSameDay(day, new Date());

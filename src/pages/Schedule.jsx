@@ -60,8 +60,8 @@ export default function Schedule() {
   const [locations, setLocations] = useState([]);
   const [inventoryReservations, setInventoryReservations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentWeekStart, setCurrentWeekStart] = useState(startOfMonth(new Date()));
-  const [calendarViewType, setCalendarViewType] = useState('month'); // 'week' or 'month'
+  const [currentWeekStart, setCurrentWeekStart] = useState(addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -7));
+  const [calendarViewType, setCalendarViewType] = useState('week'); // 'week' or 'month'
   
   // Dispatch view state
   const [viewMode, setViewMode] = useState('calendar');
@@ -146,7 +146,7 @@ export default function Schedule() {
 
   const prevWeek = () => setCurrentWeekStart(calendarViewType === 'month' ? addMonths(currentWeekStart, -1) : addDays(currentWeekStart, -7));
   const nextWeek = () => setCurrentWeekStart(calendarViewType === 'month' ? addMonths(currentWeekStart, 1) : addDays(currentWeekStart, 7));
-  const goToToday = () => setCurrentWeekStart(calendarViewType === 'month' ? startOfMonth(new Date()) : startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const goToToday = () => setCurrentWeekStart(calendarViewType === 'month' ? startOfMonth(new Date()) : addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -7));
   
   // Dispatch navigation
   const prevDay = () => setDispatchDate(addDays(dispatchDate, -1));
