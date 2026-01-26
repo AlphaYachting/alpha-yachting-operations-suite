@@ -28,6 +28,9 @@ const TECHNICIAN_COLORS = [
   { bg: 'bg-amber-500', text: 'text-white', border: 'border-amber-600' },
 ];
 
+// Unassigned work order color
+const UNASSIGNED_COLOR = { bg: 'bg-slate-700', text: 'text-white', border: 'border-slate-800' };
+
 export default function DragDropCalendar({
   currentWeekStart,
   workOrders,
@@ -38,10 +41,10 @@ export default function DragDropCalendar({
   locations,
   inventoryReservations,
   onWorkOrderUpdate,
+  onWorkOrderEdit,
   loading,
   viewType = 'month' // 'week' or 'month'
 }) {
-  const navigate = useNavigate();
   const [conflicts, setConflicts] = useState({});
   const [technicianColorMap, setTechnicianColorMap] = useState({});
   
@@ -223,16 +226,18 @@ export default function DragDropCalendar({
   };
   
   const getTechnicianColor = (techIds) => {
-    if (!techIds || techIds.length === 0) return TECHNICIAN_COLORS[0];
+    if (!techIds || techIds.length === 0) return UNASSIGNED_COLOR;
     // Use lead technician color or first assigned technician
     const leadTechId = techIds[0];
     return technicianColorMap[leadTechId] || TECHNICIAN_COLORS[0];
   };
   
-  const handleWorkOrderClick = (e, woId) => {
+  const handleWorkOrderClick = (e, wo) => {
     e.preventDefault();
     e.stopPropagation();
-    navigate(createPageUrl('WorkOrderDetail') + `?id=${woId}`);
+    if (onWorkOrderEdit) {
+      onWorkOrderEdit(wo);
+    }
   };
 
   const getConflictTooltip = (woId) => {
@@ -313,14 +318,14 @@ export default function DragDropCalendar({
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div
-                                        onClick={(e) => !dragSnapshot.isDragging && handleWorkOrderClick(e, wo.id)}
-                                        className={`p-1.5 rounded-md border-l-4 text-[10px] cursor-pointer hover:shadow-md transition-all ${
+                                        onClick={(e) => !dragSnapshot.isDragging && handleWorkOrderClick(e, wo)}
+                                        className={`p-1.5 rounded-md border-l-4 text-[10px] cursor-move hover:shadow-lg transition-all ${
                                           techColor.bg
                                         } ${techColor.text} ${techColor.border} ${
-                                          dragSnapshot.isDragging ? 'opacity-80 shadow-lg scale-105 rotate-2' : ''
+                                          dragSnapshot.isDragging ? 'opacity-60 shadow-xl scale-110 rotate-3 cursor-grabbing' : 'hover:scale-105'
                                         } ${
                                           hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
-                                        } relative`}
+                                        } relative select-none`}
                                       >
                                         {hasConflict && (
                                           <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">

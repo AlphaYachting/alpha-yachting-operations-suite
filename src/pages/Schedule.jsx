@@ -196,6 +196,12 @@ export default function Schedule() {
       console.error('Error updating work order:', error);
     }
   };
+  
+  // Handle work order edit from calendar
+  const handleWorkOrderEditFromCalendar = (workOrder) => {
+    setEditingWorkOrder(workOrder);
+    setShowWorkOrderDialog(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -285,6 +291,7 @@ export default function Schedule() {
             locations={locations}
             inventoryReservations={inventoryReservations}
             onWorkOrderUpdate={handleWorkOrderUpdate}
+            onWorkOrderEdit={handleWorkOrderEditFromCalendar}
             loading={loading}
             viewType={calendarViewType}
           />
