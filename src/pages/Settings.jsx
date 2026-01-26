@@ -2,12 +2,18 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, ChevronRight } from 'lucide-react';
+import { FileText, ChevronRight, Bell } from 'lucide-react';
 
 export default function Settings() {
   const navigate = useNavigate();
 
   const settingsCategories = [
+    {
+      title: 'Notification Preferences',
+      description: 'Configure when and how you receive notifications',
+      icon: Bell,
+      page: 'NotificationPreferences'
+    },
     {
       title: 'PDF Templates',
       description: 'Configure document templates for offers and invoices',
