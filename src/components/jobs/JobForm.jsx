@@ -26,6 +26,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
     priority: job?.priority || 'Normal',
     status: job?.status || 'New',
     intake_source: job?.intake_source || 'Phone',
+    intake_date: job?.intake_date || new Date().toISOString().split('T')[0],
     requested_date: job?.requested_date || '',
     estimated_hours: job?.estimated_hours || '',
     quote_amount: job?.quote_amount || '',
@@ -272,11 +273,54 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Requested Date</Label>
+          <Label>Intake Date</Label>
           <Input
             type="date"
-            value={formData.requested_date}
-            onChange={(e) => updateField('requested_date', e.target.value)}
+            value={formData.intake_date}
+            onChange={(e) => updateField('intake_date', e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Job Due Date */}
+      <div className="space-y-2">
+        <Label>Job Due Date</Label>
+        <Input
+          type="date"
+          value={formData.requested_date}
+          onChange={(e) => updateField('requested_date', e.target.value)}
+          placeholder="When should the job be completed?"
+        />
+      </div>
+
+      {/* Estimates */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Estimated Hours</Label>
+          <Input
+            type="number"
+            step="0.5"
+            value={formData.estimated_hours}
+            onChange={(e) => updateField('estimated_hours', parseFloat(e.target.value) || '')}
+            onBlur={() => setIsEstimatedHoursTouched(true)}
+            className={cn(
+              isEstimatedHoursTouched && !formData.estimated_hours && !formData.quote_amount && "border-red-500"
+            )}
+            placeholder="0"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Quote Amount (€)</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={formData.quote_amount}
+            onChange={(e) => updateField('quote_amount', parseFloat(e.target.value) || '')}
+            onBlur={() => setIsQuoteAmountTouched(true)}
+            className={cn(
+              isQuoteAmountTouched && !formData.quote_amount && !formData.estimated_hours && "border-red-500"
+            )}
+            placeholder="0.00"
           />
         </div>
       </div>
