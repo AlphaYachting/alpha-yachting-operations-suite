@@ -17,12 +17,22 @@ import {
   Plus,
   Edit,
   MoreVertical,
-  ClipboardList
+  ClipboardList,
+  Save
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -87,6 +97,10 @@ export default function WorkOrderDetail() {
   const [quickUpdateTask, setQuickUpdateTask] = useState(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [showEditWorkOrder, setShowEditWorkOrder] = useState(false);
+  const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateCategory, setTemplateCategory] = useState('General Service');
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
@@ -212,6 +226,50 @@ export default function WorkOrderDetail() {
         console.error('Error deleting task:', error);
       }
     }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!templateName.trim()) {
+      alert('Please enter a template name');
+      return;
+    }
+    if (tasks.length === 0) {
+      alert('No tasks to save as template');
+      return;
+    }
+    
+    setSavingTemplate(true);
+    try {
+      // Create template list
+      const templateList = await base44.entities.TaskTemplateList.create({
+        name: templateName,
+        category: templateCategory,
+        is_active: true
+      });
+
+      // Create template items from tasks
+      const templateItems = tasks
+        .sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0))
+        .map((task, index) => ({
+          template_list_id: templateList.id,
+          sort_order: index + 1,
+          title: task.title,
+          description: task.description || '',
+          default_estimated_hours: task.estimated_minutes ? task.estimated_minutes / 60 : null,
+          is_optional: false
+        }));
+
+      await base44.entities.TaskTemplateItem.bulkCreate(templateItems);
+
+      alert(`Template "${templateName}" created successfully!`);
+      setShowSaveAsTemplate(false);
+      setTemplateName('');
+      setTemplateCategory('General Service');
+    } catch (error) {
+      console.error('Error saving template:', error);
+      alert('Failed to save template');
+    }
+    setSavingTemplate(false);
   };
 
   const isAdmin = currentUser?.role === 'admin';
@@ -460,6 +518,16 @@ export default function WorkOrderDetail() {
                 <ClipboardList className="h-4 w-4 mr-2" />
                 From Template
               </Button>
+              {tasks.length > 0 && (
+                <Button
+                  onClick={() => setShowSaveAsTemplate(true)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save as Template
+                </Button>
+              )}
               <Button
                 onClick={() => {
                   setEditingTask(null);
@@ -654,6 +722,56 @@ export default function WorkOrderDetail() {
               onCancel={() => setShowEditWorkOrder(false)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Save as Template Dialog */}
+      <Dialog open={showSaveAsTemplate} onOpenChange={setShowSaveAsTemplate}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save Tasks as Template</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Template Name *</Label>
+              <Input
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="e.g., Engine Service 50h"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={templateCategory} onValueChange={setTemplateCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Engine">Engine</SelectItem>
+                  <SelectItem value="Electrical">Electrical</SelectItem>
+                  <SelectItem value="Hull">Hull</SelectItem>
+                  <SelectItem value="Commissioning">Commissioning</SelectItem>
+                  <SelectItem value="Winterization">Winterization</SelectItem>
+                  <SelectItem value="Electronics">Electronics</SelectItem>
+                  <SelectItem value="Plumbing">Plumbing</SelectItem>
+                  <SelectItem value="Rigging">Rigging</SelectItem>
+                  <SelectItem value="General Service">General Service</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-sm text-slate-500">
+              This will create a template with {tasks.length} tasks from this work order.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowSaveAsTemplate(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveAsTemplate} disabled={savingTemplate}>
+              {savingTemplate ? 'Saving...' : 'Save Template'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

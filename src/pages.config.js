@@ -10,6 +10,7 @@ import Invoices from './pages/Invoices';
 import JobDetail from './pages/JobDetail';
 import Jobs from './pages/Jobs';
 import Locations from './pages/Locations';
+import NotificationPreferences from './pages/NotificationPreferences';
 import OfferDetail from './pages/OfferDetail';
 import Offers from './pages/Offers';
 import PDFTemplateSettings from './pages/PDFTemplateSettings';
@@ -24,7 +25,6 @@ import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import NotificationPreferences from './pages/NotificationPreferences';
 import __Layout from './Layout.jsx';
 
 
@@ -41,6 +41,7 @@ export const PAGES = {
     "JobDetail": JobDetail,
     "Jobs": Jobs,
     "Locations": Locations,
+    "NotificationPreferences": NotificationPreferences,
     "OfferDetail": OfferDetail,
     "Offers": Offers,
     "PDFTemplateSettings": PDFTemplateSettings,
@@ -55,7 +56,6 @@ export const PAGES = {
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "NotificationPreferences": NotificationPreferences,
 }
 
 export const pagesConfig = {
