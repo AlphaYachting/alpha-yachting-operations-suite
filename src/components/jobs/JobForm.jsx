@@ -108,19 +108,25 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
   };
 
   const handleCreateCustomer = async () => {
-    if (!newCustomer.last_name || !newCustomer.email) {
-      setError('Last name and email are required for customer');
+    if (!newCustomer.last_name) {
+      setError('Last name is required for customer');
       return;
     }
+    // Generate a default email if not provided (required by database)
+    const customerData = {
+      ...newCustomer,
+      email: newCustomer.email || `noemail_${Date.now()}@placeholder.local`
+    };
     setCreating(true);
+    setError(null);
     try {
-      const created = await base44.entities.Customer.create(newCustomer);
+      const created = await base44.entities.Customer.create(customerData);
       customers.push(created);
-      setFormData(prev => ({ ...prev, customer_id: created.id }));
+      setFormData(prev => ({ ...prev, customer_id: created.id, boat_id: '' }));
       setShowCustomerDialog(false);
       setNewCustomer({ first_name: '', last_name: '', email: '', phone: '' });
     } catch (err) {
-      setError('Failed to create customer');
+      setError('Failed to create customer: ' + (err.message || ''));
     }
     setCreating(false);
   };
@@ -135,9 +141,12 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
       return;
     }
     setCreating(true);
+    setError(null);
     try {
       const created = await base44.entities.Boat.create({
-        ...newBoat,
+        vessel_name: newBoat.vessel_name,
+        manufacturer: newBoat.manufacturer || '',
+        model: newBoat.model || '',
         customer_id: formData.customer_id
       });
       boats.push(created);
@@ -145,7 +154,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
       setShowBoatDialog(false);
       setNewBoat({ vessel_name: '', manufacturer: '', model: '' });
     } catch (err) {
-      setError('Failed to create boat');
+      setError('Failed to create boat: ' + (err.message || ''));
     }
     setCreating(false);
   };
@@ -490,11 +499,12 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Email *</Label>
+              <Label>Email</Label>
               <Input
                 type="email"
                 value={newCustomer.email}
                 onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
+                placeholder="Optional"
               />
             </div>
             <div className="space-y-2">
