@@ -90,7 +90,7 @@ export default function Dashboard() {
     const loadData = async () => {
       try {
         const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData] = await Promise.all([
-          base44.entities.Job.list('-created_date', 100),
+          base44.entities.Job.list(),
           base44.entities.WorkOrder.list('-scheduled_date', 100),
           base44.entities.Task.list(),
           base44.entities.Customer.list(),
@@ -99,7 +99,51 @@ export default function Dashboard() {
           base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
           base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
         ]);
-        setJobs(jobsData);
+        
+        // Sort jobs: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
+        const sortedJobs = jobsData.sort((a, b) => {
+          const today = new Date();
+          const aDate = a.requested_date ? parseISO(a.requested_date) : null;
+          const bDate = b.requested_date ? parseISO(b.requested_date) : null;
+          
+          const aOverdue = aDate && isPast(aDate) && !isToday(aDate);
+          const bOverdue = bDate && isPast(bDate) && !isToday(bDate);
+          const aDueToday = aDate && isToday(aDate);
+          const bDueToday = bDate && isToday(bDate);
+          const aDueSoon = aDate && differenceInDays(aDate, today) <= 7 && differenceInDays(aDate, today) > 0;
+          const bDueSoon = bDate && differenceInDays(bDate, today) <= 7 && differenceInDays(bDate, today) > 0;
+          
+          // Overdue first
+          if (aOverdue && !bOverdue) return -1;
+          if (!aOverdue && bOverdue) return 1;
+          
+          // Due today second
+          if (aDueToday && !bDueToday) return -1;
+          if (!aDueToday && bDueToday) return 1;
+          
+          // Due soon third
+          if (aDueSoon && !bDueSoon) return -1;
+          if (!aDueSoon && bDueSoon) return 1;
+          
+          // Priority order
+          const priorityOrder = { Express: 0, Urgent: 1, High: 2, Normal: 3, Low: 4 };
+          const aPriority = priorityOrder[a.priority] ?? 5;
+          const bPriority = priorityOrder[b.priority] ?? 5;
+          if (aPriority !== bPriority) return aPriority - bPriority;
+          
+          // By due date
+          if (aDate && bDate) {
+            if (aDate < bDate) return -1;
+            if (aDate > bDate) return 1;
+          }
+          if (aDate && !bDate) return -1;
+          if (!aDate && bDate) return 1;
+          
+          // By created date (newest first)
+          return new Date(b.created_date) - new Date(a.created_date);
+        });
+        
+        setJobs(sortedJobs);
         setWorkOrders(workOrdersData);
         setTasks(tasksData);
         setCustomers(customersData);
