@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { format, isToday, isTomorrow, parseISO, addDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, isToday, isTomorrow, parseISO, addDays, isWithinInterval, startOfDay, endOfDay, isPast, differenceInDays } from 'date-fns';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 
 const StatCard = ({ title, value, icon: Icon, trend, color, loading }) => (
@@ -121,6 +121,12 @@ export default function Dashboard() {
   const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
   const urgentJobs = jobs.filter(j => ['Urgent', 'Express'].includes(j.priority) && !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
   const todayWorkOrders = workOrders.filter(wo => wo.scheduled_date && isToday(parseISO(wo.scheduled_date)));
+  
+  // Overdue jobs based on due date
+  const overdueJobs = jobs.filter(j => {
+    if (!j.requested_date || ['Completed', 'Invoiced', 'Cancelled'].includes(j.status)) return false;
+    return isPast(parseISO(j.requested_date)) && !isToday(parseISO(j.requested_date));
+  });
   
   // Draft work orders (unplanned)
   const draftWorkOrders = workOrders.filter(wo => wo.status === 'Draft');
@@ -263,10 +269,10 @@ export default function Dashboard() {
           loading={loading}
         />
         <StatCard 
-          title="Urgent Items" 
-          value={urgentJobs.length} 
+          title="Overdue Jobs" 
+          value={overdueJobs.length} 
           icon={AlertTriangle}
-          color="bg-amber-500"
+          color="bg-red-500"
           loading={loading}
         />
         <StatCard 

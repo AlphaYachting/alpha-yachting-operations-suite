@@ -13,7 +13,8 @@ import {
   Calendar,
   Clock,
   ChevronRight,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { format } from 'date-fns';
+import { format, isPast, isToday, parseISO, differenceInDays } from 'date-fns';
 import JobForm from '@/components/jobs/JobForm';
 
 const priorityColors = {
@@ -252,9 +253,15 @@ export default function Jobs() {
         <div className="grid gap-4">
           {filteredJobs.map((job) => {
             const taskStats = getJobTaskStats(job.id);
+            const isDueOverdue = job.requested_date && isPast(parseISO(job.requested_date)) && !isToday(parseISO(job.requested_date));
+            const isDueToday = job.requested_date && isToday(parseISO(job.requested_date));
+            const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), new Date()) <= 3 && differenceInDays(parseISO(job.requested_date), new Date()) > 0;
             
             return (
-            <Card key={job.id} className="hover:shadow-md transition-shadow">
+            <Card key={job.id} className={`hover:shadow-md transition-shadow ${
+              isDueOverdue ? 'border-red-300 border-2' : 
+              isDueToday ? 'border-amber-300 border-2' : ''
+            }`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -267,6 +274,17 @@ export default function Jobs() {
                       </Link>
                       <Badge className={priorityColors[job.priority]}>{job.priority}</Badge>
                       <Badge className={statusColors[job.status]}>{job.status}</Badge>
+                      {job.requested_date && (
+                        <Badge className={`${
+                          isDueOverdue ? 'bg-red-100 text-red-800 border-red-300' : 
+                          isDueToday ? 'bg-amber-100 text-amber-800 border-amber-300' : 
+                          isDueSoon ? 'bg-orange-100 text-orange-800' : 
+                          'bg-slate-100 text-slate-700'
+                        }`}>
+                          <AlertTriangle className={`h-3 w-3 mr-1 ${isDueOverdue || isDueToday ? 'animate-pulse' : ''}`} />
+                          {isDueOverdue ? 'OVERDUE' : isDueToday ? 'DUE TODAY' : `Due ${format(parseISO(job.requested_date), 'MMM d')}`}
+                        </Badge>
+                      )}
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-slate-500">
@@ -283,12 +301,23 @@ export default function Jobs() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
+                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-400 flex-wrap">
                       {job.job_number && <span>#{job.job_number}</span>}
                       {job.intake_date && (
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(job.intake_date), 'MMM d, yyyy')}
+                          Intake: {format(new Date(job.intake_date), 'MMM d, yyyy')}
+                        </div>
+                      )}
+                      {job.requested_date && (
+                        <div className={`flex items-center gap-1 font-medium ${
+                          isDueOverdue ? 'text-red-700' : 
+                          isDueToday ? 'text-amber-700' : 
+                          isDueSoon ? 'text-orange-600' : 
+                          'text-slate-600'
+                        }`}>
+                          <AlertTriangle className="h-3 w-3" />
+                          Due: {format(parseISO(job.requested_date), 'MMM d, yyyy')}
                         </div>
                       )}
                       {job.estimated_hours && (

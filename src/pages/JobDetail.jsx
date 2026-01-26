@@ -16,14 +16,15 @@ import {
   Clock,
   DollarSign,
   FileText,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { format } from 'date-fns';
+import { format, isPast, isToday, parseISO, differenceInDays } from 'date-fns';
 
 const statusColors = {
   New: 'bg-slate-100 text-slate-700',
@@ -127,8 +128,32 @@ export default function JobDetail() {
   const totalTasks = tasks.length;
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
+  const isDueOverdue = job.requested_date && isPast(parseISO(job.requested_date)) && !isToday(parseISO(job.requested_date));
+  const isDueToday = job.requested_date && isToday(parseISO(job.requested_date));
+  const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), new Date()) <= 3 && differenceInDays(parseISO(job.requested_date), new Date()) > 0;
+
   return (
     <div className="space-y-6">
+      {/* Critical Due Date Alert */}
+      {job.requested_date && (isDueOverdue || isDueToday) && (
+        <Card className={`border-2 ${isDueOverdue ? 'border-red-500 bg-red-50' : 'border-amber-500 bg-amber-50'}`}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className={`h-6 w-6 ${isDueOverdue ? 'text-red-700 animate-pulse' : 'text-amber-700 animate-pulse'}`} />
+              <div>
+                <p className={`font-bold text-lg ${isDueOverdue ? 'text-red-900' : 'text-amber-900'}`}>
+                  {isDueOverdue ? 'CRITICAL: JOB OVERDUE' : 'URGENT: DUE TODAY'}
+                </p>
+                <p className={`text-sm ${isDueOverdue ? 'text-red-700' : 'text-amber-700'}`}>
+                  Job deadline: {format(parseISO(job.requested_date), 'MMMM d, yyyy')}
+                  {isDueOverdue && ` (${Math.abs(differenceInDays(parseISO(job.requested_date), new Date()))} days overdue)`}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
@@ -141,6 +166,17 @@ export default function JobDetail() {
             <h1 className="text-2xl font-bold text-slate-900">{job.title}</h1>
             <Badge className={statusColors[job.status]}>{job.status}</Badge>
             <Badge variant="outline">{job.job_number}</Badge>
+            {job.requested_date && (
+              <Badge className={`${
+                isDueOverdue ? 'bg-red-100 text-red-800 border-red-300 border-2' : 
+                isDueToday ? 'bg-amber-100 text-amber-800 border-amber-300 border-2' : 
+                isDueSoon ? 'bg-orange-100 text-orange-800' : 
+                'bg-blue-100 text-blue-700'
+              }`}>
+                <Calendar className="h-3 w-3 mr-1" />
+                Due: {format(parseISO(job.requested_date), 'MMM d, yyyy')}
+              </Badge>
+            )}
           </div>
           <p className="text-slate-500 mt-1">{job.service_category} • {job.job_type}</p>
         </div>
@@ -224,10 +260,25 @@ export default function JobDetail() {
                 {job.intake_date ? format(new Date(job.intake_date), 'MMM d, yyyy') : 'N/A'}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-slate-500">Requested Date</p>
-              <p className="font-medium">
-                {job.requested_date ? format(new Date(job.requested_date), 'MMM d, yyyy') : 'N/A'}
+            <div className={job.requested_date && (isDueOverdue || isDueToday || isDueSoon) ? 'col-span-2' : ''}>
+              <p className="text-sm text-slate-500 flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Job Due Date (Deadline)
+              </p>
+              <p className={`font-bold text-lg ${
+                isDueOverdue ? 'text-red-700' : 
+                isDueToday ? 'text-amber-700' : 
+                isDueSoon ? 'text-orange-700' : 
+                'text-slate-900'
+              }`}>
+                {job.requested_date ? (
+                  <>
+                    {format(parseISO(job.requested_date), 'MMMM d, yyyy')}
+                    {isDueOverdue && <span className="text-sm ml-2 text-red-600">({Math.abs(differenceInDays(parseISO(job.requested_date), new Date()))} days overdue)</span>}
+                    {isDueToday && <span className="text-sm ml-2 text-amber-600">(Today!)</span>}
+                    {isDueSoon && <span className="text-sm ml-2 text-orange-600">(in {differenceInDays(parseISO(job.requested_date), new Date())} days)</span>}
+                  </>
+                ) : 'N/A'}
               </p>
             </div>
             <div>
