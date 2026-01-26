@@ -798,86 +798,89 @@ export default function Dashboard() {
 
       {/* Schedule Full Screen Dialog */}
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-6">
-          <DialogHeader className="mb-4">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-2xl">Schedule</DialogTitle>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    if (viewMode === 'calendar') goToToday();
-                    else if (dispatchViewMode === 'day') goToDispatchToday();
-                    else goToOverviewToday();
-                  }}
-                >
-                  Today
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => {
-                    if (viewMode === 'calendar') prevWeek();
-                    else if (dispatchViewMode === 'day') prevDay();
-                    else prevRange();
-                  }}
-                >
-                  <ChevronRight className="h-4 w-4 rotate-180" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => {
-                    if (viewMode === 'calendar') nextWeek();
-                    else if (dispatchViewMode === 'day') nextDay();
-                    else nextRange();
-                  }}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+        <DialogContent className="max-w-[98vw] max-h-[98vh] w-[98vw] h-[98vh] p-0">
+          <div className="flex flex-col h-full">
+            <DialogHeader className="px-6 pt-6 pb-4 border-b">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-2xl">Schedule</DialogTitle>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      if (viewMode === 'calendar') goToToday();
+                      else if (dispatchViewMode === 'day') goToDispatchToday();
+                      else goToOverviewToday();
+                    }}
+                  >
+                    Today
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => {
+                      if (viewMode === 'calendar') prevWeek();
+                      else if (dispatchViewMode === 'day') prevDay();
+                      else prevRange();
+                    }}
+                  >
+                    <ChevronRight className="h-4 w-4 rotate-180" />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => {
+                      if (viewMode === 'calendar') nextWeek();
+                      else if (dispatchViewMode === 'day') nextDay();
+                      else nextRange();
+                    }}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          </DialogHeader>
-          
-          <div className="overflow-y-auto h-[calc(100%-80px)]">
-            <Tabs value={viewMode} onValueChange={setViewMode} className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
-                <TabsTrigger value="calendar" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Calendar
-                </TabsTrigger>
-                <TabsTrigger value="dispatch" className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Dispatch
-                </TabsTrigger>
-              </TabsList>
+            </DialogHeader>
+            
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <Tabs value={viewMode} onValueChange={setViewMode} className="w-full h-full flex flex-col">
+                <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+                  <TabsTrigger value="calendar" className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Calendar
+                  </TabsTrigger>
+                  <TabsTrigger value="dispatch" className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    Dispatch
+                  </TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="calendar" className="space-y-4">
-                {loading ? (
-                  <div className="grid grid-cols-7 gap-4">
-                    {[1,2,3,4,5,6,7].map(i => (
-                      <Skeleton key={i} className="h-64" />
-                    ))}
-                  </div>
-                ) : (
-                  <DragDropCalendar
-                    currentWeekStart={currentWeekStart}
-                    workOrders={workOrders}
-                    jobs={jobs}
-                    technicians={technicians}
-                    customers={customers}
-                    boats={boats}
-                    locations={locations}
-                    inventoryReservations={inventoryReservations}
-                    onWorkOrderUpdate={handleWorkOrderUpdate}
-                    onWorkOrderEdit={handleWorkOrderEditFromCalendar}
-                    loading={loading}
-                    viewType={calendarViewType}
-                  />
-                )}
-              </TabsContent>
+                <TabsContent value="calendar" className="flex-1 mt-0">
+                  {loading ? (
+                    <div className="grid grid-cols-7 gap-3 h-full">
+                      {[1,2,3,4,5,6,7].map(i => (
+                        <Skeleton key={i} className="h-full min-h-[200px]" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-full">
+                      <DragDropCalendar
+                        currentWeekStart={currentWeekStart}
+                        workOrders={workOrders}
+                        jobs={jobs}
+                        technicians={technicians}
+                        customers={customers}
+                        boats={boats}
+                        locations={locations}
+                        inventoryReservations={inventoryReservations}
+                        onWorkOrderUpdate={handleWorkOrderUpdate}
+                        onWorkOrderEdit={handleWorkOrderEditFromCalendar}
+                        loading={loading}
+                        viewType={calendarViewType}
+                      />
+                    </div>
+                  )}
+                </TabsContent>
 
-              <TabsContent value="dispatch" className="space-y-4">
+              <TabsContent value="dispatch" className="flex-1 space-y-4 mt-0">
                 <div className="flex items-center gap-4">
                   <Tabs value={dispatchViewMode} onValueChange={setDispatchViewMode} className="w-full max-w-md">
                     <TabsList className="grid w-full grid-cols-2">
@@ -1017,7 +1020,8 @@ export default function Dashboard() {
                   </>
                 )}
               </TabsContent>
-            </Tabs>
+              </Tabs>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -270,7 +270,9 @@ export default function DragDropCalendar({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className={`grid gap-2 grid-cols-7`}>
+      <div className="grid gap-3 grid-cols-7 auto-rows-fr h-full"
+        style={{ gridTemplateRows: `repeat(${Math.ceil(calendarDays.length / 7)}, minmax(150px, 1fr))` }}
+      >
         {calendarDays.map((day, dayIndex) => {
           const dayWorkOrders = getWorkOrdersForDay(day);
           const isToday = isSameDay(day, new Date());
@@ -282,7 +284,7 @@ export default function DragDropCalendar({
                 <div 
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`min-h-[120px] border rounded-lg transition-all ${
+                  className={`h-full border rounded-lg transition-all flex flex-col ${
                     isToday ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-white'
                   } ${
                     !isCurrentMonth ? 'opacity-40' : ''
@@ -300,7 +302,7 @@ export default function DragDropCalendar({
                       </span>
                     </div>
                   </div>
-                  <div className="p-1 space-y-1 min-h-[80px]">
+                  <div className="flex-1 p-1 space-y-1 overflow-y-auto">
                     {dayWorkOrders.length === 0 ? (
                       <p className="text-[10px] text-slate-400 text-center py-2">
                         {snapshot.isDraggingOver ? 'Drop here' : ''}
