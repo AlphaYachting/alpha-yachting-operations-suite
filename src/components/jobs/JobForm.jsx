@@ -53,11 +53,13 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
   const [newBoat, setNewBoat] = useState({ vessel_name: '', manufacturer: '', model: '' });
   const [newLocation, setNewLocation] = useState({ name: '', location_type: 'Marina', city: '' });
   const [creating, setCreating] = useState(false);
+  const [newlyCreatedBoats, setNewlyCreatedBoats] = useState([]);
 
   const customerBoats = useMemo(() => {
     if (!formData.customer_id) return [];
-    return boats.filter(b => b.customer_id === formData.customer_id);
-  }, [formData.customer_id, boats]);
+    const allBoats = [...boats, ...newlyCreatedBoats];
+    return allBoats.filter(b => b.customer_id === formData.customer_id);
+  }, [formData.customer_id, boats, newlyCreatedBoats]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -149,7 +151,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
         model: newBoat.model || '',
         customer_id: formData.customer_id
       });
-      boats.push(created);
+      setNewlyCreatedBoats(prev => [...prev, created]);
       setFormData(prev => ({ ...prev, boat_id: created.id }));
       setShowBoatDialog(false);
       setNewBoat({ vessel_name: '', manufacturer: '', model: '' });
