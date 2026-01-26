@@ -24,6 +24,7 @@ import {
   AlertCircle,
   AlertTriangle
 } from 'lucide-react';
+import { notifyWorkOrderAssignment } from '@/components/notifications/notificationUtils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -160,9 +161,35 @@ export default function WorkOrders() {
   const handleSave = async (workOrderData, templateId, suggestedTasks) => {
     try {
       let createdWoId;
+      let savedWorkOrder;
       
       if (editingWorkOrder) {
         await base44.entities.WorkOrder.update(editingWorkOrder.id, workOrderData);
+        savedWorkOrder = { ...editingWorkOrder, ...workOrderData };
+        
+        // Check if new technicians were assigned
+        const oldTechIds = editingWorkOrder.assigned_technicians || [];
+        const newTechIds = workOrderData.assigned_technicians || [];
+        const newlyAssigned = newTechIds.filter(id => !oldTechIds.includes(id));
+        
+        if (newlyAssigned.length > 0) {
+          // Notify newly assigned technicians
+          const newlyAssignedTechs = technicians.filter(t => newlyAssigned.includes(t.id));
+          for (const tech of newlyAssignedTechs) {
+            if (tech.email) {
+              try {
+                await notifyWorkOrderAssignment(
+                  { ...savedWorkOrder, assigned_technicians: [tech.id] },
+                  [tech],
+                  workOrderData.title
+                );
+              } catch (notifyError) {
+                console.error('Failed to send notification:', notifyError);
+              }
+            }
+          }
+        }
+        
         toast.success('Work order updated');
       } else {
         const woNumber = `WO${Date.now().toString().slice(-6)}`;
@@ -171,6 +198,16 @@ export default function WorkOrders() {
           work_order_number: woNumber 
         });
         createdWoId = newWo.id;
+        savedWorkOrder = newWo;
+        
+        // Send notifications to assigned technicians
+        if (workOrderData.assigned_technicians && workOrderData.assigned_technicians.length > 0) {
+          try {
+            await notifyWorkOrderAssignment(newWo, technicians, workOrderData.title);
+          } catch (notifyError) {
+            console.error('Failed to send notifications:', notifyError);
+          }
+        }
 
         // If AI-suggested tasks, add them
         if (suggestedTasks && suggestedTasks.length > 0) {
