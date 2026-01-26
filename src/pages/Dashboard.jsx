@@ -843,7 +843,7 @@ export default function Dashboard() {
             <Tabs value={viewMode} onValueChange={setViewMode} className="w-full">
               <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
                 <TabsTrigger value="calendar" className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4" />
+                  <Calendar className="h-4 w-4" />
                   Calendar
                 </TabsTrigger>
                 <TabsTrigger value="dispatch" className="flex items-center gap-2">
