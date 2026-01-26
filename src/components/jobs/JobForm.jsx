@@ -282,19 +282,17 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
         </div>
       </div>
 
-      {/* Job Due Date */}
-      <div className="space-y-2">
-        <Label>Job Due Date</Label>
-        <Input
-          type="date"
-          value={formData.requested_date}
-          onChange={(e) => updateField('requested_date', e.target.value)}
-          placeholder="When should the job be completed?"
-        />
-      </div>
-
-      {/* Estimates */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Job Due Date and Estimates */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label>Job Due Date</Label>
+          <Input
+            type="date"
+            value={formData.requested_date}
+            onChange={(e) => updateField('requested_date', e.target.value)}
+            placeholder="When should the job be completed?"
+          />
+        </div>
         <div className="space-y-2">
           <Label>Estimated Hours</Label>
           <Input
