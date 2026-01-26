@@ -325,38 +325,6 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
         </div>
       </div>
 
-      {/* Estimates */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Estimated Hours</Label>
-          <Input
-            type="number"
-            step="0.5"
-            value={formData.estimated_hours}
-            onChange={(e) => updateField('estimated_hours', parseFloat(e.target.value) || '')}
-            onBlur={() => setIsEstimatedHoursTouched(true)}
-            className={cn(
-              isEstimatedHoursTouched && !formData.estimated_hours && !formData.quote_amount && "border-red-500"
-            )}
-            placeholder="0"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Quote Amount (€)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            value={formData.quote_amount}
-            onChange={(e) => updateField('quote_amount', parseFloat(e.target.value) || '')}
-            onBlur={() => setIsQuoteAmountTouched(true)}
-            className={cn(
-              isQuoteAmountTouched && !formData.quote_amount && !formData.estimated_hours && "border-red-500"
-            )}
-            placeholder="0.00"
-          />
-        </div>
-      </div>
-
       {/* Notes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
