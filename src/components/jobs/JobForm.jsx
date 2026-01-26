@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function JobForm({ job, customers, boats, locations, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -33,6 +34,8 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [isEstimatedHoursTouched, setIsEstimatedHoursTouched] = useState(false);
+  const [isQuoteAmountTouched, setIsQuoteAmountTouched] = useState(false);
 
   const customerBoats = useMemo(() => {
     if (!formData.customer_id) return [];
@@ -42,6 +45,10 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    
+    // Mark fields as touched to show red border if empty
+    setIsEstimatedHoursTouched(true);
+    setIsQuoteAmountTouched(true);
 
     // Validate required fields
     if (!formData.customer_id) {
@@ -279,6 +286,10 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
             step="0.5"
             value={formData.estimated_hours}
             onChange={(e) => updateField('estimated_hours', parseFloat(e.target.value) || '')}
+            onBlur={() => setIsEstimatedHoursTouched(true)}
+            className={cn(
+              isEstimatedHoursTouched && !formData.estimated_hours && "border-red-500"
+            )}
             placeholder="0"
           />
         </div>
@@ -289,6 +300,10 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
             step="0.01"
             value={formData.quote_amount}
             onChange={(e) => updateField('quote_amount', parseFloat(e.target.value) || '')}
+            onBlur={() => setIsQuoteAmountTouched(true)}
+            className={cn(
+              isQuoteAmountTouched && !formData.quote_amount && "border-red-500"
+            )}
             placeholder="0.00"
           />
         </div>
