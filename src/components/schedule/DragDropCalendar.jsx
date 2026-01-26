@@ -354,7 +354,7 @@ export default function DragDropCalendar({
                                         )}
                                       </div>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top" className={`${hasConflict ? "bg-red-50 border-red-300" : "bg-slate-900 border-slate-700"} shadow-xl`}>
+                                    <TooltipContent side="top" className={`bg-slate-900 ${hasConflict ? "border-red-500 border-2" : "border-slate-700"} shadow-xl`}>
                                       <div className="text-sm space-y-2 min-w-[250px]">
                                         <p className="font-bold text-white text-base">{wo.title}</p>
                                         
