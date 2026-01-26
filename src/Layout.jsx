@@ -92,7 +92,6 @@ export default function Layout({ children, currentPageName }) {
             <span className="font-semibold text-slate-900">Alpha Yachting</span>
           </div>
         </div>
-        {user && <NotificationBell userEmail={user.email} />}
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -111,14 +110,17 @@ export default function Layout({ children, currentPageName }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="h-16 px-6 flex items-center justify-between border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <Anchor className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between flex-1">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <Anchor className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <span className="font-bold text-slate-900">Alpha Yachting</span>
+                  <p className="text-[10px] text-slate-500 -mt-0.5">Service Management</p>
+                </div>
               </div>
-              <div>
-                <span className="font-bold text-slate-900">Alpha Yachting</span>
-                <p className="text-[10px] text-slate-500 -mt-0.5">Service Management</p>
-              </div>
+              {user && <NotificationBell userEmail={user.email} />}
             </div>
             <Button 
               variant="ghost" 
@@ -172,12 +174,7 @@ export default function Layout({ children, currentPageName }) {
               <Smartphone className="h-5 w-5" />
               Mobile App
             </Link>
-          </div>
-
-          {/* Notification Bell - Desktop */}
-          <div className="px-3 pb-3">
-            {user && <NotificationBell userEmail={user.email} />}
-          </div>
+            </div>
 
           {/* User Menu */}
           <div className="p-3 border-t border-slate-100">
