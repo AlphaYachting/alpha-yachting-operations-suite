@@ -288,7 +288,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
             onChange={(e) => updateField('estimated_hours', parseFloat(e.target.value) || '')}
             onBlur={() => setIsEstimatedHoursTouched(true)}
             className={cn(
-              isEstimatedHoursTouched && !formData.estimated_hours && "border-red-500"
+              isEstimatedHoursTouched && !formData.estimated_hours && !formData.quote_amount && "border-red-500"
             )}
             placeholder="0"
           />
@@ -302,7 +302,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
             onChange={(e) => updateField('quote_amount', parseFloat(e.target.value) || '')}
             onBlur={() => setIsQuoteAmountTouched(true)}
             className={cn(
-              isQuoteAmountTouched && !formData.quote_amount && "border-red-500"
+              isQuoteAmountTouched && !formData.quote_amount && !formData.estimated_hours && "border-red-500"
             )}
             placeholder="0.00"
           />
