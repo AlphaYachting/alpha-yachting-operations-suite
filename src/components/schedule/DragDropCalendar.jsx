@@ -362,6 +362,9 @@ export default function DragDropCalendar({
                                           <div className="flex items-center gap-2 text-white">
                                             <Clock className="h-4 w-4" />
                                             <span>{wo.scheduled_start_time}{wo.scheduled_end_time && ` - ${wo.scheduled_end_time}`}</span>
+                                            {wo.estimated_duration_hours && (
+                                              <span className="text-slate-300">({wo.estimated_duration_hours}h)</span>
+                                            )}
                                           </div>
                                         )}
                                         
