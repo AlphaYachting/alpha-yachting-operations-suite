@@ -44,6 +44,7 @@ import TaskForm from '@/components/tasks/TaskForm';
 import QuickTaskUpdate from '@/components/tasks/QuickTaskUpdate';
 import TemplateSelector from '@/components/templates/TemplateSelector';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
+import { notifyTaskStatusChange } from '@/components/notifications/notificationUtils';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -177,7 +178,24 @@ export default function WorkOrderDetail() {
 
   const handleQuickTaskUpdate = async (taskData) => {
     try {
+      const oldStatus = quickUpdateTask.status;
       await base44.entities.Task.update(quickUpdateTask.id, taskData);
+      
+      // Send notification if status changed
+      if (taskData.status && taskData.status !== oldStatus) {
+        try {
+          await notifyTaskStatusChange(
+            { ...quickUpdateTask, ...taskData },
+            workOrder,
+            technicians,
+            oldStatus,
+            taskData.status
+          );
+        } catch (notifyError) {
+          console.error('Failed to send task notification:', notifyError);
+        }
+      }
+      
       await loadWorkOrderDetails();
       setQuickUpdateTask(null);
     } catch (error) {
