@@ -25,8 +25,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { format, isToday, isTomorrow, parseISO, addDays, isWithinInterval, startOfDay, endOfDay, isPast, differenceInDays } from 'date-fns';
+import { format, isToday, isTomorrow, parseISO, addDays, isWithinInterval, startOfDay, endOfDay, isPast, differenceInDays, startOfWeek, addMonths, startOfMonth } from 'date-fns';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
+import DragDropCalendar from '@/components/schedule/DragDropCalendar';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import DispatchTimeline from '@/components/schedule/DispatchTimeline';
+import FutureOverview from '@/components/schedule/FutureOverview';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const StatCard = ({ title, value, icon: Icon, trend, color, loading }) => (
   <Card className="relative overflow-hidden">
@@ -85,11 +96,30 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [locations, setLocations] = useState([]);
+  const [inventoryReservations, setInventoryReservations] = useState([]);
+  
+  // Schedule state
+  const [currentWeekStart, setCurrentWeekStart] = useState(addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -7));
+  const [calendarViewType, setCalendarViewType] = useState('week');
+  const [viewMode, setViewMode] = useState('calendar');
+  const [dispatchViewMode, setDispatchViewMode] = useState('day');
+  const [dispatchDate, setDispatchDate] = useState(new Date());
+  const [gridSize, setGridSize] = useState('1h');
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [technicianFilter, setTechnicianFilter] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [rangeWeeks, setRangeWeeks] = useState(8);
+  const [showBlockedOnly, setShowBlockedOnly] = useState(false);
+  const [focusBlockedDays, setFocusBlockedDays] = useState(false);
+  const [overviewStartDate, setOverviewStartDate] = useState(startOfDay(new Date()));
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData] = await Promise.all([
+        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData, locationsData] = await Promise.all([
           base44.entities.Job.list(),
           base44.entities.WorkOrder.list('-scheduled_date', 100),
           base44.entities.Task.list(),
@@ -97,7 +127,8 @@ export default function Dashboard() {
           base44.entities.Boat.list(),
           base44.entities.Technician.list(),
           base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-          base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
+          base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' }),
+          base44.entities.Location.list()
         ]);
         
         // Sort jobs: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
@@ -151,6 +182,8 @@ export default function Dashboard() {
         setTechnicians(techniciansData);
         setReservations(reservationsData);
         setVehicles(vehiclesData);
+        setLocations(locationsData);
+        setInventoryReservations(reservationsData);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -272,6 +305,47 @@ export default function Dashboard() {
       console.error('Error updating work order:', error);
     }
   };
+  
+  // Schedule navigation functions
+  const prevWeek = () => setCurrentWeekStart(calendarViewType === 'month' ? addMonths(currentWeekStart, -1) : addDays(currentWeekStart, -7));
+  const nextWeek = () => setCurrentWeekStart(calendarViewType === 'month' ? addMonths(currentWeekStart, 1) : addDays(currentWeekStart, 7));
+  const goToToday = () => setCurrentWeekStart(calendarViewType === 'month' ? startOfMonth(new Date()) : addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -7));
+  const prevDay = () => setDispatchDate(addDays(dispatchDate, -1));
+  const nextDay = () => setDispatchDate(addDays(dispatchDate, 1));
+  const goToDispatchToday = () => setDispatchDate(new Date());
+  const prevRange = () => setOverviewStartDate(addDays(overviewStartDate, -rangeWeeks * 7));
+  const nextRange = () => setOverviewStartDate(addDays(overviewStartDate, rangeWeeks * 7));
+  const goToOverviewToday = () => setOverviewStartDate(startOfDay(new Date()));
+  
+  const handleOverviewDateClick = (date, technicianId) => {
+    setDispatchDate(date);
+    setDispatchViewMode('day');
+  };
+  
+  const handleWorkOrderClick = (workOrderId) => {
+    const wo = workOrders.find(w => w.id === workOrderId);
+    if (wo) {
+      setEditingWorkOrder(wo);
+      setShowEditDialog(true);
+    }
+  };
+  
+  const handleWorkOrderUpdate = async (workOrderId, updates) => {
+    try {
+      await base44.entities.WorkOrder.update(workOrderId, updates);
+      const [workOrdersData] = await Promise.all([
+        base44.entities.WorkOrder.list('-scheduled_date', 100)
+      ]);
+      setWorkOrders(workOrdersData);
+    } catch (error) {
+      console.error('Error updating work order:', error);
+    }
+  };
+  
+  const handleWorkOrderEditFromCalendar = (workOrder) => {
+    setEditingWorkOrder(workOrder);
+    setShowEditDialog(true);
+  };
 
   return (
     <div className="space-y-8">
@@ -282,11 +356,9 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">Welcome back! Here's what's happening today.</p>
         </div>
         <div className="flex gap-3">
-          <Button asChild variant="outline">
-            <Link to={createPageUrl('Schedule')}>
-              <Calendar className="h-4 w-4 mr-2" />
-              Schedule
-            </Link>
+          <Button variant="outline" onClick={() => setShowScheduleDialog(true)}>
+            <Calendar className="h-4 w-4 mr-2" />
+            Schedule
           </Button>
           <Button asChild className="bg-blue-600 hover:bg-blue-700">
             <Link to={createPageUrl('Jobs') + '?new=true'}>
@@ -718,6 +790,232 @@ export default function Dashboard() {
             onSave={handleSaveWorkOrder}
             onCancel={() => setShowEditDialog(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Schedule Full Screen Dialog */}
+      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-6">
+          <DialogHeader className="mb-4">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-2xl">Schedule</DialogTitle>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    if (viewMode === 'calendar') goToToday();
+                    else if (dispatchViewMode === 'day') goToDispatchToday();
+                    else goToOverviewToday();
+                  }}
+                >
+                  Today
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => {
+                    if (viewMode === 'calendar') prevWeek();
+                    else if (dispatchViewMode === 'day') prevDay();
+                    else prevRange();
+                  }}
+                >
+                  <ChevronRight className="h-4 w-4 rotate-180" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  onClick={() => {
+                    if (viewMode === 'calendar') nextWeek();
+                    else if (dispatchViewMode === 'day') nextDay();
+                    else nextRange();
+                  }}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="overflow-y-auto h-[calc(100%-80px)]">
+            <Tabs value={viewMode} onValueChange={setViewMode} className="w-full">
+              <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+                <TabsTrigger value="calendar" className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4" />
+                  Calendar
+                </TabsTrigger>
+                <TabsTrigger value="dispatch" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Dispatch
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="calendar" className="space-y-4">
+                {loading ? (
+                  <div className="grid grid-cols-7 gap-4">
+                    {[1,2,3,4,5,6,7].map(i => (
+                      <Skeleton key={i} className="h-64" />
+                    ))}
+                  </div>
+                ) : (
+                  <DragDropCalendar
+                    currentWeekStart={currentWeekStart}
+                    workOrders={workOrders}
+                    jobs={jobs}
+                    technicians={technicians}
+                    customers={customers}
+                    boats={boats}
+                    locations={locations}
+                    inventoryReservations={inventoryReservations}
+                    onWorkOrderUpdate={handleWorkOrderUpdate}
+                    onWorkOrderEdit={handleWorkOrderEditFromCalendar}
+                    loading={loading}
+                    viewType={calendarViewType}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="dispatch" className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Tabs value={dispatchViewMode} onValueChange={setDispatchViewMode} className="w-full max-w-md">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="day">Day Timeline</TabsTrigger>
+                      <TabsTrigger value="future">Future Overview</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+
+                {dispatchViewMode === 'day' && (
+                  <>
+                    <div className="flex flex-col lg:flex-row gap-4">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          placeholder="Search by job, boat, or customer..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2 flex-wrap">
+                        <Select value={gridSize} onValueChange={setGridSize}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Grid size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="30m">30 minutes</SelectItem>
+                            <SelectItem value="1h">1 hour</SelectItem>
+                            <SelectItem value="2h">2 hours</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={locationFilter} onValueChange={setLocationFilter}>
+                          <SelectTrigger className="w-44">
+                            <SelectValue placeholder="All Locations" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Locations</SelectItem>
+                            {locations.map(loc => (
+                              <SelectItem key={loc.id} value={loc.id}>
+                                {loc.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {loading ? (
+                      <Skeleton className="h-96" />
+                    ) : (
+                      <DispatchTimeline
+                        technicians={technicians}
+                        workOrders={workOrders}
+                        jobs={jobs}
+                        customers={customers}
+                        boats={boats}
+                        locations={locations}
+                        selectedDate={dispatchDate}
+                        viewMode={dispatchViewMode}
+                        gridSize={gridSize}
+                        locationFilter={locationFilter}
+                        statusFilter={statusFilter}
+                        technicianFilter={technicianFilter}
+                        searchTerm={searchTerm}
+                        onWorkOrderClick={handleWorkOrderClick}
+                      />
+                    )}
+                  </>
+                )}
+
+                {dispatchViewMode === 'future' && (
+                  <>
+                    <div className="flex flex-col lg:flex-row gap-4">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          placeholder="Search by job, boat, or customer..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2 flex-wrap">
+                        <Select value={rangeWeeks.toString()} onValueChange={(val) => setRangeWeeks(Number(val))}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Range" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="4">4 weeks</SelectItem>
+                            <SelectItem value="8">8 weeks</SelectItem>
+                            <SelectItem value="12">12 weeks</SelectItem>
+                            <SelectItem value="26">6 months</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={locationFilter} onValueChange={setLocationFilter}>
+                          <SelectTrigger className="w-44">
+                            <SelectValue placeholder="All Locations" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Locations</SelectItem>
+                            {locations.map(loc => (
+                              <SelectItem key={loc.id} value={loc.id}>
+                                {loc.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {loading ? (
+                      <Skeleton className="h-96" />
+                    ) : (
+                      <FutureOverview
+                        technicians={technicians}
+                        workOrders={workOrders}
+                        jobs={jobs}
+                        customers={customers}
+                        boats={boats}
+                        locations={locations}
+                        startDate={overviewStartDate}
+                        rangeWeeks={rangeWeeks}
+                        locationFilter={locationFilter}
+                        statusFilter={statusFilter}
+                        technicianFilter={technicianFilter}
+                        searchTerm={searchTerm}
+                        showBlockedOnly={showBlockedOnly}
+                        focusBlockedDays={focusBlockedDays}
+                        onDateClick={handleOverviewDateClick}
+                      />
+                    )}
+                  </>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
