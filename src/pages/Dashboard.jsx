@@ -17,7 +17,8 @@ import {
   Calendar,
   User,
   Pencil,
-  Truck
+  Truck,
+  Flag
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -271,7 +272,7 @@ export default function Dashboard() {
         <StatCard 
           title="Overdue Jobs" 
           value={overdueJobs.length} 
-          icon={AlertTriangle}
+          icon={Flag}
           color="bg-red-500"
           loading={loading}
         />
