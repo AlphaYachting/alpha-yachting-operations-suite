@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 const navItems = [
   { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
@@ -91,6 +92,7 @@ export default function Layout({ children, currentPageName }) {
             <span className="font-semibold text-slate-900">Alpha Yachting</span>
           </div>
         </div>
+        {user && <NotificationBell userEmail={user.email} />}
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -170,6 +172,11 @@ export default function Layout({ children, currentPageName }) {
               <Smartphone className="h-5 w-5" />
               Mobile App
             </Link>
+          </div>
+
+          {/* Notification Bell - Desktop */}
+          <div className="px-3 pb-3">
+            {user && <NotificationBell userEmail={user.email} />}
           </div>
 
           {/* User Menu */}
