@@ -482,19 +482,39 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {jobs.slice(0, 5).map((job) => (
+                {jobs.slice(0, 5).map((job) => {
+                  const isDueOverdue = job.requested_date && isPast(parseISO(job.requested_date)) && !isToday(parseISO(job.requested_date));
+                  const isDueToday = job.requested_date && isToday(parseISO(job.requested_date));
+                  const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), today) <= 3 && differenceInDays(parseISO(job.requested_date), today) > 0;
+                  
+                  return (
                   <Link
                     key={job.id}
                     to={createPageUrl('JobDetail') + `?id=${job.id}`}
-                    className="block p-4 rounded-xl border border-slate-200 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
+                    className={`block p-4 rounded-xl border-2 transition-all ${
+                      isDueOverdue ? 'border-red-500 bg-red-50 hover:border-red-600 hover:bg-red-100' : 
+                      isDueToday ? 'border-amber-500 bg-amber-50 hover:border-amber-600 hover:bg-amber-100' : 
+                      'border-slate-200 hover:border-blue-200 hover:bg-blue-50/50'
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium text-slate-900 truncate">{job.title}</p>
                           <Badge className={priorityColors[job.priority] || 'bg-slate-100'} variant="secondary">
                             {job.priority}
                           </Badge>
+                          {job.requested_date && (
+                            <Badge className={`${
+                              isDueOverdue ? 'bg-red-600 text-white border-red-700' : 
+                              isDueToday ? 'bg-amber-600 text-white border-amber-700' : 
+                              isDueSoon ? 'bg-orange-100 text-orange-800' : 
+                              'bg-blue-100 text-blue-700'
+                            }`}>
+                              <Flag className={`h-3 w-3 mr-1 ${isDueOverdue || isDueToday ? 'animate-pulse' : ''}`} />
+                              {isDueOverdue ? 'OVERDUE' : isDueToday ? 'DUE TODAY' : `Due ${format(parseISO(job.requested_date), 'MMM d')}`}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-slate-500 mt-0.5">
                           {getCustomerName(job.customer_id)} • {getBoatName(job.boat_id)}
@@ -510,7 +530,8 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
