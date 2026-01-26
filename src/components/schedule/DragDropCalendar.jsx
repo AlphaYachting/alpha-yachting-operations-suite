@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format, parseISO, isSameDay, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Clock, AlertTriangle, Users } from 'lucide-react';
+import { Clock, AlertTriangle, Users, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +64,18 @@ export default function DragDropCalendar({
     });
     setTechnicianColorMap(colorMap);
   }, [technicians]);
+
+  // Memoize work orders by date for performance
+  const workOrdersByDate = useMemo(() => {
+    const byDate = {};
+    workOrders.forEach(wo => {
+      if (!wo.scheduled_date) return;
+      const dateKey = format(parseISO(wo.scheduled_date), 'yyyy-MM-dd');
+      if (!byDate[dateKey]) byDate[dateKey] = [];
+      byDate[dateKey].push(wo);
+    });
+    return byDate;
+  }, [workOrders]);
 
   useEffect(() => {
     detectConflicts();
@@ -180,10 +192,8 @@ export default function DragDropCalendar({
   };
 
   const getWorkOrdersForDay = (date) => {
-    return workOrders.filter(wo => {
-      if (!wo.scheduled_date) return false;
-      return isSameDay(parseISO(wo.scheduled_date), date);
-    });
+    const dateKey = format(date, 'yyyy-MM-dd');
+    return workOrdersByDate[dateKey] || [];
   };
 
   const getJobInfo = (jobId) => {
@@ -344,66 +354,46 @@ export default function DragDropCalendar({
                                         )}
                                       </div>
                                     </TooltipTrigger>
-                                    <TooltipContent side="top" className={`${hasConflict ? "bg-red-50 border-red-300" : "bg-white border-slate-200"} shadow-xl max-w-sm`}>
-                                      <div className="text-sm space-y-2">
-                                        <div>
-                                          <p className="font-bold text-slate-900 text-base">{wo.title}</p>
-                                          <p className="text-xs text-slate-500">WO #{wo.work_order_number}</p>
-                                        </div>
+                                    <TooltipContent side="top" className={`${hasConflict ? "bg-red-50 border-red-300" : "bg-slate-900 border-slate-700"} shadow-xl`}>
+                                      <div className="text-sm space-y-2 min-w-[250px]">
+                                        <p className="font-bold text-white text-base">{wo.title}</p>
                                         
                                         {wo.scheduled_start_time && (
-                                          <div className="flex items-center gap-2 text-slate-700">
+                                          <div className="flex items-center gap-2 text-white">
                                             <Clock className="h-4 w-4" />
-                                            <span className="font-medium">{wo.scheduled_start_time} {wo.scheduled_end_time && `- ${wo.scheduled_end_time}`}</span>
-                                            {wo.estimated_duration_hours && (
-                                              <span className="text-slate-500">({wo.estimated_duration_hours}h)</span>
-                                            )}
-                                          </div>
-                                        )}
-                                        
-                                        {jobInfo.customer && (
-                                          <div className="text-slate-700">
-                                            <span className="font-medium">Customer:</span> {jobInfo.customer}
+                                            <span>{wo.scheduled_start_time}{wo.scheduled_end_time && ` - ${wo.scheduled_end_time}`}</span>
                                           </div>
                                         )}
                                         
                                         {jobInfo.boat && (
-                                          <div className="text-slate-700">
-                                            <span className="font-medium">Boat:</span> {jobInfo.boat}
+                                          <div className="flex items-center gap-2 text-white">
+                                            <span>🚤</span>
+                                            <span>{jobInfo.boat}</span>
                                           </div>
                                         )}
                                         
                                         {jobInfo.location && (
-                                          <div className="text-slate-700">
-                                            <span className="font-medium">Location:</span> {jobInfo.location}
+                                          <div className="flex items-center gap-2 text-white">
+                                            <MapPin className="h-4 w-4" />
+                                            <span>{jobInfo.location}</span>
                                           </div>
                                         )}
                                         
                                         {techs.length > 0 ? (
-                                          <div className="text-slate-700">
-                                            <span className="font-medium">Technicians:</span> {techs.map(t => t.name).join(', ')}
+                                          <div className="flex items-center gap-2 text-white">
+                                            <Users className="h-4 w-4" />
+                                            <span>{techs.map(t => t.name).join(', ')}</span>
                                           </div>
                                         ) : (
-                                          <div className="text-amber-700 font-medium">
-                                            ⚠️ No technicians assigned
-                                          </div>
-                                        )}
-                                        
-                                        {wo.status && (
-                                          <div className="text-slate-700">
-                                            <span className="font-medium">Status:</span> {wo.status}
-                                          </div>
-                                        )}
-                                        
-                                        {wo.description && (
-                                          <div className="text-slate-600 text-xs pt-2 border-t border-slate-200">
-                                            {wo.description.length > 100 ? wo.description.substring(0, 100) + '...' : wo.description}
+                                          <div className="flex items-center gap-2 text-amber-300 font-medium">
+                                            <AlertTriangle className="h-4 w-4" />
+                                            <span>No technicians assigned</span>
                                           </div>
                                         )}
                                         
                                         {hasConflict && conflictTooltip && (
-                                          <div className="mt-2 pt-2 border-t border-red-300">
-                                            <div className="flex items-start gap-2 text-red-700 font-medium">
+                                          <div className="mt-2 pt-2 border-t border-red-400">
+                                            <div className="flex items-start gap-2 text-red-300 font-medium">
                                               <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                                               <span className="whitespace-pre-line">{conflictTooltip}</span>
                                             </div>
