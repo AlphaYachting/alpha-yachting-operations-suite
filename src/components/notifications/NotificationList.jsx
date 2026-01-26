@@ -65,7 +65,7 @@ export default function NotificationList({ notifications, onNotificationClick, o
                   {notification.message}
                 </p>
                 <p className="text-xs text-slate-400 mt-2">
-                  {formatDistanceToNow(new Date(notification.created_date), { addSuffix: true })}
+                  {notification.created_date ? formatDistanceToNow(new Date(notification.created_date), { addSuffix: true }) : 'Just now'}
                 </p>
               </div>
               {!notification.is_read && (
