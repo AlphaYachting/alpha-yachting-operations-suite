@@ -1,51 +1,62 @@
 import puppeteer from 'puppeteer';
 
-export default async function generateOfferPDF({ documentData, lineItems, templateData }) {
-  let browser;
+Deno.serve(async (req) => {
   try {
-    browser = await puppeteer.launch({ headless: 'new' });
-    const page = await browser.newPage();
+    const { documentData, lineItems, templateData } = await req.json();
     
-    // Set viewport for A4
-    await page.setViewport({ width: 1240, height: 1754 });
+    const puppeteer = (await import('npm:puppeteer')).default;
+    let browser;
     
-    // Build HTML from document data
-    const html = buildHTMLDocument(documentData, lineItems, templateData);
-    
-    // Set content
-    await page.setContent(html, { waitUntil: 'networkidle2' });
-    
-    // Generate PDF
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      margin: {
-        top: '15mm',
-        right: '12mm',
-        bottom: '15mm',
-        left: '12mm'
-      },
-      printBackground: true,
-      scale: 1
-    });
-    
-    await browser.close();
-    
-    // Convert to base64
-    const base64PDF = pdfBuffer.toString('base64');
-    
-    return {
-      success: true,
-      pdf: `data:application/pdf;base64,${base64PDF}`,
-      fileName: `${documentData.document_number || 'offer'}_${new Date().toISOString().split('T')[0]}.pdf`
-    };
+    try {
+      browser = await puppeteer.launch({ headless: 'new' });
+      const page = await browser.newPage();
+      
+      // Set viewport for A4
+      await page.setViewport({ width: 1240, height: 1754 });
+      
+      // Build HTML from document data
+      const html = buildHTMLDocument(documentData, lineItems, templateData);
+      
+      // Set content
+      await page.setContent(html, { waitUntil: 'networkidle2' });
+      
+      // Generate PDF
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        margin: {
+          top: '15mm',
+          right: '12mm',
+          bottom: '15mm',
+          left: '12mm'
+        },
+        printBackground: true,
+        scale: 1
+      });
+      
+      await browser.close();
+      
+      // Convert to base64
+      const base64PDF = pdfBuffer.toString('base64');
+      
+      return Response.json({
+        success: true,
+        pdf: `data:application/pdf;base64,${base64PDF}`,
+        fileName: `${documentData.document_number || 'offer'}_${new Date().toISOString().split('T')[0]}.pdf`
+      });
+    } catch (error) {
+      if (browser) await browser.close();
+      return Response.json({
+        success: false,
+        error: error.message
+      }, { status: 500 });
+    }
   } catch (error) {
-    if (browser) await browser.close();
-    return {
+    return Response.json({
       success: false,
       error: error.message
-    };
+    }, { status: 400 });
   }
-}
+});
 
 function buildHTMLDocument(documentData, lineItems, templateData) {
   const subtotal = lineItems.reduce((sum, item) => sum + (item.total_net || 0), 0);
