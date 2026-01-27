@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 export default function PDFDocumentTemplate({ document, lineItems, template, payments = [] }) {
   const isInvoice = document.document_type === 'Invoice';
   const currency = document.currency === 'EUR' ? '€' : document.currency;
+  const useLetterhead = template.letterhead_enabled && template.letterhead_image_url;
 
   // Calculate tax breakdown
   const taxBreakdown = lineItems.reduce((acc, item) => {
@@ -22,37 +23,39 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
       minHeight: '100%',
       padding: '0',
       margin: '0',
-      backgroundColor: 'white',
+      backgroundColor: useLetterhead ? 'transparent' : 'white',
       color: '#000',
       fontSize: '11pt',
       boxSizing: 'border-box',
       lineHeight: '1.5'
     }}>
-      {/* Header */}
-      <div style={{ marginBottom: '25px', borderBottom: `2px solid ${template.primary_color || '#2563eb'}`, paddingBottom: '15px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            {template.logo_url && (
-              <img src={template.logo_url} alt="Logo" style={{ maxHeight: '50px', marginBottom: '8px' }} />
-            )}
-            <h1 style={{ margin: 0, color: template.primary_color || '#2563eb', fontSize: '20pt', fontWeight: 'bold' }}>
-              {template.company_name || 'Alpha Yachting'}
-            </h1>
-            <div style={{ fontSize: '9pt', color: '#555', marginTop: '4px', lineHeight: '1.3' }}>
-              {template.company_address && <div>{template.company_address}</div>}
-              {template.company_vat && <div>VAT: {template.company_vat}</div>}
-              {template.company_registration && <div>Reg: {template.company_registration}</div>}
+      {/* Header - Only show if letterhead is disabled */}
+      {!useLetterhead && (
+        <div style={{ marginBottom: '25px', borderBottom: `2px solid ${template.primary_color || '#2563eb'}`, paddingBottom: '15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              {template.logo_url && (
+                <img src={template.logo_url} alt="Logo" style={{ maxHeight: '50px', marginBottom: '8px' }} />
+              )}
+              <h1 style={{ margin: 0, color: template.primary_color || '#2563eb', fontSize: '20pt', fontWeight: 'bold' }}>
+                {template.company_name || 'Alpha Yachting'}
+              </h1>
+              <div style={{ fontSize: '9pt', color: '#555', marginTop: '4px', lineHeight: '1.3' }}>
+                {template.company_address && <div>{template.company_address}</div>}
+                {template.company_vat && <div>VAT: {template.company_vat}</div>}
+                {template.company_registration && <div>Reg: {template.company_registration}</div>}
+              </div>
             </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '9pt', color: '#555', lineHeight: '1.3' }}>
-              {template.contact_phone && <div>Tel: {template.contact_phone}</div>}
-              {template.contact_email && <div>{template.contact_email}</div>}
-              {template.contact_website && <div>{template.contact_website}</div>}
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '9pt', color: '#555', lineHeight: '1.3' }}>
+                {template.contact_phone && <div>Tel: {template.contact_phone}</div>}
+                {template.contact_email && <div>{template.contact_email}</div>}
+                {template.contact_website && <div>{template.contact_website}</div>}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Document Title & Number */}
       <div style={{ marginBottom: '20px' }}>
@@ -286,24 +289,26 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
         </div>
       )}
 
-      {/* Footer */}
-      <div style={{ 
-        marginTop: '30px', 
-        paddingTop: '15px', 
-        borderTop: `1px solid ${template.primary_color || '#2563eb'}`,
-        fontSize: '8pt',
-        color: '#666',
-        textAlign: 'center',
-        lineHeight: '1.3'
-      }}>
-        {template.footer_text && (
-          <div style={{ marginBottom: '8px' }}>{template.footer_text}</div>
-        )}
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <div>{template.company_name || 'Alpha Yachting'}</div>
-          <div>Generated: {format(new Date(), 'dd.MM.yyyy HH:mm')}</div>
+      {/* Footer - Only show if letterhead is disabled */}
+      {!useLetterhead && (
+        <div style={{ 
+          marginTop: '30px', 
+          paddingTop: '15px', 
+          borderTop: `1px solid ${template.primary_color || '#2563eb'}`,
+          fontSize: '8pt',
+          color: '#666',
+          textAlign: 'center',
+          lineHeight: '1.3'
+        }}>
+          {template.footer_text && (
+            <div style={{ marginBottom: '8px' }}>{template.footer_text}</div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div>{template.company_name || 'Alpha Yachting'}</div>
+            <div>Generated: {format(new Date(), 'dd.MM.yyyy HH:mm')}</div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
