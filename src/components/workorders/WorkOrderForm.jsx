@@ -48,12 +48,25 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
     setSaving(true);
     
     try {
+      // Validate required fields
+      if (!formData.job_id) {
+        throw new Error('Please select a parent job');
+      }
+      if (!formData.title?.trim()) {
+        throw new Error('Work order title is required');
+      }
+      if (!formData.scheduled_date) {
+        throw new Error('Start date is required');
+      }
+      
       // Pass template ID and suggested tasks to parent for post-creation handling
       await onSave(formData, selectedTemplateId, suggestedTasks);
-    } finally {
+    } catch (err) {
+      setError(err.message || 'Failed to save work order. Please check all required fields.');
       setSaving(false);
     }
   };
