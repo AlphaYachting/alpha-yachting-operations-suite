@@ -159,6 +159,7 @@ export default function WorkOrders() {
   };
 
   const handleSave = async (workOrderData, templateId, suggestedTasks) => {
+    console.log('handleSave called with:', { workOrderData, templateId, suggestedTasks });
     try {
       let createdWoId;
       let savedWorkOrder;
