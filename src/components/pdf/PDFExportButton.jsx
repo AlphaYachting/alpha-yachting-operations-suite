@@ -59,17 +59,44 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         <html>
         <head>
           <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Print Document</title>
           <style>
-            body {
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+            html, body {
+              width: 100%;
+              height: 100%;
               margin: 0;
               padding: 0;
               background: white;
               font-family: Arial, sans-serif;
+              font-size: 11pt;
+            }
+            #print-content {
+              width: 100%;
+              page-break-after: auto;
+            }
+            @page {
+              size: A4;
+              margin: 0;
             }
             @media print {
-              body { margin: 0; padding: 0; }
-              .print-content { page-break-after: auto; }
+              html, body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                zoom: 100%;
+              }
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+              }
             }
           </style>
         </head>
@@ -77,7 +104,7 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
           <div id="print-content"></div>
           <script>
             window.addEventListener('load', () => {
-              setTimeout(() => { window.print(); }, 500);
+              setTimeout(() => { window.print(); }, 300);
             });
           </script>
         </body>
