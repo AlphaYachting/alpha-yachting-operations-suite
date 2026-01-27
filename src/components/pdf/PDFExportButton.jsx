@@ -149,57 +149,41 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
             <Button variant="outline" onClick={() => setShowPreview(false)}>
               Close
             </Button>
-            <Button onClick={() => {
-              // Get the preview element which already renders correctly
-              const previewElement = document.getElementById('preview-print-area');
-              if (!previewElement) return;
+            <Button onClick={async () => {
+              try {
+                setIsGenerating(true);
 
-              // Create print window from the correct preview content
-              const printWindow = window.open('', '', 'width=900,height=1200');
-              const doc = printWindow.document;
+                // Create temp container with correct content
+                const tempContainer = document.createElement('div');
+                const root = createRoot(tempContainer);
 
-              // Write HTML with print-optimized CSS
-              doc.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="utf-8">
-                  <title>${documentData.document_number || 'document'}</title>
-                  <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    @page {
-                      size: A4 portrait;
-                      margin: 0;
-                    }
-                    @media print {
-                      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                      html, body { width: 210mm; height: 297mm; margin: 0; padding: 0; background: white !important; }
-                      body { -webkit-print-color-adjust: exact; color-adjust: exact; }
-                    }
-                    body { font-family: Arial, sans-serif; background: white; }
-                    #print-content { width: 210mm; margin: 0; padding: 0; }
-                  </style>
-                </head>
-                <body id="print-body">
-                  <div id="print-content"></div>
-                </body>
-                </html>
-              `);
-              doc.close();
+                root.render(
+                  <PDFDocumentTemplate 
+                    document={documentData} 
+                    lineItems={lineItems}
+                    template={template}
+                    payments={payments}
+                    isPdfExport={true}
+                  />
+                );
 
-              // Append the preview content (already properly rendered with letterhead)
-              setTimeout(() => {
-                const contentDiv = doc.getElementById('print-content');
-                const cloned = previewElement.cloneNode(true);
-                cloned.style.margin = '0';
-                cloned.style.padding = '0';
-                contentDiv.appendChild(cloned);
+                // Wait for render
+                await new Promise(resolve => setTimeout(resolve, 800));
 
-                // Trigger print
-                setTimeout(() => {
-                  printWindow.print();
-                }, 300);
-              }, 100);
+                // Use html2canvas + jsPDF for proper scaling
+                await printScaledPDF({
+                  containerElement: tempContainer,
+                  fileName: `${documentData.document_number || 'document'}_${new Date().toISOString().split('T')[0]}.pdf`,
+                  templateData: template
+                });
+
+                root.unmount();
+                setIsGenerating(false);
+              } catch (error) {
+                console.error('PDF export error:', error);
+                setPdfError(`Failed to generate PDF: ${error.message}`);
+                setIsGenerating(false);
+              }
             }}>
               <Download className="h-4 w-4 mr-2" />
               Print to PDF
