@@ -13,7 +13,8 @@ import {
   AlertCircle,
   FileText,
   Target,
-  Activity
+  Activity,
+  Wrench
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -233,6 +234,59 @@ export default function Reports() {
     };
   }).filter(v => v.reservations > 0).sort((a, b) => b.reservations - a.reservations);
 
+  // Skills Capacity Analysis - Current Month
+  const currentMonth = new Date();
+  const currentMonthStart = startOfMonth(currentMonth);
+  const currentMonthEnd = endOfMonth(currentMonth);
+  
+  const currentMonthWorkOrders = workOrders.filter(wo => {
+    if (!wo.scheduled_date) return false;
+    try {
+      const woDate = parseISO(wo.scheduled_date);
+      return isWithinInterval(woDate, { start: currentMonthStart, end: currentMonthEnd });
+    } catch {
+      return false;
+    }
+  });
+
+  // All available skills from technicians
+  const allSkills = [...new Set(technicians.flatMap(tech => tech.skills || []))].sort();
+
+  const skillsCapacity = allSkills.map(skill => {
+    // Find all technicians with this skill
+    const techsWithSkill = technicians.filter(tech => tech.skills?.includes(skill));
+    
+    // Calculate planned hours for this skill in current month
+    let plannedHours = 0;
+    currentMonthWorkOrders.forEach(wo => {
+      if (!wo.assigned_technicians || wo.assigned_technicians.length === 0) return;
+      
+      // Check if any assigned technician has this skill
+      const hasSkill = wo.assigned_technicians.some(techId => 
+        techsWithSkill.some(t => t.id === techId)
+      );
+      
+      if (hasSkill) {
+        plannedHours += wo.estimated_duration_hours || 0;
+      }
+    });
+
+    // Count work orders requiring this skill
+    const workOrdersCount = currentMonthWorkOrders.filter(wo => 
+      wo.assigned_technicians?.some(techId => 
+        techsWithSkill.some(t => t.id === techId)
+      )
+    ).length;
+
+    return {
+      skill,
+      techniciansCount: techsWithSkill.length,
+      technicians: techsWithSkill.map(t => `${t.first_name} ${t.last_name}`).join(', '),
+      plannedHours: Math.round(plannedHours * 10) / 10,
+      workOrdersCount
+    };
+  }).sort((a, b) => b.plannedHours - a.plannedHours);
+
   const exportToCSV = (data, filename) => {
     if (!data || data.length === 0) {
       alert('No data to export');
@@ -367,13 +421,145 @@ export default function Reports() {
       </div>
 
       {/* Reports Tabs */}
-      <Tabs defaultValue="jobs" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="skills" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="skills">Skills Capacity</TabsTrigger>
           <TabsTrigger value="jobs">Job Completion</TabsTrigger>
           <TabsTrigger value="technicians">Technician Performance</TabsTrigger>
           <TabsTrigger value="time">Time Tracking</TabsTrigger>
           <TabsTrigger value="equipment">Equipment Usage</TabsTrigger>
         </TabsList>
+
+        {/* Skills Capacity Report */}
+        <TabsContent value="skills" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Skills Capacity Overview</CardTitle>
+                <p className="text-sm text-slate-500 mt-1">
+                  Current Month: {format(currentMonthStart, 'MMMM yyyy')}
+                </p>
+              </div>
+              <Button 
+                onClick={() => exportToCSV(skillsCapacity, 'skills_capacity_report')}
+                size="sm"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {skillsCapacity.length > 0 ? (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-700 mb-4">Planned Hours by Skill</h3>
+                      <ResponsiveContainer width="100%" height={400}>
+                        <BarChart data={skillsCapacity}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="skill" angle={-45} textAnchor="end" height={120} />
+                          <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="plannedHours" fill="#3b82f6" name="Planned Hours" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-700 mb-4">Detailed Breakdown</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Skill</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Technicians</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Planned Hours</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Work Orders</th>
+                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Avg Hours/WO</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-200">
+                            {skillsCapacity.map((item) => (
+                              <tr key={item.skill} className="hover:bg-slate-50">
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-2">
+                                    <Wrench className="h-4 w-4 text-blue-600" />
+                                    <span className="text-sm font-medium text-slate-900">{item.skill}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="text-sm text-slate-600">
+                                    <span className="font-medium">{item.techniciansCount}</span>
+                                    <div className="text-xs text-slate-500 mt-0.5">{item.technicians}</div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <Badge className={
+                                    item.plannedHours >= 100 ? 'bg-red-100 text-red-700' :
+                                    item.plannedHours >= 50 ? 'bg-amber-100 text-amber-700' :
+                                    item.plannedHours >= 20 ? 'bg-blue-100 text-blue-700' :
+                                    'bg-slate-100 text-slate-700'
+                                  }>
+                                    {item.plannedHours}h
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-slate-600">{item.workOrdersCount}</td>
+                                <td className="px-4 py-3 text-sm text-slate-600">
+                                  {item.workOrdersCount > 0 
+                                    ? Math.round((item.plannedHours / item.workOrdersCount) * 10) / 10 
+                                    : 0}h
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Wrench className="h-5 w-5 text-blue-600" />
+                          <p className="text-sm font-medium text-blue-900">Total Skills</p>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-700">{allSkills.length}</p>
+                      </div>
+                      
+                      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Clock className="h-5 w-5 text-emerald-600" />
+                          <p className="text-sm font-medium text-emerald-900">Total Planned Hours</p>
+                        </div>
+                        <p className="text-2xl font-bold text-emerald-700">
+                          {Math.round(skillsCapacity.reduce((sum, s) => sum + s.plannedHours, 0))}h
+                        </p>
+                      </div>
+                      
+                      <div className="p-4 bg-violet-50 border border-violet-200 rounded-lg">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Activity className="h-5 w-5 text-violet-600" />
+                          <p className="text-sm font-medium text-violet-900">Avg Hours per Skill</p>
+                        </div>
+                        <p className="text-2xl font-bold text-violet-700">
+                          {skillsCapacity.length > 0 
+                            ? Math.round((skillsCapacity.reduce((sum, s) => sum + s.plannedHours, 0) / skillsCapacity.length) * 10) / 10
+                            : 0}h
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12 text-slate-500">
+                    <Wrench className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                    <p>No skills data available</p>
+                    <p className="text-sm mt-1">Add skills to technicians to see capacity overview</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Job Completion Report */}
         <TabsContent value="jobs" className="space-y-6">
