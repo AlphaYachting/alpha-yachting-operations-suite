@@ -28,6 +28,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -78,6 +88,8 @@ export default function Jobs() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
   const [editingJob, setEditingJob] = useState(null);
+  const [deletingJob, setDeletingJob] = useState(null);
+  const [deleteRelated, setDeleteRelated] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -163,14 +175,38 @@ export default function Jobs() {
     setSearchParams({});
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this job?')) {
-      try {
-        await base44.entities.Job.delete(id);
-        await loadData();
-      } catch (error) {
-        console.error('Error deleting job:', error);
+  const handleDelete = async (job) => {
+    setDeletingJob(job);
+    setDeleteRelated(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingJob) return;
+    
+    try {
+      if (deleteRelated) {
+        // Find all work orders for this job
+        const jobWorkOrders = workOrders.filter(wo => wo.job_id === deletingJob.id);
+        const workOrderIds = jobWorkOrders.map(wo => wo.id);
+        
+        // Delete all tasks associated with these work orders
+        const jobTasks = tasks.filter(task => workOrderIds.includes(task.work_order_id));
+        for (const task of jobTasks) {
+          await base44.entities.Task.delete(task.id);
+        }
+        
+        // Delete all work orders
+        for (const wo of jobWorkOrders) {
+          await base44.entities.WorkOrder.delete(wo.id);
+        }
       }
+      
+      // Delete the job
+      await base44.entities.Job.delete(deletingJob.id);
+      await loadData();
+      setDeletingJob(null);
+    } catch (error) {
+      console.error('Error deleting job:', error);
     }
   };
 
@@ -414,7 +450,7 @@ export default function Jobs() {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          onClick={() => handleDelete(job.id)}
+                          onClick={() => handleDelete(job)}
                           className="text-red-600"
                         >
                           Delete
@@ -446,6 +482,62 @@ export default function Jobs() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingJob} onOpenChange={(open) => !open && setDeletingJob(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Job</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>Are you sure you want to delete this job?</p>
+              {deletingJob && (() => {
+                const jobWorkOrders = workOrders.filter(wo => wo.job_id === deletingJob.id);
+                const workOrderIds = jobWorkOrders.map(wo => wo.id);
+                const jobTasks = tasks.filter(task => workOrderIds.includes(task.work_order_id));
+                
+                return (
+                  <>
+                    {(jobWorkOrders.length > 0 || jobTasks.length > 0) && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-md p-3 space-y-2">
+                        <p className="font-medium text-amber-900">This job has associated data:</p>
+                        <ul className="text-sm text-amber-800 space-y-1 ml-4 list-disc">
+                          {jobWorkOrders.length > 0 && (
+                            <li>{jobWorkOrders.length} work order(s)</li>
+                          )}
+                          {jobTasks.length > 0 && (
+                            <li>{jobTasks.length} task(s)</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                    <div className="flex items-start space-x-2 pt-2">
+                      <input
+                        type="checkbox"
+                        id="deleteRelated"
+                        checked={deleteRelated}
+                        onChange={(e) => setDeleteRelated(e.target.checked)}
+                        className="mt-1"
+                      />
+                      <label htmlFor="deleteRelated" className="text-sm text-slate-700 cursor-pointer">
+                        Also delete all associated work orders and tasks
+                      </label>
+                    </div>
+                  </>
+                );
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Job
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
