@@ -135,7 +135,7 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
             <DialogTitle>PDF Preview</DialogTitle>
           </DialogHeader>
           {template && (
-            <div className="bg-white p-4">
+            <div id="preview-print-area" className="bg-white p-4">
               <PDFDocumentTemplate 
                 document={documentData} 
                 lineItems={lineItems}
@@ -148,9 +148,22 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
             <Button variant="outline" onClick={() => setShowPreview(false)}>
               Close
             </Button>
-            <Button onClick={() => { setShowPreview(false); generatePDF(); }}>
+            <Button onClick={() => {
+              const printCSS = `
+                @media print {
+                  body * { display: none; }
+                  #preview-print-area { display: block !important; }
+                  #preview-print-area * { display: inherit; }
+                }
+              `;
+              const style = document.createElement('style');
+              style.textContent = printCSS;
+              document.head.appendChild(style);
+              window.print();
+              setTimeout(() => document.head.removeChild(style), 100);
+            }}>
               <Download className="h-4 w-4 mr-2" />
-              Download PDF
+              Print to PDF
             </Button>
           </div>
         </DialogContent>
