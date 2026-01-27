@@ -142,54 +142,9 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
             <Button variant="outline" onClick={() => setShowPreview(false)}>
               Close
             </Button>
-            <Button onClick={() => {
-              if (!template) return;
-
-              // Clone the preview content
-              const previewElement = document.getElementById('preview-print-area');
-              if (!previewElement) return;
-
-              const clonedContent = previewElement.cloneNode(true);
-
-              // Create a new window
-              const printWindow = window.open('', '', 'width=800,height=1000');
-              printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="utf-8">
-                  <title>${documentData.document_number || 'document'}</title>
-                  <style>
-                    @page {
-                      size: A4;
-                      margin: 0;
-                    }
-                    * {
-                      margin: 0;
-                      padding: 0;
-                      box-sizing: border-box;
-                    }
-                    body {
-                      font-family: Arial, sans-serif;
-                      background: white;
-                    }
-                  </style>
-                </head>
-                <body></body>
-                </html>
-              `);
-              printWindow.document.close();
-
-              // Wait for document to be ready, then append content
-              setTimeout(() => {
-                printWindow.document.body.appendChild(clonedContent);
-                setTimeout(() => {
-                  printWindow.print();
-                }, 300);
-              }, 100);
-            }}>
+            <Button onClick={() => generatePDF()}>
               <Download className="h-4 w-4 mr-2" />
-              Print to PDF
+              Download PDF
             </Button>
           </div>
         </DialogContent>
