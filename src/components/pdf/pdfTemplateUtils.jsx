@@ -1,5 +1,5 @@
-// Shared HTML template generator for PDF export and preview
-// Single source of truth for both backend (Puppeteer) and frontend (React preview)
+// Shared PDF HTML template generator for both frontend preview and backend export
+// Used by: PDFDocumentTemplate (React preview), generateOfferPDF (Puppeteer export)
 
 export function buildPDFHTML(document, lineItems, template, payments = []) {
   const isInvoice = document.document_type === 'Invoice';
@@ -49,27 +49,6 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
   }, {});
 
   const outstanding = isInvoice ? (document.total || 0) - (document.paid_amount || 0) : 0;
-
-  // Letterhead background CSS
-  const letterheadCSS = template.letterhead_image_url
-    ? `
-      body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: url('${template.letterhead_image_url}');
-        background-attachment: fixed;
-        background-size: 210mm 297mm;
-        background-repeat: no-repeat;
-        z-index: -1;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-    `
-    : '';
 
   // Watermark HTML
   const watermarkHTML = template.watermark_enabled
@@ -454,7 +433,6 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
           margin-top: 12px;
         }
       </style>
-      ${letterheadCSS}
     </head>
     <body>
       ${watermarkHTML}

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { buildPDFHTML } from '@/functions/pdfTemplateGenerator.js';
+import { buildPDFHTML } from './pdfTemplateUtils.js';
 
 export default function PDFDocumentTemplate({ document, lineItems, template, payments = [] }) {
   // Generate unified HTML template and render as iframe preview
