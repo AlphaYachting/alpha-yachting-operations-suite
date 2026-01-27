@@ -151,7 +151,13 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
             <Button onClick={() => {
               if (!template) return;
 
-              // Create a new window with just the document
+              // Clone the preview content
+              const previewElement = document.getElementById('preview-print-area');
+              if (!previewElement) return;
+
+              const clonedContent = previewElement.cloneNode(true);
+
+              // Create a new window
               const printWindow = window.open('', '', 'width=800,height=1000');
               printWindow.document.write(`
                 <!DOCTYPE html>
@@ -164,44 +170,28 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
                       size: A4;
                       margin: 0;
                     }
-                    body {
+                    * {
                       margin: 0;
                       padding: 0;
-                      font-family: Arial, sans-serif;
+                      box-sizing: border-box;
                     }
-                    #content {
-                      width: 210mm;
-                      height: auto;
-                      padding: 15mm 12mm;
-                      margin: 0;
+                    body {
+                      font-family: Arial, sans-serif;
+                      background: white;
                     }
                   </style>
                 </head>
-                <body id="print-body">
-                  <div id="content"></div>
-                </body>
+                <body></body>
                 </html>
               `);
               printWindow.document.close();
 
-              // Render template into the print window
+              // Wait for document to be ready, then append content
               setTimeout(() => {
-                const contentDiv = printWindow.document.getElementById('content');
-                const { createRoot } = require('react-dom/client');
-                const root = createRoot(contentDiv);
-                root.render(
-                  <PDFDocumentTemplate 
-                    document={documentData} 
-                    lineItems={lineItems}
-                    template={template}
-                    payments={payments}
-                  />
-                );
-
-                // Wait for render, then print
+                printWindow.document.body.appendChild(clonedContent);
                 setTimeout(() => {
                   printWindow.print();
-                }, 500);
+                }, 300);
               }, 100);
             }}>
               <Download className="h-4 w-4 mr-2" />
