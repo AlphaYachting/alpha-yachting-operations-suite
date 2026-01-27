@@ -67,8 +67,11 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
               print-color-adjust: exact !important;
               color-adjust: exact !important;
             }
-            html, body {
-              width: 210mm;
+            html {
+              margin: 0;
+              padding: 0;
+            }
+            body {
               margin: 0;
               padding: 0;
               background: white;
@@ -76,8 +79,8 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
               font-size: 11pt;
             }
             #print-content {
-              width: 210mm;
-              page-break-inside: avoid;
+              margin: 0;
+              padding: 0;
             }
             @page {
               size: A4;
@@ -87,9 +90,10 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
               html, body {
                 margin: 0;
                 padding: 0;
-                width: 100%;
-                height: 100%;
-                zoom: 100%;
+              }
+              #print-content {
+                margin: 0;
+                padding: 0;
               }
               * {
                 -webkit-print-color-adjust: exact !important;
