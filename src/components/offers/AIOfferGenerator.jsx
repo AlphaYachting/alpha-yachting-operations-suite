@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated }) {
   const [prompt, setPrompt] = useState('');
   const [defaultUnitPrice, setDefaultUnitPrice] = useState(50);
+  const [detailedExplanations, setDetailedExplanations] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
 
@@ -38,10 +40,11 @@ ${prompt}
 
 Generate a detailed list of tasks for this service offer. For each task, provide:
 - A clear, specific title
-- A brief description of what the task involves
-- Estimated hours to complete the task
+- ${detailedExplanations ? 'A detailed technical description including specific procedures, tools, and technical specifications' : 'A brief, simple description that a non-technical customer can understand'}
+- Quantity needed (e.g., hours for labor, pieces for parts, square meters for surface work, etc.)
+- Appropriate unit type (Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, or Lump Sum)
 
-Be practical and realistic with time estimates. Consider travel time if it's mobile service work.
+Be practical and realistic with estimates. Consider travel time if it's mobile service work.
 `.trim();
 
       const response = await base44.integrations.Core.InvokeLLM({
@@ -121,6 +124,23 @@ Be practical and realistic with time estimates. Consider travel time if it's mob
         <p className="text-xs text-slate-500">
           This price will be applied to all generated tasks (you can adjust individual tasks later)
         </p>
+      </div>
+
+      <div className="flex items-center gap-3 p-4 border border-slate-200 rounded-lg">
+        <Checkbox
+          id="detailed-explanations"
+          checked={detailedExplanations}
+          onCheckedChange={setDetailedExplanations}
+          disabled={generating}
+        />
+        <div className="flex-1">
+          <Label htmlFor="detailed-explanations" className="cursor-pointer font-medium">
+            Generate detailed technical explanations
+          </Label>
+          <p className="text-xs text-slate-500 mt-1">
+            Include technical specifications and procedures (recommended for technically knowledgeable clients)
+          </p>
+        </div>
       </div>
 
       <Button
