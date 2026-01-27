@@ -57,18 +57,20 @@ export async function generateHighQualityPDF({
 
     diag.log('Export Config', { pageFormat, renderDpi, scale, pageHeightMm, useLetterhead });
 
-    // Step 2: Prepare container with print styles
-    containerElement.id = 'pdf-export-container';
-    containerElement.style.position = 'relative';
-    containerElement.style.width = pageFormat === 'A4' ? '210mm' : '216mm';
-    containerElement.style.margin = '0';
-    containerElement.style.padding = '0';
-    containerElement.style.backgroundColor = 'white';
-    containerElement.style.display = 'block';
-    containerElement.style.boxSizing = 'border-box';
+    // Step 2: Clone container to avoid modifying live DOM
+    const exportContainer = containerElement.cloneNode(true);
+    
+    exportContainer.id = 'pdf-export-container';
+    exportContainer.style.position = 'relative';
+    exportContainer.style.width = pageFormat === 'A4' ? '210mm' : '216mm';
+    exportContainer.style.margin = '0';
+    exportContainer.style.padding = '0';
+    exportContainer.style.backgroundColor = 'white';
+    exportContainer.style.display = 'block';
+    exportContainer.style.boxSizing = 'border-box';
 
     // Remove inline background image from PDFDocumentTemplate
-    const pdfContent = containerElement.querySelector('#pdf-content');
+    const pdfContent = exportContainer.querySelector('#pdf-content');
     if (pdfContent) {
       pdfContent.style.backgroundImage = 'none';
       pdfContent.style.backgroundAttachment = 'scroll';
@@ -139,13 +141,13 @@ export async function generateHighQualityPDF({
       }
     `;
     document.head.appendChild(printStyle);
-    document.body.appendChild(containerElement);
+    document.body.appendChild(exportContainer);
 
     // Step 3: Wait for render
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Step 4: Get total content height
-    const totalHeight = containerElement.scrollHeight;
+    const totalHeight = exportContainer.scrollHeight;
     const estimatedPages = Math.ceil(totalHeight / pageHeightPx);
 
     diag.log('Content measured', {
@@ -155,7 +157,7 @@ export async function generateHighQualityPDF({
     });
 
     // Step 5: Render container to single large canvas
-    const canvas = await html2canvas(containerElement, {
+    const canvas = await html2canvas(exportContainer, {
       scale: scale,
       useCORS: true,
       allowTaint: true,
@@ -287,8 +289,8 @@ export async function generateHighQualityPDF({
     pdf.save(fileName);
 
     // Step 10: Cleanup
-    if (document.body.contains(containerElement)) {
-      document.body.removeChild(containerElement);
+    if (document.body.contains(exportContainer)) {
+      document.body.removeChild(exportContainer);
     }
     if (document.head.contains(printStyle)) {
       document.head.removeChild(printStyle);
