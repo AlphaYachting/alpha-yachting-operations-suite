@@ -149,51 +149,39 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
             <Button variant="outline" onClick={() => setShowPreview(false)}>
               Close
             </Button>
-            <Button onClick={() => {
+            <Button onClick={async () => {
               if (!template) return;
 
-              // Clone the preview content
-              const previewElement = document.getElementById('preview-print-area');
-              if (!previewElement) return;
+              // Create a temporary container for rendering
+              const tempContainer = document.createElement('div');
+              const root = createRoot(tempContainer);
 
-              const clonedContent = previewElement.cloneNode(true);
+              root.render(
+                <PDFDocumentTemplate 
+                  document={documentData} 
+                  lineItems={lineItems}
+                  template={template}
+                  payments={payments}
+                  isPdfExport={true}
+                />
+              );
 
-              // Create a new window
-              const printWindow = window.open('', '', 'width=800,height=1000');
-              printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="utf-8">
-                  <title>${documentData.document_number || 'document'}</title>
-                  <style>
-                    @page {
-                      size: A4;
-                      margin: 0;
-                    }
-                    * {
-                      margin: 0;
-                      padding: 0;
-                      box-sizing: border-box;
-                    }
-                    body {
-                      font-family: Arial, sans-serif;
-                      background: white;
-                    }
-                  </style>
-                </head>
-                <body></body>
-                </html>
-              `);
-              printWindow.document.close();
+              // Wait for render
+              await new Promise(resolve => setTimeout(resolve, 500));
 
-              // Wait for document to be ready, then append content
-              setTimeout(() => {
-                printWindow.document.body.appendChild(clonedContent);
-                setTimeout(() => {
-                  printWindow.print();
-                }, 300);
-              }, 100);
+              // Use the proper print PDF function
+              try {
+                await generatePrintPDF({
+                  containerElement: tempContainer,
+                  templateData: template,
+                  documentData: documentData,
+                  fileName: `${documentData.document_number || 'document'}_${new Date().toISOString().split('T')[0]}.pdf`
+                });
+                root.unmount();
+              } catch (error) {
+                console.error('Print PDF error:', error);
+                root.unmount();
+              }
             }}>
               <Download className="h-4 w-4 mr-2" />
               Print to PDF
