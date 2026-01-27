@@ -67,8 +67,15 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       
       console.log('Submitting work order:', { formData, selectedTemplateId, suggestedTasks });
       
-      // Pass template ID and suggested tasks to parent for post-creation handling
-      await onSave(formData, selectedTemplateId, suggestedTasks);
+      // Add timeout wrapper (30 seconds)
+      const saveWithTimeout = Promise.race([
+        onSave(formData, selectedTemplateId, suggestedTasks),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Save operation timed out. Please try again.')), 30000)
+        )
+      ]);
+      
+      await saveWithTimeout;
       // onSave will close the dialog if successful
     } catch (err) {
       console.error('Work order save error:', err);
