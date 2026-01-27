@@ -95,6 +95,24 @@ export default function PDFTemplateSettings() {
     }
   };
 
+  const handleFooterGraphicUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const result = await base44.integrations.Core.UploadFile({ file });
+      setTemplate({ ...template, footer_graphic_url: result.file_url });
+      setSuccess('Footer graphic uploaded successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Error uploading footer graphic:', error);
+      setError('Failed to upload footer graphic');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleLetterheadUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -810,6 +828,42 @@ export default function PDFTemplateSettings() {
                 rows={3}
                 placeholder="e.g., © 2026 Alpha Yachting. www.alphayachting.com"
               />
+            </div>
+
+            {/* Footer Graphic */}
+            <div>
+              <Label>Footer Graphic</Label>
+              <p className="text-xs text-slate-500 mb-3">Upload a graphic or image to display above the footer text (e.g., company logo, seal, or decorative element)</p>
+              {template.footer_graphic_url && (
+                <div className="mb-4 p-3 border rounded-lg bg-slate-50">
+                  <p className="text-sm font-medium mb-2">Current Footer Graphic</p>
+                  <img 
+                    src={template.footer_graphic_url} 
+                    alt="Footer Graphic" 
+                    className="max-h-20 object-contain"
+                    onError={(e) => {
+                      console.error('Footer graphic failed to load:', template.footer_graphic_url);
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFooterGraphicUpload}
+                className="hidden"
+                id="footer-graphic-upload"
+              />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => document.getElementById('footer-graphic-upload').click()}
+                disabled={uploading}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {uploading ? 'Uploading...' : (template.footer_graphic_url ? 'Replace Footer Graphic' : 'Upload Footer Graphic')}
+              </Button>
             </div>
           </CardContent>
         </Card>
