@@ -67,9 +67,11 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       
       // Pass template ID and suggested tasks to parent for post-creation handling
       await onSave(formData, selectedTemplateId, suggestedTasks);
+      // onSave will close the dialog if successful, so we don't setSaving(false) here
     } catch (err) {
       setError(err.message || 'Failed to save work order. Please check all required fields.');
       setSaving(false);
+      // Don't re-throw - just show the error to user
     }
   };
 
