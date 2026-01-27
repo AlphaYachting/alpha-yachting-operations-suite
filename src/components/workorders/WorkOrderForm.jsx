@@ -21,6 +21,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     title: workOrder?.title || '',
     description: workOrder?.description || '',
     scheduled_date: workOrder?.scheduled_date || '',
+    scheduled_end_date: workOrder?.scheduled_end_date || '',
     scheduled_start_time: workOrder?.scheduled_start_time || '',
     scheduled_end_time: workOrder?.scheduled_end_time || '',
     estimated_duration_hours: workOrder?.estimated_duration_hours || '',
@@ -142,9 +143,9 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       </div>
 
       {/* Schedule */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Scheduled Date *</Label>
+          <Label>Start Date *</Label>
           <Input
             type="date"
             value={formData.scheduled_date}
@@ -152,6 +153,18 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             required
           />
         </div>
+        <div className="space-y-2">
+          <Label>End Date (for multi-day work)</Label>
+          <Input
+            type="date"
+            value={formData.scheduled_end_date}
+            onChange={(e) => updateField('scheduled_end_date', e.target.value)}
+            min={formData.scheduled_date}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Start Time</Label>
           <Input
