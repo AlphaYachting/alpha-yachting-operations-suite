@@ -98,7 +98,7 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: useLetterhead ? null : '#ffffff'
       });
 
       const pdf = new jsPDF('p', 'mm', 'a4');
