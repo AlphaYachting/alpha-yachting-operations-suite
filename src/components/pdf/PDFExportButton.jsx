@@ -60,6 +60,7 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
       container.style.position = 'absolute';
       container.style.left = '-9999px';
       container.style.width = '210mm'; // A4 width
+      container.style.height = '297mm'; // A4 height
       container.style.background = 'white';
       
       // Apply letterhead as background if enabled
@@ -70,10 +71,9 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
         const bottomMargin = templateData.margin_bottom_mm || 20;
         
         container.style.backgroundImage = `url(${templateData.letterhead_image_url})`;
-        container.style.backgroundSize = 'cover';
+        container.style.backgroundSize = '210mm 297mm';
         container.style.backgroundRepeat = 'no-repeat';
-        container.style.backgroundPosition = 'top center';
-        container.style.backgroundAttachment = 'fixed';
+        container.style.backgroundPosition = 'top left';
         container.style.paddingTop = `${topMargin}mm`;
         container.style.paddingLeft = `${leftMargin}mm`;
         container.style.paddingRight = `${rightMargin}mm`;
