@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { format, parseISO, isSameDay, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+import { format, parseISO, isSameDay, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays, isWithinInterval } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Clock, AlertTriangle, Users, MapPin } from 'lucide-react';
+import { Clock, AlertTriangle, Users, MapPin, Flame, Zap, TrendingUp, Circle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,15 @@ const TECHNICIAN_COLORS = [
 
 // Unassigned work order color
 const UNASSIGNED_COLOR = { bg: 'bg-slate-300', text: 'text-slate-700', border: 'border-slate-400' };
+
+// Job priority colors and icons
+const PRIORITY_CONFIG = {
+  Express: { color: 'bg-purple-600', icon: Zap, label: 'Express' },
+  Urgent: { color: 'bg-red-600', icon: Flame, label: 'Urgent' },
+  High: { color: 'bg-orange-500', icon: TrendingUp, label: 'High' },
+  Normal: { color: 'bg-blue-500', icon: Circle, label: 'Normal' },
+  Low: { color: 'bg-slate-400', icon: Circle, label: 'Low' }
+};
 
 export default function DragDropCalendar({
   currentWeekStart,
@@ -65,14 +74,34 @@ export default function DragDropCalendar({
     setTechnicianColorMap(colorMap);
   }, [technicians]);
 
-  // Memoize work orders by date for performance
+  // Memoize work orders by date for performance - includes multi-day work orders
   const workOrdersByDate = useMemo(() => {
     const byDate = {};
     workOrders.forEach(wo => {
       if (!wo.scheduled_date) return;
-      const dateKey = format(parseISO(wo.scheduled_date), 'yyyy-MM-dd');
-      if (!byDate[dateKey]) byDate[dateKey] = [];
-      byDate[dateKey].push(wo);
+      
+      const startDate = parseISO(wo.scheduled_date);
+      const endDate = wo.scheduled_end_date ? parseISO(wo.scheduled_end_date) : startDate;
+      
+      // Add work order to each day it spans
+      const daysInRange = eachDayOfInterval({ start: startDate, end: endDate });
+      daysInRange.forEach(day => {
+        const dateKey = format(day, 'yyyy-MM-dd');
+        if (!byDate[dateKey]) byDate[dateKey] = [];
+        
+        // Mark continuation and position info for multi-day rendering
+        const isStart = isSameDay(day, startDate);
+        const isEnd = isSameDay(day, endDate);
+        const totalDays = differenceInDays(endDate, startDate) + 1;
+        
+        byDate[dateKey].push({
+          ...wo,
+          _multiDay: totalDays > 1,
+          _isStart: isStart,
+          _isEnd: isEnd,
+          _totalDays: totalDays
+        });
+      });
     });
     return byDate;
   }, [workOrders]);
@@ -230,9 +259,22 @@ export default function DragDropCalendar({
     if (source.droppableId === destination.droppableId) return;
 
     const workOrderId = draggableId;
-    const newDate = format(calendarDays[parseInt(destination.droppableId)], 'yyyy-MM-dd');
+    const workOrder = workOrders.find(wo => wo.id === workOrderId);
+    if (!workOrder) return;
     
-    await onWorkOrderUpdate(workOrderId, { scheduled_date: newDate });
+    const oldStartDate = parseISO(workOrder.scheduled_date);
+    const newStartDate = calendarDays[parseInt(destination.droppableId)];
+    const daysDiff = differenceInDays(newStartDate, oldStartDate);
+    
+    // Update both start and end dates if multi-day
+    const updates = { scheduled_date: format(newStartDate, 'yyyy-MM-dd') };
+    if (workOrder.scheduled_end_date) {
+      const oldEndDate = parseISO(workOrder.scheduled_end_date);
+      const newEndDate = addDays(oldEndDate, daysDiff);
+      updates.scheduled_end_date = format(newEndDate, 'yyyy-MM-dd');
+    }
+    
+    await onWorkOrderUpdate(workOrderId, updates);
   };
   
   const getTechnicianColor = (techIds) => {
@@ -240,6 +282,11 @@ export default function DragDropCalendar({
     // Use lead technician color or first assigned technician
     const leadTechId = techIds[0];
     return technicianColorMap[leadTechId] || TECHNICIAN_COLORS[0];
+  };
+  
+  const getJobPriority = (jobId) => {
+    const job = jobs.find(j => j.id === jobId);
+    return job?.priority || 'Normal';
   };
   
   const handleWorkOrderClick = (e, wo) => {
@@ -310,12 +357,133 @@ export default function DragDropCalendar({
                         const jobInfo = getJobInfo(wo.job_id);
                         const techs = getTechnicianInitials(wo.assigned_technicians);
                         const techColor = getTechnicianColor(wo.assigned_technicians);
+                        const priority = getJobPriority(wo.job_id);
+                        const priorityConfig = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.Normal;
+                        const PriorityIcon = priorityConfig.icon;
                         const hasConflict = conflicts[wo.id] && (
                           conflicts[wo.id].technicians.length > 0 || 
                           conflicts[wo.id].vehicles.length > 0
                         );
                         const conflictTooltip = getConflictTooltip(wo.id);
-                        
+
+                        // Multi-day rendering logic
+                        const isMultiDay = wo._multiDay;
+                        const isStart = wo._isStart;
+                        const isEnd = wo._isEnd;
+                        const isContinuation = isMultiDay && !isStart;
+
+                        // Only render draggable on start day for multi-day work orders
+                        if (isMultiDay && !isStart) {
+                          return (
+                            <TooltipProvider key={`${wo.id}-${index}`}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    onClick={(e) => handleWorkOrderClick(e, wo)}
+                                    className={`p-1.5 text-[10px] cursor-pointer hover:shadow-lg transition-all ${
+                                      techColor.bg
+                                    } ${techColor.text} relative select-none ${
+                                      isEnd ? 'rounded-r-md border-r-4' : 'border-r border-white/30'
+                                    } ${
+                                      hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
+                                    }`}
+                                    style={{
+                                      borderLeftWidth: '0px',
+                                      borderTopLeftRadius: '0px',
+                                      borderBottomLeftRadius: '0px'
+                                    }}
+                                  >
+                                    {hasConflict && (
+                                      <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">
+                                        <AlertTriangle className="h-2 w-2 text-white" />
+                                      </div>
+                                    )}
+                                    <div className="flex items-center gap-1">
+                                      <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
+                                      <p className="font-semibold truncate leading-tight flex-1">{wo.title}</p>
+                                    </div>
+                                    {isEnd && wo.scheduled_end_time && (
+                                      <div className="flex items-center gap-0.5 mt-0.5 opacity-90">
+                                        <Clock className="h-2 w-2" />
+                                        <span>Ends {wo.scheduled_end_time}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className={`bg-slate-900 ${hasConflict ? "border-red-500 border-2" : "border-slate-700"} shadow-xl`}>
+                                  <div className="text-sm space-y-2 min-w-[250px]">
+                                    <div className="flex items-center gap-2">
+                                      <div className={`p-1.5 rounded ${priorityConfig.color}`}>
+                                        <PriorityIcon className="h-4 w-4 text-white" />
+                                      </div>
+                                      <div>
+                                        <p className="font-bold text-white text-base">{wo.title}</p>
+                                        <p className="text-xs text-slate-400">{priorityConfig.label} Priority</p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 text-amber-300 font-medium">
+                                      <AlertTriangle className="h-4 w-4" />
+                                      <span>Multi-day work order (Day {Math.abs(differenceInDays(parseISO(wo.scheduled_date), day)) + 1} of {wo._totalDays})</span>
+                                    </div>
+
+                                    {(wo.scheduled_start_time || wo.estimated_duration_hours) && (
+                                      <div className="flex items-center gap-2 text-white">
+                                        <Clock className="h-4 w-4" />
+                                        {wo.scheduled_start_time ? (
+                                          <>
+                                            <span>{wo.scheduled_start_time}{wo.scheduled_end_time && ` - ${wo.scheduled_end_time}`}</span>
+                                            {wo.estimated_duration_hours && (
+                                              <span className="text-slate-300">({wo.estimated_duration_hours}h)</span>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <span className="text-slate-300">{wo.estimated_duration_hours}h estimated</span>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {jobInfo.boat && (
+                                      <div className="flex items-center gap-2 text-white">
+                                        <span>🚤</span>
+                                        <span>{jobInfo.boat}</span>
+                                      </div>
+                                    )}
+
+                                    {jobInfo.location && (
+                                      <div className="flex items-center gap-2 text-white">
+                                        <MapPin className="h-4 w-4" />
+                                        <span>{jobInfo.location}</span>
+                                      </div>
+                                    )}
+
+                                    {techs.length > 0 ? (
+                                      <div className="flex items-center gap-2 text-white">
+                                        <Users className="h-4 w-4" />
+                                        <span>{techs.map(t => t.name).join(', ')}</span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2 text-amber-300 font-medium">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <span>No technicians assigned</span>
+                                      </div>
+                                    )}
+
+                                    {hasConflict && conflictTooltip && (
+                                      <div className="mt-2 pt-2 border-t border-red-400">
+                                        <div className="flex items-start gap-2 text-red-300 font-medium">
+                                          <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                          <span className="whitespace-pre-line">{conflictTooltip}</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        }
+
                         return (
                           <Draggable key={wo.id} draggableId={wo.id} index={index}>
                             {(provided, dragSnapshot) => (
@@ -329,20 +497,29 @@ export default function DragDropCalendar({
                                     <TooltipTrigger asChild>
                                       <div
                                         onClick={(e) => !dragSnapshot.isDragging && handleWorkOrderClick(e, wo)}
-                                        className={`p-1.5 rounded-md border-l-4 text-[10px] cursor-move hover:shadow-lg transition-all ${
+                                        className={`p-1.5 border-l-4 text-[10px] cursor-move hover:shadow-lg transition-all ${
                                           techColor.bg
                                         } ${techColor.text} ${techColor.border} ${
                                           dragSnapshot.isDragging ? 'opacity-60 shadow-xl scale-110 rotate-3 cursor-grabbing' : 'hover:scale-105'
                                         } ${
                                           hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
+                                        } ${
+                                          isMultiDay && !isEnd ? 'rounded-l-md border-r border-white/30' : 'rounded-md'
                                         } relative select-none`}
+                                        style={isMultiDay && !isEnd ? {
+                                          borderTopRightRadius: '0px',
+                                          borderBottomRightRadius: '0px'
+                                        } : {}}
                                       >
                                         {hasConflict && (
                                           <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">
                                             <AlertTriangle className="h-2 w-2 text-white" />
                                           </div>
                                         )}
-                                        <p className="font-semibold truncate leading-tight">{wo.title}</p>
+                                        <div className="flex items-center gap-1">
+                                          <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
+                                          <p className="font-semibold truncate leading-tight flex-1">{wo.title}</p>
+                                        </div>
                                         {wo.scheduled_start_time && (
                                           <div className="flex items-center gap-0.5 mt-0.5 opacity-90">
                                             <Clock className="h-2 w-2" />
@@ -352,12 +529,32 @@ export default function DragDropCalendar({
                                         {jobInfo.boat && (
                                           <p className="truncate mt-0.5 opacity-80 leading-tight">{jobInfo.boat}</p>
                                         )}
+                                        {isMultiDay && (
+                                          <div className="mt-0.5 text-[9px] font-medium opacity-90">
+                                            {wo._totalDays} days →
+                                          </div>
+                                        )}
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className={`bg-slate-900 ${hasConflict ? "border-red-500 border-2" : "border-slate-700"} shadow-xl`}>
                                       <div className="text-sm space-y-2 min-w-[250px]">
-                                        <p className="font-bold text-white text-base">{wo.title}</p>
-                                        
+                                        <div className="flex items-center gap-2">
+                                          <div className={`p-1.5 rounded ${priorityConfig.color}`}>
+                                            <PriorityIcon className="h-4 w-4 text-white" />
+                                          </div>
+                                          <div>
+                                            <p className="font-bold text-white text-base">{wo.title}</p>
+                                            <p className="text-xs text-slate-400">{priorityConfig.label} Priority</p>
+                                          </div>
+                                        </div>
+
+                                        {isMultiDay && (
+                                          <div className="flex items-center gap-2 text-amber-300 font-medium">
+                                            <AlertTriangle className="h-4 w-4" />
+                                            <span>Multi-day work order ({wo._totalDays} days)</span>
+                                          </div>
+                                        )}
+
                                         {(wo.scheduled_start_time || wo.estimated_duration_hours) && (
                                           <div className="flex items-center gap-2 text-white">
                                             <Clock className="h-4 w-4" />
@@ -373,21 +570,21 @@ export default function DragDropCalendar({
                                             )}
                                           </div>
                                         )}
-                                        
+
                                         {jobInfo.boat && (
                                           <div className="flex items-center gap-2 text-white">
                                             <span>🚤</span>
                                             <span>{jobInfo.boat}</span>
                                           </div>
                                         )}
-                                        
+
                                         {jobInfo.location && (
                                           <div className="flex items-center gap-2 text-white">
                                             <MapPin className="h-4 w-4" />
                                             <span>{jobInfo.location}</span>
                                           </div>
                                         )}
-                                        
+
                                         {techs.length > 0 ? (
                                           <div className="flex items-center gap-2 text-white">
                                             <Users className="h-4 w-4" />
@@ -399,7 +596,7 @@ export default function DragDropCalendar({
                                             <span>No technicians assigned</span>
                                           </div>
                                         )}
-                                        
+
                                         {hasConflict && conflictTooltip && (
                                           <div className="mt-2 pt-2 border-t border-red-400">
                                             <div className="flex items-start gap-2 text-red-300 font-medium">
