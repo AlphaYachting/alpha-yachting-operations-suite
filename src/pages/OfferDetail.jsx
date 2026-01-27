@@ -270,6 +270,7 @@ export default function OfferDetail() {
     const boat = boats.find(b => b.id === formData.boat_id);
     
     return {
+      id: offerId,
       document_type: 'Offer',
       document_number: formData.offer_number || 'DRAFT',
       status: formData.status,
