@@ -165,6 +165,7 @@ export default function WorkOrders() {
       let savedWorkOrder;
       
       if (editingWorkOrder) {
+        console.log('Updating existing work order...');
         await base44.entities.WorkOrder.update(editingWorkOrder.id, workOrderData);
         savedWorkOrder = { ...editingWorkOrder, ...workOrderData };
         
@@ -193,6 +194,7 @@ export default function WorkOrders() {
         
         toast.success('Work order updated');
       } else {
+        console.log('Creating new work order...');
         const woNumber = `WO${Date.now().toString().slice(-6)}`;
         const newWo = await base44.entities.WorkOrder.create({ 
           ...workOrderData, 
@@ -200,6 +202,7 @@ export default function WorkOrders() {
         });
         createdWoId = newWo.id;
         savedWorkOrder = newWo;
+        console.log('Work order created:', createdWoId);
         
         // Send notifications to assigned technicians
         if (workOrderData.assigned_technicians && workOrderData.assigned_technicians.length > 0) {
@@ -212,26 +215,28 @@ export default function WorkOrders() {
 
         // If AI-suggested tasks, add them
         if (suggestedTasks && suggestedTasks.length > 0) {
+          console.log('Adding AI-suggested tasks:', suggestedTasks.length);
           try {
-            await Promise.all(
-              suggestedTasks.map((task, idx) =>
-                base44.entities.Task.create({
-                  work_order_id: createdWoId,
-                  title: task.title,
-                  description: task.description,
-                  estimated_minutes: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
-                  sequence_order: idx,
-                  status: 'Not Started'
-                })
-              )
-            );
+            const taskPromises = suggestedTasks.map((task, idx) => {
+              console.log(`Creating task ${idx + 1}:`, task.title);
+              return base44.entities.Task.create({
+                work_order_id: createdWoId,
+                title: task.title,
+                description: task.description || '',
+                estimated_minutes: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
+                sequence_order: idx,
+                status: 'Not Started'
+              });
+            });
+            
+            await Promise.all(taskPromises);
+            console.log('All AI tasks created successfully');
             toast.success(`Work order created with ${suggestedTasks.length} AI-suggested tasks`);
           } catch (aiTaskError) {
             console.error('Error adding AI-suggested tasks:', aiTaskError);
-            toast.error('Work order created, but failed to add AI tasks');
+            toast.error(`Work order created, but failed to add AI tasks: ${aiTaskError.message}`);
           }
         } else if (templateId) {
-          // Template will be applied below
           toast.success('Work order created');
         } else {
           toast.success('Work order created');
@@ -239,6 +244,7 @@ export default function WorkOrders() {
 
         // If template selected, apply it
         if (templateId) {
+          console.log('Applying template:', templateId);
           try {
             const user = await base44.auth.me();
             const templateItems = await base44.entities.TaskTemplateItem.filter(
@@ -252,12 +258,12 @@ export default function WorkOrders() {
                   base44.entities.Task.create({
                     work_order_id: createdWoId,
                     title: item.title,
-                    description: item.description,
+                    description: item.description || '',
                     estimated_minutes: item.default_estimated_hours ? Math.round(item.default_estimated_hours * 60) : null,
                     sequence_order: (suggestedTasks?.length || 0) + idx,
                     status: 'Not Started',
                     notes: item.required_tools_note || '',
-                    requires_approval: item.requires_customer_approval
+                    requires_approval: item.requires_customer_approval || false
                   })
                 )
               );
@@ -270,21 +276,26 @@ export default function WorkOrders() {
                 mode: 'full',
                 selected_item_ids: templateItems.map(t => t.id)
               });
+              console.log('Template applied successfully');
             }
           } catch (templateError) {
             console.error('Error applying template:', templateError);
-            toast.error('Template tasks failed to apply');
+            toast.error(`Template tasks failed: ${templateError.message}`);
           }
         }
       }
       
+      console.log('Reloading data...');
       await loadData();
+      console.log('Closing form...');
       setShowForm(false);
       setEditingWorkOrder(null);
       setSearchParams({});
+      console.log('Save complete!');
     } catch (error) {
       console.error('Error saving work order:', error);
       toast.error(`Failed to save work order: ${error.message || 'Unknown error'}`);
+      throw error;
     }
   };
 
