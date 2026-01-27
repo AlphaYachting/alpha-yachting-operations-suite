@@ -1,5 +1,4 @@
-import React, { useState, useRef } from 'react';
-import { createRoot } from 'react-dom/client';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Eye, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -17,6 +16,7 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [template, setTemplate] = useState(null);
+  const [pdfError, setPdfError] = useState(null);
 
   const loadTemplate = async () => {
     try {
@@ -24,7 +24,6 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
       const defaultTemplate = templates.find(t => t.is_default) || templates[0];
       
       if (!defaultTemplate) {
-        // Create default template if none exists
         const newTemplate = await base44.entities.PDFTemplate.create({
           company_name: 'Alpha Yachting',
           company_address: 'Novigrad, Croatia',
@@ -32,7 +31,9 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
           secondary_color: '#06b6d4',
           show_vat_column: true,
           show_net_gross: true,
-          is_default: true
+          is_default: true,
+          render_dpi: 150,
+          page_format: 'A4'
         });
         return newTemplate;
       }
@@ -40,50 +41,56 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
       return defaultTemplate;
     } catch (error) {
       console.error('Error loading template:', error);
-      // Return default fallback
-      return {
-        company_name: 'Alpha Yachting',
-        primary_color: '#2563eb',
-        show_vat_column: true
-      };
+      throw error;
     }
   };
 
   const generatePDF = async () => {
     setIsGenerating(true);
+    setPdfError(null);
     try {
       const templateData = await loadTemplate();
+      const pageFormat = templateData.page_format || 'A4';
+      const renderDpi = templateData.render_dpi || 150;
       const useLetterhead = templateData.letterhead_enabled && templateData.letterhead_image_url;
       
-      // Create a temporary container
-      const container = window.document.createElement('div');
+      // Create invisible container with high DPI scaling
+      const container = document.createElement('div');
+      container.id = `pdf-export-${Date.now()}`;
       container.style.position = 'absolute';
       container.style.left = '-9999px';
-      container.style.width = '210mm'; // A4 width
-      container.style.height = '297mm'; // A4 height
+      container.style.width = '210mm';
+      container.style.height = 'auto';
       container.style.background = 'white';
+      container.style.margin = '0';
+      container.style.padding = '0';
       
-      // Apply letterhead as background if enabled
-      if (useLetterhead) {
-        const topMargin = templateData.margin_top_mm || 20;
-        const leftMargin = templateData.margin_left_mm || 20;
-        const rightMargin = templateData.margin_right_mm || 20;
-        const bottomMargin = templateData.margin_bottom_mm || 20;
-        
-        container.style.backgroundImage = `url(${templateData.letterhead_image_url})`;
-        container.style.backgroundSize = '210mm 297mm';
-        container.style.backgroundRepeat = 'no-repeat';
-        container.style.backgroundPosition = 'top left';
-        container.style.paddingTop = `${topMargin}mm`;
-        container.style.paddingLeft = `${leftMargin}mm`;
-        container.style.paddingRight = `${rightMargin}mm`;
-        container.style.paddingBottom = `${bottomMargin}mm`;
-        container.style.boxSizing = 'border-box';
-      }
-      
-      window.document.body.appendChild(container);
+      // Set up CSS for print quality
+      const styleSheet = document.createElement('style');
+      styleSheet.textContent = `
+        #${container.id} {
+          font-family: Arial, sans-serif;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          color-adjust: exact;
+        }
+        #${container.id} table {
+          page-break-inside: auto;
+          border-collapse: collapse;
+        }
+        #${container.id} tr {
+          page-break-inside: avoid;
+        }
+        #${container.id} img {
+          max-width: 100%;
+          height: auto;
+        }
+      `;
+      document.head.appendChild(styleSheet);
+      document.body.appendChild(container);
 
-      // Render the PDF template
+      // Render React component into container
+      const { createRoot } = await import('react-dom/client');
       const root = createRoot(container);
       
       await new Promise((resolve) => {
@@ -93,72 +100,50 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
             lineItems={lineItems}
             template={templateData}
             payments={payments}
+            isPdfExport={true}
           />
         );
-        setTimeout(resolve, 1000);
+        setTimeout(resolve, 1500);
       });
 
-      // Generate PDF
+      // Generate canvas at high DPI
+      const scale = renderDpi / 96; // 96 DPI is standard screen DPI
       const canvas = await html2canvas(container, {
-        scale: 4,
+        scale: scale,
         useCORS: true,
         allowTaint: true,
         logging: false,
         backgroundColor: useLetterhead ? null : '#ffffff',
-        imageTimeout: 5000,
-        quality: 1,
-        imageType: 'image/png'
+        imageTimeout: 10000,
+        width: 793.7, // A4 width in pixels at 96 DPI
+        windowHeight: container.scrollHeight || 1122
       });
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: pageFormat
+      });
+
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      // Add letterhead as background on first page if enabled
-      if (useLetterhead) {
-        try {
-          // Load letterhead image and convert to base64
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = templateData.letterhead_image_url;
-          });
-          
-          // Create canvas to get base64
-          const imgCanvas = document.createElement('canvas');
-          imgCanvas.width = img.width;
-          imgCanvas.height = img.height;
-          const ctx = imgCanvas.getContext('2d');
-          ctx.drawImage(img, 0, 0);
-          const letterheadBase64 = imgCanvas.toDataURL('image/png');
-          
-          // Add letterhead image as background
-          pdf.addImage(letterheadBase64, 'PNG', 0, 0, pdfWidth, pdfHeight);
-        } catch (err) {
-          console.warn('Failed to add letterhead background:', err);
-        }
-      }
-
-      // Add content on top
-      const contentData = canvas.toDataURL('image/png');
+      // Convert canvas to image data
+      const imgData = canvas.toDataURL('image/png');
       const imgWidth = pdfWidth;
       const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      let heightLeft = imgHeight;
-      let position = 0;
-      let pageNum = 0;
+      let yPosition = 0;
+      let isFirstPage = true;
 
-      pdf.addImage(contentData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pageNum++;
+      // Add content pages
+      while (yPosition < imgHeight) {
+        if (!isFirstPage) {
+          pdf.addPage();
+        }
         
-        // Add letterhead to each page
+        // Add letterhead to each page if enabled
         if (useLetterhead) {
           try {
             const img = new Image();
@@ -169,42 +154,59 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
               img.src = templateData.letterhead_image_url;
             });
             
-            const imgCanvas = document.createElement('canvas');
-            imgCanvas.width = img.width;
-            imgCanvas.height = img.height;
-            const ctx = imgCanvas.getContext('2d');
+            const letterheadCanvas = document.createElement('canvas');
+            letterheadCanvas.width = img.width;
+            letterheadCanvas.height = img.height;
+            const ctx = letterheadCanvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
-            const letterheadBase64 = imgCanvas.toDataURL('image/png');
+            const letterheadData = letterheadCanvas.toDataURL('image/png');
             
-            pdf.addImage(letterheadBase64, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.addImage(letterheadData, 'PNG', 0, 0, pdfWidth, pdfHeight);
           } catch (err) {
-            console.warn('Failed to add letterhead to page', pageNum);
+            console.warn('Failed to add letterhead:', err);
           }
         }
-        
-        pdf.addImage(contentData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+
+        // Add content slice
+        const contentHeight = Math.min(imgHeight - yPosition, pdfHeight);
+        pdf.addImage(
+          imgData,
+          'PNG',
+          0,
+          -yPosition / scale,
+          imgWidth,
+          imgHeight
+        );
+
+        yPosition += pdfHeight;
+        isFirstPage = false;
       }
 
-      // Download the PDF
+      // Download
       const fileName = `${document.document_number || 'document'}_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
 
       // Cleanup
       root.unmount();
-      window.document.body.removeChild(container);
+      document.body.removeChild(container);
+      document.head.removeChild(styleSheet);
+
     } catch (error) {
       console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
+      setPdfError(`Failed to generate PDF: ${error.message}`);
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handlePreview = async () => {
-    const templateData = await loadTemplate();
-    setTemplate(templateData);
-    setShowPreview(true);
+    try {
+      const templateData = await loadTemplate();
+      setTemplate(templateData);
+      setShowPreview(true);
+    } catch (error) {
+      setPdfError('Failed to load preview');
+    }
   };
 
   return (
@@ -237,6 +239,12 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
         </Button>
       </div>
 
+      {pdfError && (
+        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+          {pdfError}
+        </div>
+      )}
+
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -244,15 +252,15 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
           </DialogHeader>
           {template && (
             <div 
-              className="bg-white p-4 relative" 
+              className="bg-white p-4" 
               style={{
                 backgroundImage: template.letterhead_enabled && template.letterhead_image_url 
                   ? `url(${template.letterhead_image_url})` 
                   : 'none',
-                backgroundSize: 'contain',
+                backgroundSize: 'cover',
                 backgroundRepeat: 'no-repeat',
                 backgroundPosition: 'top center',
-                minHeight: '297mm'
+                backgroundAttachment: 'fixed'
               }}
             >
               <div style={{
