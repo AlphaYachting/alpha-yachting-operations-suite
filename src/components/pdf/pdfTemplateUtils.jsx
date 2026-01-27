@@ -256,27 +256,29 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
         table {
           width: 100%;
           border-collapse: collapse;
-          margin: 20px 0;
-          font-size: 10pt;
+          margin: 10px 0;
+          font-size: 9pt;
+          background: transparent;
+          border: none;
         }
 
         thead {
-          background-color: ${template.primary_color || '#2563eb'};
-          color: white;
+          background-color: transparent;
+          color: #333;
           display: table-header-group;
         }
 
         th {
-          padding: 8px 6px;
+          padding: 4px 3px;
           text-align: left;
           font-weight: bold;
-          border: 1px solid #ddd;
+          border: none;
           white-space: nowrap;
         }
 
         td {
-          padding: 8px 6px;
-          border: 1px solid #ddd;
+          padding: 4px 3px;
+          border: none;
         }
 
         tbody tr {
@@ -285,7 +287,7 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
         }
 
         tbody tr:nth-child(even) {
-          background-color: #f9f9f9;
+          background-color: transparent;
         }
 
         .col-index {
