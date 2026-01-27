@@ -243,16 +243,12 @@ export default function Reports() {
     };
   }).filter(v => v.reservations > 0).sort((a, b) => b.reservations - a.reservations);
 
-  // Skills Capacity Analysis - Current Month
-  const currentMonth = new Date();
-  const currentMonthStart = startOfMonth(currentMonth);
-  const currentMonthEnd = endOfMonth(currentMonth);
-  
-  const currentMonthWorkOrders = workOrders.filter(wo => {
+  // Skills Capacity Analysis - Selected Date Range
+  const selectedRangeWorkOrders = workOrders.filter(wo => {
     if (!wo.scheduled_date) return false;
     try {
       const woDate = parseISO(wo.scheduled_date);
-      return isWithinInterval(woDate, { start: currentMonthStart, end: currentMonthEnd });
+      return isWithinInterval(woDate, { start: rangeStart, end: rangeEnd });
     } catch {
       return false;
     }
@@ -265,9 +261,9 @@ export default function Reports() {
     // Find all technicians with this skill
     const techsWithSkill = technicians.filter(tech => tech.skills?.includes(skill));
     
-    // Calculate planned hours for this skill in current month
+    // Calculate planned hours for this skill in selected date range
     let plannedHours = 0;
-    currentMonthWorkOrders.forEach(wo => {
+    selectedRangeWorkOrders.forEach(wo => {
       if (!wo.assigned_technicians || wo.assigned_technicians.length === 0) return;
       
       // Check if any assigned technician has this skill
@@ -281,7 +277,7 @@ export default function Reports() {
     });
 
     // Count work orders requiring this skill
-    const workOrdersCount = currentMonthWorkOrders.filter(wo => 
+    const workOrdersCount = selectedRangeWorkOrders.filter(wo => 
       wo.assigned_technicians?.some(techId => 
         techsWithSkill.some(t => t.id === techId)
       )
@@ -450,7 +446,7 @@ export default function Reports() {
               <div>
                 <CardTitle>Skills Capacity Overview</CardTitle>
                 <p className="text-sm text-slate-500 mt-1">
-                  Current Month: {format(currentMonthStart, 'MMMM yyyy')}
+                  {format(rangeStart, 'MMM d, yyyy')} - {format(rangeEnd, 'MMM d, yyyy')}
                 </p>
               </div>
               <Button 
@@ -466,7 +462,7 @@ export default function Reports() {
                 {skillsCapacity.length > 0 ? (
                   <>
                     <div>
-                      <h3 className="text-sm font-medium text-slate-700 mb-4">Planned Hours by Skill - Current Month</h3>
+                      <h3 className="text-sm font-medium text-slate-700 mb-4">Planned Hours by Skill</h3>
                       <div className="space-y-4">
                         {skillsCapacity.map((item) => {
                           const maxHours = Math.max(...skillsCapacity.map(s => s.plannedHours), 1);
