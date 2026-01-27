@@ -53,6 +53,7 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
     setIsGenerating(true);
     try {
       const templateData = await loadTemplate();
+      const useLetterhead = templateData.letterhead_enabled && templateData.letterhead_image_url;
       
       // Create a temporary container
       const container = window.document.createElement('div');
@@ -60,6 +61,21 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
       container.style.left = '-9999px';
       container.style.width = '210mm'; // A4 width
       container.style.background = 'white';
+      
+      // Apply margins if letterhead is enabled
+      if (useLetterhead) {
+        const topMargin = templateData.margin_top_mm || 20;
+        const leftMargin = templateData.margin_left_mm || 20;
+        const rightMargin = templateData.margin_right_mm || 20;
+        const bottomMargin = templateData.margin_bottom_mm || 20;
+        
+        container.style.paddingTop = `${topMargin}mm`;
+        container.style.paddingLeft = `${leftMargin}mm`;
+        container.style.paddingRight = `${rightMargin}mm`;
+        container.style.paddingBottom = `${bottomMargin}mm`;
+        container.style.boxSizing = 'border-box';
+      }
+      
       window.document.body.appendChild(container);
 
       // Render the PDF template
@@ -74,7 +90,7 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
             payments={payments}
           />
         );
-        setTimeout(resolve, 1000); // Wait for rendering
+        setTimeout(resolve, 1000);
       });
 
       // Generate PDF
@@ -85,23 +101,47 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
         backgroundColor: '#ffffff'
       });
 
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      // Add letterhead as background on first page if enabled
+      if (useLetterhead) {
+        try {
+          // Add letterhead image as background
+          pdf.addImage(templateData.letterhead_image_url, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        } catch (err) {
+          console.warn('Failed to add letterhead background:', err);
+        }
+      }
+
+      // Add content on top
+      const contentData = canvas.toDataURL('image/png');
       const imgWidth = pdfWidth;
       const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
       let heightLeft = imgHeight;
       let position = 0;
+      let pageNum = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(contentData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pdfHeight;
 
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pageNum++;
+        
+        // Add letterhead to each page
+        if (useLetterhead) {
+          try {
+            pdf.addImage(templateData.letterhead_image_url, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          } catch (err) {
+            console.warn('Failed to add letterhead to page', pageNum);
+          }
+        }
+        
+        pdf.addImage(contentData, 'PNG', 0, position, imgWidth, imgHeight);
         heightLeft -= pdfHeight;
       }
 

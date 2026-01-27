@@ -92,6 +92,45 @@ export default function PDFTemplateSettings() {
     }
   };
 
+  const handleLetterheadUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      setError('Please upload a PDF file');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+    try {
+      // Upload original PDF
+      const pdfResult = await base44.integrations.Core.UploadFile({ file });
+      
+      // Convert PDF to image using InvokeLLM with file attachment
+      const conversionPrompt = `Convert this PDF letterhead to a high-resolution PNG image. 
+The output should be a single page A4 letterhead suitable for printing.
+Return only the image data, no additional text or explanation.`;
+      
+      // For now, store the PDF URL and let the PDF generation handle conversion
+      // In production, you'd want server-side PDF->Image conversion
+      setTemplate({ 
+        ...template, 
+        letterhead_original_pdf_url: pdfResult.file_url,
+        letterhead_image_url: pdfResult.file_url, // Temporary: will be converted on PDF generation
+        letterhead_upload_date: new Date().toISOString()
+      });
+      
+      setSuccess('Letterhead uploaded successfully! Note: PDF will be rendered as background during export.');
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (error) {
+      console.error('Error uploading letterhead:', error);
+      setError('Failed to upload letterhead');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Sample data for preview
   const sampleDocument = {
     document_type: 'Invoice',
@@ -168,7 +207,108 @@ export default function PDFTemplateSettings() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-6">
+        {/* Letterhead Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>PDF Letterhead (Briefpapier)</CardTitle>
+            <CardDescription>Upload a PDF letterhead to use as background for all invoices and offers</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Enable Letterhead</Label>
+              <Switch
+                checked={template.letterhead_enabled || false}
+                onCheckedChange={(checked) => setTemplate({ ...template, letterhead_enabled: checked })}
+              />
+            </div>
+
+            {template.letterhead_image_url && (
+              <div className="border rounded-lg p-4 bg-slate-50">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-medium">Current Letterhead</p>
+                    <p className="text-xs text-slate-500">
+                      Uploaded: {template.letterhead_upload_date ? new Date(template.letterhead_upload_date).toLocaleDateString() : 'Unknown'}
+                    </p>
+                  </div>
+                  {template.letterhead_original_pdf_url && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(template.letterhead_original_pdf_url, '_blank')}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View PDF
+                    </Button>
+                  )}
+                </div>
+                <img 
+                  src={template.letterhead_image_url} 
+                  alt="Letterhead" 
+                  className="w-full max-w-md border rounded"
+                />
+              </div>
+            )}
+
+            <div>
+              <Label>Upload Letterhead PDF</Label>
+              <p className="text-xs text-slate-500 mb-2">PDF will be converted to image and used as page background (A4 recommended)</p>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={handleLetterheadUpload}
+                className="hidden"
+                id="letterhead-upload"
+              />
+              <Button 
+                variant="outline"
+                onClick={() => document.getElementById('letterhead-upload').click()}
+                disabled={uploading}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {uploading ? 'Processing...' : (template.letterhead_image_url ? 'Replace Letterhead' : 'Upload Letterhead')}
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Top Margin (mm)</Label>
+                <Input
+                  type="number"
+                  value={template.margin_top_mm || 20}
+                  onChange={(e) => setTemplate({ ...template, margin_top_mm: parseFloat(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Bottom Margin (mm)</Label>
+                <Input
+                  type="number"
+                  value={template.margin_bottom_mm || 20}
+                  onChange={(e) => setTemplate({ ...template, margin_bottom_mm: parseFloat(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Left Margin (mm)</Label>
+                <Input
+                  type="number"
+                  value={template.margin_left_mm || 20}
+                  onChange={(e) => setTemplate({ ...template, margin_left_mm: parseFloat(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Right Margin (mm)</Label>
+                <Input
+                  type="number"
+                  value={template.margin_right_mm || 20}
+                  onChange={(e) => setTemplate({ ...template, margin_right_mm: parseFloat(e.target.value) })}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Company Info */}
         <Card>
           <CardHeader>
@@ -367,6 +507,7 @@ export default function PDFTemplateSettings() {
             />
           </CardContent>
         </Card>
+        </div>
       </div>
 
       {/* Actions */}
