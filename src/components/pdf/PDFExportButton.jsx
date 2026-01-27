@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Eye, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import PDFDocumentTemplate from './PDFDocumentTemplate';
-import { generateHighQualityPDF } from './PDFExportEngine';
+import { generatePrintPDF } from './PrintPDFExport';
 import {
   Dialog,
   DialogContent,
@@ -64,9 +64,9 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         />
       );
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const result = await generateHighQualityPDF({
+      await generatePrintPDF({
         containerElement: container,
         templateData: templateData,
         documentData: documentData,
@@ -74,11 +74,11 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
       });
 
       root.unmount();
+      setIsGenerating(false);
 
     } catch (error) {
       console.error('Error generating PDF:', error);
       setPdfError(`Failed to generate PDF: ${error.message}`);
-    } finally {
       setIsGenerating(false);
     }
   };
