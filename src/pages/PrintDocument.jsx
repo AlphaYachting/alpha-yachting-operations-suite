@@ -5,6 +5,9 @@ import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
 
 export default function PrintDocument() {
   const [searchParams] = useSearchParams();
+  const docType = searchParams.get('type');
+  const docId = searchParams.get('id');
+  
   const [document, setDocument] = useState(null);
   const [lineItems, setLineItems] = useState([]);
   const [template, setTemplate] = useState(null);
@@ -13,9 +16,6 @@ export default function PrintDocument() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const docType = searchParams.get('type'); // 'Offer' or 'Invoice'
-        const docId = searchParams.get('id');
-
         if (!docType || !docId) {
           console.error('Missing type or id parameter');
           setIsLoading(false);
@@ -74,7 +74,7 @@ export default function PrintDocument() {
     };
 
     loadData();
-  }, [searchParams]);
+  }, [docType, docId]);
 
   if (isLoading) {
     return <div className="print-loading">Loading document...</div>;
