@@ -1,6 +1,6 @@
 import puppeteer from 'puppeteer';
 
-async function generateOfferPDF({ documentData, lineItems, templateData }) {
+export default async function generateOfferPDF({ documentData, lineItems, templateData }) {
   let browser;
   try {
     browser = await puppeteer.launch({ headless: 'new' });
