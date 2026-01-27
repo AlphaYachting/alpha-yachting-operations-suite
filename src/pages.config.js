@@ -17,6 +17,7 @@ import PDFExportDebugger from './pages/PDFExportDebugger';
 import PDFLayoutEditor from './pages/PDFLayoutEditor';
 import PDFTemplateManager from './pages/PDFTemplateManager';
 import PDFTemplateSettings from './pages/PDFTemplateSettings';
+import PrintDocument from './pages/PrintDocument';
 import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
@@ -28,7 +29,6 @@ import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import PrintDocument from './pages/PrintDocument';
 import __Layout from './Layout.jsx';
 
 
@@ -52,6 +52,7 @@ export const PAGES = {
     "PDFLayoutEditor": PDFLayoutEditor,
     "PDFTemplateManager": PDFTemplateManager,
     "PDFTemplateSettings": PDFTemplateSettings,
+    "PrintDocument": PrintDocument,
     "Reports": Reports,
     "Schedule": Schedule,
     "Settings": Settings,
@@ -63,7 +64,6 @@ export const PAGES = {
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "PrintDocument": PrintDocument,
 }
 
 export const pagesConfig = {
