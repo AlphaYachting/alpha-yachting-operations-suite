@@ -50,13 +50,50 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         return;
       }
       const templateData = await loadTemplate();
-      setTemplate(templateData);
-      setShowPreview(true);
       
-      // Trigger print after a short delay to allow rendering
-      setTimeout(() => {
-        window.print();
-      }, 1000);
+      // Create a temporary print-friendly window
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Print Document</title>
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+              background: white;
+              font-family: Arial, sans-serif;
+            }
+            @media print {
+              body { margin: 0; padding: 0; }
+              .print-content { page-break-after: auto; }
+            }
+          </style>
+        </head>
+        <body>
+          <div id="print-content"></div>
+          <script>
+            window.addEventListener('load', () => {
+              setTimeout(() => { window.print(); }, 500);
+            });
+          </script>
+        </body>
+        </html>
+      `);
+      
+      // Render the PDF template into the print window
+      const container = printWindow.document.getElementById('print-content');
+      const root = ReactDOM.createRoot(container);
+      root.render(
+        <PDFDocumentTemplate 
+          document={documentData} 
+          lineItems={lineItems}
+          template={templateData}
+          payments={payments}
+        />
+      );
     } catch (error) {
       console.error('Error opening print dialog:', error);
       setPdfError('Failed to open print dialog');
