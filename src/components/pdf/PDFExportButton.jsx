@@ -49,14 +49,19 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
     setIsGenerating(true);
     setPdfError(null);
     try {
+      if (typeof document === 'undefined') {
+        throw new Error('PDF generation requires browser environment');
+      }
+
       const templateData = await loadTemplate();
       const pageFormat = templateData.page_format || 'A4';
       const renderDpi = templateData.render_dpi || 150;
       const useLetterhead = templateData.letterhead_enabled && templateData.letterhead_image_url;
       
       // Create invisible container with high DPI scaling
+      const containerId = `pdf-export-${Date.now()}`;
       const container = document.createElement('div');
-      container.id = `pdf-export-${Date.now()}`;
+      container.id = containerId;
       container.style.position = 'absolute';
       container.style.left = '-9999px';
       container.style.width = '210mm';
@@ -68,20 +73,20 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
       // Set up CSS for print quality
       const styleSheet = document.createElement('style');
       styleSheet.textContent = `
-        #${container.id} {
+        #${containerId} {
           font-family: Arial, sans-serif;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
           color-adjust: exact;
         }
-        #${container.id} table {
+        #${containerId} table {
           page-break-inside: auto;
           border-collapse: collapse;
         }
-        #${container.id} tr {
+        #${containerId} tr {
           page-break-inside: avoid;
         }
-        #${container.id} img {
+        #${containerId} img {
           max-width: 100%;
           height: auto;
         }
@@ -188,8 +193,12 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
 
       // Cleanup
       root.unmount();
-      document.body.removeChild(container);
-      document.head.removeChild(styleSheet);
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+      if (document.head.contains(styleSheet)) {
+        document.head.removeChild(styleSheet);
+      }
 
     } catch (error) {
       console.error('Error generating PDF:', error);
