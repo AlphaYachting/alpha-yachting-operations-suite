@@ -27,6 +27,19 @@ const SKILLS = [
 
 const LANGUAGES = ['German', 'English', 'Italian', 'Slovenian', 'Croatian'];
 
+const COLORS = [
+  { value: '#3b82f6', label: 'Blue' },
+  { value: '#8b5cf6', label: 'Purple' },
+  { value: '#ec4899', label: 'Pink' },
+  { value: '#f59e0b', label: 'Amber' },
+  { value: '#10b981', label: 'Emerald' },
+  { value: '#06b6d4', label: 'Cyan' },
+  { value: '#ef4444', label: 'Red' },
+  { value: '#14b8a6', label: 'Teal' },
+  { value: '#f97316', label: 'Orange' },
+  { value: '#6366f1', label: 'Indigo' }
+];
+
 export default function TechnicianForm({ technician, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     first_name: technician?.first_name || '',
@@ -34,6 +47,7 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
     email: technician?.email || '',
     phone: technician?.phone || '',
     role: technician?.role || 'Technician',
+    color: technician?.color || '#3b82f6',
     skills: technician?.skills || [],
     languages: technician?.languages || ['German'],
     certifications: technician?.certifications || [],
@@ -170,6 +184,32 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
               <SelectItem value="Inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      {/* Schedule Color */}
+      <div className="space-y-2">
+        <Label>Schedule Color</Label>
+        <p className="text-xs text-slate-500 mb-2">Choose a color to easily identify this technician in schedule views</p>
+        <div className="grid grid-cols-5 gap-3">
+          {COLORS.map(color => (
+            <button
+              key={color.value}
+              type="button"
+              onClick={() => updateField('color', color.value)}
+              className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
+                formData.color === color.value
+                  ? 'border-slate-900 shadow-md scale-105'
+                  : 'border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <div
+                className="w-8 h-8 rounded-full"
+                style={{ backgroundColor: color.value }}
+              />
+              <span className="text-xs font-medium">{color.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 

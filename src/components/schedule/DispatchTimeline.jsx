@@ -93,6 +93,20 @@ export default function DispatchTimeline({
   const startHour = 6;
   const endHour = 18;
   const hoursRange = endHour - startHour;
+
+  // Create color map for technicians
+  const technicianColorMap = useMemo(() => {
+    const map = {};
+    technicians.forEach(tech => {
+      const color = tech.color || '#3b82f6';
+      map[tech.id] = {
+        bg: color + '20',
+        border: color,
+        text: color
+      };
+    });
+    return map;
+  }, [technicians]);
   
   // Generate time slots based on grid size
   const timeSlots = useMemo(() => {
@@ -184,11 +198,23 @@ export default function DispatchTimeline({
           {technicianRows.map(({ technician }) => (
             <div key={technician.id} className="h-20 border-b flex items-center px-4">
               <div className="flex items-center gap-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
-                    {technician.first_name?.[0]}{technician.last_name?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <div 
+                    className="absolute -inset-1 rounded-full"
+                    style={{ backgroundColor: (technician.color || '#3b82f6') + '30' }}
+                  />
+                  <Avatar className="h-8 w-8 relative">
+                    <AvatarFallback 
+                      className="text-xs font-semibold"
+                      style={{ 
+                        backgroundColor: (technician.color || '#3b82f6') + '20',
+                        color: technician.color || '#3b82f6'
+                      }}
+                    >
+                      {technician.first_name?.[0]}{technician.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
                 <div>
                   <p className="font-medium text-sm text-slate-900">
                     {technician.first_name} {technician.last_name}
@@ -251,18 +277,24 @@ export default function DispatchTimeline({
                         e.stopPropagation();
                         onWorkOrderClick && onWorkOrderClick(wo.id);
                       }}
-                      className="group absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden"
+                      className="group absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden border"
                       style={{
                         left: `${position.left}%`,
                         width: `${position.width}%`,
-                        zIndex: wo.hasConflict ? 20 : 10
+                        zIndex: wo.hasConflict ? 20 : 10,
+                        backgroundColor: wo.hasConflict 
+                          ? '#fef2f2'
+                          : (technicianColorMap[technician.id]?.bg || '#e2e8f020'),
+                        borderColor: wo.hasConflict
+                          ? '#ef4444'
+                          : (technicianColorMap[technician.id]?.border || '#94a3b8'),
+                        borderLeftWidth: '4px',
+                        borderLeftColor: wo.hasConflict
+                          ? '#ef4444'
+                          : (technicianColorMap[technician.id]?.border || '#3b82f6')
                       }}
                     >
-                      <div className={`h-full px-2 py-1 border-l-4 ${
-                        wo.hasConflict 
-                          ? 'bg-red-50 border-red-500' 
-                          : statusColors[wo.status] + ' border-transparent'
-                      }`}>
+                      <div className="h-full px-2 py-1">
                         <div className="flex items-start justify-between gap-1">
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium truncate text-slate-900">
