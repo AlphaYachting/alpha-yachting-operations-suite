@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, Upload, Eye, Beaker } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Eye, Beaker, Columns3, Droplet } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
 import PDFDiagnostics from '@/components/pdf/PDFDiagnostics';
@@ -485,6 +485,220 @@ export default function PDFTemplateSettings() {
               <Switch
                 checked={template.show_net_gross}
                 onCheckedChange={(checked) => setTemplate({ ...template, show_net_gross: checked })}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Watermark Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Droplet className="h-5 w-5" />
+              Watermark Settings
+            </CardTitle>
+            <CardDescription>Add watermarks like DRAFT, PAID, or CONFIDENTIAL</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Enable Watermark</Label>
+              <Switch
+                checked={template.watermark_enabled || false}
+                onCheckedChange={(checked) => setTemplate({ ...template, watermark_enabled: checked })}
+              />
+            </div>
+
+            {template.watermark_enabled && (
+              <>
+                <div>
+                  <Label>Watermark Text</Label>
+                  <Input
+                    value={template.watermark_text || 'DRAFT'}
+                    onChange={(e) => setTemplate({ ...template, watermark_text: e.target.value })}
+                    placeholder="e.g., DRAFT, PAID, CONFIDENTIAL"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Opacity (0.0 - 1.0)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={template.watermark_opacity ?? 0.1}
+                      onChange={(e) => setTemplate({ ...template, watermark_opacity: parseFloat(e.target.value) })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Angle (degrees)</Label>
+                    <Input
+                      type="number"
+                      value={template.watermark_angle ?? -45}
+                      onChange={(e) => setTemplate({ ...template, watermark_angle: parseFloat(e.target.value) })}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                  <p className="text-xs text-slate-600">Preview:</p>
+                  <div style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '120px',
+                    border: '1px solid #ddd',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      fontSize: '48pt',
+                      fontWeight: 'bold',
+                      color: '#ccc',
+                      opacity: template.watermark_opacity ?? 0.1,
+                      transform: `rotate(${template.watermark_angle ?? -45}deg)`,
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {template.watermark_text || 'DRAFT'}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Table Column Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Columns3 className="h-5 w-5" />
+              Table Column Settings
+            </CardTitle>
+            <CardDescription>Customize column widths and alignment</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div>
+              <p className="text-sm font-medium mb-3">Column Widths (%)</p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {['index', 'description', 'quantity', 'unit', 'unit_price', 'vat', 'total'].map((col) => (
+                  <div key={col}>
+                    <Label className="text-xs capitalize">{col === 'unit_price' ? 'Unit Price' : col}</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={template.table_column_widths?.[col] || (col === 'description' ? 38 : col === 'index' ? 4 : 8)}
+                      onChange={(e) => setTemplate({
+                        ...template,
+                        table_column_widths: {
+                          ...template.table_column_widths,
+                          [col]: parseFloat(e.target.value)
+                        }
+                      })}
+                      className="text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500 mt-2">Total should equal 100%</p>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium mb-3">Column Alignment</p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {['index', 'description', 'quantity', 'unit', 'unit_price', 'vat', 'total'].map((col) => (
+                  <div key={col}>
+                    <Label className="text-xs capitalize">{col === 'unit_price' ? 'Unit Price' : col}</Label>
+                    <Select
+                      value={template.table_column_align?.[col] || (col === 'description' ? 'left' : 'right')}
+                      onValueChange={(value) => setTemplate({
+                        ...template,
+                        table_column_align: {
+                          ...template.table_column_align,
+                          [col]: value
+                        }
+                      })}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="left">Left</SelectItem>
+                        <SelectItem value="center">Center</SelectItem>
+                        <SelectItem value="right">Right</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Page Break Rules */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Page Break Rules</CardTitle>
+            <CardDescription>Control where content breaks across pages</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Break Before Totals</Label>
+                <p className="text-xs text-slate-500">Insert page break before totals section</p>
+              </div>
+              <Switch
+                checked={template.page_break_rules?.break_before_totals || false}
+                onCheckedChange={(checked) => setTemplate({
+                  ...template,
+                  page_break_rules: { ...template.page_break_rules, break_before_totals: checked }
+                })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Break Before Notes</Label>
+                <p className="text-xs text-slate-500">Insert page break before notes section</p>
+              </div>
+              <Switch
+                checked={template.page_break_rules?.break_before_notes || false}
+                onCheckedChange={(checked) => setTemplate({
+                  ...template,
+                  page_break_rules: { ...template.page_break_rules, break_before_notes: checked }
+                })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Keep Totals with Items</Label>
+                <p className="text-xs text-slate-500">Prevent separation of totals from last item</p>
+              </div>
+              <Switch
+                checked={template.page_break_rules?.keep_totals_with_items !== false}
+                onCheckedChange={(checked) => setTemplate({
+                  ...template,
+                  page_break_rules: { ...template.page_break_rules, keep_totals_with_items: checked }
+                })}
+              />
+            </div>
+
+            <div>
+              <Label>Min Lines Before Break</Label>
+              <p className="text-xs text-slate-500 mb-2">Minimum line items before page break is allowed</p>
+              <Input
+                type="number"
+                min="1"
+                max="20"
+                value={template.page_break_rules?.min_lines_before_break || 3}
+                onChange={(e) => setTemplate({
+                  ...template,
+                  page_break_rules: { ...template.page_break_rules, min_lines_before_break: parseFloat(e.target.value) }
+                })}
               />
             </div>
           </CardContent>
