@@ -107,25 +107,27 @@ export default function PDFTemplateSettings() {
       // Upload original PDF
       const pdfResult = await base44.integrations.Core.UploadFile({ file });
       
-      // Convert PDF to image using InvokeLLM with file attachment
-      const conversionPrompt = `Convert this PDF letterhead to a high-resolution PNG image. 
-The output should be a single page A4 letterhead suitable for printing.
-Return only the image data, no additional text or explanation.`;
+      // Generate PNG image from PDF using AI
+      const imageResult = await base44.integrations.Core.GenerateImage({
+        prompt: `Convert this PDF letterhead to a high-resolution PNG image with A4 proportions (210mm x 297mm). 
+Maintain exact layout, colors, logos, and text positioning. 
+This will be used as a background letterhead for documents.
+Output should be print-quality, 300 DPI equivalent.`,
+        existing_image_urls: [pdfResult.file_url]
+      });
       
-      // For now, store the PDF URL and let the PDF generation handle conversion
-      // In production, you'd want server-side PDF->Image conversion
       setTemplate({ 
         ...template, 
         letterhead_original_pdf_url: pdfResult.file_url,
-        letterhead_image_url: pdfResult.file_url, // Temporary: will be converted on PDF generation
+        letterhead_image_url: imageResult.url,
         letterhead_upload_date: new Date().toISOString()
       });
       
-      setSuccess('Letterhead uploaded successfully! Note: PDF will be rendered as background during export.');
-      setTimeout(() => setSuccess(''), 5000);
+      setSuccess('Letterhead converted and uploaded successfully!');
+      setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Error uploading letterhead:', error);
-      setError('Failed to upload letterhead');
+      setError('Failed to convert letterhead. Please try again.');
     } finally {
       setUploading(false);
     }
