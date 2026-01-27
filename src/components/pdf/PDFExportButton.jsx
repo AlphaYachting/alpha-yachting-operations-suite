@@ -202,13 +202,31 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
             <DialogTitle>PDF Preview</DialogTitle>
           </DialogHeader>
           {template && (
-            <div className="bg-slate-100 p-4">
-              <PDFDocumentTemplate 
-                document={document} 
-                lineItems={lineItems}
-                template={template}
-                payments={payments}
-              />
+            <div 
+              className="bg-white p-4 relative" 
+              style={{
+                backgroundImage: template.letterhead_enabled && template.letterhead_image_url 
+                  ? `url(${template.letterhead_image_url})` 
+                  : 'none',
+                backgroundSize: 'contain',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'top center',
+                minHeight: '297mm'
+              }}
+            >
+              <div style={{
+                paddingTop: template.letterhead_enabled ? `${template.margin_top_mm || 20}mm` : '0',
+                paddingLeft: template.letterhead_enabled ? `${template.margin_left_mm || 20}mm` : '0',
+                paddingRight: template.letterhead_enabled ? `${template.margin_right_mm || 20}mm` : '0',
+                paddingBottom: template.letterhead_enabled ? `${template.margin_bottom_mm || 20}mm` : '0'
+              }}>
+                <PDFDocumentTemplate 
+                  document={document} 
+                  lineItems={lineItems}
+                  template={template}
+                  payments={payments}
+                />
+              </div>
             </div>
           )}
           <div className="flex justify-end gap-3 pt-4">
