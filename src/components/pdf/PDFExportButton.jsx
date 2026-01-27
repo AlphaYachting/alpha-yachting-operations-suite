@@ -149,18 +149,60 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
               Close
             </Button>
             <Button onClick={() => {
-              const printCSS = `
-                @media print {
-                  body * { display: none; }
-                  #preview-print-area { display: block !important; }
-                  #preview-print-area * { display: inherit; }
-                }
-              `;
-              const style = document.createElement('style');
-              style.textContent = printCSS;
-              document.head.appendChild(style);
-              window.print();
-              setTimeout(() => document.head.removeChild(style), 100);
+              if (!template) return;
+
+              // Create a new window with just the document
+              const printWindow = window.open('', '', 'width=800,height=1000');
+              printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8">
+                  <title>${documentData.document_number || 'document'}</title>
+                  <style>
+                    @page {
+                      size: A4;
+                      margin: 0;
+                    }
+                    body {
+                      margin: 0;
+                      padding: 0;
+                      font-family: Arial, sans-serif;
+                    }
+                    #content {
+                      width: 210mm;
+                      height: auto;
+                      padding: 15mm 12mm;
+                      margin: 0;
+                    }
+                  </style>
+                </head>
+                <body id="print-body">
+                  <div id="content"></div>
+                </body>
+                </html>
+              `);
+              printWindow.document.close();
+
+              // Render template into the print window
+              setTimeout(() => {
+                const contentDiv = printWindow.document.getElementById('content');
+                const { createRoot } = require('react-dom/client');
+                const root = createRoot(contentDiv);
+                root.render(
+                  <PDFDocumentTemplate 
+                    document={documentData} 
+                    lineItems={lineItems}
+                    template={template}
+                    payments={payments}
+                  />
+                );
+
+                // Wait for render, then print
+                setTimeout(() => {
+                  printWindow.print();
+                }, 500);
+              }, 100);
             }}>
               <Download className="h-4 w-4 mr-2" />
               Print to PDF
