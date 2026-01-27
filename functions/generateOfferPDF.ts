@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+// Deno handler for PDF generation
 
 Deno.serve(async (req) => {
   try {
