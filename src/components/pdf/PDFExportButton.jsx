@@ -66,9 +66,19 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
       container.style.left = '-9999px';
       container.style.width = '210mm';
       container.style.height = 'auto';
-      container.style.background = 'white';
       container.style.margin = '0';
       container.style.padding = '0';
+      
+      // Apply letterhead background if enabled
+      if (useLetterhead) {
+        container.style.backgroundImage = `url(${templateData.letterhead_image_url})`;
+        container.style.backgroundSize = 'cover';
+        container.style.backgroundRepeat = 'no-repeat';
+        container.style.backgroundPosition = 'top center';
+        container.style.backgroundAttachment = 'fixed';
+      } else {
+        container.style.background = 'white';
+      }
       
       // Set up CSS for print quality
       const styleSheet = document.createElement('style');
