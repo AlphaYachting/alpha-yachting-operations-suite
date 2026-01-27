@@ -9,7 +9,7 @@ import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated }) {
   const [prompt, setPrompt] = useState('');
-  const [defaultHourlyRate, setDefaultHourlyRate] = useState(50);
+  const [defaultUnitPrice, setDefaultUnitPrice] = useState(50);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
 
@@ -56,9 +56,10 @@ Be practical and realistic with time estimates. Consider travel time if it's mob
                 properties: {
                   title: { type: 'string' },
                   description: { type: 'string' },
-                  estimated_hours: { type: 'number' }
+                  unit_type: { type: 'string' },
+                  quantity: { type: 'number' }
                 },
-                required: ['title', 'estimated_hours']
+                required: ['title', 'quantity']
               }
             }
           },
@@ -67,12 +68,13 @@ Be practical and realistic with time estimates. Consider travel time if it's mob
       });
 
       if (response.tasks && Array.isArray(response.tasks)) {
-        const tasksWithRates = response.tasks.map(task => ({
+        const tasksWithPrices = response.tasks.map(task => ({
           ...task,
-          hourly_rate: defaultHourlyRate,
-          total_amount: task.estimated_hours * defaultHourlyRate
+          unit_type: task.unit_type || 'Hour',
+          unit_price: defaultUnitPrice,
+          total_amount: task.quantity * defaultUnitPrice
         }));
-        onTasksGenerated(tasksWithRates);
+        onTasksGenerated(tasksWithPrices);
       } else {
         throw new Error('Invalid response from AI');
       }
@@ -107,17 +109,17 @@ Be practical and realistic with time estimates. Consider travel time if it's mob
       </div>
 
       <div className="space-y-2">
-        <Label>Default Hourly Rate (€)</Label>
+        <Label>Default Unit Price (€)</Label>
         <Input
           type="number"
           step="1"
           min="0"
-          value={defaultHourlyRate}
-          onChange={(e) => setDefaultHourlyRate(parseFloat(e.target.value) || 50)}
+          value={defaultUnitPrice}
+          onChange={(e) => setDefaultUnitPrice(parseFloat(e.target.value) || 50)}
           disabled={generating}
         />
         <p className="text-xs text-slate-500">
-          This rate will be applied to all generated tasks (you can adjust individual tasks later)
+          This price will be applied to all generated tasks (you can adjust individual tasks later)
         </p>
       </div>
 

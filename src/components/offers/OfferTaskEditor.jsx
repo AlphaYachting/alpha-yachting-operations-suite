@@ -4,6 +4,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -20,16 +27,18 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
   const [taskForm, setTaskForm] = useState({
     title: '',
     description: '',
-    estimated_hours: 1,
-    hourly_rate: 50,
+    unit_type: 'Hour',
+    quantity: 1,
+    unit_price: 50,
   });
 
   const openNewTask = () => {
     setTaskForm({
       title: '',
       description: '',
-      estimated_hours: 1,
-      hourly_rate: 50,
+      unit_type: 'Hour',
+      quantity: 1,
+      unit_price: 50,
     });
     setEditingTask(null);
     setShowDialog(true);
@@ -42,7 +51,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
   };
 
   const handleSaveTask = () => {
-    const total_amount = taskForm.estimated_hours * taskForm.hourly_rate;
+    const total_amount = taskForm.quantity * taskForm.unit_price;
     const taskToSave = { ...taskForm, total_amount };
 
     if (editingTask !== null) {
@@ -102,10 +111,10 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                     <p className="text-sm text-slate-600 mt-1">{task.description}</p>
                   )}
                   <div className="flex gap-6 mt-2 text-sm text-slate-600">
-                    <span>{task.estimated_hours}h</span>
-                    <span>€{task.hourly_rate}/h</span>
+                    <span>{task.quantity} {task.unit_type}</span>
+                    <span>€{task.unit_price.toFixed(2)}/{task.unit_type}</span>
                     <span className="font-semibold text-slate-900">
-                      €{(task.estimated_hours * task.hourly_rate).toFixed(2)}
+                      €{(task.quantity * task.unit_price).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -162,25 +171,46 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                 rows={3}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Charging Method *</Label>
+              <Select 
+                value={taskForm.unit_type} 
+                onValueChange={(v) => setTaskForm({ ...taskForm, unit_type: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hour">Hour</SelectItem>
+                  <SelectItem value="Piece">Piece</SelectItem>
+                  <SelectItem value="Square Meter">Square Meter</SelectItem>
+                  <SelectItem value="Linear Meter">Linear Meter</SelectItem>
+                  <SelectItem value="Liter">Liter</SelectItem>
+                  <SelectItem value="Kilogram">Kilogram</SelectItem>
+                  <SelectItem value="Set">Set</SelectItem>
+                  <SelectItem value="Lump Sum">Lump Sum</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Estimated Hours *</Label>
+                <Label>Quantity *</Label>
                 <Input
                   type="number"
-                  step="0.5"
+                  step="0.1"
                   min="0"
-                  value={taskForm.estimated_hours}
-                  onChange={(e) => setTaskForm({ ...taskForm, estimated_hours: parseFloat(e.target.value) || 0 })}
+                  value={taskForm.quantity}
+                  onChange={(e) => setTaskForm({ ...taskForm, quantity: parseFloat(e.target.value) || 0 })}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Hourly Rate (€) *</Label>
+                <Label>Unit Price (€) *</Label>
                 <Input
                   type="number"
-                  step="1"
+                  step="0.01"
                   min="0"
-                  value={taskForm.hourly_rate}
-                  onChange={(e) => setTaskForm({ ...taskForm, hourly_rate: parseFloat(e.target.value) || 0 })}
+                  value={taskForm.unit_price}
+                  onChange={(e) => setTaskForm({ ...taskForm, unit_price: parseFloat(e.target.value) || 0 })}
                 />
               </div>
             </div>
@@ -188,7 +218,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-600">Task Total</span>
                 <span className="text-lg font-bold text-slate-900">
-                  €{(taskForm.estimated_hours * taskForm.hourly_rate).toFixed(2)}
+                  €{(taskForm.quantity * taskForm.unit_price).toFixed(2)}
                 </span>
               </div>
             </div>

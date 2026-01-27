@@ -58,6 +58,7 @@ export default function OfferDetail() {
     job_id: '',
     title: '',
     description: '',
+    language: 'German',
     status: 'Draft',
     valid_until: '',
     notes: '',
@@ -148,7 +149,7 @@ export default function OfferDetail() {
               ...task,
               offer_id: savedOfferId,
               sequence_order: idx,
-              total_amount: task.estimated_hours * task.hourly_rate,
+              total_amount: task.quantity * task.unit_price,
             }))
           );
         }
@@ -171,7 +172,7 @@ export default function OfferDetail() {
               ...task,
               offer_id: offerId,
               sequence_order: idx,
-              total_amount: task.estimated_hours * task.hourly_rate,
+              total_amount: task.quantity * task.unit_price,
             }))
           );
         }
@@ -216,9 +217,9 @@ export default function OfferDetail() {
           tasks.map((task, idx) => ({
             work_order_id: workOrder.id,
             title: task.title,
-            description: task.description,
+            description: `${task.description || ''}\n${task.quantity} ${task.unit_type} @ €${task.unit_price}`,
             sequence_order: idx,
-            estimated_minutes: task.estimated_hours * 60,
+            estimated_minutes: task.unit_type === 'Hour' ? task.quantity * 60 : 0,
             status: 'Not Started',
           }))
         );
@@ -376,7 +377,22 @@ export default function OfferDetail() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Language</Label>
+                  <Select value={formData.language} onValueChange={(v) => updateField('language', v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="German">German</SelectItem>
+                      <SelectItem value="English">English</SelectItem>
+                      <SelectItem value="Italian">Italian</SelectItem>
+                      <SelectItem value="Slovenian">Slovenian</SelectItem>
+                      <SelectItem value="Croatian">Croatian</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label>Status</Label>
                   <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
@@ -461,9 +477,9 @@ export default function OfferDetail() {
                 <span className="font-semibold">{tasks.length}</span>
               </div>
               <div className="flex justify-between items-center py-3 border-b">
-                <span className="text-slate-600">Total Hours</span>
+                <span className="text-slate-600">Total Items</span>
                 <span className="font-semibold">
-                  {tasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0).toFixed(1)}h
+                  {tasks.reduce((sum, t) => sum + (t.quantity || 0), 0).toFixed(1)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-4 bg-blue-50 px-4 rounded-lg">
