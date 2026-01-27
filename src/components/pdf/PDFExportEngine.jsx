@@ -57,24 +57,15 @@ export async function generateHighQualityPDF({
 
     diag.log('Export Config', { pageFormat, renderDpi, scale, pageHeightMm, useLetterhead });
 
-    // Step 2: Clone container to avoid modifying live DOM
-    const exportContainer = containerElement.cloneNode(true);
-    
-    exportContainer.id = 'pdf-export-container';
-    exportContainer.style.position = 'relative';
-    exportContainer.style.width = pageFormat === 'A4' ? '210mm' : '216mm';
-    exportContainer.style.margin = '0';
-    exportContainer.style.padding = '0';
-    exportContainer.style.backgroundColor = 'white';
-    exportContainer.style.display = 'block';
-    exportContainer.style.boxSizing = 'border-box';
-
-    // Remove inline background image from PDFDocumentTemplate
-    const pdfContent = exportContainer.querySelector('#pdf-content');
-    if (pdfContent) {
-      pdfContent.style.backgroundImage = 'none';
-      pdfContent.style.backgroundAttachment = 'scroll';
-    }
+    // Step 2: Prepare container for export (use original, not clone)
+    containerElement.id = 'pdf-export-container';
+    containerElement.style.position = 'relative';
+    containerElement.style.width = pageFormat === 'A4' ? '210mm' : '216mm';
+    containerElement.style.margin = '0';
+    containerElement.style.padding = '0';
+    containerElement.style.backgroundColor = 'white';
+    containerElement.style.display = 'block';
+    containerElement.style.boxSizing = 'border-box';
 
     // Inject print CSS that REMOVES background and enforces page breaks
     const printStyle = document.createElement('style');
@@ -141,13 +132,13 @@ export async function generateHighQualityPDF({
       }
     `;
     document.head.appendChild(printStyle);
-    document.body.appendChild(exportContainer);
+    document.body.appendChild(containerElement);
 
     // Step 3: Wait for render
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // Step 4: Get total content height
-    const totalHeight = exportContainer.scrollHeight;
+    const totalHeight = containerElement.scrollHeight;
     const estimatedPages = Math.ceil(totalHeight / pageHeightPx);
 
     diag.log('Content measured', {
@@ -156,8 +147,8 @@ export async function generateHighQualityPDF({
       estimatedPages
     });
 
-    // Step 5: Render container to single large canvas
-    const canvas = await html2canvas(exportContainer, {
+    // Step 5: Render container to single large canvas (includes letterhead background)
+    const canvas = await html2canvas(containerElement, {
       scale: scale,
       useCORS: true,
       allowTaint: true,
@@ -175,42 +166,9 @@ export async function generateHighQualityPDF({
       actualPages: Math.ceil(canvas.height / (pageHeightPx * scale))
     });
 
-    // Step 6: Load letterhead if enabled
-    let letterheadImgData = null;
-    let letterheadWidth = 0;
-    let letterheadHeight = 0;
-
-    if (useLetterhead) {
-      try {
-        const letterheadImg = new Image();
-        letterheadImg.crossOrigin = 'anonymous';
-        
-        await new Promise((resolve, reject) => {
-          letterheadImg.onload = resolve;
-          letterheadImg.onerror = reject;
-          letterheadImg.src = templateData.letterhead_image_url;
-        });
-
-        // Store original dimensions
-        letterheadWidth = letterheadImg.naturalWidth;
-        letterheadHeight = letterheadImg.naturalHeight;
-
-        const letterheadCanvas = document.createElement('canvas');
-        letterheadCanvas.width = letterheadWidth;
-        letterheadCanvas.height = letterheadHeight;
-        const ctx = letterheadCanvas.getContext('2d');
-        ctx.drawImage(letterheadImg, 0, 0);
-        letterheadImgData = letterheadCanvas.toDataURL('image/png');
-
-        diag.log('Letterhead loaded', {
-          width: letterheadWidth,
-          height: letterheadHeight,
-          format: 'PNG'
-        });
-      } catch (err) {
-        diag.log('⚠️ Letterhead load failed', err.message);
-      }
-    }
+    // Step 6: Letterhead already rendered in canvas via html2canvas
+    // (background-image in PDFDocumentTemplate is included in canvas render)
+    diag.log('Content rendered with letterhead background', { useLetterhead });
 
     // Step 7: Create PDF and split canvas into pages
     const pdf = new jsPDF({
@@ -244,7 +202,7 @@ export async function generateHighQualityPDF({
         pdf.addPage();
       }
 
-      // Add content slice from canvas
+      // Add content slice from canvas (includes letterhead background)
       const sliceHeight = Math.min(pdfHeight, imgHeight - yPosition);
       pdf.addImage(
         imgData,
@@ -255,26 +213,7 @@ export async function generateHighQualityPDF({
         imgHeight
       );
 
-      // Add letterhead overlay on top of this page (if enabled)
-      if (letterheadImgData && letterheadWidth > 0) {
-        // Scale letterhead to fit page width while maintaining aspect ratio
-        const letterheadPageWidth = pdfWidth;
-        const letterheadPageHeight = (letterheadHeight * pdfWidth) / letterheadWidth;
-
-        try {
-          pdf.addImage(
-            letterheadImgData,
-            'PNG',
-            0,
-            0,
-            letterheadPageWidth,
-            letterheadPageHeight
-          );
-          diag.log(`Letterhead overlay added to page ${pageCount + 1}`);
-        } catch (err) {
-          diag.log(`⚠️ Letterhead overlay failed on page ${pageCount + 1}`, err.message);
-        }
-      }
+      diag.log(`Page ${pageCount + 1} rendered with content + letterhead`);
 
       yPosition += pdfHeight;
       pageCount++;
@@ -289,8 +228,8 @@ export async function generateHighQualityPDF({
     pdf.save(fileName);
 
     // Step 10: Cleanup
-    if (document.body.contains(exportContainer)) {
-      document.body.removeChild(exportContainer);
+    if (document.body.contains(containerElement)) {
+      document.body.removeChild(containerElement);
     }
     if (document.head.contains(printStyle)) {
       document.head.removeChild(printStyle);
