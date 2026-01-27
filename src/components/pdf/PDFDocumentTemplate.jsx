@@ -4,11 +4,14 @@ import { format } from 'date-fns';
 export default function PDFDocumentTemplate({ document, lineItems, template, payments = [] }) {
   const isInvoice = document.document_type === 'Invoice';
   const currency = document.currency === 'EUR' ? '€' : document.currency;
-  const useLetterhead = template.letterhead_enabled && template.letterhead_image_url;
 
-  // Get layout settings
-  const layoutSettings = template.pdf_layout_settings || {};
-  const margins = layoutSettings.margins_mm || { top: 15, right: 12, bottom: 15, left: 12 };
+  // Margins
+  const margins = { 
+    top: template.margin_top_mm || 20, 
+    right: template.margin_right_mm || 20, 
+    bottom: template.margin_bottom_mm || 20, 
+    left: template.margin_left_mm || 20 
+  };
 
   // Watermark configuration
   const useWatermark = template.watermark_enabled;
@@ -62,17 +65,12 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
       minHeight: '100%',
       padding: `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`,
       margin: '0',
-      backgroundColor: useLetterhead ? 'transparent' : 'white',
+      backgroundColor: 'white',
       color: '#000',
       fontSize: `${fontSizeBody}pt`,
       boxSizing: 'border-box',
       lineHeight: lineSpacing,
-      position: 'relative',
-      backgroundImage: useLetterhead ? `url(${template.letterhead_image_url})` : 'none',
-      backgroundSize: 'cover',
-      backgroundRepeat: 'repeat',
-      backgroundPosition: '0 0',
-      backgroundAttachment: 'scroll'
+      position: 'relative'
     }}>
       {/* Watermark */}
       {useWatermark && (
@@ -92,33 +90,31 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
           {watermarkText}
         </div>
       )}
-      {/* Header - Only show if letterhead is disabled */}
-      {!useLetterhead && (
-        <div style={{ marginBottom: `${paragraphSpacing}pt`, borderBottom: `2px solid ${template.primary_color || '#2563eb'}`, paddingBottom: '15px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              {template.logo_url && (
-                <img src={template.logo_url} alt="Logo" style={{ maxHeight: '50px', marginBottom: '8px' }} />
-              )}
-              <h1 style={{ margin: 0, color: template.primary_color || '#2563eb', fontSize: `${fontSizeCompanyName}pt`, fontWeight: 'bold' }}>
-                {template.company_name || 'Alpha Yachting'}
-              </h1>
-              <div style={{ fontSize: `${fontSizeBody - 2}pt`, color: '#555', marginTop: '4px', lineHeight: lineSpacing }}>
-                {template.company_address && <div>{template.company_address}</div>}
-                {template.company_vat && <div>VAT: {template.company_vat}</div>}
-                {template.company_registration && <div>Reg: {template.company_registration}</div>}
-              </div>
+      {/* Header with Logo */}
+      <div style={{ marginBottom: `${paragraphSpacing}pt`, borderBottom: `2px solid ${template.primary_color || '#2563eb'}`, paddingBottom: '15px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            {template.logo_url && (
+              <img src={template.logo_url} alt="Logo" style={{ maxHeight: '50px', marginBottom: '8px' }} />
+            )}
+            <h1 style={{ margin: 0, color: template.primary_color || '#2563eb', fontSize: `${fontSizeCompanyName}pt`, fontWeight: 'bold' }}>
+              {template.company_name || 'Alpha Yachting'}
+            </h1>
+            <div style={{ fontSize: `${fontSizeBody - 2}pt`, color: '#555', marginTop: '4px', lineHeight: lineSpacing }}>
+              {template.company_address && <div>{template.company_address}</div>}
+              {template.company_vat && <div>VAT: {template.company_vat}</div>}
+              {template.company_registration && <div>Reg: {template.company_registration}</div>}
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: `${fontSizeBody - 2}pt`, color: '#555', lineHeight: lineSpacing }}>
-                {template.contact_phone && <div>Tel: {template.contact_phone}</div>}
-                {template.contact_email && <div>{template.contact_email}</div>}
-                {template.contact_website && <div>{template.contact_website}</div>}
-              </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: `${fontSizeBody - 2}pt`, color: '#555', lineHeight: lineSpacing }}>
+              {template.contact_phone && <div>Tel: {template.contact_phone}</div>}
+              {template.contact_email && <div>{template.contact_email}</div>}
+              {template.contact_website && <div>{template.contact_website}</div>}
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Document Title & Number */}
       <div style={{ marginBottom: `${paragraphSpacing}pt` }}>
@@ -366,16 +362,19 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
         </div>
       )}
 
-      {/* Footer - Show for all documents */}
+      {/* Footer with Graphics */}
       <div style={{ 
         marginTop: `${paragraphSpacing * 2}pt`, 
         paddingTop: '15px', 
-        borderTop: !useLetterhead ? `1px solid ${template.primary_color || '#2563eb'}` : 'none',
+        borderTop: `1px solid ${template.primary_color || '#2563eb'}`,
         fontSize: `${fontSizeBody - 3}pt`,
         color: '#666',
         textAlign: 'center',
         lineHeight: lineSpacing
       }}>
+        {template.footer_graphic_url && (
+          <img src={template.footer_graphic_url} alt="Footer" style={{ maxWidth: '100%', maxHeight: '60px', marginBottom: '12px' }} />
+        )}
         {template.footer_text && (
           <div style={{ marginBottom: '8px' }}>{template.footer_text}</div>
         )}
