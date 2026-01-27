@@ -111,10 +111,10 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                     <p className="text-sm text-slate-600 mt-1">{task.description}</p>
                   )}
                   <div className="flex gap-6 mt-2 text-sm text-slate-600">
-                    <span>{task.quantity} {task.unit_type}</span>
-                    <span>€{task.unit_price.toFixed(2)}/{task.unit_type}</span>
+                    <span>{task.quantity || 0} {task.unit_type || 'Hour'}</span>
+                    <span>€{(task.unit_price || 0).toFixed(2)}/{task.unit_type || 'Hour'}</span>
                     <span className="font-semibold text-slate-900">
-                      €{(task.quantity * task.unit_price).toFixed(2)}
+                      €{((task.quantity || 0) * (task.unit_price || 0)).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -218,7 +218,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-600">Task Total</span>
                 <span className="text-lg font-bold text-slate-900">
-                  €{(taskForm.quantity * taskForm.unit_price).toFixed(2)}
+                  €{((taskForm.quantity || 0) * (taskForm.unit_price || 0)).toFixed(2)}
                 </span>
               </div>
             </div>
