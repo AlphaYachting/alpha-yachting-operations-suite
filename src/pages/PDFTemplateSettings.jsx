@@ -360,6 +360,17 @@ export default function PDFTemplateSettings() {
             </div>
 
             <div>
+              <Label>Logo Height (mm)</Label>
+              <Input
+                type="number"
+                min="5"
+                max="100"
+                value={template.logo_height_mm || 20}
+                onChange={(e) => setTemplate({ ...template, logo_height_mm: parseFloat(e.target.value) })}
+              />
+            </div>
+
+            <div>
               <Label>Company Name</Label>
               <Input
                 value={template.company_name}
@@ -864,6 +875,17 @@ export default function PDFTemplateSettings() {
                 <Upload className="h-4 w-4 mr-2" />
                 {uploading ? 'Uploading...' : (template.footer_graphic_url ? 'Replace Footer Graphic' : 'Upload Footer Graphic')}
               </Button>
+            </div>
+
+            <div>
+              <Label>Footer Graphic Height (mm)</Label>
+              <Input
+                type="number"
+                min="5"
+                max="100"
+                value={template.footer_graphic_height_mm || 25}
+                onChange={(e) => setTemplate({ ...template, footer_graphic_height_mm: parseFloat(e.target.value) })}
+              />
             </div>
           </CardContent>
         </Card>

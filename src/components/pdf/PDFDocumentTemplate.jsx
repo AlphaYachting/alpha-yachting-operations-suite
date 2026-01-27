@@ -95,7 +95,7 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             {template.logo_url && (
-              <img src={template.logo_url} alt="Logo" style={{ maxHeight: '50px', marginBottom: '8px' }} />
+              <img src={template.logo_url} alt="Logo" style={{ height: `${template.logo_height_mm || 20}mm`, marginBottom: '8px', objectFit: 'contain' }} />
             )}
             <h1 style={{ margin: 0, color: template.primary_color || '#2563eb', fontSize: `${fontSizeCompanyName}pt`, fontWeight: 'bold' }}>
               {template.company_name || 'Alpha Yachting'}
@@ -373,7 +373,7 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
         lineHeight: lineSpacing
       }}>
         {template.footer_graphic_url && (
-          <img src={template.footer_graphic_url} alt="Footer" style={{ maxWidth: '100%', maxHeight: '60px', marginBottom: '12px' }} />
+          <img src={template.footer_graphic_url} alt="Footer" style={{ maxWidth: '100%', height: `${template.footer_graphic_height_mm || 25}mm`, marginBottom: '12px', objectFit: 'contain' }} />
         )}
         {template.footer_text && (
           <div style={{ marginBottom: '8px' }}>{template.footer_text}</div>
