@@ -6,6 +6,33 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
   const currency = document.currency === 'EUR' ? '€' : document.currency;
   const useLetterhead = template.letterhead_enabled && template.letterhead_image_url;
 
+  // Watermark configuration
+  const useWatermark = template.watermark_enabled;
+  const watermarkText = template.watermark_text || 'DRAFT';
+  const watermarkOpacity = template.watermark_opacity ?? 0.1;
+  const watermarkAngle = template.watermark_angle ?? -45;
+
+  // Table column configuration
+  const columnWidths = template.table_column_widths || {
+    index: 4,
+    description: 38,
+    quantity: 8,
+    unit: 8,
+    unit_price: 13,
+    vat: 8,
+    total: 13
+  };
+
+  const columnAlign = template.table_column_align || {
+    index: 'center',
+    description: 'left',
+    quantity: 'right',
+    unit: 'center',
+    unit_price: 'right',
+    vat: 'right',
+    total: 'right'
+  };
+
   // Calculate tax breakdown
   const taxBreakdown = lineItems.reduce((acc, item) => {
     const rate = item.tax_rate || 0;
@@ -35,8 +62,27 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
       color: '#000',
       fontSize: `${fontSizeBody}pt`,
       boxSizing: 'border-box',
-      lineHeight: lineSpacing
+      lineHeight: lineSpacing,
+      position: 'relative'
     }}>
+      {/* Watermark */}
+      {useWatermark && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: `translate(-50%, -50%) rotate(${watermarkAngle}deg)`,
+          fontSize: '72pt',
+          fontWeight: 'bold',
+          color: '#ccc',
+          opacity: watermarkOpacity,
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+          zIndex: 0
+        }}>
+          {watermarkText}
+        </div>
+      )}
       {/* Header - Only show if letterhead is disabled */}
       {!useLetterhead && (
         <div style={{ marginBottom: `${paragraphSpacing}pt`, borderBottom: `2px solid ${template.primary_color || '#2563eb'}`, paddingBottom: '15px' }}>
@@ -168,58 +214,65 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
 
       {/* Line Items Table */}
       <table style={{ 
-        width: '100%', 
-        borderCollapse: 'collapse', 
-        marginBottom: '15px',
-        fontSize: '9pt'
+       width: '100%', 
+       borderCollapse: 'collapse', 
+       marginBottom: '15px',
+       fontSize: '9pt',
+       pageBreakInside: 'avoid'
       }}>
-        <thead>
-          <tr style={{ 
-            backgroundColor: template.primary_color || '#2563eb', 
-            color: 'white',
-            textAlign: 'left'
-          }}>
-            <th style={{ padding: '6px 4px', width: '4%', fontSize: '9pt' }}>#</th>
-            <th style={{ padding: '6px 4px', width: '38%', fontSize: '9pt' }}>Description</th>
-            <th style={{ padding: '6px 4px', width: '8%', textAlign: 'right', fontSize: '9pt' }}>Qty</th>
-            <th style={{ padding: '6px 4px', width: '8%', fontSize: '9pt' }}>Unit</th>
-            <th style={{ padding: '6px 4px', width: '13%', textAlign: 'right', fontSize: '9pt' }}>Unit Price</th>
-            {template.show_vat_column && (
-              <th style={{ padding: '6px 4px', width: '8%', textAlign: 'right', fontSize: '9pt' }}>VAT %</th>
-            )}
-            <th style={{ padding: '6px 4px', width: '13%', textAlign: 'right', fontSize: '9pt' }}>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lineItems.map((item, index) => (
-            <tr key={index} style={{ borderBottom: '1px solid #e2e8f0' }}>
-              <td style={{ padding: '6px 4px', color: '#666', fontSize: '9pt' }}>{index + 1}</td>
-              <td style={{ padding: '6px 4px' }}>
-                <div style={{ fontWeight: 'bold', fontSize: '9pt' }}>{item.title}</div>
-                {item.description && (
-                  <div style={{ fontSize: '8pt', color: '#666', marginTop: '1px', whiteSpace: 'pre-line', lineHeight: '1.2' }}>
-                    {item.description}
-                  </div>
-                )}
-              </td>
-              <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: '9pt' }}>{item.quantity || 0}</td>
-              <td style={{ padding: '6px 4px', fontSize: '9pt' }}>{item.unit || '-'}</td>
-              <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: '9pt' }}>
-                {currency}{(item.unit_price || 0).toFixed(2)}
-              </td>
-              {template.show_vat_column && (
-                <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: '9pt' }}>{item.tax_rate || 0}%</td>
-              )}
-              <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: 'bold', fontSize: '9pt' }}>
-                {currency}{(item.total_gross || 0).toFixed(2)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
+       <thead>
+         <tr style={{ 
+           backgroundColor: template.primary_color || '#2563eb', 
+           color: 'white',
+           textAlign: 'left'
+         }}>
+           <th style={{ padding: '6px 4px', width: `${columnWidths.index}%`, fontSize: '9pt', textAlign: columnAlign.index }}>#</th>
+           <th style={{ padding: '6px 4px', width: `${columnWidths.description}%`, fontSize: '9pt', textAlign: columnAlign.description }}>Description</th>
+           <th style={{ padding: '6px 4px', width: `${columnWidths.quantity}%`, fontSize: '9pt', textAlign: columnAlign.quantity }}>Qty</th>
+           <th style={{ padding: '6px 4px', width: `${columnWidths.unit}%`, fontSize: '9pt', textAlign: columnAlign.unit }}>Unit</th>
+           <th style={{ padding: '6px 4px', width: `${columnWidths.unit_price}%`, fontSize: '9pt', textAlign: columnAlign.unit_price }}>Unit Price</th>
+           {template.show_vat_column && (
+             <th style={{ padding: '6px 4px', width: `${columnWidths.vat}%`, fontSize: '9pt', textAlign: columnAlign.vat }}>VAT %</th>
+           )}
+           <th style={{ padding: '6px 4px', width: `${columnWidths.total}%`, fontSize: '9pt', textAlign: columnAlign.total }}>Total</th>
+         </tr>
+       </thead>
+       <tbody>
+         {lineItems.map((item, index) => (
+           <tr key={index} style={{ borderBottom: '1px solid #e2e8f0', pageBreakInside: 'avoid' }}>
+             <td style={{ padding: '6px 4px', color: '#666', fontSize: '9pt', textAlign: columnAlign.index }}>{index + 1}</td>
+             <td style={{ padding: '6px 4px', textAlign: columnAlign.description }}>
+               <div style={{ fontWeight: 'bold', fontSize: '9pt' }}>{item.title}</div>
+               {item.description && (
+                 <div style={{ fontSize: '8pt', color: '#666', marginTop: '1px', whiteSpace: 'pre-line', lineHeight: '1.2' }}>
+                   {item.description}
+                 </div>
+               )}
+             </td>
+             <td style={{ padding: '6px 4px', textAlign: columnAlign.quantity, fontSize: '9pt' }}>{item.quantity || 0}</td>
+             <td style={{ padding: '6px 4px', fontSize: '9pt', textAlign: columnAlign.unit }}>{item.unit || '-'}</td>
+             <td style={{ padding: '6px 4px', textAlign: columnAlign.unit_price, fontSize: '9pt' }}>
+               {currency}{(item.unit_price || 0).toFixed(2)}
+             </td>
+             {template.show_vat_column && (
+               <td style={{ padding: '6px 4px', textAlign: columnAlign.vat, fontSize: '9pt' }}>{item.tax_rate || 0}%</td>
+             )}
+             <td style={{ padding: '6px 4px', textAlign: columnAlign.total, fontWeight: 'bold', fontSize: '9pt' }}>
+               {currency}{(item.total_gross || 0).toFixed(2)}
+             </td>
+           </tr>
+         ))}
+       </tbody>
       </table>
 
       {/* Totals Section */}
-      <div style={{ marginLeft: 'auto', width: '45%', marginBottom: '20px' }}>
+      <div style={{ 
+        marginLeft: 'auto', 
+        width: '45%', 
+        marginBottom: '20px',
+        pageBreakBefore: template.page_break_rules?.break_before_totals ? 'always' : 'auto',
+        pageBreakInside: 'avoid'
+      }}>
         <table style={{ width: '100%', fontSize: '10pt' }}>
           <tbody>
             <tr>
@@ -276,7 +329,14 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
 
       {/* Notes */}
       {document.public_notes && (
-        <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f8fafc', borderRadius: '3px' }}>
+        <div style={{ 
+          marginBottom: '15px', 
+          padding: '10px', 
+          backgroundColor: '#f8fafc', 
+          borderRadius: '3px',
+          pageBreakBefore: template.page_break_rules?.break_before_notes ? 'always' : 'auto',
+          pageBreakInside: 'avoid'
+        }}>
           <div style={{ fontSize: '8pt', fontWeight: 'bold', marginBottom: '4px' }}>Notes:</div>
           <div style={{ fontSize: '9pt', whiteSpace: 'pre-line', lineHeight: '1.3' }}>{document.public_notes}</div>
         </div>
