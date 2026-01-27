@@ -10,9 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save, Upload, Eye } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Eye, Beaker } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
+import PDFDiagnostics from '@/components/pdf/PDFDiagnostics';
 
 export default function PDFTemplateSettings() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function PDFTemplateSettings() {
   const [success, setSuccess] = useState('');
   const [uploading, setUploading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [templateId, setTemplateId] = useState(null);
 
   useEffect(() => {
@@ -601,15 +603,21 @@ export default function PDFTemplateSettings() {
       </div>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => setShowPreview(true)}>
-          <Eye className="h-4 w-4 mr-2" />
-          Preview
+      <div className="flex justify-between items-center">
+        <Button variant="outline" onClick={() => setShowDiagnostics(true)}>
+          <Beaker className="h-4 w-4 mr-2" />
+          Run PDF Diagnostics
         </Button>
-        <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : 'Save Template'}
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => setShowPreview(true)}>
+            <Eye className="h-4 w-4 mr-2" />
+            Preview
+          </Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save Template'}
+          </Button>
+        </div>
       </div>
 
       {/* Preview Dialog */}
@@ -628,6 +636,16 @@ export default function PDFTemplateSettings() {
           <div className="flex justify-end pt-4">
             <Button onClick={() => setShowPreview(false)}>Close</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diagnostics Dialog */}
+      <Dialog open={showDiagnostics} onOpenChange={setShowDiagnostics}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>PDF Export Diagnostics</DialogTitle>
+          </DialogHeader>
+          <PDFDiagnostics />
         </DialogContent>
       </Dialog>
     </div>

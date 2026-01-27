@@ -13,6 +13,7 @@ import Locations from './pages/Locations';
 import NotificationPreferences from './pages/NotificationPreferences';
 import OfferDetail from './pages/OfferDetail';
 import Offers from './pages/Offers';
+import PDFTemplateManager from './pages/PDFTemplateManager';
 import PDFTemplateSettings from './pages/PDFTemplateSettings';
 import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
@@ -25,7 +26,6 @@ import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import PDFTemplateManager from './pages/PDFTemplateManager';
 import __Layout from './Layout.jsx';
 
 
@@ -45,6 +45,7 @@ export const PAGES = {
     "NotificationPreferences": NotificationPreferences,
     "OfferDetail": OfferDetail,
     "Offers": Offers,
+    "PDFTemplateManager": PDFTemplateManager,
     "PDFTemplateSettings": PDFTemplateSettings,
     "Reports": Reports,
     "Schedule": Schedule,
@@ -57,7 +58,6 @@ export const PAGES = {
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "PDFTemplateManager": PDFTemplateManager,
 }
 
 export const pagesConfig = {
