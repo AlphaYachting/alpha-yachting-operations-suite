@@ -33,6 +33,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     billable: workOrder?.billable !== false
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [suggestedTasks, setSuggestedTasks] = useState([]);
 
