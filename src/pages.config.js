@@ -27,6 +27,7 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import PDFLayoutEditor from './pages/PDFLayoutEditor';
+import PDFExportDebugger from './pages/PDFExportDebugger';
 import __Layout from './Layout.jsx';
 
 
@@ -60,6 +61,7 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "PDFLayoutEditor": PDFLayoutEditor,
+    "PDFExportDebugger": PDFExportDebugger,
 }
 
 export const pagesConfig = {
