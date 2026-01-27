@@ -52,8 +52,8 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
       }
       const templateData = await loadTemplate();
       
-      // Create a temporary print-friendly window
-      const printWindow = window.open('', '_blank');
+      // Create a temporary print-friendly window with A4 dimensions
+      const printWindow = window.open('', '_blank', 'width=900,height=1200');
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
