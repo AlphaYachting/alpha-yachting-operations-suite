@@ -311,7 +311,8 @@ export default function Reports() {
       skills: tech.skills?.join(', ') || 'No skills assigned',
       plannedHours: Math.round(plannedHours * 10) / 10,
       workOrdersCount: techWorkOrders.length,
-      role: tech.role || 'Technician'
+      role: tech.role || 'Technician',
+      color: tech.color || '#3b82f6'
     };
   }).sort((a, b) => b.plannedHours - a.plannedHours);
 
@@ -599,11 +600,11 @@ export default function Reports() {
                             const percentage = (tech.plannedHours / maxHours) * 100;
                             
                             return (
-                              <div key={tech.id} className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all">
+                              <div key={tech.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-sm transition-all" style={{ borderColor: tech.color + '30' }}>
                                 <div className="flex items-center justify-between mb-3">
                                   <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-violet-50 rounded-lg">
-                                      <Users className="h-5 w-5 text-violet-600" />
+                                    <div className="p-2 rounded-lg" style={{ backgroundColor: tech.color + '20' }}>
+                                      <Users className="h-5 w-5" style={{ color: tech.color }} />
                                     </div>
                                     <div>
                                       <h4 className="text-base font-semibold text-slate-900">{tech.name}</h4>
@@ -624,13 +625,11 @@ export default function Reports() {
                                 
                                 <div className="relative w-full h-8 bg-slate-100 rounded-full overflow-hidden">
                                   <div 
-                                    className={`h-full rounded-full transition-all duration-500 ${
-                                      tech.plannedHours >= 100 ? 'bg-gradient-to-r from-red-500 to-red-600' :
-                                      tech.plannedHours >= 50 ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
-                                      tech.plannedHours >= 20 ? 'bg-gradient-to-r from-violet-500 to-violet-600' :
-                                      'bg-gradient-to-r from-slate-400 to-slate-500'
-                                    }`}
-                                    style={{ width: `${percentage}%` }}
+                                    className="h-full rounded-full transition-all duration-500"
+                                    style={{ 
+                                      width: `${percentage}%`,
+                                      backgroundColor: tech.color
+                                    }}
                                   />
                                   <div className="absolute inset-0 flex items-center px-3 text-xs font-medium">
                                     <span className={percentage > 30 ? 'text-white' : 'text-slate-700'}>
