@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
 import { Button } from '@/components/ui/button';
 import { Download, Eye, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -54,15 +55,14 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
       const templateData = await loadTemplate();
       
       // Create a temporary container
-      const container = document.createElement('div');
+      const container = window.document.createElement('div');
       container.style.position = 'absolute';
       container.style.left = '-9999px';
       container.style.width = '210mm'; // A4 width
       container.style.background = 'white';
-      document.body.appendChild(container);
+      window.document.body.appendChild(container);
 
       // Render the PDF template
-      const { createRoot } = await import('react-dom/client');
       const root = createRoot(container);
       
       await new Promise((resolve) => {
@@ -74,7 +74,7 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
             payments={payments}
           />
         );
-        setTimeout(resolve, 500); // Wait for rendering
+        setTimeout(resolve, 1000); // Wait for rendering
       });
 
       // Generate PDF
@@ -111,7 +111,7 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
 
       // Cleanup
       root.unmount();
-      document.body.removeChild(container);
+      window.document.body.removeChild(container);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');
