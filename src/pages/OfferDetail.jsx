@@ -381,7 +381,7 @@ export default function OfferDetail() {
           )}
         </div>
         <div className="flex gap-2">
-          {!isNewOffer && formData.status !== 'Draft' && (
+          {formData.customer_id && formData.title && (
             <PDFExportButton 
               document={getPDFDocument()}
               lineItems={getPDFLineItems()}
@@ -411,7 +411,7 @@ export default function OfferDetail() {
       )}
 
       {/* PDF Template for Print */}
-      {template && !isNewOffer && formData.status !== 'Draft' && (
+      {template && formData.customer_id && formData.title && (
         <div id="pdf-print-template" style={{ display: 'none' }}>
           <PDFDocumentTemplate 
             document={getPDFDocument()}
