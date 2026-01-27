@@ -108,8 +108,25 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
       // Add letterhead as background on first page if enabled
       if (useLetterhead) {
         try {
+          // Load letterhead image and convert to base64
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = templateData.letterhead_image_url;
+          });
+          
+          // Create canvas to get base64
+          const imgCanvas = document.createElement('canvas');
+          imgCanvas.width = img.width;
+          imgCanvas.height = img.height;
+          const ctx = imgCanvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          const letterheadBase64 = imgCanvas.toDataURL('image/png');
+          
           // Add letterhead image as background
-          pdf.addImage(templateData.letterhead_image_url, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          pdf.addImage(letterheadBase64, 'PNG', 0, 0, pdfWidth, pdfHeight);
         } catch (err) {
           console.warn('Failed to add letterhead background:', err);
         }
@@ -135,7 +152,22 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
         // Add letterhead to each page
         if (useLetterhead) {
           try {
-            pdf.addImage(templateData.letterhead_image_url, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = templateData.letterhead_image_url;
+            });
+            
+            const imgCanvas = document.createElement('canvas');
+            imgCanvas.width = img.width;
+            imgCanvas.height = img.height;
+            const ctx = imgCanvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const letterheadBase64 = imgCanvas.toDataURL('image/png');
+            
+            pdf.addImage(letterheadBase64, 'PNG', 0, 0, pdfWidth, pdfHeight);
           } catch (err) {
             console.warn('Failed to add letterhead to page', pageNum);
           }
