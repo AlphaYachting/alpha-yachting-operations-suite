@@ -49,9 +49,10 @@ const navItems = [
   { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
   { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates', adminOnly: true },
   { name: 'Offers', icon: FileText, page: 'Offers' },
-        { name: 'Invoices', icon: Receipt, page: 'Invoices' },
-        { name: 'Reports', icon: BarChart3, page: 'Reports' },
-        { name: 'Settings', icon: Settings, page: 'Settings' },
+  { name: 'Invoices', icon: Receipt, page: 'Invoices' },
+  { name: 'PDF Templates', icon: FileText, page: 'PDFTemplateManager' },
+  { name: 'Reports', icon: BarChart3, page: 'Reports' },
+  { name: 'Settings', icon: Settings, page: 'Settings' },
 ];
 
 export default function Layout({ children, currentPageName }) {
