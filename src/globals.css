@@ -1,0 +1,154 @@
+/* Existing global styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Print stylesheet for A4 PDF export */
+@media print {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body,
+  html {
+    width: 100%;
+    height: 100%;
+    background: white;
+    font-family: Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.4;
+    color: #333;
+  }
+
+  .print-document-container {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm 12mm;
+  }
+
+  /* Prevent hiding elements */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ensure tables paginate correctly */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15pt 0;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+    background-color: #f5f5f5;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  td,
+  th {
+    padding: 6pt;
+    text-align: left;
+    border: 1px solid #ddd;
+  }
+
+  th {
+    font-weight: bold;
+    background-color: #f0f0f0;
+  }
+
+  /* Totals block stays together */
+  .totals,
+  .totals-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin: 15pt 0;
+  }
+
+  /* Notes section */
+  .notes {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin: 15pt 0;
+    padding: 10pt;
+  }
+
+  /* Footer and headers */
+  .footer,
+  .header {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Prevent overflow on page boundaries */
+  div,
+  section {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Hide scrollbars and interactive elements */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Remove button and link styling */
+  button,
+  a {
+    color: inherit;
+    text-decoration: none;
+    pointer-events: none;
+    cursor: default;
+  }
+
+  /* Ensure text is selectable (not converted to images) */
+  img[style*="max-width"] {
+    max-width: 100% !important;
+  }
+
+  /* Watermark */
+  .watermark {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 80pt;
+    font-weight: bold;
+    opacity: 0.1;
+    z-index: -2;
+    pointer-events: none;
+  }
+}
+
+/* Screen styling (preview mode) */
+@media screen {
+  .print-document-container {
+    max-width: 210mm;
+    background: white;
+    margin: 20px auto;
+    padding: 15mm 12mm;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .print-loading {
+    padding: 40px;
+    text-align: center;
+    font-size: 16px;
+    color: #666;
+  }
+}
