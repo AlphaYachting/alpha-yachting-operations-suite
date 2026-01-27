@@ -1,450 +1,538 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Send, CheckCircle, XCircle, FileText, ArrowRight, Edit3 } from 'lucide-react';
-import PDFExportButton from '@/components/pdf/PDFExportButton';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import DocumentHeader from '@/components/documents/DocumentHeader';
-import LineItemsTable from '@/components/documents/LineItemsTable';
-import TotalsSection from '@/components/documents/TotalsSection';
-import AddFromOperationsDrawer from '@/components/documents/AddFromOperationsDrawer';
-import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
-import { addDays, format } from 'date-fns';
+import {
+  ArrowLeft,
+  Save,
+  Sparkles,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Send,
+  FileText,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import OfferTaskEditor from '@/components/offers/OfferTaskEditor';
+import AIOfferGenerator from '@/components/offers/AIOfferGenerator';
 
 export default function OfferDetail() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
   const offerId = urlParams.get('id');
-  const isNew = urlParams.get('new') === 'true';
+  const isNewOffer = !offerId;
 
-  const [template, setTemplate] = useState(null);
-  const [offer, setOffer] = useState({
-    document_type: 'Offer',
+  const [formData, setFormData] = useState({
+    customer_id: '',
+    boat_id: '',
+    job_id: '',
+    title: '',
+    description: '',
     status: 'Draft',
-    currency: 'EUR',
-    language: 'German',
-    payment_terms: 'Net 14 days',
-    issue_date: format(new Date(), 'yyyy-MM-dd'),
-    valid_until: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
-    subtotal: 0,
-    tax_total: 0,
-    total: 0
+    valid_until: '',
+    notes: '',
+    customer_notes: '',
+    total_amount: 0,
   });
-  const [lineItems, setLineItems] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [boats, setBoats] = useState([]);
-  const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(!isNew);
+  const [tasks, setTasks] = useState([]);
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [showOperationsDrawer, setShowOperationsDrawer] = useState(false);
+  const [error, setError] = useState(null);
+
+  const { data: offer } = useQuery({
+    queryKey: ['offer', offerId],
+    queryFn: () => base44.entities.Offer.list().then(offers => offers.find(o => o.id === offerId)),
+    enabled: !!offerId,
+  });
+
+  const { data: offerTasks = [] } = useQuery({
+    queryKey: ['offerTasks', offerId],
+    queryFn: () => base44.entities.OfferTask.filter({ offer_id: offerId }, 'sequence_order'),
+    enabled: !!offerId,
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => base44.entities.Customer.list(),
+  });
+
+  const { data: boats = [] } = useQuery({
+    queryKey: ['boats'],
+    queryFn: () => base44.entities.Boat.list(),
+  });
+
+  const { data: jobs = [] } = useQuery({
+    queryKey: ['jobs'],
+    queryFn: () => base44.entities.Job.list(),
+  });
 
   useEffect(() => {
-    loadMasterData();
-    loadTemplate();
-    if (!isNew && offerId) {
-      loadOffer();
+    if (offer) {
+      setFormData(offer);
     }
-  }, [offerId, isNew]);
+  }, [offer]);
 
-  const loadTemplate = async () => {
-    try {
-      const templates = await base44.entities.PDFTemplate.list();
-      const defaultTemplate = templates.find(t => t.is_default) || templates[0];
-      if (defaultTemplate) {
-        setTemplate(defaultTemplate);
-      }
-    } catch (error) {
-      console.error('Error loading template:', error);
+  useEffect(() => {
+    if (offerTasks.length > 0) {
+      setTasks(offerTasks);
     }
+  }, [offerTasks]);
+
+  useEffect(() => {
+    // Recalculate total whenever tasks change
+    const total = tasks.reduce((sum, task) => sum + (task.total_amount || 0), 0);
+    setFormData(prev => ({ ...prev, total_amount: total }));
+  }, [tasks]);
+
+  const updateField = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const loadMasterData = async () => {
-    try {
-      const [customersData, boatsData, locationsData] = await Promise.all([
-        base44.entities.Customer.list(),
-        base44.entities.Boat.list(),
-        base44.entities.Location.list()
-      ]);
-      setCustomers(customersData);
-      setBoats(boatsData);
-      setLocations(locationsData);
-    } catch (error) {
-      console.error('Error loading master data:', error);
-    }
-  };
-
-  const loadOffer = async () => {
-    try {
-      const [offerData, lineItemsData] = await Promise.all([
-        base44.entities.Document.filter({ id: offerId }),
-        base44.entities.DocumentLineItem.filter({ document_id: offerId })
-      ]);
-      
-      if (offerData.length > 0) {
-        setOffer(offerData[0]);
-        setLineItems(lineItemsData.sort((a, b) => a.sort_order - b.sort_order));
-      }
-    } catch (error) {
-      console.error('Error loading offer:', error);
-      setError('Failed to load offer');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const recalculateTotals = (items) => {
-    const subtotal = items.reduce((sum, item) => sum + (item.total_net || 0), 0);
-    const taxTotal = items.reduce((sum, item) => sum + (item.total_tax || 0), 0);
-    const total = items.reduce((sum, item) => sum + (item.total_gross || 0), 0);
-    
-    setOffer(prev => ({
-      ...prev,
-      subtotal,
-      tax_total: taxTotal,
-      total
-    }));
-  };
-
-  const handleLineItemsChange = (updatedItems) => {
-    setLineItems(updatedItems);
-    recalculateTotals(updatedItems);
-  };
-
-  const handleAddFromOperations = (newItems) => {
-    const withCalculatedTotals = newItems.map(item => {
-      const subtotal = (item.quantity || 0) * (item.unit_price || 0);
-      const discounted = subtotal * (1 - (item.discount_percent || 0) / 100);
-      const totalNet = discounted;
-      const totalTax = totalNet * ((item.tax_rate || 0) / 100);
-      const totalGross = totalNet + totalTax;
-      
-      return {
-        ...item,
-        total_net: totalNet,
-        total_tax: totalTax,
-        total_gross: totalGross
-      };
-    });
-    
-    const updated = [...lineItems, ...withCalculatedTotals];
-    setLineItems(updated);
-    recalculateTotals(updated);
-    setShowOperationsDrawer(false);
-  };
-
-  const generateOfferNumber = () => {
-    const year = new Date().getFullYear();
-    const random = Math.floor(Math.random() * 9999) + 1;
-    return `OFF-${year}-${String(random).padStart(4, '0')}`;
-  };
-
-  const handleSave = async (newStatus) => {
-    if (!offer.customer_id) {
-      setError('Please select a customer');
-      return;
-    }
-
-    if (newStatus !== 'Draft' && lineItems.length === 0) {
-      setError('Cannot send offer without line items');
-      return;
-    }
-
+  const handleSave = async () => {
     setSaving(true);
-    setError('');
+    setError(null);
 
     try {
-      let savedOffer = { ...offer };
-      
-      // Generate number if issuing/sending
-      if (!savedOffer.document_number && newStatus !== 'Draft') {
-        savedOffer.document_number = generateOfferNumber();
+      if (!formData.customer_id || !formData.title) {
+        throw new Error('Customer and title are required');
       }
-      
-      savedOffer.status = newStatus;
 
-      // Save or update offer
-      if (isNew || !offerId) {
-        const created = await base44.entities.Document.create(savedOffer);
-        savedOffer = created;
+      let savedOfferId = offerId;
 
-        // Save line items
-        for (const item of lineItems) {
-          await base44.entities.DocumentLineItem.create({
-            ...item,
-            document_id: created.id
-          });
+      if (isNewOffer) {
+        // Generate offer number
+        const offerCount = await base44.entities.Offer.list().then(offers => offers.length);
+        const offerNumber = `OFF-${String(offerCount + 1).padStart(5, '0')}`;
+        
+        const newOffer = await base44.entities.Offer.create({
+          ...formData,
+          offer_number: offerNumber,
+        });
+        savedOfferId = newOffer.id;
+
+        // Create tasks
+        if (tasks.length > 0) {
+          await base44.entities.OfferTask.bulkCreate(
+            tasks.map((task, idx) => ({
+              ...task,
+              offer_id: savedOfferId,
+              sequence_order: idx,
+              total_amount: task.estimated_hours * task.hourly_rate,
+            }))
+          );
         }
 
-        navigate(createPageUrl('OfferDetail') + `?id=${created.id}`, { replace: true });
+        queryClient.invalidateQueries(['offers']);
+        navigate(createPageUrl('OfferDetail') + `?id=${savedOfferId}`);
       } else {
-        await base44.entities.Document.update(offerId, savedOffer);
+        // Update existing offer
+        await base44.entities.Offer.update(offerId, formData);
 
-        // Delete existing line items
-        const existing = await base44.entities.DocumentLineItem.filter({ document_id: offerId });
-        for (const item of existing) {
-          await base44.entities.DocumentLineItem.delete(item.id);
+        // Delete existing tasks and recreate
+        const existingTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
+        for (const task of existingTasks) {
+          await base44.entities.OfferTask.delete(task.id);
         }
 
-        // Save new line items
-        for (const item of lineItems) {
-          await base44.entities.DocumentLineItem.create({
-            ...item,
-            document_id: offerId
-          });
+        if (tasks.length > 0) {
+          await base44.entities.OfferTask.bulkCreate(
+            tasks.map((task, idx) => ({
+              ...task,
+              offer_id: offerId,
+              sequence_order: idx,
+              total_amount: task.estimated_hours * task.hourly_rate,
+            }))
+          );
         }
-      }
 
-      setOffer(savedOffer);
-      
-      if (newStatus === 'Sent') {
-        alert('Offer marked as sent!');
+        queryClient.invalidateQueries(['offer', offerId]);
+        queryClient.invalidateQueries(['offerTasks', offerId]);
+        queryClient.invalidateQueries(['offers']);
       }
-    } catch (error) {
-      console.error('Error saving offer:', error);
-      setError('Failed to save offer');
+    } catch (err) {
+      console.error('Save error:', err);
+      setError(err.message);
     } finally {
       setSaving(false);
     }
   };
 
-
-
-  const handleConvertToInvoice = async () => {
-    if (!window.confirm('Convert this offer to an invoice?')) return;
+  const handleConvertToWorkOrder = async () => {
+    if (!offerId || formData.status !== 'Approved') return;
 
     setSaving(true);
+    setError(null);
+
     try {
-      const invoice = {
-        document_type: 'Invoice',
+      // Generate work order number
+      const workOrders = await base44.entities.WorkOrder.list();
+      const woNumber = `WO-${String(workOrders.length + 1).padStart(5, '0')}`;
+
+      // Create work order
+      const workOrder = await base44.entities.WorkOrder.create({
+        job_id: formData.job_id,
+        title: formData.title,
+        description: formData.description,
+        work_order_number: woNumber,
         status: 'Draft',
-        customer_id: offer.customer_id,
-        boat_id: offer.boat_id,
-        location_id: offer.location_id,
-        currency: offer.currency,
-        language: offer.language,
-        payment_terms: offer.payment_terms,
-        public_notes: offer.public_notes,
-        internal_notes: offer.internal_notes,
-        subtotal: offer.subtotal,
-        tax_total: offer.tax_total,
-        total: offer.total,
-        customer_name: offer.customer_name,
-        customer_address: offer.customer_address,
-        customer_vat: offer.customer_vat,
-        boat_name: offer.boat_name,
-        boat_details: offer.boat_details,
-        location_name: offer.location_name,
-        converted_from_offer_id: offer.id,
-        issue_date: format(new Date(), 'yyyy-MM-dd'),
-        due_date: format(addDays(new Date(), 14), 'yyyy-MM-dd'),
-        paid_amount: 0
-      };
+        scheduled_date: new Date().toISOString().split('T')[0],
+        internal_notes: `Converted from offer ${formData.offer_number}`,
+      });
 
-      const createdInvoice = await base44.entities.Document.create(invoice);
-
-      // Copy line items
-      for (const item of lineItems) {
-        await base44.entities.DocumentLineItem.create({
-          ...item,
-          document_id: createdInvoice.id
-        });
+      // Create tasks from offer tasks
+      if (tasks.length > 0) {
+        await base44.entities.Task.bulkCreate(
+          tasks.map((task, idx) => ({
+            work_order_id: workOrder.id,
+            title: task.title,
+            description: task.description,
+            sequence_order: idx,
+            estimated_minutes: task.estimated_hours * 60,
+            status: 'Not Started',
+          }))
+        );
       }
 
       // Update offer status
-      await base44.entities.Document.update(offer.id, { status: 'Accepted' });
+      await base44.entities.Offer.update(offerId, {
+        status: 'Converted',
+        converted_work_order_id: workOrder.id,
+      });
 
-      navigate(createPageUrl('InvoiceDetail') + `?id=${createdInvoice.id}`);
-    } catch (error) {
-      console.error('Error converting to invoice:', error);
-      setError('Failed to convert to invoice');
+      queryClient.invalidateQueries(['offer', offerId]);
+      queryClient.invalidateQueries(['offers']);
+      
+      setShowConvertDialog(false);
+      navigate(createPageUrl('WorkOrderDetail') + `?id=${workOrder.id}`);
+    } catch (err) {
+      console.error('Convert error:', err);
+      setError(err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const isLocked = offer.status !== 'Draft';
-
-  if (loading) {
-    return <div className="p-8">Loading...</div>;
-  }
+  const filteredBoats = boats.filter(b => b.customer_id === formData.customer_id);
+  const filteredJobs = jobs.filter(j => j.customer_id === formData.customer_id);
 
   return (
-    <>
-      <style>{`
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 15mm 20mm;
-          }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          body * {
-            visibility: hidden;
-          }
-          #pdf-print-template {
-            display: block !important;
-            visibility: visible;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-          }
-          #pdf-print-template * {
-            visibility: visible;
-          }
-          #pdf-content {
-            width: 100% !important;
-            max-width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            transform: scale(1) !important;
-            transform-origin: top left !important;
-          }
-        }
-      `}</style>
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl('Offers'))}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(createPageUrl('Offers'))}
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              {offer.document_number || 'New Offer'}
+            <h1 className="text-3xl font-bold text-slate-900">
+              {isNewOffer ? 'New Offer' : formData.title}
             </h1>
-            <p className="text-slate-500 mt-1">
-              {isNew ? 'Create a new offer' : 'Edit offer details'}
-            </p>
+            {!isNewOffer && formData.offer_number && (
+              <p className="text-slate-600 mt-1">#{formData.offer_number}</p>
+            )}
           </div>
-          <Badge className={
-            offer.status === 'Draft' ? 'bg-slate-100 text-slate-700' :
-            offer.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
-            offer.status === 'Accepted' ? 'bg-emerald-100 text-emerald-700' :
-            'bg-slate-100 text-slate-700'
-          }>
-            {offer.status}
-          </Badge>
+          {!isNewOffer && (
+            <Badge className={
+              formData.status === 'Approved' ? 'bg-green-100 text-green-700' :
+              formData.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
+              'bg-slate-100 text-slate-700'
+            }>
+              {formData.status}
+            </Badge>
+          )}
         </div>
-        <div className="flex gap-3">
-          {offer.status !== 'Draft' && (
-            <PDFExportButton 
-              document={offer}
-              lineItems={lineItems}
-            />
-          )}
-          {isLocked && (offer.status === 'Sent' || offer.status === 'Accepted' || offer.status === 'Rejected') && (
-            <Button variant="outline" onClick={() => handleSave('Draft')} disabled={saving}>
-              <Edit3 className="h-4 w-4 mr-2" />
-              Reopen for Editing
-            </Button>
-          )}
-          {!isLocked && offer.customer_id && (
-            <Button variant="outline" onClick={() => setShowOperationsDrawer(true)}>
+        <div className="flex gap-2">
+          {formData.status === 'Approved' && !formData.converted_work_order_id && formData.job_id && (
+            <Button
+              onClick={() => setShowConvertDialog(true)}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
               <FileText className="h-4 w-4 mr-2" />
-              Add from Operations
+              Convert to Work Order
             </Button>
           )}
-          {!isLocked && (
-            <>
-              <Button variant="outline" onClick={() => handleSave('Draft')} disabled={saving}>
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Draft'}
-              </Button>
-              <Button onClick={() => handleSave('Sent')} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
-                <Send className="h-4 w-4 mr-2" />
-                Mark as Sent
-              </Button>
-            </>
-          )}
-          {offer.status === 'Sent' && (
-            <>
-              <Button onClick={() => handleSave('Accepted')} className="bg-emerald-600 hover:bg-emerald-700">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Mark Accepted
-              </Button>
-              <Button variant="outline" onClick={() => handleSave('Rejected')}>
-                <XCircle className="h-4 w-4 mr-2" />
-                Mark Rejected
-              </Button>
-            </>
-          )}
-          {offer.status === 'Accepted' && (
-            <Button onClick={handleConvertToInvoice} className="bg-blue-600 hover:bg-blue-700">
-              <ArrowRight className="h-4 w-4 mr-2" />
-              Convert to Invoice
-            </Button>
-          )}
+          <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save Offer'}
+          </Button>
         </div>
       </div>
 
       {error && (
-        <Alert variant="destructive" className="no-print">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      {/* PDF Template for Print */}
-      {template && (
-        <div id="pdf-print-template" style={{ display: 'none' }}>
-          <PDFDocumentTemplate 
-            document={offer}
-            lineItems={lineItems}
-            template={template}
-          />
-        </div>
-      )}
-
-      {/* Document Editor */}
-      <div id="printable-content" className="no-print grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Form */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <DocumentHeader
-            document={offer}
-            onChange={setOffer}
-            customers={customers}
-            boats={boats}
-            locations={locations}
-            isLocked={isLocked}
-          />
-          
-          <LineItemsTable
-            lineItems={lineItems}
-            onChange={handleLineItemsChange}
-            isLocked={isLocked}
-            currency={offer.currency}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle>Offer Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Customer *</Label>
+                  <Select value={formData.customer_id} onValueChange={(v) => updateField('customer_id', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.company_name || `${c.first_name} ${c.last_name}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Boat</Label>
+                  <Select value={formData.boat_id} onValueChange={(v) => updateField('boat_id', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select boat" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredBoats.map(b => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.vessel_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Related Job</Label>
+                <Select value={formData.job_id} onValueChange={(v) => updateField('job_id', v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select job (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredJobs.map(j => (
+                      <SelectItem key={j.id} value={j.id}>
+                        {j.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Title *</Label>
+                <Input
+                  value={formData.title}
+                  onChange={(e) => updateField('title', e.target.value)}
+                  placeholder="Offer title"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => updateField('description', e.target.value)}
+                  placeholder="Offer description"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Draft">Draft</SelectItem>
+                      <SelectItem value="Sent">Sent</SelectItem>
+                      <SelectItem value="Approved">Approved</SelectItem>
+                      <SelectItem value="Rejected">Rejected</SelectItem>
+                      <SelectItem value="Expired">Expired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Valid Until</Label>
+                  <Input
+                    type="date"
+                    value={formData.valid_until}
+                    onChange={(e) => updateField('valid_until', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Customer Notes</Label>
+                <Textarea
+                  value={formData.customer_notes}
+                  onChange={(e) => updateField('customer_notes', e.target.value)}
+                  placeholder="Notes visible to customer"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Internal Notes</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => updateField('notes', e.target.value)}
+                  placeholder="Internal notes"
+                  rows={2}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Tasks Section */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Tasks</CardTitle>
+                  <CardDescription>Define the work items for this offer</CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAIDialog(true)}
+                  className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  AI Generate
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <OfferTaskEditor tasks={tasks} setTasks={setTasks} />
+            </CardContent>
+          </Card>
         </div>
 
-        <div>
-          <TotalsSection
-            lineItems={lineItems}
-            currency={offer.currency}
-          />
+        {/* Summary Sidebar */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center py-3 border-b">
+                <span className="text-slate-600">Tasks</span>
+                <span className="font-semibold">{tasks.length}</span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b">
+                <span className="text-slate-600">Total Hours</span>
+                <span className="font-semibold">
+                  {tasks.reduce((sum, t) => sum + (t.estimated_hours || 0), 0).toFixed(1)}h
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-4 bg-blue-50 px-4 rounded-lg">
+                <span className="text-lg font-semibold text-slate-900">Total Amount</span>
+                <span className="text-2xl font-bold text-blue-600">
+                  €{formData.total_amount.toFixed(2)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
 
-      {/* Add from Operations Drawer */}
-      {showOperationsDrawer && (
-        <AddFromOperationsDrawer
-          customerId={offer.customer_id}
-          boatId={offer.boat_id}
-          onAdd={handleAddFromOperations}
-          onClose={() => setShowOperationsDrawer(false)}
-        />
-      )}
-    </>
+      {/* AI Generator Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>AI Task Generator</DialogTitle>
+            <DialogDescription>
+              Describe the work needed and let AI generate task suggestions
+            </DialogDescription>
+          </DialogHeader>
+          <AIOfferGenerator
+            formData={formData}
+            customers={customers}
+            boats={boats}
+            jobs={jobs}
+            onTasksGenerated={(generatedTasks) => {
+              setTasks(generatedTasks);
+              setShowAIDialog(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Convert Confirmation Dialog */}
+      <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convert to Work Order?</DialogTitle>
+            <DialogDescription>
+              This will create a new work order with all tasks from this offer.
+              The offer status will be updated to "Converted".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setShowConvertDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConvertToWorkOrder}
+              disabled={saving}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Converting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Convert to Work Order
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
