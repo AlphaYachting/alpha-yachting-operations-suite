@@ -453,67 +453,55 @@ export default function Reports() {
                 {skillsCapacity.length > 0 ? (
                   <>
                     <div>
-                      <h3 className="text-sm font-medium text-slate-700 mb-4">Planned Hours by Skill</h3>
-                      <ResponsiveContainer width="100%" height={400}>
-                        <BarChart data={skillsCapacity}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="skill" angle={-45} textAnchor="end" height={120} />
-                          <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="plannedHours" fill="#3b82f6" name="Planned Hours" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-medium text-slate-700 mb-4">Detailed Breakdown</h3>
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead className="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Skill</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Technicians</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Planned Hours</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Work Orders</th>
-                              <th className="px-4 py-3 text-left text-sm font-medium text-slate-700">Avg Hours/WO</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200">
-                            {skillsCapacity.map((item) => (
-                              <tr key={item.skill} className="hover:bg-slate-50">
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <Wrench className="h-4 w-4 text-blue-600" />
-                                    <span className="text-sm font-medium text-slate-900">{item.skill}</span>
+                      <h3 className="text-sm font-medium text-slate-700 mb-4">Planned Hours by Skill - Current Month</h3>
+                      <div className="space-y-4">
+                        {skillsCapacity.map((item) => {
+                          const maxHours = Math.max(...skillsCapacity.map(s => s.plannedHours), 1);
+                          const percentage = (item.plannedHours / maxHours) * 100;
+                          
+                          return (
+                            <div key={item.skill} className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 bg-blue-50 rounded-lg">
+                                    <Wrench className="h-5 w-5 text-blue-600" />
                                   </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="text-sm text-slate-600">
-                                    <span className="font-medium">{item.techniciansCount}</span>
-                                    <div className="text-xs text-slate-500 mt-0.5">{item.technicians}</div>
+                                  <div>
+                                    <h4 className="text-base font-semibold text-slate-900">{item.skill}</h4>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                      {item.techniciansCount} technician{item.techniciansCount !== 1 ? 's' : ''} • {item.workOrdersCount} work order{item.workOrdersCount !== 1 ? 's' : ''}
+                                    </p>
                                   </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <Badge className={
-                                    item.plannedHours >= 100 ? 'bg-red-100 text-red-700' :
-                                    item.plannedHours >= 50 ? 'bg-amber-100 text-amber-700' :
-                                    item.plannedHours >= 20 ? 'bg-blue-100 text-blue-700' :
-                                    'bg-slate-100 text-slate-700'
-                                  }>
-                                    {item.plannedHours}h
-                                  </Badge>
-                                </td>
-                                <td className="px-4 py-3 text-sm text-slate-600">{item.workOrdersCount}</td>
-                                <td className="px-4 py-3 text-sm text-slate-600">
-                                  {item.workOrdersCount > 0 
-                                    ? Math.round((item.plannedHours / item.workOrdersCount) * 10) / 10 
-                                    : 0}h
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-2xl font-bold text-slate-900">{item.plannedHours}h</div>
+                                  <div className="text-xs text-slate-500">
+                                    {item.workOrdersCount > 0 
+                                      ? `${Math.round((item.plannedHours / item.workOrdersCount) * 10) / 10}h avg/WO`
+                                      : 'No WOs'}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="relative w-full h-8 bg-slate-100 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    item.plannedHours >= 100 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                                    item.plannedHours >= 50 ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
+                                    item.plannedHours >= 20 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                                    'bg-gradient-to-r from-slate-400 to-slate-500'
+                                  }`}
+                                  style={{ width: `${percentage}%` }}
+                                />
+                                <div className="absolute inset-0 flex items-center px-3 text-xs font-medium">
+                                  <span className={percentage > 30 ? 'text-white' : 'text-slate-700'}>
+                                    {item.technicians}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
