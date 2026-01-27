@@ -49,9 +49,14 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         setPdfError('Document ID is missing. Please save the document first.');
         return;
       }
-      // Open print document page in new window
-      const printUrl = createPageUrl('PrintDocument') + `?type=${documentData.document_type}&id=${documentData.id}`;
-      window.open(printUrl, '_blank', 'width=900,height=1000');
+      const templateData = await loadTemplate();
+      setTemplate(templateData);
+      setShowPreview(true);
+      
+      // Trigger print after a short delay to allow rendering
+      setTimeout(() => {
+        window.print();
+      }, 1000);
     } catch (error) {
       console.error('Error opening print dialog:', error);
       setPdfError('Failed to open print dialog');
