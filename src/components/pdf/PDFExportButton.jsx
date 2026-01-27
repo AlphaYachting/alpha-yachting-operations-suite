@@ -48,28 +48,44 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
     setPdfError(null);
     try {
       const templateData = await loadTemplate();
-
-      // Call backend function to generate PDF
-      const response = await base44.functions.invoke('generateOfferPDF', {
-        documentData: documentData,
-        lineItems: lineItems,
-        templateData: templateData
-      });
       
-      const result = response.data;
-
-      if (result.success && result.pdf) {
-        // Create download link
-        const link = document.createElement('a');
-        link.href = result.pdf;
-        link.download = result.fileName || `${documentData.document_number || 'document'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else {
-        setPdfError(result.error || 'Failed to generate PDF');
+      // Get the preview container
+      const previewContainer = document.getElementById('preview-print-area');
+      if (!previewContainer) {
+        setPdfError('Preview container not found');
+        setIsGenerating(false);
+        return;
       }
 
+      // Use jsPDF with html2canvas for client-side generation
+      const { jsPDF } = (await import('jspdf')).default ? await import('jspdf') : { jsPDF: (await import('jspdf')).default };
+      const html2canvas = (await import('html2canvas')).default;
+      
+      const canvas = await html2canvas(previewContainer, {
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= 297;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= 297;
+      }
+
+      pdf.save(`${documentData.document_number || 'document'}.pdf`);
       setIsGenerating(false);
 
     } catch (error) {
