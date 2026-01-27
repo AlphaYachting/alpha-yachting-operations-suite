@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, ChevronRight, Bell } from 'lucide-react';
+import { FileText, ChevronRight, Bell, Layout } from 'lucide-react';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -19,6 +19,12 @@ export default function Settings() {
       description: 'Configure document templates for offers and invoices',
       icon: FileText,
       page: 'PDFTemplateSettings'
+    },
+    {
+      title: 'PDF Layout Editor',
+      description: 'Visually design page layout, margins, and block positions',
+      icon: Layout,
+      page: 'PDFLayoutEditor'
     }
   ];
 
