@@ -45,6 +45,10 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
 
   const openPrintDialog = async () => {
     try {
+      if (!documentData?.id) {
+        setPdfError('Document ID is missing. Please save the document first.');
+        return;
+      }
       // Open print document page in new window
       const printUrl = createPageUrl('PrintDocument') + `?type=${documentData.document_type}&id=${documentData.id}`;
       window.open(printUrl, '_blank', 'width=900,height=1000');
@@ -77,6 +81,7 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         <Button 
           variant={variant}
           onClick={openPrintDialog}
+          disabled={!documentData?.id}
         >
           <Download className="h-4 w-4 mr-2" />
           Export PDF
@@ -108,7 +113,7 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
            <Button variant="outline" onClick={() => setShowPreview(false)}>
              Close
            </Button>
-           <Button onClick={openPrintDialog}>
+           <Button onClick={openPrintDialog} disabled={!documentData?.id}>
              <Download className="h-4 w-4 mr-2" />
              Download PDF
            </Button>
