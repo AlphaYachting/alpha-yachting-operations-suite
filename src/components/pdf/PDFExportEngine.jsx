@@ -79,8 +79,6 @@ export async function generateHighQualityPDF({
       }
 
       #pdf-content {
-        background-image: none !important;
-        background-attachment: scroll !important;
         margin: 0;
         padding: 0;
         display: block;
@@ -166,9 +164,39 @@ export async function generateHighQualityPDF({
       actualPages: Math.ceil(canvas.height / (pageHeightPx * scale))
     });
 
-    // Step 6: Letterhead already rendered in canvas via html2canvas
-    // (background-image in PDFDocumentTemplate is included in canvas render)
-    diag.log('Content rendered with letterhead background', { useLetterhead });
+    // Step 6: Load and overlay letterhead on canvas if needed
+    if (useLetterhead) {
+      try {
+        const letterheadImg = new Image();
+        letterheadImg.crossOrigin = 'anonymous';
+        
+        await new Promise((resolve, reject) => {
+          letterheadImg.onload = resolve;
+          letterheadImg.onerror = reject;
+          letterheadImg.src = templateData.letterhead_image_url;
+        });
+
+        // Draw letterhead on top of canvas (on each page)
+        const ctx = canvas.getContext('2d');
+        const letterheadWidth = letterheadImg.naturalWidth;
+        const letterheadHeight = letterheadImg.naturalHeight;
+        const letterheadPageHeight = (letterheadHeight / letterheadWidth) * canvas.width;
+
+        // Draw letterhead at top of each page
+        for (let page = 0; page < Math.ceil(canvas.height / (pageHeightPx * scale)); page++) {
+          const pageYOffset = page * (pageHeightPx * scale);
+          ctx.drawImage(letterheadImg, 0, pageYOffset, canvas.width, letterheadPageHeight);
+        }
+
+        diag.log('Letterhead overlaid on canvas', {
+          letterheadWidth,
+          letterheadHeight,
+          pages: Math.ceil(canvas.height / (pageHeightPx * scale))
+        });
+      } catch (err) {
+        diag.log('⚠️ Letterhead overlay failed', err.message);
+      }
+    }
 
     // Step 7: Create PDF and split canvas into pages
     const pdf = new jsPDF({
