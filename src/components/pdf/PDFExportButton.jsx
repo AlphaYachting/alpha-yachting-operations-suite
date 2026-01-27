@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Download, Eye, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import PDFDocumentTemplate from './PDFDocumentTemplate';
-import { generateHighQualityPDF } from './PDFExportEngine';
 import {
   Dialog,
   DialogContent,
@@ -48,18 +47,13 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
     setIsGenerating(true);
     setPdfError(null);
     try {
-      if (typeof document === 'undefined') {
-        throw new Error('PDF generation requires browser environment');
-      }
-
       const templateData = await loadTemplate();
-      
-      // Create container for PDF template
+
+      // Render template to HTML string
       const container = document.createElement('div');
       const { createRoot } = await import('react-dom/client');
       const root = createRoot(container);
-      
-      // Render template
+
       root.render(
         <PDFDocumentTemplate 
           document={documentData} 
@@ -71,15 +65,37 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
       );
 
       // Wait for render
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Use high-quality export engine
-      const result = await generateHighQualityPDF({
-        containerElement: container,
-        templateData: templateData,
-        documentData: documentData,
-        fileName: `${documentData.document_number || 'document'}_${new Date().toISOString().split('T')[0]}.pdf`
+      // Get HTML content
+      const htmlContent = container.innerHTML;
+
+      // Call backend PDF generation
+      const result = await base44.functions.generateOfferPDF({
+        htmlContent: htmlContent,
+        fileName: `${documentData.document_number || 'document'}_${new Date().toISOString().split('T')[0]}.pdf`,
+        templateData: templateData
       });
+
+      if (result.success) {
+        // Download PDF from base64
+        const binaryString = atob(result.pdfBuffer);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        throw new Error(result.error || 'PDF generation failed');
+      }
 
       root.unmount();
 
