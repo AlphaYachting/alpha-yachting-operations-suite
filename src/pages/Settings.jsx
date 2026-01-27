@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, ChevronRight, Bell, Layout } from 'lucide-react';
+import PDFDiagnosticsPanel from '@/components/pdf/PDFDiagnosticsPanel';
 
 export default function Settings() {
   const navigate = useNavigate();
