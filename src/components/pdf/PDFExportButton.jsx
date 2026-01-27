@@ -68,8 +68,7 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
               color-adjust: exact !important;
             }
             html, body {
-              width: 100%;
-              height: 100%;
+              width: 210mm;
               margin: 0;
               padding: 0;
               background: white;
@@ -77,12 +76,12 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
               font-size: 11pt;
             }
             #print-content {
-              width: 100%;
-              page-break-after: auto;
+              width: 210mm;
+              page-break-inside: avoid;
             }
             @page {
               size: A4;
-              margin: 0;
+              margin: 20mm;
             }
             @media print {
               html, body {
