@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, Eye, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import PDFDocumentTemplate from './PDFDocumentTemplate';
+import { generateHighQualityPDF } from './PDFExportEngine';
 import {
   Dialog,
   DialogContent,
@@ -54,161 +53,35 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
       }
 
       const templateData = await loadTemplate();
-      const pageFormat = templateData.page_format || 'A4';
-      const renderDpi = templateData.render_dpi || 150;
-      const useLetterhead = templateData.letterhead_enabled && templateData.letterhead_image_url;
       
-      // Create invisible container with high DPI scaling
-      const containerId = `pdf-export-${Date.now()}`;
+      // Create container for PDF template
       const container = document.createElement('div');
-      container.id = containerId;
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.width = '210mm';
-      container.style.height = 'auto';
-      container.style.margin = '0';
-      container.style.padding = '0';
-      
-      // Apply letterhead background if enabled
-      if (useLetterhead) {
-        container.style.backgroundImage = `url(${templateData.letterhead_image_url})`;
-        container.style.backgroundSize = 'cover';
-        container.style.backgroundRepeat = 'no-repeat';
-        container.style.backgroundPosition = 'top center';
-        container.style.backgroundAttachment = 'fixed';
-      } else {
-        container.style.background = 'white';
-      }
-      
-      // Set up CSS for print quality
-      const styleSheet = document.createElement('style');
-      styleSheet.textContent = `
-        #${containerId} {
-          font-family: Arial, sans-serif;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-          color-adjust: exact;
-        }
-        #${containerId} table {
-          page-break-inside: auto;
-          border-collapse: collapse;
-        }
-        #${containerId} tr {
-          page-break-inside: avoid;
-        }
-        #${containerId} img {
-          max-width: 100%;
-          height: auto;
-        }
-      `;
-      document.head.appendChild(styleSheet);
-      document.body.appendChild(container);
-
-      // Render React component into container
       const { createRoot } = await import('react-dom/client');
       const root = createRoot(container);
       
-      await new Promise((resolve) => {
-        root.render(
-          <PDFDocumentTemplate 
-            document={documentData} 
-            lineItems={lineItems}
-            template={templateData}
-            payments={payments}
-            isPdfExport={true}
-          />
-        );
-        setTimeout(resolve, 1500);
+      // Render template
+      root.render(
+        <PDFDocumentTemplate 
+          document={documentData} 
+          lineItems={lineItems}
+          template={templateData}
+          payments={payments}
+          isPdfExport={true}
+        />
+      );
+
+      // Wait for render
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Use high-quality export engine
+      const result = await generateHighQualityPDF({
+        containerElement: container,
+        templateData: templateData,
+        documentData: documentData,
+        fileName: `${documentData.document_number || 'document'}_${new Date().toISOString().split('T')[0]}.pdf`
       });
 
-      // Generate canvas at high DPI
-      const scale = renderDpi / 96; // 96 DPI is standard screen DPI
-      const canvas = await html2canvas(container, {
-        scale: scale,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: useLetterhead ? null : '#ffffff',
-        imageTimeout: 10000,
-        width: 793.7, // A4 width in pixels at 96 DPI
-        windowHeight: container.scrollHeight || 1122
-      });
-
-      // Create PDF
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: pageFormat
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      // Convert canvas to image data
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-      let yPosition = 0;
-      let isFirstPage = true;
-
-      // Add content pages
-      while (yPosition < imgHeight) {
-        if (!isFirstPage) {
-          pdf.addPage();
-        }
-        
-        // Add letterhead to each page if enabled
-        if (useLetterhead) {
-          try {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              img.src = templateData.letterhead_image_url;
-            });
-            
-            const letterheadCanvas = document.createElement('canvas');
-            letterheadCanvas.width = img.width;
-            letterheadCanvas.height = img.height;
-            const ctx = letterheadCanvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            const letterheadData = letterheadCanvas.toDataURL('image/png');
-            
-            pdf.addImage(letterheadData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-          } catch (err) {
-            console.warn('Failed to add letterhead:', err);
-          }
-        }
-
-        // Add content slice
-        const contentHeight = Math.min(imgHeight - yPosition, pdfHeight);
-        pdf.addImage(
-          imgData,
-          'PNG',
-          0,
-          -yPosition / scale,
-          imgWidth,
-          imgHeight
-        );
-
-        yPosition += pdfHeight;
-        isFirstPage = false;
-      }
-
-      // Download
-      const fileName = `${documentData.document_number || 'document'}_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(fileName);
-
-      // Cleanup
       root.unmount();
-      if (document.body.contains(container)) {
-        document.body.removeChild(container);
-      }
-      if (document.head.contains(styleSheet)) {
-        document.head.removeChild(styleSheet);
-      }
 
     } catch (error) {
       console.error('Error generating PDF:', error);
