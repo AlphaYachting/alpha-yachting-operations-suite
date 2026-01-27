@@ -6,6 +6,19 @@ import { FileText, ChevronRight, Bell, Layout } from 'lucide-react';
 
 export default function Settings() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await base44.auth.me();
+        setUser(userData);
+      } catch (e) {
+        console.log('User not loaded');
+      }
+    };
+    loadUser();
+  }, []);
 
   const settingsCategories = [
     {
@@ -61,6 +74,14 @@ export default function Settings() {
           </Card>
         ))}
       </div>
+
+      {/* Admin: PDF Export Diagnostics */}
+      {user?.role === 'admin' && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Admin Tools</h2>
+          <PDFDiagnosticsPanel />
+        </div>
+      )}
     </div>
   );
 }
