@@ -62,13 +62,18 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
       container.style.width = '210mm'; // A4 width
       container.style.background = 'white';
       
-      // Apply margins if letterhead is enabled
+      // Apply letterhead as background if enabled
       if (useLetterhead) {
         const topMargin = templateData.margin_top_mm || 20;
         const leftMargin = templateData.margin_left_mm || 20;
         const rightMargin = templateData.margin_right_mm || 20;
         const bottomMargin = templateData.margin_bottom_mm || 20;
         
+        container.style.backgroundImage = `url(${templateData.letterhead_image_url})`;
+        container.style.backgroundSize = 'cover';
+        container.style.backgroundRepeat = 'no-repeat';
+        container.style.backgroundPosition = 'top center';
+        container.style.backgroundAttachment = 'fixed';
         container.style.paddingTop = `${topMargin}mm`;
         container.style.paddingLeft = `${leftMargin}mm`;
         container.style.paddingRight = `${rightMargin}mm`;
