@@ -50,11 +50,13 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
       const templateData = await loadTemplate();
 
       // Call backend function to generate PDF
-      const result = await base44.functions.generateOfferPDF({
+      const response = await base44.functions.invoke('generateOfferPDF', {
         documentData: documentData,
         lineItems: lineItems,
         templateData: templateData
       });
+      
+      const result = response.data;
 
       if (result.success && result.pdf) {
         // Create download link
