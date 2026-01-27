@@ -67,38 +67,45 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
               print-color-adjust: exact !important;
               color-adjust: exact !important;
             }
-            html {
-              margin: 0;
-              padding: 0;
-            }
-            body {
+            html, body {
+              width: 100%;
+              height: 100%;
               margin: 0;
               padding: 0;
               background: white;
               font-family: Arial, sans-serif;
-              font-size: 11pt;
             }
             #print-content {
+              width: 100%;
               margin: 0;
               padding: 0;
             }
             @page {
               size: A4;
-              margin: 20mm;
+              margin: 0;
+              padding: 0;
             }
             @media print {
               html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              body {
                 margin: 0;
                 padding: 0;
               }
               #print-content {
+                width: 100%;
                 margin: 0;
                 padding: 0;
               }
               * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                color-adjust: exact !important;
               }
             }
           </style>
