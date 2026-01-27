@@ -4,6 +4,7 @@ import { Download, Eye, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import PDFDocumentTemplate from './PDFDocumentTemplate';
 import { generatePrintPDF } from './PrintPDFExport';
+import { createRoot } from 'react-dom/client';
 import {
   Dialog,
   DialogContent,
