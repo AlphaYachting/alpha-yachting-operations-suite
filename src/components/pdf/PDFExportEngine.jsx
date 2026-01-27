@@ -81,7 +81,7 @@ export async function generateHighQualityPDF({
       #pdf-content {
         background-size: cover;
         background-attachment: scroll;
-        background-repeat: repeat;
+        background-repeat: repeat !important;
         margin: 0;
         padding: 0;
         display: block;
