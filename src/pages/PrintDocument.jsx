@@ -15,24 +15,32 @@ export default function PrintDocument() {
 
   useEffect(() => {
     const loadData = async () => {
+      console.log('[PrintDocument] Starting load with type:', docType, 'id:', docId);
+      
       try {
         if (!docType || !docId) {
-          console.error('Missing type or id parameter');
+          console.error('[PrintDocument] Missing type or id parameter', { docType, docId });
           setIsLoading(false);
           return;
         }
 
         let doc, items;
+        
+        console.log('[PrintDocument] Fetching templates...');
         const templates = await base44.entities.PDFTemplate.list();
+        console.log('[PrintDocument] Templates loaded:', templates.length);
 
         if (docType === 'Offer') {
-          // Fetch from Offer entity
+          console.log('[PrintDocument] Fetching offers...');
           const offers = await base44.entities.Offer.list();
+          console.log('[PrintDocument] Offers fetched:', offers.length, 'Looking for ID:', docId);
           doc = offers.find(o => o.id === docId);
+          console.log('[PrintDocument] Offer found:', !!doc, doc?.offer_number);
           
           if (doc) {
-            // Fetch OfferTasks as line items
+            console.log('[PrintDocument] Fetching OfferTasks...');
             const tasks = await base44.entities.OfferTask.filter({ offer_id: docId }, 'sequence_order');
+            console.log('[PrintDocument] Tasks found:', tasks.length);
             items = tasks.map(task => ({
               sort_order: task.sequence_order || 0,
               title: task.title,
@@ -47,28 +55,37 @@ export default function PrintDocument() {
             }));
           }
         } else {
-          // Fetch from Document entity (Invoice)
+          console.log('[PrintDocument] Fetching Document with ID:', docId);
           const docs = await base44.entities.Document.filter({ id: docId });
+          console.log('[PrintDocument] Documents found:', docs.length);
           doc = docs[0];
-          items = await base44.entities.DocumentLineItem.filter({ document_id: docId });
+          if (doc) {
+            items = await base44.entities.DocumentLineItem.filter({ document_id: docId });
+            console.log('[PrintDocument] Line items found:', items.length);
+          }
         }
 
+        console.log('[PrintDocument] Setting state - doc:', !!doc, 'items:', items?.length || 0);
         setDocument(doc);
         setLineItems(items || []);
 
         const defaultTemplate = templates.find(t => t.is_default) || templates[0];
+        console.log('[PrintDocument] Using template:', defaultTemplate?.company_name);
         if (defaultTemplate) {
           setTemplate(defaultTemplate);
         }
 
         setIsLoading(false);
+        console.log('[PrintDocument] Load complete');
 
         // Auto-trigger print on load
         setTimeout(() => {
+          console.log('[PrintDocument] Triggering print...');
           window.print();
         }, 500);
       } catch (error) {
-        console.error('Error loading print data:', error);
+        console.error('[PrintDocument] Error loading print data:', error);
+        console.error('[PrintDocument] Error details:', { message: error.message, stack: error.stack });
         setIsLoading(false);
       }
     };
