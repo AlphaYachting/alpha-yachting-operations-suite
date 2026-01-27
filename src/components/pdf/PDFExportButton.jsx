@@ -49,30 +49,25 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
     try {
       const templateData = await loadTemplate();
 
-      const container = document.createElement('div');
-      const { createRoot } = await import('react-dom/client');
-      const root = createRoot(container);
-
-      root.render(
-        <PDFDocumentTemplate 
-          document={documentData} 
-          lineItems={lineItems}
-          template={templateData}
-          payments={payments}
-          isPdfExport={true}
-        />
-      );
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      await generatePrintPDF({
-        containerElement: container,
-        templateData: templateData,
+      // Call backend function to generate PDF
+      const result = await base44.functions.generateOfferPDF({
         documentData: documentData,
-        fileName: `${documentData.document_number || 'document'}_${new Date().toISOString().split('T')[0]}.pdf`
+        lineItems: lineItems,
+        templateData: templateData
       });
 
-      root.unmount();
+      if (result.success && result.pdf) {
+        // Create download link
+        const link = document.createElement('a');
+        link.href = result.pdf;
+        link.download = result.fileName || `${documentData.document_number || 'document'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        setPdfError(result.error || 'Failed to generate PDF');
+      }
+
       setIsGenerating(false);
 
     } catch (error) {
