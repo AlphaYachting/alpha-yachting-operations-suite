@@ -6,6 +6,10 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
   const currency = document.currency === 'EUR' ? '€' : document.currency;
   const useLetterhead = template.letterhead_enabled && template.letterhead_image_url;
 
+  // Get layout settings
+  const layoutSettings = template.pdf_layout_settings || {};
+  const margins = layoutSettings.margins_mm || { top: 15, right: 12, bottom: 15, left: 12 };
+
   // Watermark configuration
   const useWatermark = template.watermark_enabled;
   const watermarkText = template.watermark_text || 'DRAFT';
@@ -56,14 +60,19 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
       fontFamily: `${fontFamily}, sans-serif`,
       width: '100%',
       minHeight: '100%',
-      padding: '0',
+      padding: `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`,
       margin: '0',
       backgroundColor: useLetterhead ? 'transparent' : 'white',
       color: '#000',
       fontSize: `${fontSizeBody}pt`,
       boxSizing: 'border-box',
       lineHeight: lineSpacing,
-      position: 'relative'
+      position: 'relative',
+      backgroundImage: useLetterhead ? `url(${template.letterhead_image_url})` : 'none',
+      backgroundSize: 'cover',
+      backgroundRepeat: 'repeat',
+      backgroundPosition: '0 0',
+      backgroundAttachment: 'scroll'
     }}>
       {/* Watermark */}
       {useWatermark && (
