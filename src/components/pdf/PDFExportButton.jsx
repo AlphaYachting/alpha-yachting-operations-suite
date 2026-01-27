@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom/client';
 import { Button } from '@/components/ui/button';
 import { Download, Eye } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
