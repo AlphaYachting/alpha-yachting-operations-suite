@@ -98,6 +98,14 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Error Alert */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Creation Mode - Only show for new work orders */}
       {!workOrder && (
         <TemplateFromCreation
