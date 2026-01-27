@@ -101,6 +101,7 @@ export default function Reports() {
   const [endDate, setEndDate] = useState('');
   const [selectedTechnician, setSelectedTechnician] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [capacityView, setCapacityView] = useState('skills'); // 'skills' or 'technicians'
 
   useEffect(() => {
     loadData();
@@ -292,6 +293,28 @@ export default function Reports() {
     };
   }).sort((a, b) => b.plannedHours - a.plannedHours);
 
+  // Technician Capacity Analysis - Selected Date Range
+  const technicianCapacity = technicians.map(tech => {
+    // Filter work orders where this technician is assigned
+    const techWorkOrders = selectedRangeWorkOrders.filter(wo => 
+      wo.assigned_technicians?.includes(tech.id) || wo.lead_technician_id === tech.id
+    );
+    
+    // Calculate planned hours
+    const plannedHours = techWorkOrders.reduce((sum, wo) => 
+      sum + (wo.estimated_duration_hours || 0), 0
+    );
+
+    return {
+      id: tech.id,
+      name: `${tech.first_name} ${tech.last_name}`,
+      skills: tech.skills?.join(', ') || 'No skills assigned',
+      plannedHours: Math.round(plannedHours * 10) / 10,
+      workOrdersCount: techWorkOrders.length,
+      role: tech.role || 'Technician'
+    };
+  }).sort((a, b) => b.plannedHours - a.plannedHours);
+
   const exportToCSV = (data, filename) => {
     if (!data || data.length === 0) {
       alert('No data to export');
@@ -442,116 +465,224 @@ export default function Reports() {
         {/* Skills Capacity Report */}
         <TabsContent value="skills" className="space-y-6">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Skills Capacity Overview</CardTitle>
-                <p className="text-sm text-slate-500 mt-1">
-                  {format(rangeStart, 'MMM d, yyyy')} - {format(rangeEnd, 'MMM d, yyyy')}
-                </p>
+            <CardHeader>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <CardTitle>Capacity Overview</CardTitle>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {format(rangeStart, 'MMM d, yyyy')} - {format(rangeEnd, 'MMM d, yyyy')}
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => exportToCSV(
+                    capacityView === 'skills' ? skillsCapacity : technicianCapacity, 
+                    capacityView === 'skills' ? 'skills_capacity_report' : 'technician_capacity_report'
+                  )}
+                  size="sm"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
               </div>
-              <Button 
-                onClick={() => exportToCSV(skillsCapacity, 'skills_capacity_report')}
-                size="sm"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
+              <Tabs value={capacityView} onValueChange={setCapacityView} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="skills">By Skills</TabsTrigger>
+                  <TabsTrigger value="technicians">By Technicians</TabsTrigger>
+                </TabsList>
+              </Tabs>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {skillsCapacity.length > 0 ? (
-                  <>
-                    <div>
-                      <h3 className="text-sm font-medium text-slate-700 mb-4">Planned Hours by Skill</h3>
-                      <div className="space-y-4">
-                        {skillsCapacity.map((item) => {
-                          const maxHours = Math.max(...skillsCapacity.map(s => s.plannedHours), 1);
-                          const percentage = (item.plannedHours / maxHours) * 100;
-                          
-                          return (
-                            <div key={item.skill} className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-blue-50 rounded-lg">
-                                    <Wrench className="h-5 w-5 text-blue-600" />
+                {capacityView === 'skills' ? (
+                  skillsCapacity.length > 0 ? (
+                    <>
+                      <div>
+                        <h3 className="text-sm font-medium text-slate-700 mb-4">Planned Hours by Skill</h3>
+                        <div className="space-y-4">
+                          {skillsCapacity.map((item) => {
+                            const maxHours = Math.max(...skillsCapacity.map(s => s.plannedHours), 1);
+                            const percentage = (item.plannedHours / maxHours) * 100;
+                            
+                            return (
+                              <div key={item.skill} className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-blue-50 rounded-lg">
+                                      <Wrench className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-base font-semibold text-slate-900">{item.skill}</h4>
+                                      <p className="text-xs text-slate-500 mt-0.5">
+                                        {item.techniciansCount} technician{item.techniciansCount !== 1 ? 's' : ''} • {item.workOrdersCount} work order{item.workOrdersCount !== 1 ? 's' : ''}
+                                      </p>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <h4 className="text-base font-semibold text-slate-900">{item.skill}</h4>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                      {item.techniciansCount} technician{item.techniciansCount !== 1 ? 's' : ''} • {item.workOrdersCount} work order{item.workOrdersCount !== 1 ? 's' : ''}
-                                    </p>
+                                  <div className="text-right">
+                                    <div className="text-2xl font-bold text-slate-900">{item.plannedHours}h</div>
+                                    <div className="text-xs text-slate-500">
+                                      {item.workOrdersCount > 0 
+                                        ? `${Math.round((item.plannedHours / item.workOrdersCount) * 10) / 10}h avg/WO`
+                                        : 'No WOs'}
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="text-right">
-                                  <div className="text-2xl font-bold text-slate-900">{item.plannedHours}h</div>
-                                  <div className="text-xs text-slate-500">
-                                    {item.workOrdersCount > 0 
-                                      ? `${Math.round((item.plannedHours / item.workOrdersCount) * 10) / 10}h avg/WO`
-                                      : 'No WOs'}
+                                
+                                <div className="relative w-full h-8 bg-slate-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      item.plannedHours >= 100 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                                      item.plannedHours >= 50 ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
+                                      item.plannedHours >= 20 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
+                                      'bg-gradient-to-r from-slate-400 to-slate-500'
+                                    }`}
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                  <div className="absolute inset-0 flex items-center px-3 text-xs font-medium">
+                                    <span className={percentage > 30 ? 'text-white' : 'text-slate-700'}>
+                                      {item.technicians}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
-                              
-                              <div className="relative w-full h-8 bg-slate-100 rounded-full overflow-hidden">
-                                <div 
-                                  className={`h-full rounded-full transition-all duration-500 ${
-                                    item.plannedHours >= 100 ? 'bg-gradient-to-r from-red-500 to-red-600' :
-                                    item.plannedHours >= 50 ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
-                                    item.plannedHours >= 20 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
-                                    'bg-gradient-to-r from-slate-400 to-slate-500'
-                                  }`}
-                                  style={{ width: `${percentage}%` }}
-                                />
-                                <div className="absolute inset-0 flex items-center px-3 text-xs font-medium">
-                                  <span className={percentage > 30 ? 'text-white' : 'text-slate-700'}>
-                                    {item.technicians}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Wrench className="h-5 w-5 text-blue-600" />
-                          <p className="text-sm font-medium text-blue-900">Total Skills</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Wrench className="h-5 w-5 text-blue-600" />
+                            <p className="text-sm font-medium text-blue-900">Total Skills</p>
+                          </div>
+                          <p className="text-2xl font-bold text-blue-700">{allSkills.length}</p>
                         </div>
-                        <p className="text-2xl font-bold text-blue-700">{allSkills.length}</p>
-                      </div>
-                      
-                      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Clock className="h-5 w-5 text-emerald-600" />
-                          <p className="text-sm font-medium text-emerald-900">Total Planned Hours</p>
+                        
+                        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Clock className="h-5 w-5 text-emerald-600" />
+                            <p className="text-sm font-medium text-emerald-900">Total Planned Hours</p>
+                          </div>
+                          <p className="text-2xl font-bold text-emerald-700">
+                            {Math.round(skillsCapacity.reduce((sum, s) => sum + s.plannedHours, 0))}h
+                          </p>
                         </div>
-                        <p className="text-2xl font-bold text-emerald-700">
-                          {Math.round(skillsCapacity.reduce((sum, s) => sum + s.plannedHours, 0))}h
-                        </p>
-                      </div>
-                      
-                      <div className="p-4 bg-violet-50 border border-violet-200 rounded-lg">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Activity className="h-5 w-5 text-violet-600" />
-                          <p className="text-sm font-medium text-violet-900">Avg Hours per Skill</p>
+                        
+                        <div className="p-4 bg-violet-50 border border-violet-200 rounded-lg">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Activity className="h-5 w-5 text-violet-600" />
+                            <p className="text-sm font-medium text-violet-900">Avg Hours per Skill</p>
+                          </div>
+                          <p className="text-2xl font-bold text-violet-700">
+                            {skillsCapacity.length > 0 
+                              ? Math.round((skillsCapacity.reduce((sum, s) => sum + s.plannedHours, 0) / skillsCapacity.length) * 10) / 10
+                              : 0}h
+                          </p>
                         </div>
-                        <p className="text-2xl font-bold text-violet-700">
-                          {skillsCapacity.length > 0 
-                            ? Math.round((skillsCapacity.reduce((sum, s) => sum + s.plannedHours, 0) / skillsCapacity.length) * 10) / 10
-                            : 0}h
-                        </p>
                       </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-12 text-slate-500">
+                      <Wrench className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                      <p>No skills data available</p>
+                      <p className="text-sm mt-1">Add skills to technicians to see capacity overview</p>
                     </div>
-                  </>
+                  )
                 ) : (
-                  <div className="text-center py-12 text-slate-500">
-                    <Wrench className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-                    <p>No skills data available</p>
-                    <p className="text-sm mt-1">Add skills to technicians to see capacity overview</p>
-                  </div>
+                  technicianCapacity.length > 0 ? (
+                    <>
+                      <div>
+                        <h3 className="text-sm font-medium text-slate-700 mb-4">Planned Hours by Technician</h3>
+                        <div className="space-y-4">
+                          {technicianCapacity.map((tech) => {
+                            const maxHours = Math.max(...technicianCapacity.map(t => t.plannedHours), 1);
+                            const percentage = (tech.plannedHours / maxHours) * 100;
+                            
+                            return (
+                              <div key={tech.id} className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-violet-50 rounded-lg">
+                                      <Users className="h-5 w-5 text-violet-600" />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-base font-semibold text-slate-900">{tech.name}</h4>
+                                      <p className="text-xs text-slate-500 mt-0.5">
+                                        {tech.role} • {tech.workOrdersCount} work order{tech.workOrdersCount !== 1 ? 's' : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-2xl font-bold text-slate-900">{tech.plannedHours}h</div>
+                                    <div className="text-xs text-slate-500">
+                                      {tech.workOrdersCount > 0 
+                                        ? `${Math.round((tech.plannedHours / tech.workOrdersCount) * 10) / 10}h avg/WO`
+                                        : 'No WOs'}
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="relative w-full h-8 bg-slate-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      tech.plannedHours >= 100 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                                      tech.plannedHours >= 50 ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
+                                      tech.plannedHours >= 20 ? 'bg-gradient-to-r from-violet-500 to-violet-600' :
+                                      'bg-gradient-to-r from-slate-400 to-slate-500'
+                                    }`}
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                  <div className="absolute inset-0 flex items-center px-3 text-xs font-medium">
+                                    <span className={percentage > 30 ? 'text-white' : 'text-slate-700'}>
+                                      {tech.skills}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 bg-violet-50 border border-violet-200 rounded-lg">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Users className="h-5 w-5 text-violet-600" />
+                            <p className="text-sm font-medium text-violet-900">Total Technicians</p>
+                          </div>
+                          <p className="text-2xl font-bold text-violet-700">{technicianCapacity.length}</p>
+                        </div>
+                        
+                        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Clock className="h-5 w-5 text-emerald-600" />
+                            <p className="text-sm font-medium text-emerald-900">Total Planned Hours</p>
+                          </div>
+                          <p className="text-2xl font-bold text-emerald-700">
+                            {Math.round(technicianCapacity.reduce((sum, t) => sum + t.plannedHours, 0))}h
+                          </p>
+                        </div>
+                        
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Activity className="h-5 w-5 text-blue-600" />
+                            <p className="text-sm font-medium text-blue-900">Avg Hours per Tech</p>
+                          </div>
+                          <p className="text-2xl font-bold text-blue-700">
+                            {technicianCapacity.length > 0 
+                              ? Math.round((technicianCapacity.reduce((sum, t) => sum + t.plannedHours, 0) / technicianCapacity.length) * 10) / 10
+                              : 0}h
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-12 text-slate-500">
+                      <Users className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                      <p>No technician data available</p>
+                      <p className="text-sm mt-1">Add technicians to see capacity overview</p>
+                    </div>
+                  )
                 )}
               </div>
             </CardContent>
