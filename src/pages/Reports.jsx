@@ -40,6 +40,7 @@ import {
   startOfWeek,
   endOfWeek,
   subMonths,
+  addMonths,
   isWithinInterval
 } from 'date-fns';
 import {
@@ -149,6 +150,14 @@ export default function Reports() {
         return { start: startOfMonth(now), end: endOfMonth(now) };
       case 'last_month':
         return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) };
+      case 'next_month':
+        return { start: startOfMonth(addMonths(now, 1)), end: endOfMonth(addMonths(now, 1)) };
+      case 'next_2_months':
+        return { start: startOfMonth(addMonths(now, 1)), end: endOfMonth(addMonths(now, 2)) };
+      case 'next_3_months':
+        return { start: startOfMonth(addMonths(now, 1)), end: endOfMonth(addMonths(now, 3)) };
+      case 'next_6_months':
+        return { start: startOfMonth(addMonths(now, 1)), end: endOfMonth(addMonths(now, 6)) };
       case 'this_year':
         return { start: startOfYear(now), end: endOfYear(now) };
       case 'custom':
@@ -327,9 +336,13 @@ export default function Reports() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="last_month">Last Month</SelectItem>
                   <SelectItem value="this_week">This Week</SelectItem>
                   <SelectItem value="this_month">This Month</SelectItem>
-                  <SelectItem value="last_month">Last Month</SelectItem>
+                  <SelectItem value="next_month">Next Month</SelectItem>
+                  <SelectItem value="next_2_months">Next 2 Months</SelectItem>
+                  <SelectItem value="next_3_months">Next 3 Months</SelectItem>
+                  <SelectItem value="next_6_months">Next 6 Months</SelectItem>
                   <SelectItem value="this_year">This Year</SelectItem>
                   <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
