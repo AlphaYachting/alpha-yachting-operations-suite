@@ -106,11 +106,21 @@ export default function PDFTemplateSettings() {
     try {
       const result = await base44.integrations.Core.UploadFile({ file });
       
-      setTemplate({ 
+      const updatedTemplate = { 
         ...template, 
         letterhead_image_url: result.file_url,
         letterhead_upload_date: new Date().toISOString()
-      });
+      };
+      
+      setTemplate(updatedTemplate);
+      
+      // Save to database immediately
+      if (templateId) {
+        await base44.entities.PDFTemplate.update(templateId, updatedTemplate);
+      } else {
+        const created = await base44.entities.PDFTemplate.create(updatedTemplate);
+        setTemplateId(created.id);
+      }
       
       setSuccess('Letterhead uploaded successfully!');
       setTimeout(() => setSuccess(''), 3000);
