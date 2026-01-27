@@ -243,11 +243,23 @@ Return only the image data, no additional text or explanation.`;
                     </Button>
                   )}
                 </div>
-                <img 
-                  src={template.letterhead_image_url} 
-                  alt="Letterhead" 
-                  className="w-full max-w-md border rounded"
-                />
+                {template.letterhead_original_pdf_url ? (
+                  <embed 
+                    src={template.letterhead_original_pdf_url} 
+                    type="application/pdf"
+                    className="w-full h-96 border rounded"
+                  />
+                ) : (
+                  <img 
+                    src={template.letterhead_image_url} 
+                    alt="Letterhead" 
+                    className="w-full max-w-md border rounded"
+                    onError={(e) => {
+                      console.error('Image failed to load:', template.letterhead_image_url);
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                )}
               </div>
             )}
 
