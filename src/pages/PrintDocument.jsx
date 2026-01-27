@@ -77,11 +77,40 @@ export default function PrintDocument() {
   }, [docType, docId]);
 
   if (isLoading) {
-    return <div className="print-loading">Loading document...</div>;
+    return (
+      <div className="print-loading p-8">
+        <p className="mb-4">Loading document...</p>
+        <div className="p-4 bg-slate-100 rounded text-sm font-mono">
+          <p>Type: {docType}</p>
+          <p>ID: {docId}</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!document || !template) {
-    return <div className="print-loading">Document not found</div>;
+  if (!document) {
+    return (
+      <div className="print-loading p-8">
+        <p className="text-red-600 mb-4">Document not found with ID: {docId}</p>
+        <div className="p-4 bg-slate-100 rounded text-sm font-mono">
+          <p>Type: {docType}</p>
+          <p>ID: {docId}</p>
+          <p className="mt-2">Check browser console for error details</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!template) {
+    return (
+      <div className="print-loading p-8">
+        <p className="text-orange-600 mb-4">Template not found</p>
+        <div className="p-4 bg-slate-100 rounded text-sm font-mono">
+          <p>Document loaded: {document.title || document.offer_number}</p>
+          <p>But no PDF template available</p>
+        </div>
+      </div>
+    );
   }
 
   return (
