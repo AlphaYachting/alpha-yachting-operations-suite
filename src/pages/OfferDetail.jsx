@@ -44,6 +44,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import OfferTaskEditor from '@/components/offers/OfferTaskEditor';
 import AIOfferGenerator from '@/components/offers/AIOfferGenerator';
+import PDFExportButton from '@/components/pdf/PDFExportButton';
+import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
 
 export default function OfferDetail() {
   const navigate = useNavigate();
@@ -70,6 +72,7 @@ export default function OfferDetail() {
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [template, setTemplate] = useState(null);
 
   const { data: offer } = useQuery({
     queryKey: ['offer', offerId],
@@ -97,6 +100,20 @@ export default function OfferDetail() {
     queryKey: ['jobs'],
     queryFn: () => base44.entities.Job.list(),
   });
+
+  const { data: pdfTemplate } = useQuery({
+    queryKey: ['pdfTemplate'],
+    queryFn: async () => {
+      const templates = await base44.entities.PDFTemplate.list();
+      return templates.find(t => t.is_default) || templates[0];
+    },
+  });
+
+  useEffect(() => {
+    if (pdfTemplate) {
+      setTemplate(pdfTemplate);
+    }
+  }, [pdfTemplate]);
 
   useEffect(() => {
     if (offer) {
@@ -247,8 +264,94 @@ export default function OfferDetail() {
   const filteredBoats = boats.filter(b => b.customer_id === formData.customer_id);
   const filteredJobs = jobs.filter(j => j.customer_id === formData.customer_id);
 
+  // Prepare PDF document data
+  const getPDFDocument = () => {
+    const customer = customers.find(c => c.id === formData.customer_id);
+    const boat = boats.find(b => b.id === formData.boat_id);
+    
+    return {
+      document_type: 'Offer',
+      document_number: formData.offer_number || 'DRAFT',
+      status: formData.status,
+      customer_name: customer ? (customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim()) : '',
+      customer_address: customer ? [
+        customer.billing_address,
+        customer.billing_city && customer.billing_postal_code ? `${customer.billing_postal_code} ${customer.billing_city}` : customer.billing_city,
+        customer.billing_country
+      ].filter(Boolean).join('\n') : '',
+      customer_vat: customer?.vat_number,
+      boat_name: boat?.vessel_name,
+      boat_details: boat ? [boat.make, boat.model, boat.year].filter(Boolean).join(' ') : '',
+      issue_date: offer?.created_date || new Date().toISOString().split('T')[0],
+      valid_until: formData.valid_until,
+      payment_terms: customer?.payment_terms || 'Net 14 days',
+      subtotal: formData.total_amount || 0,
+      tax_total: 0,
+      total: formData.total_amount || 0,
+      public_notes: formData.customer_notes,
+      currency: 'EUR',
+      language: formData.language
+    };
+  };
+
+  const getPDFLineItems = () => {
+    return tasks.map((task, index) => ({
+      sort_order: task.sequence_order || index,
+      title: task.title,
+      description: task.description,
+      quantity: task.quantity || 0,
+      unit: task.unit_type || 'Hour',
+      unit_price: task.unit_price || 0,
+      tax_rate: 0,
+      total_net: task.total_amount || 0,
+      total_tax: 0,
+      total_gross: task.total_amount || 0
+    }));
+  };
+
   return (
-    <div className="space-y-6">
+    <>
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 15mm 20mm;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #pdf-print-template {
+            display: block !important;
+            visibility: visible;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+          }
+          #pdf-print-template * {
+            visibility: visible;
+          }
+          #pdf-content {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            transform: scale(1) !important;
+            transform-origin: top left !important;
+          }
+        }
+      `}</style>
+    <div className="space-y-6 no-print">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -278,6 +381,12 @@ export default function OfferDetail() {
           )}
         </div>
         <div className="flex gap-2">
+          {!isNewOffer && formData.status !== 'Draft' && (
+            <PDFExportButton 
+              document={getPDFDocument()}
+              lineItems={getPDFLineItems()}
+            />
+          )}
           {formData.status === 'Approved' && !formData.converted_work_order_id && formData.job_id && (
             <Button
               onClick={() => setShowConvertDialog(true)}
@@ -299,6 +408,17 @@ export default function OfferDetail() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
+
+      {/* PDF Template for Print */}
+      {template && !isNewOffer && formData.status !== 'Draft' && (
+        <div id="pdf-print-template" style={{ display: 'none' }}>
+          <PDFDocumentTemplate 
+            document={getPDFDocument()}
+            lineItems={getPDFLineItems()}
+            template={template}
+          />
+        </div>
       )}
 
       {/* Main Form */}
@@ -550,5 +670,6 @@ export default function OfferDetail() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }
