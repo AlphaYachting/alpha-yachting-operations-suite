@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Eye, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import PDFDocumentTemplate from './PDFDocumentTemplate';
+import { generatePrintPDF } from './PrintPDFExport';
 import {
   Dialog,
   DialogContent,
@@ -148,52 +149,46 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
               Close
             </Button>
             <Button onClick={() => {
-              // Get the preview element which already renders correctly
+              if (!template) return;
+
+              // Clone the preview content
               const previewElement = document.getElementById('preview-print-area');
               if (!previewElement) return;
 
-              // Create print window from the correct preview content
-              const printWindow = window.open('', '', 'width=900,height=1200');
-              const doc = printWindow.document;
+              const clonedContent = previewElement.cloneNode(true);
 
-              // Write HTML with print-optimized CSS
-              doc.write(`
+              // Create a new window
+              const printWindow = window.open('', '', 'width=800,height=1000');
+              printWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
                 <head>
                   <meta charset="utf-8">
                   <title>${documentData.document_number || 'document'}</title>
                   <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
                     @page {
-                      size: A4 portrait;
+                      size: A4;
                       margin: 0;
                     }
-                    @media print {
-                      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                      html, body { width: 210mm; height: 297mm; margin: 0; padding: 0; background: white !important; }
-                      body { -webkit-print-color-adjust: exact; color-adjust: exact; }
+                    * {
+                      margin: 0;
+                      padding: 0;
+                      box-sizing: border-box;
                     }
-                    body { font-family: Arial, sans-serif; background: white; }
-                    #print-content { width: 210mm; margin: 0; padding: 0; }
+                    body {
+                      font-family: Arial, sans-serif;
+                      background: white;
+                    }
                   </style>
                 </head>
-                <body id="print-body">
-                  <div id="print-content"></div>
-                </body>
+                <body></body>
                 </html>
               `);
-              doc.close();
+              printWindow.document.close();
 
-              // Append the preview content (already properly rendered with letterhead)
+              // Wait for document to be ready, then append content
               setTimeout(() => {
-                const contentDiv = doc.getElementById('print-content');
-                const cloned = previewElement.cloneNode(true);
-                cloned.style.margin = '0';
-                cloned.style.padding = '0';
-                contentDiv.appendChild(cloned);
-
-                // Trigger print
+                printWindow.document.body.appendChild(clonedContent);
                 setTimeout(() => {
                   printWindow.print();
                 }, 300);
