@@ -147,7 +147,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>Description</Label>
-          {!workOrder && formData.job_id && formData.description && formData.description.split(/\s+/).filter(word => word.length > 0).length >= 5 && (
+          {!workOrder && formData.job_id && (
             <AITaskSuggestions
               formData={formData}
               jobs={jobs}
@@ -164,6 +164,9 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
           placeholder="Detailed instructions for technicians..."
           rows={3}
         />
+        {!workOrder && formData.job_id && (!formData.description || formData.description.split(/\s+/).filter(word => word.length > 0).length < 5) && (
+          <p className="text-xs text-slate-500">💡 Add at least 5 words in description to enable AI task suggestions</p>
+        )}
       </div>
 
       {/* Schedule */}
