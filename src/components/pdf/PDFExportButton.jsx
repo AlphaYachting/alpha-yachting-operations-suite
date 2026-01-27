@@ -100,11 +100,14 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
 
       // Generate PDF
       const canvas = await html2canvas(container, {
-        scale: 3,
+        scale: 4,
         useCORS: true,
+        allowTaint: true,
         logging: false,
         backgroundColor: useLetterhead ? null : '#ffffff',
-        imageTimeout: 5000
+        imageTimeout: 5000,
+        quality: 1,
+        imageType: 'image/png'
       });
 
       const pdf = new jsPDF('p', 'mm', 'a4');
