@@ -65,11 +65,25 @@ export default function DragDropCalendar({
       })
     : Array.from({ length: 35 }, (_, i) => addDays(currentWeekStart, i));
   
-  // Assign colors to technicians
+  // Assign colors to technicians based on their assigned color field
   useEffect(() => {
     const colorMap = {};
-    technicians.forEach((tech, index) => {
-      colorMap[tech.id] = TECHNICIAN_COLORS[index % TECHNICIAN_COLORS.length];
+    technicians.forEach((tech) => {
+      const techColor = tech.color || '#3b82f6'; // Default to blue
+      // Convert hex color to rgba with opacity
+      const hexToRgba = (hex, alpha = 0.2) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      };
+      
+      colorMap[tech.id] = {
+        bg: techColor,
+        bgLight: hexToRgba(techColor, 0.2),
+        text: '#ffffff',
+        border: techColor
+      };
     });
     setTechnicianColorMap(colorMap);
   }, [technicians]);
@@ -278,10 +292,22 @@ export default function DragDropCalendar({
   };
   
   const getTechnicianColor = (techIds) => {
-    if (!techIds || techIds.length === 0) return UNASSIGNED_COLOR;
+    if (!techIds || techIds.length === 0) {
+      return {
+        bg: '#94a3b8',
+        bgLight: 'rgba(148, 163, 184, 0.2)',
+        text: '#ffffff',
+        border: '#94a3b8'
+      };
+    }
     // Use lead technician color or first assigned technician
     const leadTechId = techIds[0];
-    return technicianColorMap[leadTechId] || TECHNICIAN_COLORS[0];
+    return technicianColorMap[leadTechId] || {
+      bg: '#3b82f6',
+      bgLight: 'rgba(59, 130, 246, 0.2)',
+      text: '#ffffff',
+      border: '#3b82f6'
+    };
   };
   
   const getJobPriority = (jobId) => {
@@ -379,19 +405,20 @@ export default function DragDropCalendar({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div
-                                    onClick={(e) => handleWorkOrderClick(e, wo)}
-                                    className={`p-1.5 text-[10px] cursor-pointer hover:shadow-lg transition-all ${
-                                      techColor.bg
-                                    } ${techColor.text} relative select-none ${
-                                      isEnd ? 'rounded-r-md border-r-4' : 'border-r border-white/30'
-                                    } ${
-                                      hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
-                                    }`}
-                                    style={{
-                                      borderLeftWidth: '0px',
-                                      borderTopLeftRadius: '0px',
-                                      borderBottomLeftRadius: '0px'
-                                    }}
+                                   onClick={(e) => handleWorkOrderClick(e, wo)}
+                                   className={`p-1.5 text-[10px] cursor-pointer hover:shadow-lg transition-all relative select-none ${
+                                     isEnd ? 'rounded-r-md border-r-4' : 'border-r border-white/30'
+                                   } ${
+                                     hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
+                                   }`}
+                                   style={{
+                                     backgroundColor: techColor.bg,
+                                     color: techColor.text,
+                                     borderRightColor: isEnd ? techColor.border : 'rgba(255, 255, 255, 0.3)',
+                                     borderLeftWidth: '0px',
+                                     borderTopLeftRadius: '0px',
+                                     borderBottomLeftRadius: '0px'
+                                   }}
                                   >
                                     {hasConflict && (
                                       <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">
@@ -496,20 +523,26 @@ export default function DragDropCalendar({
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div
-                                        onClick={(e) => !dragSnapshot.isDragging && handleWorkOrderClick(e, wo)}
-                                        className={`p-1.5 border-l-4 text-[10px] cursor-move hover:shadow-lg transition-all ${
-                                          techColor.bg
-                                        } ${techColor.text} ${techColor.border} ${
-                                          dragSnapshot.isDragging ? 'opacity-60 shadow-xl scale-110 rotate-3 cursor-grabbing' : 'hover:scale-105'
-                                        } ${
-                                          hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
-                                        } ${
-                                          isMultiDay && !isEnd ? 'rounded-l-md border-r border-white/30' : 'rounded-md'
-                                        } relative select-none`}
-                                        style={isMultiDay && !isEnd ? {
-                                          borderTopRightRadius: '0px',
-                                          borderBottomRightRadius: '0px'
-                                        } : {}}
+                                       onClick={(e) => !dragSnapshot.isDragging && handleWorkOrderClick(e, wo)}
+                                       className={`p-1.5 border-l-4 text-[10px] cursor-move hover:shadow-lg transition-all ${
+                                         dragSnapshot.isDragging ? 'opacity-60 shadow-xl scale-110 rotate-3 cursor-grabbing' : 'hover:scale-105'
+                                       } ${
+                                         hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
+                                       } ${
+                                         isMultiDay && !isEnd ? 'rounded-l-md border-r border-white/30' : 'rounded-md'
+                                       } relative select-none`}
+                                       style={isMultiDay && !isEnd ? {
+                                         backgroundColor: techColor.bg,
+                                         color: techColor.text,
+                                         borderLeftColor: techColor.border,
+                                         borderRightColor: 'rgba(255, 255, 255, 0.3)',
+                                         borderTopRightRadius: '0px',
+                                         borderBottomRightRadius: '0px'
+                                       } : {
+                                         backgroundColor: techColor.bg,
+                                         color: techColor.text,
+                                         borderLeftColor: techColor.border
+                                       }}
                                       >
                                         {hasConflict && (
                                           <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">
