@@ -58,24 +58,30 @@ export async function generatePrintPDF({
 
         @page {
           size: A4 portrait;
-          margin: 15mm 12mm 15mm 12mm;
+          margin: 0;
         }
 
-        body {
+        html, body {
+          width: 210mm;
+          height: 297mm;
+          margin: 0;
+          padding: 0;
           font-family: Arial, sans-serif;
           font-size: 11pt;
           line-height: 1.5;
           color: #000;
           background: white;
-          margin: 0;
-          padding: 0;
         }
 
         #print-pdf-content {
-          width: 100%;
+          width: 210mm;
           height: auto;
           margin: 0;
-          padding: 0;
+          padding: 15mm 12mm;
+          background-size: cover;
+          background-attachment: scroll;
+          background-repeat: repeat;
+          page-break-after: always;
         }
 
         table {
@@ -109,13 +115,17 @@ export async function generatePrintPDF({
         }
 
         @media print {
-          body {
+          html, body {
+            width: 210mm;
+            height: auto;
             margin: 0;
             padding: 0;
           }
           #print-pdf-content {
+            width: 210mm;
+            height: auto;
             margin: 0;
-            padding: 0;
+            padding: 15mm 12mm;
           }
           a {
             text-decoration: none;
