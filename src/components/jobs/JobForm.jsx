@@ -54,6 +54,16 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
   const [newLocation, setNewLocation] = useState({ name: '', location_type: 'Marina', city: '' });
   const [creating, setCreating] = useState(false);
   const [newlyCreatedBoats, setNewlyCreatedBoats] = useState([]);
+  const [newlyCreatedCustomers, setNewlyCreatedCustomers] = useState([]);
+  const [newlyCreatedLocations, setNewlyCreatedLocations] = useState([]);
+
+  const allCustomers = useMemo(() => {
+    return [...customers, ...newlyCreatedCustomers];
+  }, [customers, newlyCreatedCustomers]);
+
+  const allLocations = useMemo(() => {
+    return [...locations, ...newlyCreatedLocations];
+  }, [locations, newlyCreatedLocations]);
 
   const customerBoats = useMemo(() => {
     if (!formData.customer_id) return [];
@@ -123,7 +133,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
     setError(null);
     try {
       const created = await base44.entities.Customer.create(customerData);
-      customers.push(created);
+      setNewlyCreatedCustomers(prev => [...prev, created]);
       setFormData(prev => ({ ...prev, customer_id: created.id, boat_id: '' }));
       setShowCustomerDialog(false);
       setNewCustomer({ first_name: '', last_name: '', email: '', phone: '' });
@@ -167,14 +177,15 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
       return;
     }
     setCreating(true);
+    setError(null);
     try {
       const created = await base44.entities.Location.create(newLocation);
-      locations.push(created);
+      setNewlyCreatedLocations(prev => [...prev, created]);
       setFormData(prev => ({ ...prev, location_id: created.id }));
       setShowLocationDialog(false);
       setNewLocation({ name: '', location_type: 'Marina', city: '' });
     } catch (err) {
-      setError('Failed to create location');
+      setError('Failed to create location: ' + (err.message || ''));
     }
     setCreating(false);
   };
@@ -198,7 +209,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
                 <SelectValue placeholder="Select customer" />
               </SelectTrigger>
               <SelectContent>
-                {customers.map(customer => (
+                {allCustomers.map(customer => (
                   <SelectItem key={customer.id} value={customer.id}>
                     {getCustomerDisplayName(customer)}
                   </SelectItem>
@@ -258,7 +269,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
               <SelectValue placeholder="Select location (optional)" />
             </SelectTrigger>
             <SelectContent>
-              {locations.map(location => (
+              {allLocations.map(location => (
                 <SelectItem key={location.id} value={location.id}>
                   {location.name} - {location.region}
                 </SelectItem>
