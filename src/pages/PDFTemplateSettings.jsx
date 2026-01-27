@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save, Upload, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
@@ -487,19 +488,113 @@ export default function PDFTemplateSettings() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
+        {/* Footer & Typography */}
         <Card>
           <CardHeader>
-            <CardTitle>Footer Text</CardTitle>
-            <CardDescription>Legal disclaimers or additional information</CardDescription>
+            <CardTitle>Footer & Typography</CardTitle>
+            <CardDescription>Customize text styling and footer content</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Textarea
-              value={template.footer_text || ''}
-              onChange={(e) => setTemplate({ ...template, footer_text: e.target.value })}
-              rows={5}
-              placeholder="e.g., All prices include applicable taxes. Terms and conditions apply."
-            />
+          <CardContent className="space-y-6">
+            {/* Font Selection */}
+            <div className="space-y-2">
+              <Label>Font Family</Label>
+              <Select value={template.font_family || 'Arial'} onValueChange={(value) => setTemplate({ ...template, font_family: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Arial">Arial</SelectItem>
+                  <SelectItem value="Helvetica">Helvetica</SelectItem>
+                  <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                  <SelectItem value="Georgia">Georgia</SelectItem>
+                  <SelectItem value="Courier New">Courier New</SelectItem>
+                  <SelectItem value="Verdana">Verdana</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Font Sizes */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label>Body Text Size (pt)</Label>
+                <Input
+                  type="number"
+                  min="8"
+                  max="14"
+                  value={template.font_size_body || 11}
+                  onChange={(e) => setTemplate({ ...template, font_size_body: parseFloat(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Heading Size (pt)</Label>
+                <Input
+                  type="number"
+                  min="12"
+                  max="24"
+                  value={template.font_size_heading || 18}
+                  onChange={(e) => setTemplate({ ...template, font_size_heading: parseFloat(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Company Name Size (pt)</Label>
+                <Input
+                  type="number"
+                  min="14"
+                  max="32"
+                  value={template.font_size_company_name || 20}
+                  onChange={(e) => setTemplate({ ...template, font_size_company_name: parseFloat(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            {/* Spacing */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Line Spacing (1.0 - 2.5)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="2.5"
+                  step="0.1"
+                  value={template.line_spacing || 1.5}
+                  onChange={(e) => setTemplate({ ...template, line_spacing: parseFloat(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Paragraph Spacing (pt)</Label>
+                <Input
+                  type="number"
+                  min="5"
+                  max="30"
+                  value={template.paragraph_spacing || 15}
+                  onChange={(e) => setTemplate({ ...template, paragraph_spacing: parseFloat(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            {/* Footer Text */}
+            <div>
+              <Label>Footer Text</Label>
+              <p className="text-xs text-slate-500 mb-2">Legal disclaimers or additional information shown at the bottom of documents</p>
+              <Textarea
+                value={template.footer_text || ''}
+                onChange={(e) => setTemplate({ ...template, footer_text: e.target.value })}
+                rows={3}
+                placeholder="e.g., All prices include applicable taxes. Terms and conditions apply."
+              />
+            </div>
+
+            {/* Custom Footer */}
+            <div>
+              <Label>Custom Footer Content</Label>
+              <p className="text-xs text-slate-500 mb-2">Additional custom content for the footer (e.g., company website, copyright)</p>
+              <Textarea
+                value={template.custom_footer || ''}
+                onChange={(e) => setTemplate({ ...template, custom_footer: e.target.value })}
+                rows={3}
+                placeholder="e.g., © 2026 Alpha Yachting. www.alphayachting.com"
+              />
+            </div>
           </CardContent>
         </Card>
         </div>
