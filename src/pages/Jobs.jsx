@@ -90,6 +90,7 @@ export default function Jobs() {
   const [editingJob, setEditingJob] = useState(null);
   const [deletingJob, setDeletingJob] = useState(null);
   const [deleteRelated, setDeleteRelated] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -181,8 +182,9 @@ export default function Jobs() {
   };
 
   const confirmDelete = async () => {
-    if (!deletingJob) return;
+    if (!deletingJob || isDeleting) return;
     
+    setIsDeleting(true);
     try {
       if (deleteRelated) {
         // Find all work orders for this job
@@ -207,6 +209,8 @@ export default function Jobs() {
       setDeletingJob(null);
     } catch (error) {
       console.error('Error deleting job:', error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -528,12 +532,20 @@ export default function Jobs() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={confirmDelete}
+              disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete Job
+              {isDeleting ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Deleting...
+                </span>
+              ) : (
+                'Delete Job'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
