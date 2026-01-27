@@ -48,9 +48,76 @@ export default function PDFExportButton({ document, lineItems, payments = [], va
     }
   };
 
-  const generatePDF = () => {
-    // Use browser's print to PDF functionality
-    window.print();
+  const generatePDF = async () => {
+    setIsGenerating(true);
+    try {
+      const templateData = await loadTemplate();
+      
+      // Create a temporary container
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.width = '210mm'; // A4 width
+      container.style.background = 'white';
+      document.body.appendChild(container);
+
+      // Render the PDF template
+      const { createRoot } = await import('react-dom/client');
+      const root = createRoot(container);
+      
+      await new Promise((resolve) => {
+        root.render(
+          <PDFDocumentTemplate 
+            document={document} 
+            lineItems={lineItems}
+            template={templateData}
+            payments={payments}
+          />
+        );
+        setTimeout(resolve, 500); // Wait for rendering
+      });
+
+      // Generate PDF
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      // Download the PDF
+      const fileName = `${document.document_number || 'document'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+
+      // Cleanup
+      root.unmount();
+      document.body.removeChild(container);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handlePreview = async () => {
