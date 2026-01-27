@@ -13,6 +13,8 @@ import Locations from './pages/Locations';
 import NotificationPreferences from './pages/NotificationPreferences';
 import OfferDetail from './pages/OfferDetail';
 import Offers from './pages/Offers';
+import PDFExportDebugger from './pages/PDFExportDebugger';
+import PDFLayoutEditor from './pages/PDFLayoutEditor';
 import PDFTemplateManager from './pages/PDFTemplateManager';
 import PDFTemplateSettings from './pages/PDFTemplateSettings';
 import Reports from './pages/Reports';
@@ -26,8 +28,7 @@ import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import PDFLayoutEditor from './pages/PDFLayoutEditor';
-import PDFExportDebugger from './pages/PDFExportDebugger';
+import PrintDocument from './pages/PrintDocument';
 import __Layout from './Layout.jsx';
 
 
@@ -47,6 +48,8 @@ export const PAGES = {
     "NotificationPreferences": NotificationPreferences,
     "OfferDetail": OfferDetail,
     "Offers": Offers,
+    "PDFExportDebugger": PDFExportDebugger,
+    "PDFLayoutEditor": PDFLayoutEditor,
     "PDFTemplateManager": PDFTemplateManager,
     "PDFTemplateSettings": PDFTemplateSettings,
     "Reports": Reports,
@@ -60,8 +63,7 @@ export const PAGES = {
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "PDFLayoutEditor": PDFLayoutEditor,
-    "PDFExportDebugger": PDFExportDebugger,
+    "PrintDocument": PrintDocument,
 }
 
 export const pagesConfig = {

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, Eye, Loader2 } from 'lucide-react';
+import { Download, Eye } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { createPageUrl } from '@/utils';
 import PDFDocumentTemplate from './PDFDocumentTemplate';
 import {
   Dialog,
@@ -11,7 +12,6 @@ import {
 } from '@/components/ui/dialog';
 
 export default function PDFExportButton({ document: documentData, lineItems, payments = [], variant = "outline" }) {
-  const [isGenerating, setIsGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [template, setTemplate] = useState(null);
   const [pdfError, setPdfError] = useState(null);
@@ -43,55 +43,14 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
     }
   };
 
-  const generatePDF = async () => {
-    setIsGenerating(true);
-    setPdfError(null);
+  const openPrintDialog = async () => {
     try {
-      const templateData = await loadTemplate();
-      
-      // Get the preview container
-      const previewContainer = document.getElementById('preview-print-area');
-      if (!previewContainer) {
-        setPdfError('Preview container not found');
-        setIsGenerating(false);
-        return;
-      }
-
-      // Use jsPDF with html2canvas for client-side generation
-      const { jsPDF } = (await import('jspdf')).default ? await import('jspdf') : { jsPDF: (await import('jspdf')).default };
-      const html2canvas = (await import('html2canvas')).default;
-      
-      const canvas = await html2canvas(previewContainer, {
-        scale: 2,
-        useCORS: true,
-        logging: false
-      });
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= 297;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= 297;
-      }
-
-      pdf.save(`${documentData.document_number || 'document'}.pdf`);
-      setIsGenerating(false);
-
+      // Open print document page in new window
+      const printUrl = createPageUrl('PrintDocument') + `?type=${documentData.document_type}&id=${documentData.id}`;
+      window.open(printUrl, '_blank', 'width=900,height=1000');
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      setPdfError(`Failed to generate PDF: ${error.message}`);
-      setIsGenerating(false);
+      console.error('Error opening print dialog:', error);
+      setPdfError('Failed to open print dialog');
     }
   };
 
@@ -111,27 +70,16 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         <Button 
           variant={variant}
           onClick={handlePreview}
-          disabled={isGenerating}
         >
           <Eye className="h-4 w-4 mr-2" />
           Preview PDF
         </Button>
         <Button 
           variant={variant}
-          onClick={generatePDF}
-          disabled={isGenerating}
+          onClick={openPrintDialog}
         >
-          {isGenerating ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4 mr-2" />
-              Export PDF
-            </>
-          )}
+          <Download className="h-4 w-4 mr-2" />
+          Export PDF
         </Button>
       </div>
 
@@ -157,13 +105,13 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
             </div>
           )}
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setShowPreview(false)}>
-              Close
-            </Button>
-            <Button onClick={() => generatePDF()}>
-              <Download className="h-4 w-4 mr-2" />
-              Download PDF
-            </Button>
+           <Button variant="outline" onClick={() => setShowPreview(false)}>
+             Close
+           </Button>
+           <Button onClick={openPrintDialog}>
+             <Download className="h-4 w-4 mr-2" />
+             Download PDF
+           </Button>
           </div>
         </DialogContent>
       </Dialog>
