@@ -133,8 +133,12 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
     setError(null);
     try {
       const created = await base44.entities.Customer.create(customerData);
+      // Add to newly created list first
       setNewlyCreatedCustomers(prev => [...prev, created]);
-      setFormData(prev => ({ ...prev, customer_id: created.id, boat_id: '' }));
+      // Then update form data with the new customer id
+      setTimeout(() => {
+        setFormData(prev => ({ ...prev, customer_id: created.id, boat_id: '' }));
+      }, 0);
       setShowCustomerDialog(false);
       setNewCustomer({ first_name: '', last_name: '', email: '', phone: '' });
     } catch (err) {
@@ -162,7 +166,9 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
         customer_id: formData.customer_id
       });
       setNewlyCreatedBoats(prev => [...prev, created]);
-      setFormData(prev => ({ ...prev, boat_id: created.id }));
+      setTimeout(() => {
+        setFormData(prev => ({ ...prev, boat_id: created.id }));
+      }, 0);
       setShowBoatDialog(false);
       setNewBoat({ vessel_name: '', manufacturer: '', model: '' });
     } catch (err) {
@@ -181,7 +187,9 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
     try {
       const created = await base44.entities.Location.create(newLocation);
       setNewlyCreatedLocations(prev => [...prev, created]);
-      setFormData(prev => ({ ...prev, location_id: created.id }));
+      setTimeout(() => {
+        setFormData(prev => ({ ...prev, location_id: created.id }));
+      }, 0);
       setShowLocationDialog(false);
       setNewLocation({ name: '', location_type: 'Marina', city: '' });
     } catch (err) {
