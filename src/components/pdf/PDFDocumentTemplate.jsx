@@ -16,38 +16,46 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
 
   const outstanding = isInvoice ? (document.total || 0) - (document.paid_amount || 0) : 0;
 
+  // Get typography settings
+  const fontFamily = template.font_family || 'Arial';
+  const fontSizeBody = template.font_size_body || 11;
+  const fontSizeHeading = template.font_size_heading || 18;
+  const fontSizeCompanyName = template.font_size_company_name || 20;
+  const lineSpacing = template.line_spacing || 1.5;
+  const paragraphSpacing = template.paragraph_spacing || 15;
+
   return (
     <div id="pdf-content" style={{
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: `${fontFamily}, sans-serif`,
       width: '100%',
       minHeight: '100%',
       padding: '0',
       margin: '0',
       backgroundColor: useLetterhead ? 'transparent' : 'white',
       color: '#000',
-      fontSize: '11pt',
+      fontSize: `${fontSizeBody}pt`,
       boxSizing: 'border-box',
-      lineHeight: '1.5'
+      lineHeight: lineSpacing
     }}>
       {/* Header - Only show if letterhead is disabled */}
       {!useLetterhead && (
-        <div style={{ marginBottom: '25px', borderBottom: `2px solid ${template.primary_color || '#2563eb'}`, paddingBottom: '15px' }}>
+        <div style={{ marginBottom: `${paragraphSpacing}pt`, borderBottom: `2px solid ${template.primary_color || '#2563eb'}`, paddingBottom: '15px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               {template.logo_url && (
                 <img src={template.logo_url} alt="Logo" style={{ maxHeight: '50px', marginBottom: '8px' }} />
               )}
-              <h1 style={{ margin: 0, color: template.primary_color || '#2563eb', fontSize: '20pt', fontWeight: 'bold' }}>
+              <h1 style={{ margin: 0, color: template.primary_color || '#2563eb', fontSize: `${fontSizeCompanyName}pt`, fontWeight: 'bold' }}>
                 {template.company_name || 'Alpha Yachting'}
               </h1>
-              <div style={{ fontSize: '9pt', color: '#555', marginTop: '4px', lineHeight: '1.3' }}>
+              <div style={{ fontSize: `${fontSizeBody - 2}pt`, color: '#555', marginTop: '4px', lineHeight: lineSpacing }}>
                 {template.company_address && <div>{template.company_address}</div>}
                 {template.company_vat && <div>VAT: {template.company_vat}</div>}
                 {template.company_registration && <div>Reg: {template.company_registration}</div>}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '9pt', color: '#555', lineHeight: '1.3' }}>
+              <div style={{ fontSize: `${fontSizeBody - 2}pt`, color: '#555', lineHeight: lineSpacing }}>
                 {template.contact_phone && <div>Tel: {template.contact_phone}</div>}
                 {template.contact_email && <div>{template.contact_email}</div>}
                 {template.contact_website && <div>{template.contact_website}</div>}
@@ -58,10 +66,10 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
       )}
 
       {/* Document Title & Number */}
-      <div style={{ marginBottom: '20px' }}>
+      <div style={{ marginBottom: `${paragraphSpacing}pt` }}>
         <h2 style={{ 
           margin: 0, 
-          fontSize: '18pt', 
+          fontSize: `${fontSizeHeading}pt`, 
           color: template.primary_color || '#2563eb',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
@@ -69,7 +77,7 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
         }}>
           {isInvoice ? 'INVOICE' : 'OFFER'}
         </h2>
-        <div style={{ fontSize: '11pt', marginTop: '6px', fontWeight: 'bold' }}>
+        <div style={{ fontSize: `${fontSizeBody}pt`, marginTop: '6px', fontWeight: 'bold' }}>
           {document.document_number}
         </div>
         {document.status === 'Draft' && (
@@ -289,26 +297,27 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
         </div>
       )}
 
-      {/* Footer - Only show if letterhead is disabled */}
-      {!useLetterhead && (
-        <div style={{ 
-          marginTop: '30px', 
-          paddingTop: '15px', 
-          borderTop: `1px solid ${template.primary_color || '#2563eb'}`,
-          fontSize: '8pt',
-          color: '#666',
-          textAlign: 'center',
-          lineHeight: '1.3'
-        }}>
-          {template.footer_text && (
-            <div style={{ marginBottom: '8px' }}>{template.footer_text}</div>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <div>{template.company_name || 'Alpha Yachting'}</div>
-            <div>Generated: {format(new Date(), 'dd.MM.yyyy HH:mm')}</div>
-          </div>
+      {/* Footer - Show for all documents */}
+      <div style={{ 
+        marginTop: `${paragraphSpacing * 2}pt`, 
+        paddingTop: '15px', 
+        borderTop: !useLetterhead ? `1px solid ${template.primary_color || '#2563eb'}` : 'none',
+        fontSize: `${fontSizeBody - 3}pt`,
+        color: '#666',
+        textAlign: 'center',
+        lineHeight: lineSpacing
+      }}>
+        {template.footer_text && (
+          <div style={{ marginBottom: '8px' }}>{template.footer_text}</div>
+        )}
+        {template.custom_footer && (
+          <div style={{ marginBottom: '8px', borderTop: '1px solid #ddd', paddingTop: '8px' }}>{template.custom_footer}</div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: `${fontSizeBody - 3}pt` }}>
+          <div>{template.company_name || 'Alpha Yachting'}</div>
+          <div>Generated: {format(new Date(), 'dd.MM.yyyy HH:mm')}</div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
