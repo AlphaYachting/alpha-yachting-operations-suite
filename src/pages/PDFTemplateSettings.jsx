@@ -96,38 +96,27 @@ export default function PDFTemplateSettings() {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
-      setError('Please upload a PDF file');
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload an image file (PNG, JPG, etc.)');
       return;
     }
 
     setUploading(true);
     setError('');
     try {
-      // Upload original PDF
-      const pdfResult = await base44.integrations.Core.UploadFile({ file });
-      
-      // Generate PNG image from PDF using AI
-      const imageResult = await base44.integrations.Core.GenerateImage({
-        prompt: `Convert this PDF letterhead to a high-resolution PNG image with A4 proportions (210mm x 297mm). 
-Maintain exact layout, colors, logos, and text positioning. 
-This will be used as a background letterhead for documents.
-Output should be print-quality, 300 DPI equivalent.`,
-        existing_image_urls: [pdfResult.file_url]
-      });
+      const result = await base44.integrations.Core.UploadFile({ file });
       
       setTemplate({ 
         ...template, 
-        letterhead_original_pdf_url: pdfResult.file_url,
-        letterhead_image_url: imageResult.url,
+        letterhead_image_url: result.file_url,
         letterhead_upload_date: new Date().toISOString()
       });
       
-      setSuccess('Letterhead converted and uploaded successfully!');
+      setSuccess('Letterhead uploaded successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Error uploading letterhead:', error);
-      setError('Failed to convert letterhead. Please try again.');
+      setError('Failed to upload letterhead. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -234,43 +223,25 @@ Output should be print-quality, 300 DPI equivalent.`,
                       Uploaded: {template.letterhead_upload_date ? new Date(template.letterhead_upload_date).toLocaleDateString() : 'Unknown'}
                     </p>
                   </div>
-                  {template.letterhead_original_pdf_url && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.open(template.letterhead_original_pdf_url, '_blank')}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      View PDF
-                    </Button>
-                  )}
                 </div>
-                {template.letterhead_original_pdf_url ? (
-                  <embed 
-                    src={template.letterhead_original_pdf_url} 
-                    type="application/pdf"
-                    className="w-full h-96 border rounded"
-                  />
-                ) : (
-                  <img 
-                    src={template.letterhead_image_url} 
-                    alt="Letterhead" 
-                    className="w-full max-w-md border rounded"
-                    onError={(e) => {
-                      console.error('Image failed to load:', template.letterhead_image_url);
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                )}
+                <img 
+                  src={template.letterhead_image_url} 
+                  alt="Letterhead" 
+                  className="w-full max-w-md border rounded"
+                  onError={(e) => {
+                    console.error('Image failed to load:', template.letterhead_image_url);
+                    e.target.style.display = 'none';
+                  }}
+                />
               </div>
             )}
 
             <div>
-              <Label>Upload Letterhead PDF</Label>
-              <p className="text-xs text-slate-500 mb-2">PDF will be converted to image and used as page background (A4 recommended)</p>
+              <Label>Upload Letterhead Image</Label>
+              <p className="text-xs text-slate-500 mb-2">Upload PNG or JPG image to use as page background (A4 proportions recommended)</p>
               <input
                 type="file"
-                accept="application/pdf"
+                accept="image/*"
                 onChange={handleLetterheadUpload}
                 className="hidden"
                 id="letterhead-upload"
@@ -281,7 +252,7 @@ Output should be print-quality, 300 DPI equivalent.`,
                 disabled={uploading}
               >
                 <Upload className="h-4 w-4 mr-2" />
-                {uploading ? 'Processing...' : (template.letterhead_image_url ? 'Replace Letterhead' : 'Upload Letterhead')}
+                {uploading ? 'Uploading...' : (template.letterhead_image_url ? 'Replace Letterhead' : 'Upload Letterhead')}
               </Button>
             </div>
 
