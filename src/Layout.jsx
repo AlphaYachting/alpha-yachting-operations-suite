@@ -22,7 +22,8 @@ import {
   Smartphone,
   Upload,
   FileText,
-  Receipt
+  Receipt,
+  Bug
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -52,6 +53,7 @@ const navItems = [
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   { name: 'PDF Templates', icon: FileText, page: 'PDFTemplateManager' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
+  { name: 'PDF Debugger', icon: Bug, page: 'PDFExportDebugger', adminOnly: true },
   { name: 'Settings', icon: Settings, page: 'Settings' },
 ];
 
