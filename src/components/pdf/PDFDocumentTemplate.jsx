@@ -91,26 +91,21 @@ export default function PDFDocumentTemplate({ document, lineItems, template, pay
         </div>
       )}
       {/* Header with Logo */}
-      <div style={{ marginBottom: `${paragraphSpacing}pt`, borderBottom: `2px solid ${template.primary_color || '#2563eb'}`, paddingBottom: '15px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ marginBottom: `${paragraphSpacing}pt` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px' }}>
           <div>
             {template.logo_url && (
-              <img src={template.logo_url} alt="Logo" style={{ height: `${template.logo_height_mm || 20}mm`, marginBottom: '8px', objectFit: 'contain' }} />
+              <img src={template.logo_url} alt="Logo" style={{ height: `${template.logo_height_mm || 20}mm`, objectFit: 'contain' }} />
             )}
+          </div>
+          <div style={{ flex: 1 }}>
             <h1 style={{ margin: 0, color: template.primary_color || '#2563eb', fontSize: `${fontSizeCompanyName}pt`, fontWeight: 'bold' }}>
               {template.company_name || 'Alpha Yachting'}
             </h1>
-            <div style={{ fontSize: `${fontSizeBody - 2}pt`, color: '#555', marginTop: '4px', lineHeight: lineSpacing }}>
+            <div style={{ fontSize: `${fontSizeBody - 2}pt`, color: '#555', marginTop: '2px', lineHeight: lineSpacing }}>
               {template.company_address && <div>{template.company_address}</div>}
               {template.company_vat && <div>VAT: {template.company_vat}</div>}
               {template.company_registration && <div>Reg: {template.company_registration}</div>}
-            </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: `${fontSizeBody - 2}pt`, color: '#555', lineHeight: lineSpacing }}>
-              {template.contact_phone && <div>Tel: {template.contact_phone}</div>}
-              {template.contact_email && <div>{template.contact_email}</div>}
-              {template.contact_website && <div>{template.contact_website}</div>}
             </div>
           </div>
         </div>
