@@ -512,9 +512,6 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
 
   // Footer
   const footerY = pageHeight - margins.bottom - 15;
-  doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
-  doc.setLineWidth(0.3);
-  doc.line(margins.left, footerY, pageWidth - margins.right, footerY);
 
   doc.setFontSize(8);
   doc.setTextColor(102, 102, 102);
