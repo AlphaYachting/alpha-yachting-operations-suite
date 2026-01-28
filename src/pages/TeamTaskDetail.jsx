@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useSearchParams, Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { ArrowLeft, MapPin, Clock, Navigation, CheckCircle2, Circle } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, Navigation, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -162,11 +162,37 @@ export default function TeamTaskDetail() {
         {/* Description */}
         {task.description && (
           <Card>
-            <CardContent className="p-4">
-              <p className="text-xs text-slate-500 mb-2">Description</p>
-              <p className="text-sm text-slate-700">{task.description}</p>
+            <CardContent className="p-4 space-y-3">
+              <div>
+                <p className="text-xs text-slate-500 mb-2">Description</p>
+                <p className="text-sm text-slate-700">{task.description}</p>
+              </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Important Notes & Security Notices */}
+        {(task.issue_notes || workOrder.safety_notes) && (
+          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-yellow-900 text-sm">Important Security & Safety Notices</p>
+              </div>
+            </div>
+            {task.issue_notes && (
+              <div>
+                <p className="text-xs text-yellow-700 font-medium mb-1">Special Requirements:</p>
+                <p className="text-sm text-yellow-800">{task.issue_notes}</p>
+              </div>
+            )}
+            {workOrder.safety_notes && (
+              <div>
+                <p className="text-xs text-yellow-700 font-medium mb-1">Safety Notes:</p>
+                <p className="text-sm text-yellow-800">{workOrder.safety_notes}</p>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Time Booking */}
