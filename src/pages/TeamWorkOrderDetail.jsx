@@ -41,6 +41,7 @@ export default function TeamWorkOrderDetail() {
 
       const wo = woData[0];
       setWorkOrder(wo);
+      setIsTaskStarted(wo.status === 'In Progress' || wo.status === 'Completed');
 
       // Load related data
       const [jobData, tasksData] = await Promise.all([
