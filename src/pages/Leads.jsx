@@ -43,6 +43,7 @@ export default function Leads() {
   const [editingLead, setEditingLead] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [selectedLeadDetail, setSelectedLeadDetail] = useState(null);
 
   useEffect(() => {
     loadData();
