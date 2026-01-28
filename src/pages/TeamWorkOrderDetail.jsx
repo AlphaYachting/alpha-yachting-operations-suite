@@ -276,7 +276,7 @@ export default function TeamWorkOrderDetail() {
                    <Button
                   onClick={() => handleIndividualTaskStatusToggle(task.id, task.status)}
                   disabled={updatingTaskId === task.id}
-                  className={`text-xs font-semibold px-2 py-1 rounded text-white ${
+                  className={`text-sm font-semibold px-3 py-1.5 rounded text-white ${
                   task.status === 'In Progress' ?
                   'bg-blue-600 hover:bg-blue-700' :
                   task.status === 'Completed' ?
