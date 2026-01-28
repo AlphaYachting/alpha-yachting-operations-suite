@@ -19,7 +19,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   const hasLetterhead = template.letterhead_url && template.letterhead_enabled;
   
   const margins = {
-    top: hasLetterhead ? (template.margin_top_mm || 60) : (template.margin_top_mm || 20),
+    top: hasLetterhead ? (template.margin_top_mm || 70) : (template.margin_top_mm || 20),
     right: template.margin_right_mm || 20,
     bottom: template.margin_bottom_mm || 20,
     left: template.margin_left_mm || 20
