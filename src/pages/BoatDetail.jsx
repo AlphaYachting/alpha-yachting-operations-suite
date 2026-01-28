@@ -188,6 +188,16 @@ export default function BoatDetail() {
     return customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
   };
 
+  const openMapsRoute = () => {
+    if (!location?.latitude || !location?.longitude) return;
+    
+    const lat = location.latitude;
+    const lng = location.longitude;
+    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    
+    window.open(mapUrl, '_blank');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
