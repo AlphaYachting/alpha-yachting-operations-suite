@@ -242,20 +242,35 @@ export default function TeamWorkOrderDetail() {
                 <Card key={task.id}>
                   <CardContent className="p-4">
                     {/* Task Title & Status */}
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-slate-900">{task.title}</p>
-                      </div>
-                      <div className="flex-shrink-0">
-                        {task.status === 'Completed' ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-600" />
-                        ) : task.status === 'In Progress' ? (
-                          <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-                        ) : (
-                          <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
-                        )}
-                      </div>
-                    </div>
+                     <div className="flex items-start justify-between gap-3 mb-2">
+                       <div className="flex-1">
+                         <p className="text-sm font-semibold text-slate-900">{task.title}</p>
+                       </div>
+                       <div className="flex items-center gap-2 flex-shrink-0">
+                         <Button
+                           onClick={() => handleIndividualTaskStatusToggle(task.id, task.status)}
+                           disabled={updatingTaskId === task.id}
+                           className={`text-xs font-semibold px-2 py-1 rounded text-white ${
+                             task.status === 'In Progress'
+                               ? 'bg-blue-600 hover:bg-blue-700'
+                               : task.status === 'Completed'
+                               ? 'bg-green-600 hover:bg-green-700'
+                               : 'bg-slate-600 hover:bg-slate-700'
+                           }`}
+                         >
+                           {task.status === 'Completed' ? 'Done' : task.status === 'In Progress' ? 'Finish' : 'Start'}
+                         </Button>
+                         <div className="flex-shrink-0">
+                           {task.status === 'Completed' ? (
+                             <CheckCircle2 className="h-5 w-5 text-green-600" />
+                           ) : task.status === 'In Progress' ? (
+                             <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+                           ) : (
+                             <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
+                           )}
+                         </div>
+                       </div>
+                     </div>
 
                     {/* Task Description */}
                     {task.description && (
