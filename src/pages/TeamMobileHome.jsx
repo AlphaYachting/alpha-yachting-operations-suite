@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Clock, MapPin, AlertCircle, Settings } from 'lucide-react';
+import { Clock, MapPin, AlertCircle, Settings, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ export default function TeamMobileHome() {
   const [loading, setLoading] = useState(true);
   const [previewUserId, setPreviewUserId] = useState(null);
   const [showPreviewMode, setShowPreviewMode] = useState(false);
+  const [previewTechnicianName, setPreviewTechnicianName] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -210,9 +211,37 @@ export default function TeamMobileHome() {
         </div>
       </div>
 
+      {/* Test Mode Badge */}
+      {previewUserId && (
+        <div className="bg-orange-50 border-b border-orange-200 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Badge className="bg-orange-500 text-white">🧪 TEST MODE</Badge>
+            <span className="text-sm font-medium text-orange-900">{previewTechnicianName}</span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              setPreviewUserId(null);
+              setPreviewTechnicianName(null);
+            }}
+            className="h-8 w-8 hover:bg-orange-100"
+          >
+            <X className="h-4 w-4 text-orange-600" />
+          </Button>
+        </div>
+      )}
+
       {/* Preview Mode */}
       {showPreviewMode && user?.role === 'admin' && (
-        <TeamPreviewMode onUserSelect={setPreviewUserId} currentUserId={previewUserId} />
+        <TeamPreviewMode 
+          onUserSelect={(techId, techName) => {
+            setPreviewUserId(techId);
+            setPreviewTechnicianName(techName);
+            setShowPreviewMode(false);
+          }} 
+          currentUserId={previewUserId} 
+        />
       )}
 
       {/* Content */}
