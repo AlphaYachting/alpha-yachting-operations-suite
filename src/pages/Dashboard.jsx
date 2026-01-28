@@ -631,7 +631,7 @@ export default function Dashboard() {
                               isDueSoon ? 'bg-yellow-500 text-white border-yellow-600' : 
                               'bg-blue-100 text-blue-700'
                             }`}>
-                              <Flag className={`h-3 w-3 mr-1 ${isDueOverdue || isDueToday || isDueSoon ? 'animate-pulse' : ''}`} />
+                              <Flag className={`h-3 w-3 mr-1 text-red-600 ${isDueOverdue || isDueToday || isDueSoon ? 'animate-pulse' : ''}`} />
                               {isDueOverdue ? 'OVERDUE' : isDueToday ? 'DUE TODAY' : isDueSoon ? `Due ${format(parseISO(job.requested_date), 'MMM d')}` : `Due ${format(parseISO(job.requested_date), 'MMM d')}`}
                             </Badge>
                           )}
