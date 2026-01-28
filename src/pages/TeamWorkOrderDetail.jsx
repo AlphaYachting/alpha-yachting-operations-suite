@@ -267,6 +267,14 @@ export default function TeamWorkOrderDetail() {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const openMapsRoute = () => {
+    if (!location?.latitude || !location?.longitude) return;
+    const lat = location.latitude;
+    const lng = location.longitude;
+    const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(mapUrl, '_blank');
+  };
+
   const handleIndividualTaskStatusToggle = async (taskId, currentStatus) => {
     try {
       setUpdatingTaskId(taskId);
