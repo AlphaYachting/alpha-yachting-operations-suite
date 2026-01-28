@@ -39,10 +39,11 @@ import { cn } from '@/lib/utils';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 const navItems = [
-  { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-  { name: 'Customers', icon: Users, page: 'Customers' },
-  { name: 'Boats', icon: Ship, page: 'Boats' },
-  { name: 'Locations', icon: MapPin, page: 'Locations' },
+        { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
+        { name: 'Leads', icon: Phone, page: 'Leads' },
+        { name: 'Customers', icon: Users, page: 'Customers' },
+        { name: 'Boats', icon: Ship, page: 'Boats' },
+        { name: 'Locations', icon: MapPin, page: 'Locations' },
   { name: 'Projects', icon: Briefcase, page: 'Jobs' },
   { name: 'Work Orders', icon: ClipboardList, page: 'WorkOrders' },
   { name: 'Team Orders', icon: Users, page: 'TeamOrders' },
