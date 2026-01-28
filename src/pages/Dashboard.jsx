@@ -34,6 +34,7 @@ import DragDropCalendar from '@/components/schedule/DragDropCalendar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import DispatchTimeline from '@/components/schedule/DispatchTimeline';
 import FutureOverview from '@/components/schedule/FutureOverview';
+import LeadsWidget from '@/components/dashboard/LeadsWidget';
 import {
   Select,
   SelectContent,
