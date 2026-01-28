@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, parseISO, isToday, isTomorrow, startOfDay } from 'date-fns';
+import { format, parseISO, isToday, isTomorrow, startOfDay, formatDistanceToNow } from 'date-fns';
 import TeamPreviewMode from '@/components/mobile/TeamPreviewMode';
 import MobileHeaderWithWelcome from '@/components/mobile/MobileHeaderWithWelcome';
 
@@ -131,6 +131,9 @@ export default function TeamMobileHome() {
     const taskDate = wo.scheduled_date ? parseISO(wo.scheduled_date) : null;
     const isTaskToday = taskDate && isToday(taskDate);
     const timeString = wo.scheduled_start_time || '—';
+    
+    // Format date with day of week
+    const dateFormatted = taskDate ? format(taskDate, 'EEE, MMM d') : '—';
 
     return (
       <Link to={createPageUrl('TeamTaskDetail') + `?taskId=${task.id}`}>
@@ -139,31 +142,44 @@ export default function TeamMobileHome() {
           task.status === 'In Progress' ? 'border-l-blue-500 bg-blue-50' :
           'border-l-slate-300'
         }`}>
-          <CardContent className="p-4 space-y-3">
-            {/* Time - Large & Prominent */}
-            <div className="flex items-baseline gap-2">
-              <div className="text-2xl font-bold text-slate-900 font-mono">
-                {timeString}
+          <CardContent className="p-4 space-y-4">
+            {/* Date, Time & Status */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium text-slate-600">{dateFormatted}</div>
+                {isTaskToday && (
+                  <Badge className="bg-red-100 text-red-700 border-red-300 text-xs">Today</Badge>
+                )}
               </div>
-              {isTaskToday && (
-                <Badge className="bg-red-100 text-red-700 border-red-300">Today</Badge>
-              )}
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-slate-400" />
+                <div className="text-xl font-bold text-slate-900 font-mono">{timeString}</div>
+              </div>
             </div>
 
-            {/* Task Title - Bold & Clear */}
+            {/* Task Title */}
             <div>
-              <p className="text-lg font-bold text-slate-900 leading-tight">
+              <p className="text-base font-semibold text-slate-900 leading-snug">
                 {task.title}
               </p>
             </div>
 
-            {/* Location - Prominent */}
+            {/* Description if available */}
+            {task.description && (
+              <div>
+                <p className="text-sm text-slate-600 line-clamp-2">
+                  {task.description}
+                </p>
+              </div>
+            )}
+
+            {/* Location */}
             {location && (
-              <div className="bg-slate-100 rounded-lg p-3 flex items-start gap-2">
-                <MapPin className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs text-slate-500 font-medium">Location</p>
-                  <p className="text-sm font-semibold text-slate-900">{location}</p>
+                  <p className="text-xs text-slate-500">Location</p>
+                  <p className="text-sm font-medium text-slate-900">{location}</p>
                 </div>
               </div>
             )}
