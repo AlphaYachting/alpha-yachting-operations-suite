@@ -179,12 +179,22 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
       </div>
 
       <div className="space-y-2">
-        <Label>Notes</Label>
+        <Label>Email / Transcript / Description</Label>
+        <Textarea
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder="Paste the customer email, phone transcript, or detailed inquiry here. This will be used to generate task checklist."
+          rows={4}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Additional Notes</Label>
         <Textarea
           value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder="Any additional information..."
-          rows={3}
+          placeholder="Any other information..."
+          rows={2}
         />
       </div>
 
