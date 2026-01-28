@@ -357,6 +357,9 @@ export default function TeamMobileHome() {
           </div>
         }
       </div>
+
+      {/* Sync Status Component */}
+      <SyncStatus />
     </div>);
 
 }
