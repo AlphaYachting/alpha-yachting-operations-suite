@@ -130,7 +130,8 @@ export default function PDFTemplateSettings() {
       const updatedTemplate = { 
         ...template, 
         letterhead_image_url: result.file_url,
-        letterhead_upload_date: new Date().toISOString()
+        letterhead_upload_date: new Date().toISOString(),
+        letterhead_enabled: true
       };
       
       setTemplate(updatedTemplate);
