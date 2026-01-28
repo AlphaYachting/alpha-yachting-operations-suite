@@ -341,108 +341,9 @@ export default function DragDropCalendar({
     return parts.join('\n');
   };
 
-  // Find multi-day work orders and organize into rows to avoid overlap
-  const multiDaySpans = useMemo(() => {
-    const spans = [];
-    const processedWOs = new Set();
-    
-    workOrders.forEach(wo => {
-      if (!wo.scheduled_date || !wo.scheduled_end_date || processedWOs.has(wo.id)) return;
-      
-      const startDate = parseISO(wo.scheduled_date);
-      const endDate = parseISO(wo.scheduled_end_date);
-      const totalDays = differenceInDays(endDate, startDate) + 1;
-      
-      if (totalDays > 1) {
-        const startIdx = calendarDays.findIndex(day => isSameDay(day, startDate));
-        const endIdx = calendarDays.findIndex(day => isSameDay(day, endDate));
-        
-        if (startIdx !== -1 && endIdx !== -1) {
-          const techColor = getTechnicianColor(wo.assigned_technicians);
-          spans.push({
-            id: wo.id,
-            startIdx,
-            endIdx,
-            title: wo.title,
-            color: techColor.bg,
-            totalDays,
-            row: 0 // Will be assigned below
-          });
-          processedWOs.add(wo.id);
-        }
-      }
-    });
-    
-    // Assign rows to prevent overlap
-    spans.sort((a, b) => a.startIdx - b.startIdx);
-    spans.forEach(span => {
-      let row = 0;
-      while (true) {
-        const conflicts = spans.filter(s => 
-          s.row === row && 
-          s !== span && 
-          !(s.endIdx < span.startIdx || s.startIdx > span.endIdx)
-        );
-        if (conflicts.length === 0) {
-          span.row = row;
-          break;
-        }
-        row++;
-      }
-    });
-    
-    return spans;
-  }, [workOrders, calendarDays, technicianColorMap]);
-
-  const maxRow = multiDaySpans.length > 0 ? Math.max(...multiDaySpans.map(s => s.row)) + 1 : 0;
-
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="space-y-3">
-        {/* Multi-day span indicators */}
-        {multiDaySpans.length > 0 && (
-          <div className="space-y-1">
-            {Array.from({ length: maxRow }).map((_, rowIdx) => (
-              <div key={rowIdx} className="grid gap-2 grid-cols-7">
-                {calendarDays.map((day, dayIdx) => {
-                  const span = multiDaySpans.find(s => 
-                    s.row === rowIdx && 
-                    dayIdx >= s.startIdx && 
-                    dayIdx <= s.endIdx
-                  );
-                  
-                  if (!span) {
-                    return <div key={dayIdx} className="h-6" />;
-                  }
-                  
-                  // Only render the full span on the start day
-                  if (dayIdx !== span.startIdx) {
-                    return <div key={dayIdx} className="h-6" />;
-                  }
-                  
-                  const spanWidth = span.endIdx - span.startIdx + 1;
-                  
-                  return (
-                    <div
-                      key={span.id}
-                      className="h-6 rounded-lg flex items-center px-3 shadow-md border-2 border-green-600"
-                      style={{
-                        gridColumn: `span ${spanWidth}`,
-                        backgroundColor: 'rgba(134, 239, 172, 0.95)'
-                      }}
-                    >
-                      <span className="text-xs font-bold text-green-900 truncate">
-                        {span.title} ({span.totalDays} days)
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        )}
-        
-        <div className={`grid gap-2 grid-cols-7`}>
+      <div className={`grid gap-2 grid-cols-7`}>
           {calendarDays.map((day, dayIndex) => {
             const dayWorkOrders = getWorkOrdersForDay(day);
             const isToday = isSameDay(day, new Date());
@@ -505,7 +406,7 @@ export default function DragDropCalendar({
                                 <TooltipTrigger asChild>
                                   <div
                                    onClick={(e) => handleWorkOrderClick(e, wo)}
-                                   className={`p-1.5 text-[10px] cursor-pointer hover:shadow-lg transition-all relative select-none ${
+                                   className={`relative overflow-hidden text-[10px] cursor-pointer hover:shadow-lg transition-all select-none ${
                                      isEnd ? 'rounded-r-md border-r-4' : 'border-r border-white/30'
                                    } ${
                                      hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
@@ -519,21 +420,29 @@ export default function DragDropCalendar({
                                      borderBottomLeftRadius: '0px'
                                    }}
                                   >
-                                    {hasConflict && (
-                                      <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">
-                                        <AlertTriangle className="h-2 w-2 text-white" />
+                                    {/* Green line at top */}
+                                    <div 
+                                      className="absolute top-0 left-0 right-0 h-[2px]" 
+                                      style={{ backgroundColor: '#86efac' }}
+                                    />
+                                    
+                                    <div className="p-1.5 pt-2">
+                                      {hasConflict && (
+                                        <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">
+                                          <AlertTriangle className="h-2 w-2 text-white" />
+                                        </div>
+                                      )}
+                                      <div className="flex items-center gap-1">
+                                        <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
+                                        <p className="font-semibold truncate leading-tight flex-1">{wo.title}</p>
                                       </div>
-                                    )}
-                                    <div className="flex items-center gap-1">
-                                      <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
-                                      <p className="font-semibold truncate leading-tight flex-1">{wo.title}</p>
+                                      {isEnd && wo.scheduled_end_time && (
+                                        <div className="flex items-center gap-0.5 mt-0.5 opacity-90">
+                                          <Clock className="h-2 w-2" />
+                                          <span>Ends {wo.scheduled_end_time}</span>
+                                        </div>
+                                      )}
                                     </div>
-                                    {isEnd && wo.scheduled_end_time && (
-                                      <div className="flex items-center gap-0.5 mt-0.5 opacity-90">
-                                        <Clock className="h-2 w-2" />
-                                        <span>Ends {wo.scheduled_end_time}</span>
-                                      </div>
-                                    )}
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className={`bg-slate-900 ${hasConflict ? "border-red-500 border-2" : "border-slate-700"} shadow-xl`}>
@@ -623,13 +532,13 @@ export default function DragDropCalendar({
                                     <TooltipTrigger asChild>
                                       <div
                                        onClick={(e) => !dragSnapshot.isDragging && handleWorkOrderClick(e, wo)}
-                                       className={`p-1.5 border-l-4 text-[10px] cursor-move hover:shadow-lg transition-all ${
+                                       className={`relative overflow-hidden border-l-4 text-[10px] cursor-move hover:shadow-lg transition-all ${
                                          dragSnapshot.isDragging ? 'opacity-60 shadow-xl scale-110 rotate-3 cursor-grabbing' : 'hover:scale-105'
                                        } ${
                                          hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
                                        } ${
                                          isMultiDay && !isEnd ? 'rounded-l-md border-r border-white/30' : 'rounded-md'
-                                       } relative select-none`}
+                                       } select-none`}
                                        style={isMultiDay && !isEnd ? {
                                          backgroundColor: techColor.bg,
                                          color: techColor.text,
@@ -643,29 +552,39 @@ export default function DragDropCalendar({
                                          borderLeftColor: techColor.border
                                        }}
                                       >
-                                        {hasConflict && (
-                                          <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">
-                                            <AlertTriangle className="h-2 w-2 text-white" />
-                                          </div>
-                                        )}
-                                        <div className="flex items-center gap-1">
-                                          <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
-                                          <p className="font-semibold truncate leading-tight flex-1">{wo.title}</p>
-                                        </div>
-                                        {wo.scheduled_start_time && (
-                                          <div className="flex items-center gap-0.5 mt-0.5 opacity-90">
-                                            <Clock className="h-2 w-2" />
-                                            <span>{wo.scheduled_start_time}</span>
-                                          </div>
-                                        )}
-                                        {jobInfo.boat && (
-                                          <p className="truncate mt-0.5 opacity-80 leading-tight">{jobInfo.boat}</p>
-                                        )}
+                                        {/* Green line at top for multi-day tasks */}
                                         {isMultiDay && (
-                                          <div className="mt-0.5 text-[9px] font-medium opacity-90">
-                                            {wo._totalDays} days →
-                                          </div>
+                                          <div 
+                                            className="absolute top-0 left-0 right-0 h-[2px]" 
+                                            style={{ backgroundColor: '#86efac' }}
+                                          />
                                         )}
+                                        
+                                        <div className={isMultiDay ? "p-1.5 pt-2" : "p-1.5"}>
+                                          {hasConflict && (
+                                            <div className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5">
+                                              <AlertTriangle className="h-2 w-2 text-white" />
+                                            </div>
+                                          )}
+                                          <div className="flex items-center gap-1">
+                                            <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
+                                            <p className="font-semibold truncate leading-tight flex-1">{wo.title}</p>
+                                          </div>
+                                          {wo.scheduled_start_time && (
+                                            <div className="flex items-center gap-0.5 mt-0.5 opacity-90">
+                                              <Clock className="h-2 w-2" />
+                                              <span>{wo.scheduled_start_time}</span>
+                                            </div>
+                                          )}
+                                          {jobInfo.boat && (
+                                            <p className="truncate mt-0.5 opacity-80 leading-tight">{jobInfo.boat}</p>
+                                          )}
+                                          {isMultiDay && (
+                                            <div className="mt-0.5 text-[9px] font-medium opacity-90">
+                                              {wo._totalDays} days →
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="top" className={`bg-slate-900 ${hasConflict ? "border-red-500 border-2" : "border-slate-700"} shadow-xl`}>
@@ -754,7 +673,6 @@ export default function DragDropCalendar({
             </Droppable>
           );
         })}
-        </div>
       </div>
     </DragDropContext>
   );
