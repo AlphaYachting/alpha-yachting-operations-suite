@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO, isToday, isTomorrow, startOfDay } from 'date-fns';
 import TeamPreviewMode from '@/components/mobile/TeamPreviewMode';
+import MobileHeaderWithWelcome from '@/components/mobile/MobileHeaderWithWelcome';
 
 export default function TeamMobileHome() {
   const [user, setUser] = useState(null);
@@ -106,6 +107,22 @@ export default function TeamMobileHome() {
 
   const sections = groupTasksBySection();
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <MobileHeaderWithWelcome 
+          user={user}
+          taskCount={0}
+          onSettingsClick={() => {}}
+          showSettings={false}
+        />
+        <div className="p-4 space-y-4">
+          {[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+        </div>
+      </div>
+    );
+  }
+
   const TaskCard = ({ task }) => {
     const wo = getWorkOrderInfo(task.id);
     if (!wo) return null;
@@ -168,59 +185,17 @@ export default function TeamMobileHome() {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-4">
-        {[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
-      </div>
-    );
-  }
 
-  const now = new Date();
-  const timeString = format(now, 'HH:mm');
-  const dateString = format(now, 'EEE, MMM d');
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header with Logo & Time */}
-      <div className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white sticky top-0 z-10 shadow-lg">
-        <div className="p-3 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/27c878803_alpha-yachting-logo-weiss.png"
-            alt="Alpha Yachting"
-            className="h-32 object-contain flex-shrink-0"
-          />
-          
-          {/* Time & Date */}
-          <div className="flex-1">
-            <p className="text-2xl font-bold font-mono leading-none">{timeString}</p>
-            <p className="text-xs text-blue-100">{dateString}</p>
-          </div>
-
-          {/* Admin Settings */}
-          {user?.role === 'admin' && (
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setShowPreviewMode(!showPreviewMode)}
-              className="h-8 w-8 hover:bg-white/20 flex-shrink-0"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-        
-        {/* Tasks Today Badge */}
-        <div className="px-3 pb-3">
-          <div className="bg-white/20 rounded-lg px-3 py-2 inline-block">
-            <p className="text-sm">
-              <span className="font-bold">{sections.today.length}</span>
-              <span className="text-blue-100 ml-2">tasks today</span>
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Improved Header with Welcome Message */}
+      <MobileHeaderWithWelcome 
+        user={user}
+        taskCount={sections.today.length}
+        onSettingsClick={() => setShowPreviewMode(!showPreviewMode)}
+        showSettings={showPreviewMode}
+      />
 
       {/* Test Mode Badge */}
       {previewUserId && (
