@@ -269,7 +269,7 @@ export default function TeamWorkOrderDetail() {
               <Card key={task.id}>
               <CardContent className="p-4 relative">
                 {/* Task Title & Status */}
-                 <div className="mb-2">
+                 <div className="mb-4 pr-32">
                    <p className="text-slate-900 text-base font-semibold">{task.title}</p>
                  </div>
                  <div className="absolute top-4 right-4 flex items-center gap-2">
