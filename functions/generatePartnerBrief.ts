@@ -1,6 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template) {
+  const margins = {
+    top: template?.margin_top_mm || 20,
+    right: template?.margin_right_mm || 20,
+    bottom: template?.margin_bottom_mm || 20,
+    left: template?.margin_left_mm || 20
+  };
+
+  const fontFamily = template?.font_family || 'Arial';
+  const fontSizeBody = template?.font_size_body || 11;
+  const fontSizeHeading = template?.font_size_heading || 18;
+  const fontSizeCompanyName = template?.font_size_company_name || 20;
+  const lineSpacing = template?.line_spacing || 1.5;
+  const paragraphSpacing = template?.paragraph_spacing || 15;
   const assignedTechs = technicians.filter(t => workOrder.assigned_technicians?.includes(t.id));
   const customerName = customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown';
   
