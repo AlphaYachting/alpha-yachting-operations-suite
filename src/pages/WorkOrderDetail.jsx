@@ -533,7 +533,29 @@ export default function WorkOrderDetail() {
           workOrder={workOrder}
           tasks={tasks}
           technicians={technicians}
+          onTimeEntryAdded={loadWorkOrderDetails}
         />
+        {/* Mobile Time Entries from Team App */}
+        {timeEntries.length > 0 && (
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="text-sm">Mobile Time Tracking</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                {timeEntries.map(entry => (
+                  <div key={entry.id} className="flex justify-between py-2 border-b last:border-b-0">
+                    <div>
+                      <p className="font-medium">{format(parseISO(entry.entry_date), 'MMM d, yyyy')}</p>
+                      {entry.notes && <p className="text-xs text-slate-500">{entry.notes}</p>}
+                    </div>
+                    <p className="font-semibold">{entry.duration_minutes} min</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Photo Documentation Section */}
