@@ -157,7 +157,7 @@ export default function TeamWorkOrderDetail() {
         <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
         <Button
           onClick={handleTaskStatusToggle}
-          className={`text-sm font-semibold px-3 py-1 rounded-lg text-white ${
+          className={`text-base font-semibold px-4 py-1.5 rounded-lg text-white ${
           isTaskStarted ?
           'bg-blue-600 hover:bg-blue-700' :
           'bg-green-600 hover:bg-green-700'}`
