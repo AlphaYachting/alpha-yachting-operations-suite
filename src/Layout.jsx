@@ -112,7 +112,7 @@ export default function Layout({ children, currentPageName }) {
             <Menu className="h-5 w-5" />
           </Button>
           <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
             alt="Alpha Yachting"
             className="h-6 object-contain"
           />
