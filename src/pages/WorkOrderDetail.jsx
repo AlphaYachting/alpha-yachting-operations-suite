@@ -154,6 +154,7 @@ export default function WorkOrderDetail() {
       setTeamOrder(teamOrders.length > 0 ? teamOrders[0] : null);
       setComments(allComments);
       setTimeEntries(allTimeEntries);
+      setAccessLogs(allAccessLogs);
 
       if (wo.job_id) {
         const [projectData] = await base44.entities.Job.filter({ id: wo.job_id });
