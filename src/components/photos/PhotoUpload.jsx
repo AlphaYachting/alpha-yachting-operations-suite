@@ -262,7 +262,7 @@ export default function PhotoUpload({ workOrderId, tasks, onSuccess }) {
             ))}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-4 border-t">
             <Button
               variant="outline"
               onClick={() => {
@@ -270,13 +270,14 @@ export default function PhotoUpload({ workOrderId, tasks, onSuccess }) {
                 setUploadQueue([]);
               }}
               disabled={uploading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUploadAll}
               disabled={uploading || uploadQueue.filter(i => i.status === 'pending').length === 0}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
             >
               {uploading ? (
                 <>
