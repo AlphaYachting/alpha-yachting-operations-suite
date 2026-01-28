@@ -75,6 +75,7 @@ export default function TeamWorkOrderDetail() {
       }
 
       setTasks(tasksData || []);
+      setPhotos(photosData || []);
     } catch (error) {
       console.error('Error loading work order detail:', error);
     } finally {
