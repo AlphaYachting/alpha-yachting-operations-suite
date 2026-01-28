@@ -402,15 +402,22 @@ export default function TeamWorkOrderDetail() {
         {/* Location Card */}
         {location &&
         <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
+            <CardContent className="p-0">
+              <button
+                onClick={openMapsRoute}
+                disabled={!location.latitude || !location.longitude}
+                className="w-full text-left p-4 flex items-center gap-3 hover:bg-slate-50 disabled:bg-slate-50 disabled:cursor-not-allowed transition-colors"
+              >
                 <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-xs text-slate-500 font-medium">LOCATION</p>
                   <p className="text-sm font-semibold text-slate-900">{location.name}</p>
                   {location.address && <p className="text-xs text-slate-600 mt-1">{location.address}</p>}
                 </div>
-              </div>
+                {location.latitude && location.longitude && (
+                  <span className="text-xs text-blue-600 font-medium whitespace-nowrap">Open Maps →</span>
+                )}
+              </button>
             </CardContent>
           </Card>
         }
