@@ -87,9 +87,23 @@ export default function TeamOrderCard({ teamOrder, workOrder, onEdit, onGenerate
           <Button onClick={onEdit} variant="outline" size="sm" className="flex-1">
             Edit Team Order
           </Button>
-          <Button onClick={onGenerateBrief} size="sm" className="flex-1 bg-purple-600 hover:bg-purple-700">
-            <FileText className="h-4 w-4 mr-2" />
-            Partner Brief
+          <Button 
+            onClick={handleGenerateBrief} 
+            disabled={isGenerating}
+            size="sm" 
+            className="flex-1 bg-purple-600 hover:bg-purple-700"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4 mr-2" />
+                Partner Brief
+              </>
+            )}
           </Button>
         </div>
       </CardContent>
