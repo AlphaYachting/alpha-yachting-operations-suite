@@ -704,16 +704,14 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Unplanned Work Orders - Compact */}
+      {/* Unplanned Work Orders - Full Width */}
       {draftWorkOrders.length > 0 && (
-        <div className="flex items-center gap-3">
-          <Button asChild variant="outline" className="bg-slate-50">
-            <Link to={createPageUrl('WorkOrders')} className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" />
-              Unplanned: <span className="font-semibold text-amber-600">{draftWorkOrders.length}</span>
-            </Link>
-          </Button>
-        </div>
+        <Button asChild variant="outline" className="w-full bg-slate-50 hover:bg-slate-100 h-12">
+          <Link to={createPageUrl('WorkOrders')} className="flex items-center justify-center gap-2">
+            <ClipboardList className="h-5 w-5" />
+            <span className="text-lg">Unplanned Work Orders: <span className="font-bold text-amber-600">{draftWorkOrders.length}</span></span>
+          </Link>
+        </Button>
       )}
 
       {/* Quick Actions */}
