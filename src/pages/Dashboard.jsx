@@ -407,6 +407,7 @@ export default function Dashboard() {
           icon={Briefcase}
           color="bg-blue-500"
           loading={loading}
+          onClick={() => window.location.href = createPageUrl('Jobs') + '?filter=active'}
         />
         <StatCard 
           title="Today's Work Orders" 
@@ -414,6 +415,7 @@ export default function Dashboard() {
           icon={ClipboardList}
           color="bg-cyan-500"
           loading={loading}
+          onClick={() => window.location.href = createPageUrl('WorkOrders') + '?filter=today'}
         />
         <StatCard 
           title="Overdue Jobs" 
@@ -421,18 +423,16 @@ export default function Dashboard() {
           icon={Flag}
           color="bg-red-500"
           loading={loading}
+          onClick={() => window.location.href = createPageUrl('Jobs') + '?filter=overdue'}
         />
-        <div asChild className="cursor-pointer">
-          <Link to={createPageUrl('Leads')}>
-            <StatCard 
-              title="Open Leads" 
-              value={leads.filter(l => !['Lost', 'Converted'].includes(l.status)).length} 
-              icon={Phone}
-              color="bg-amber-500"
-              loading={loading}
-            />
-          </Link>
-        </div>
+        <StatCard 
+          title="Open Leads" 
+          value={leads.filter(l => !['Lost', 'Converted'].includes(l.status)).length} 
+          icon={Phone}
+          color="bg-amber-500"
+          loading={loading}
+          onClick={() => window.location.href = createPageUrl('Leads') + '?filter=open'}
+        />
       </div>
 
       {/* Secondary Stats Grid */}
@@ -443,6 +443,7 @@ export default function Dashboard() {
           icon={ClipboardList}
           color="bg-slate-500"
           loading={loading}
+          onClick={() => window.location.href = createPageUrl('WorkOrders') + '?filter=pending'}
         />
         <StatCard 
           title="Total Customers" 
@@ -450,6 +451,7 @@ export default function Dashboard() {
           icon={Users}
           color="bg-emerald-500"
           loading={loading}
+          onClick={() => window.location.href = createPageUrl('Customers')}
         />
       </div>
 
