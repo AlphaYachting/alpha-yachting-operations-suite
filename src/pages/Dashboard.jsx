@@ -487,6 +487,9 @@ export default function Dashboard() {
         </Card>
       )}
 
+      {/* Leads Widget */}
+      <LeadsWidget />
+
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Active Work Orders */}
