@@ -61,8 +61,8 @@ Work Description:
 ${prompt}
 
 Generate a detailed list of tasks for this service offer. For each task, provide:
-- A clear, specific title in ${languageMap[formData.language] || 'German'}
-- ${detailedExplanations ? 'A detailed technical description including specific procedures, tools, and technical specifications. Use bullet points (- or •) for lists and separate items with line breaks (\\n) for better readability' : 'A brief, simple description that a non-technical customer can understand'}
+- A clear, concise title in ${languageMap[formData.language] || 'German'} (max 60 characters)
+- ${detailedExplanations ? 'A detailed technical description with proper structure:\n  • Use bullet points with "• " at the start of each point\n  • Put each bullet point on a new line\n  • Group related steps under clear subtopics\n  • Keep each bullet point concise but complete\n  • Separate main sections with a blank line' : 'A brief, simple description that a non-technical customer can understand. If using bullet points, start each with "• " and put each on a new line'}
 - Quantity needed (e.g., hours for labor, pieces for parts, square meters for surface work, etc.)
 - Appropriate unit type (Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, or Lump Sum)
 

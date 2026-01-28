@@ -329,8 +329,11 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   lineItems.forEach((item, idx) => {
     // Calculate required height for this row
     const titleLines = doc.splitTextToSize(item.title || '', colWidths[1] - 4);
-    const descLines = item.description ? doc.splitTextToSize(item.description, colWidths[1] - 4) : [];
-    const requiredHeight = (titleLines.length * 4) + (descLines.length > 0 ? 2 : 0) + (descLines.length * 3.5) + 10;
+    const descText = item.description ? 
+      item.description.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n') : 
+      '';
+    const descLines = descText ? doc.splitTextToSize(descText, colWidths[1] - 4) : [];
+    const requiredHeight = (titleLines.length * 4) + (descLines.length > 0 ? 3 : 0) + (descLines.length * 3.8) + 10;
 
     // Always check for page breaks to prevent overflow
     checkPageBreak(requiredHeight);
@@ -344,16 +347,25 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     
     // Description
     doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(9);
     doc.text(titleLines, xPos + 2, rowY);
-    let descY = rowY + (titleLines.length * 4) + 2;
+    let descY = rowY + (titleLines.length * 4) + 3;
 
     if (item.description) {
       doc.setFont(fontFamily, 'normal');
       doc.setFontSize(8);
-      doc.setTextColor(102, 102, 102);
-      const descLines = doc.splitTextToSize(item.description, colWidths[1] - 4);
+      doc.setTextColor(85, 85, 85);
+
+      // Preserve line breaks and format bullet points
+      const descText = item.description
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join('\n');
+
+      const descLines = doc.splitTextToSize(descText, colWidths[1] - 4);
       doc.text(descLines, xPos + 2, descY);
-      descY += descLines.length * 3.5;
+      descY += descLines.length * 3.8;
       doc.setFontSize(9);
       doc.setTextColor(51, 51, 51);
     }
