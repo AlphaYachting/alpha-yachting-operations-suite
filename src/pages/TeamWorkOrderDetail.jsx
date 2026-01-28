@@ -136,7 +136,16 @@ export default function TeamWorkOrderDetail() {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
-        <div className="w-10" />
+        <Button
+          onClick={handleTaskStatusToggle}
+          className={`text-sm font-semibold px-3 py-1 rounded-lg text-white ${
+            isTaskStarted
+              ? 'bg-blue-600 hover:bg-blue-700'
+              : 'bg-green-600 hover:bg-green-700'
+          }`}
+        >
+          {isTaskStarted ? 'Task Done' : 'Start Task'}
+        </Button>
       </div>
 
       {/* Content */}
