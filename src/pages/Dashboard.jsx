@@ -403,37 +403,37 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
-          title="Active Jobs" 
-          value={activeJobs.length} 
-          icon={Briefcase}
-          color="bg-blue-500"
-          loading={loading}
-          onClick={() => window.location.href = createPageUrl('Jobs') + '?filter=active'}
-        />
-        <StatCard 
-          title="Today's Work Orders" 
-          value={todayWorkOrders.length} 
-          icon={ClipboardList}
-          color="bg-cyan-500"
-          loading={loading}
-          onClick={() => window.location.href = createPageUrl('WorkOrders') + '?filter=today'}
-        />
-        <StatCard 
-          title="Overdue Jobs" 
-          value={overdueJobs.length} 
-          icon={Flag}
-          color="bg-red-500"
-          loading={loading}
-          onClick={() => window.location.href = createPageUrl('Jobs') + '?filter=overdue'}
-        />
-        <StatCard 
-          title="Open Leads" 
-          value={leads.filter(l => !['Lost', 'Converted'].includes(l.status)).length} 
-          icon={Phone}
-          color="bg-amber-500"
-          loading={loading}
-          onClick={() => window.location.href = createPageUrl('Leads') + '?filter=open'}
-        />
+           title="Active Jobs" 
+           value={activeJobs.length} 
+           icon={Briefcase}
+           color="bg-blue-500"
+           loading={loading}
+           onClick={() => navigate(createPageUrl('Jobs') + '?filter=active')}
+         />
+         <StatCard 
+           title="Today's Work Orders" 
+           value={todayWorkOrders.length} 
+           icon={ClipboardList}
+           color="bg-cyan-500"
+           loading={loading}
+           onClick={() => navigate(createPageUrl('WorkOrders') + '?filter=today')}
+         />
+         <StatCard 
+           title="Overdue Jobs" 
+           value={overdueJobs.length} 
+           icon={Flag}
+           color="bg-red-500"
+           loading={loading}
+           onClick={() => navigate(createPageUrl('Jobs') + '?filter=overdue')}
+         />
+         <StatCard 
+           title="Open Leads" 
+           value={leads.filter(l => !['Lost', 'Converted'].includes(l.status)).length} 
+           icon={Phone}
+           color="bg-amber-500"
+           loading={loading}
+           onClick={() => navigate(createPageUrl('Leads') + '?filter=open')}
+         />
       </div>
 
       {/* Secondary Stats Grid */}
