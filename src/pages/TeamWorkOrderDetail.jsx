@@ -18,6 +18,7 @@ export default function TeamWorkOrderDetail() {
   const [boat, setBoat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isTaskStarted, setIsTaskStarted] = useState(false);
+  const [updatingTaskId, setUpdatingTaskId] = useState(null);
 
   useEffect(() => {
     loadData();
