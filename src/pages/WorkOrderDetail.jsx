@@ -311,6 +311,17 @@ export default function WorkOrderDetail() {
     }
   };
 
+  const handleDeleteComment = async (commentId) => {
+    if (window.confirm('Are you sure you want to delete this note?')) {
+      try {
+        await base44.entities.WorkOrderComment.delete(commentId);
+        setComments(comments.filter(c => c.id !== commentId));
+      } catch (error) {
+        console.error('Error deleting comment:', error);
+      }
+    }
+  };
+
   const isAdmin = currentUser?.role === 'admin';
   const canEditTasks = isAdmin;
 
@@ -693,7 +704,20 @@ export default function WorkOrderDetail() {
                       <p className="font-semibold text-sm text-slate-900">{comment.author_name}</p>
                       <p className="text-xs text-slate-500">{comment.author_email}</p>
                     </div>
-                    <span className="text-xs text-slate-500">{format(parseISO(comment.created_date), 'MMM d, HH:mm')}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">{format(parseISO(comment.created_date), 'MMM d, HH:mm')}</span>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteComment(comment.id)}
+                          className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Delete note"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <p className="text-sm text-slate-700 leading-relaxed">{comment.content}</p>
                 </div>
