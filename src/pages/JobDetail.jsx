@@ -48,55 +48,55 @@ const taskStatusColors = {
   'Skipped': 'bg-slate-100 text-slate-700'
 };
 
-export default function JobDetail() {
-  const [searchParams] = useSearchParams();
-  const jobId = searchParams.get('id');
-  
-  const [job, setJob] = useState(null);
-  const [customer, setCustomer] = useState(null);
-  const [boat, setBoat] = useState(null);
-  const [location, setLocation] = useState(null);
-  const [workOrders, setWorkOrders] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function ProjectDetail() {
+   const [searchParams] = useSearchParams();
+   const projectId = searchParams.get('id');
 
-  useEffect(() => {
-    if (jobId) {
-      loadJobData();
-    }
-  }, [jobId]);
+   const [project, setProject] = useState(null);
+   const [customer, setCustomer] = useState(null);
+   const [boat, setBoat] = useState(null);
+   const [location, setLocation] = useState(null);
+   const [workOrders, setWorkOrders] = useState([]);
+   const [tasks, setTasks] = useState([]);
+   const [loading, setLoading] = useState(true);
 
-  const loadJobData = async () => {
-    try {
-      const [jobData, allWOs, allTasks, customers, boats, locations] = await Promise.all([
-        base44.entities.Job.list(),
-        base44.entities.WorkOrder.list(),
-        base44.entities.Task.list(),
-        base44.entities.Customer.list(),
-        base44.entities.Boat.list(),
-        base44.entities.Location.list()
-      ]);
+   useEffect(() => {
+     if (projectId) {
+       loadProjectData();
+     }
+   }, [projectId]);
 
-      const currentJob = jobData.find(j => j.id === jobId);
-      if (currentJob) {
-        setJob(currentJob);
-        setCustomer(customers.find(c => c.id === currentJob.customer_id));
-        setBoat(boats.find(b => b.id === currentJob.boat_id));
-        setLocation(locations.find(l => l.id === currentJob.location_id));
-        
-        const jobWOs = allWOs.filter(wo => wo.job_id === jobId);
-        setWorkOrders(jobWOs);
-        
-        const woIds = jobWOs.map(wo => wo.id);
-        const jobTasks = allTasks.filter(task => woIds.includes(task.work_order_id));
-        setTasks(jobTasks);
-      }
-    } catch (error) {
-      console.error('Error loading job data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+   const loadProjectData = async () => {
+     try {
+       const [projectsData, allWOs, allTasks, customers, boats, locations] = await Promise.all([
+         base44.entities.Job.list(),
+         base44.entities.WorkOrder.list(),
+         base44.entities.Task.list(),
+         base44.entities.Customer.list(),
+         base44.entities.Boat.list(),
+         base44.entities.Location.list()
+       ]);
+
+       const currentProject = projectsData.find(j => j.id === projectId);
+       if (currentProject) {
+         setProject(currentProject);
+         setCustomer(customers.find(c => c.id === currentProject.customer_id));
+         setBoat(boats.find(b => b.id === currentProject.boat_id));
+         setLocation(locations.find(l => l.id === currentProject.location_id));
+
+         const projectWOs = allWOs.filter(wo => wo.job_id === projectId);
+         setWorkOrders(projectWOs);
+
+         const woIds = projectWOs.map(wo => wo.id);
+         const projectTasks = allTasks.filter(task => woIds.includes(task.work_order_id));
+         setTasks(projectTasks);
+       }
+     } catch (error) {
+       console.error('Error loading project data:', error);
+     } finally {
+       setLoading(false);
+     }
+   };
 
   const getTasksForWO = (woId) => {
     return tasks.filter(t => t.work_order_id === woId).sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
@@ -112,13 +112,13 @@ export default function JobDetail() {
     );
   }
 
-  if (!job) {
+  if (!project) {
     return (
       <div className="text-center py-12">
         <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-        <h3 className="text-lg font-medium text-slate-900">Job not found</h3>
+        <h3 className="text-lg font-medium text-slate-900">Project not found</h3>
         <Button asChild className="mt-4">
-          <Link to={createPageUrl('Jobs')}>Back to Jobs</Link>
+          <Link to={createPageUrl('Jobs')}>Back to Projects</Link>
         </Button>
       </div>
     );
@@ -128,25 +128,25 @@ export default function JobDetail() {
   const totalTasks = tasks.length;
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  const isDueOverdue = job.requested_date && isPast(parseISO(job.requested_date)) && !isToday(parseISO(job.requested_date));
-  const isDueToday = job.requested_date && isToday(parseISO(job.requested_date));
-  const isDueSoon = job.requested_date && differenceInDays(parseISO(job.requested_date), new Date()) <= 7 && differenceInDays(parseISO(job.requested_date), new Date()) > 0;
+  const isDueOverdue = project.requested_date && isPast(parseISO(project.requested_date)) && !isToday(parseISO(project.requested_date));
+  const isDueToday = project.requested_date && isToday(parseISO(project.requested_date));
+  const isDueSoon = project.requested_date && differenceInDays(parseISO(project.requested_date), new Date()) <= 7 && differenceInDays(parseISO(project.requested_date), new Date()) > 0;
 
   return (
     <div className="space-y-6">
       {/* Critical Due Date Alert */}
-      {job.requested_date && (isDueOverdue || isDueToday) && (
+      {project.requested_date && (isDueOverdue || isDueToday) && (
         <Card className={`border-2 ${isDueOverdue ? 'border-red-500 bg-red-50' : 'border-amber-500 bg-amber-50'}`}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <AlertTriangle className={`h-6 w-6 ${isDueOverdue ? 'text-red-700 animate-pulse' : 'text-amber-700 animate-pulse'}`} />
               <div>
                 <p className={`font-bold text-lg ${isDueOverdue ? 'text-red-900' : 'text-amber-900'}`}>
-                  {isDueOverdue ? 'CRITICAL: JOB OVERDUE' : 'URGENT: DUE TODAY'}
+                  {isDueOverdue ? 'CRITICAL: PROJECT OVERDUE' : 'URGENT: DUE TODAY'}
                 </p>
                 <p className={`text-sm ${isDueOverdue ? 'text-red-700' : 'text-amber-700'}`}>
-                  Job deadline: {format(parseISO(job.requested_date), 'MMMM d, yyyy')}
-                  {isDueOverdue && ` (${Math.abs(differenceInDays(parseISO(job.requested_date), new Date()))} days overdue)`}
+                  Project deadline: {format(parseISO(project.requested_date), 'MMMM d, yyyy')}
+                  {isDueOverdue && ` (${Math.abs(differenceInDays(parseISO(project.requested_date), new Date()))} days overdue)`}
                 </p>
               </div>
             </div>
@@ -163,10 +163,10 @@ export default function JobDetail() {
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-slate-900">{job.title}</h1>
-            <Badge className={statusColors[job.status]}>{job.status}</Badge>
-            <Badge variant="outline">{job.job_number}</Badge>
-            {job.requested_date && (
+            <h1 className="text-2xl font-bold text-slate-900">{project.title}</h1>
+            <Badge className={statusColors[project.status]}>{project.status}</Badge>
+            <Badge variant="outline">{project.job_number}</Badge>
+            {project.requested_date && (
               <Badge className={`${
                 isDueOverdue ? 'bg-red-600 text-white border-red-700 border-2' : 
                 isDueToday ? 'bg-amber-600 text-white border-amber-700 border-2' : 
@@ -174,11 +174,11 @@ export default function JobDetail() {
                 'bg-blue-100 text-blue-700'
               }`}>
                 <Calendar className="h-3 w-3 mr-1" />
-                Due: {format(parseISO(job.requested_date), 'MMM d, yyyy')}
+                Due: {format(parseISO(project.requested_date), 'MMM d, yyyy')}
               </Badge>
             )}
           </div>
-          <p className="text-slate-500 mt-1">{job.service_category} • {job.job_type}</p>
+          <p className="text-slate-500 mt-1">{project.service_category} • {project.job_type}</p>
         </div>
       </div>
 
@@ -243,27 +243,27 @@ export default function JobDetail() {
         </Card>
       </div>
 
-      {/* Job Details */}
+      {/* Project Details */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Job Details</CardTitle>
+          <CardTitle className="text-lg">Project Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <p className="text-sm text-slate-500">Priority</p>
-              <p className="font-medium">{job.priority}</p>
+              <p className="font-medium">{project.priority}</p>
             </div>
             <div>
               <p className="text-sm text-slate-500">Intake Date</p>
               <p className="font-medium">
-                {job.intake_date ? format(new Date(job.intake_date), 'MMM d, yyyy') : 'N/A'}
+                {project.intake_date ? format(new Date(project.intake_date), 'MMM d, yyyy') : 'N/A'}
               </p>
             </div>
-            <div className={job.requested_date && (isDueOverdue || isDueToday || isDueSoon) ? 'col-span-2' : ''}>
+            <div className={project.requested_date && (isDueOverdue || isDueToday || isDueSoon) ? 'col-span-2' : ''}>
               <p className="text-sm text-slate-500 flex items-center gap-1">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                Job Due Date (Deadline)
+                Project Due Date (Deadline)
               </p>
               <p className={`font-bold text-lg ${
                 isDueOverdue ? 'text-red-700' : 
@@ -271,42 +271,42 @@ export default function JobDetail() {
                 isDueSoon ? 'text-yellow-700' : 
                 'text-slate-900'
               }`}>
-                {job.requested_date ? (
+                {project.requested_date ? (
                   <>
-                    {format(parseISO(job.requested_date), 'MMMM d, yyyy')}
-                    {isDueOverdue && <span className="text-sm ml-2 text-red-600">({Math.abs(differenceInDays(parseISO(job.requested_date), new Date()))} days overdue)</span>}
+                    {format(parseISO(project.requested_date), 'MMMM d, yyyy')}
+                    {isDueOverdue && <span className="text-sm ml-2 text-red-600">({Math.abs(differenceInDays(parseISO(project.requested_date), new Date()))} days overdue)</span>}
                     {isDueToday && <span className="text-sm ml-2 text-amber-600">(Today!)</span>}
-                    {isDueSoon && <span className="text-sm ml-2 text-orange-600">(in {differenceInDays(parseISO(job.requested_date), new Date())} days)</span>}
+                    {isDueSoon && <span className="text-sm ml-2 text-orange-600">(in {differenceInDays(parseISO(project.requested_date), new Date())} days)</span>}
                   </>
                 ) : 'N/A'}
               </p>
             </div>
             <div>
               <p className="text-sm text-slate-500">Estimated Hours</p>
-              <p className="font-medium">{job.estimated_hours || 'N/A'}</p>
+              <p className="font-medium">{project.estimated_hours || 'N/A'}</p>
             </div>
-            {job.quote_amount && (
+            {project.quote_amount && (
               <div>
                 <p className="text-sm text-slate-500">Quote Amount</p>
-                <p className="font-medium">€{job.quote_amount.toFixed(2)}</p>
+                <p className="font-medium">€{project.quote_amount.toFixed(2)}</p>
               </div>
             )}
           </div>
 
-          {job.description && (
+          {project.description && (
             <>
               <Separator />
               <div>
                 <p className="text-sm text-slate-500 mb-1">Description</p>
-                <p className="text-slate-700">{job.description}</p>
+                <p className="text-slate-700">{project.description}</p>
               </div>
             </>
           )}
 
-          {job.internal_notes && (
+          {project.internal_notes && (
             <div>
               <p className="text-sm text-slate-500 mb-1">Internal Notes</p>
-              <p className="text-slate-700">{job.internal_notes}</p>
+              <p className="text-slate-700">{project.internal_notes}</p>
             </div>
           )}
         </CardContent>
@@ -317,7 +317,7 @@ export default function JobDetail() {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-900">Work Orders & Tasks</h2>
           <Button asChild size="sm">
-            <Link to={createPageUrl('WorkOrders') + `?job=${jobId}&new=true`}>
+            <Link to={createPageUrl('WorkOrders') + `?job=${projectId}&new=true`}>
               Add Work Order
             </Link>
           </Button>
