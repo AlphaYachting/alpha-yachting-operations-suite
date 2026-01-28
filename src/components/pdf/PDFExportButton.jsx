@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import ReactDOM from 'react-dom/client';
 import { Button } from '@/components/ui/button';
-import { Download, Eye } from 'lucide-react';
+import { Download, Eye, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { createPageUrl } from '@/utils';
-import PDFDocumentTemplate from './PDFDocumentTemplate';
+import { generatePDFWithJsPDF } from './jsPDFGenerator';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +14,8 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
   const [showPreview, setShowPreview] = useState(false);
   const [template, setTemplate] = useState(null);
   const [pdfError, setPdfError] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   const loadTemplate = async () => {
     try {
@@ -44,107 +44,59 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
     }
   };
 
-  const openPrintDialog = async () => {
+  const generateAndDownloadPDF = async () => {
     try {
       if (!documentData?.id) {
         setPdfError('Document ID is missing. Please save the document first.');
         return;
       }
+      
+      setIsGenerating(true);
+      setPdfError(null);
+      
       const templateData = await loadTemplate();
+      const pdfDoc = await generatePDFWithJsPDF(documentData, lineItems, templateData, payments);
       
-      // Create a temporary print-friendly window with A4 dimensions
-      const printWindow = window.open('', '_blank', 'width=900,height=1200');
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Print Document</title>
-          <style>
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
-            }
-            html, body {
-              width: 100%;
-              height: 100%;
-              margin: 0;
-              padding: 0;
-              background: white;
-              font-family: Arial, sans-serif;
-            }
-            #print-content {
-              width: 100%;
-              margin: 0;
-              padding: 0;
-            }
-            @page {
-              size: A4;
-              margin: 0;
-              padding: 0;
-            }
-            @media print {
-              html, body {
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 0;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-              body {
-                margin: 0;
-                padding: 0;
-              }
-              #print-content {
-                width: 100%;
-                margin: 0;
-                padding: 0;
-              }
-              * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div id="print-content"></div>
-          <script>
-            window.addEventListener('load', () => {
-              setTimeout(() => { window.print(); }, 300);
-            });
-          </script>
-        </body>
-        </html>
-      `);
+      // Download the PDF
+      const fileName = `${documentData.document_number || 'document'}.pdf`;
+      pdfDoc.save(fileName);
       
-      // Render the PDF template into the print window
-      const container = printWindow.document.getElementById('print-content');
-      const root = ReactDOM.createRoot(container);
-      root.render(
-        <PDFDocumentTemplate 
-          document={documentData} 
-          lineItems={lineItems}
-          template={templateData}
-          payments={payments}
-        />
-      );
+      setIsGenerating(false);
     } catch (error) {
-      console.error('Error opening print dialog:', error);
-      setPdfError('Failed to open print dialog');
+      console.error('Error generating PDF:', error);
+      setPdfError('Failed to generate PDF: ' + error.message);
+      setIsGenerating(false);
     }
   };
 
   const handlePreview = async () => {
     try {
+      setPdfError(null);
+      setIsGenerating(true);
+      
       const templateData = await loadTemplate();
+      const pdfDoc = await generatePDFWithJsPDF(documentData, lineItems, templateData, payments);
+      
+      // Generate blob URL for preview
+      const pdfBlob = pdfDoc.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      
+      setPreviewUrl(url);
       setTemplate(templateData);
       setShowPreview(true);
+      setIsGenerating(false);
     } catch (error) {
-      setPdfError('Failed to load preview');
+      console.error('Preview error:', error);
+      setPdfError('Failed to load preview: ' + error.message);
+      setIsGenerating(false);
+    }
+  };
+  
+  const handleClosePreview = () => {
+    setShowPreview(false);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
     }
   };
 
@@ -154,16 +106,17 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         <Button 
           variant={variant}
           onClick={handlePreview}
+          disabled={isGenerating || !documentData?.id}
         >
-          <Eye className="h-4 w-4 mr-2" />
+          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
           Preview PDF
         </Button>
         <Button 
           variant={variant}
-          onClick={openPrintDialog}
-          disabled={!documentData?.id}
+          onClick={generateAndDownloadPDF}
+          disabled={!documentData?.id || isGenerating}
         >
-          <Download className="h-4 w-4 mr-2" />
+          {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
           Export PDF
         </Button>
       </div>
@@ -174,27 +127,24 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         </div>
       )}
 
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={showPreview} onOpenChange={handleClosePreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>PDF Preview</DialogTitle>
           </DialogHeader>
-          {template && (
-            <div id="preview-print-area" className="bg-white p-4">
-              <PDFDocumentTemplate 
-                document={documentData} 
-                lineItems={lineItems}
-                template={template}
-                payments={payments}
-              />
-            </div>
+          {previewUrl && (
+            <iframe 
+              src={previewUrl}
+              className="w-full h-[600px] border-0"
+              title="PDF Preview"
+            />
           )}
           <div className="flex justify-end gap-3 pt-4">
-           <Button variant="outline" onClick={() => setShowPreview(false)}>
+           <Button variant="outline" onClick={handleClosePreview}>
              Close
            </Button>
-           <Button onClick={openPrintDialog} disabled={!documentData?.id}>
-             <Download className="h-4 w-4 mr-2" />
+           <Button onClick={generateAndDownloadPDF} disabled={!documentData?.id || isGenerating}>
+             {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
              Download PDF
            </Button>
           </div>

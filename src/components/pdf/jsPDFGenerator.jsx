@@ -1,0 +1,425 @@
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
+
+export async function generatePDFWithJsPDF(document, lineItems, template, payments = []) {
+  const isInvoice = document.document_type === 'Invoice';
+  const currency = document.currency === 'EUR' ? '€' : document.currency;
+
+  // Page setup
+  const pageFormat = template.page_format || 'A4';
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: pageFormat.toLowerCase()
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  // Margins
+  const margins = {
+    top: template.margin_top_mm || 20,
+    right: template.margin_right_mm || 20,
+    bottom: template.margin_bottom_mm || 20,
+    left: template.margin_left_mm || 20
+  };
+
+  const contentWidth = pageWidth - margins.left - margins.right;
+  let yPos = margins.top;
+
+  // Colors
+  const primaryColor = hexToRgb(template.primary_color || '#2563eb');
+  const secondaryColor = hexToRgb(template.secondary_color || '#06b6d4');
+
+  // Fonts
+  const fontFamily = template.font_family || 'helvetica';
+  const fontSizeBody = template.font_size_body || 11;
+  const fontSizeHeading = template.font_size_heading || 18;
+
+  // Helper functions
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 37, g: 99, b: 235 };
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  }
+
+  function formatCurrency(amount) {
+    return `${currency}${(amount || 0).toFixed(2)}`;
+  }
+
+  function checkPageBreak(requiredSpace) {
+    if (yPos + requiredSpace > pageHeight - margins.bottom) {
+      doc.addPage();
+      yPos = margins.top;
+      return true;
+    }
+    return false;
+  }
+
+  // Watermark
+  if (template.watermark_enabled) {
+    doc.saveGraphicsState();
+    doc.setGState(new doc.GState({ opacity: template.watermark_opacity || 0.1 }));
+    doc.setTextColor(200, 200, 200);
+    doc.setFontSize(80);
+    doc.text(
+      template.watermark_text || 'DRAFT',
+      pageWidth / 2,
+      pageHeight / 2,
+      { align: 'center', angle: template.watermark_angle || -45 }
+    );
+    doc.restoreGraphicsState();
+  }
+
+  // Logo
+  if (template.logo_url) {
+    try {
+      const logoHeight = template.logo_height_mm || 20;
+      const logoWidth = logoHeight * 3; // Assume 3:1 aspect ratio
+      doc.addImage(template.logo_url, 'PNG', margins.left, yPos, logoWidth, logoHeight);
+    } catch (e) {
+      console.log('Logo not loaded');
+    }
+  }
+
+  // Company info (right aligned)
+  doc.setFontSize(template.font_size_company_name || 20);
+  doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+  doc.setFont(fontFamily, 'bold');
+  doc.text(template.company_name || 'Alpha Yachting', pageWidth - margins.right, yPos, { align: 'right' });
+  
+  yPos += 7;
+  doc.setFontSize(9);
+  doc.setTextColor(85, 85, 85);
+  doc.setFont(fontFamily, 'normal');
+  if (template.company_address) {
+    doc.text(template.company_address, pageWidth - margins.right, yPos, { align: 'right' });
+    yPos += 5;
+  }
+  if (template.company_vat) {
+    doc.text(`VAT: ${template.company_vat}`, pageWidth - margins.right, yPos, { align: 'right' });
+    yPos += 5;
+  }
+
+  yPos += 10;
+
+  // Document Title
+  doc.setFontSize(fontSizeHeading);
+  doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+  doc.setFont(fontFamily, 'bold');
+  doc.text(isInvoice ? 'INVOICE' : 'OFFER', margins.left, yPos);
+  yPos += 8;
+
+  doc.setFontSize(fontSizeBody);
+  doc.setTextColor(0, 0, 0);
+  doc.text(document.document_number || '', margins.left, yPos);
+  yPos += 10;
+
+  // Customer info (left) and meta info (right)
+  const leftColX = margins.left;
+  const rightColX = pageWidth / 2 + 10;
+  const infoStartY = yPos;
+
+  // Customer
+  doc.setFontSize(8);
+  doc.setTextColor(102, 102, 102);
+  doc.setFont(fontFamily, 'bold');
+  doc.text('BILL TO:', leftColX, yPos);
+  yPos += 5;
+
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont(fontFamily, 'bold');
+  doc.text(document.customer_name || '', leftColX, yPos);
+  yPos += 5;
+
+  doc.setFont(fontFamily, 'normal');
+  doc.setFontSize(9);
+  if (document.customer_address) {
+    const lines = doc.splitTextToSize(document.customer_address, contentWidth / 2 - 10);
+    doc.text(lines, leftColX, yPos);
+    yPos += lines.length * 5;
+  }
+  if (document.customer_vat) {
+    yPos += 2;
+    doc.text(`VAT: ${document.customer_vat}`, leftColX, yPos);
+  }
+
+  // Meta info (right side)
+  let metaY = infoStartY;
+  doc.setFontSize(9);
+  doc.setTextColor(102, 102, 102);
+  doc.setFont(fontFamily, 'bold');
+  
+  doc.text('Issue Date:', rightColX, metaY);
+  doc.setFont(fontFamily, 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(formatDate(document.issue_date), pageWidth - margins.right, metaY, { align: 'right' });
+  metaY += 5;
+
+  if (isInvoice && document.due_date) {
+    doc.setTextColor(102, 102, 102);
+    doc.setFont(fontFamily, 'bold');
+    doc.text('Due Date:', rightColX, metaY);
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text(formatDate(document.due_date), pageWidth - margins.right, metaY, { align: 'right' });
+    metaY += 5;
+  }
+
+  if (!isInvoice && document.valid_until) {
+    doc.setTextColor(102, 102, 102);
+    doc.setFont(fontFamily, 'bold');
+    doc.text('Valid Until:', rightColX, metaY);
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text(formatDate(document.valid_until), pageWidth - margins.right, metaY, { align: 'right' });
+    metaY += 5;
+  }
+
+  if (document.payment_terms) {
+    doc.setTextColor(102, 102, 102);
+    doc.setFont(fontFamily, 'bold');
+    doc.text('Payment Terms:', rightColX, metaY);
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text(document.payment_terms, pageWidth - margins.right, metaY, { align: 'right' });
+  }
+
+  yPos = Math.max(yPos, metaY) + 10;
+
+  // Vessel info
+  if (document.boat_name || document.location_name) {
+    doc.setFillColor(248, 250, 252);
+    doc.rect(margins.left, yPos - 3, contentWidth, 12, 'F');
+    
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(fontFamily, 'bold');
+    if (document.boat_name) {
+      doc.text(`Vessel: `, margins.left + 2, yPos + 2);
+      doc.setFont(fontFamily, 'normal');
+      doc.text(document.boat_name, margins.left + 15, yPos + 2);
+    }
+    if (document.location_name) {
+      doc.setFont(fontFamily, 'bold');
+      doc.text(`Location: `, margins.left + 2, yPos + 7);
+      doc.setFont(fontFamily, 'normal');
+      doc.text(document.location_name, margins.left + 22, yPos + 7);
+    }
+    yPos += 15;
+  }
+
+  // Line items table
+  checkPageBreak(40);
+  
+  const tableColumns = [
+    { header: '#', dataKey: 'index' },
+    { header: 'Description', dataKey: 'description' },
+    { header: 'Qty', dataKey: 'quantity' },
+    { header: 'Unit', dataKey: 'unit' },
+    { header: 'Unit Price', dataKey: 'unit_price' },
+  ];
+  
+  if (template.show_vat_column) {
+    tableColumns.push({ header: 'VAT %', dataKey: 'vat' });
+  }
+  
+  tableColumns.push({ header: 'Total', dataKey: 'total' });
+
+  const tableData = lineItems.map((item, idx) => ({
+    index: (idx + 1).toString(),
+    description: `${item.title || ''}\n${item.description || ''}`,
+    quantity: (item.quantity || 0).toFixed(2),
+    unit: item.unit || '-',
+    unit_price: formatCurrency(item.unit_price),
+    vat: `${item.tax_rate || 0}%`,
+    total: formatCurrency(item.total_gross)
+  }));
+
+  doc.autoTable({
+    startY: yPos,
+    head: [tableColumns.map(col => col.header)],
+    body: tableData.map(row => tableColumns.map(col => row[col.dataKey])),
+    margin: { left: margins.left, right: margins.right },
+    styles: {
+      fontSize: 9,
+      cellPadding: 2,
+      lineColor: [255, 255, 255],
+      lineWidth: 0
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [51, 51, 51],
+      fontStyle: 'bold',
+      lineWidth: 0
+    },
+    bodyStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [51, 51, 51]
+    },
+    alternateRowStyles: {
+      fillColor: [255, 255, 255]
+    },
+    columnStyles: {
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 20, halign: 'right' },
+      3: { cellWidth: 15, halign: 'center' },
+      4: { cellWidth: 25, halign: 'right' },
+      5: { cellWidth: 20, halign: 'right' },
+      6: { cellWidth: 25, halign: 'right' }
+    }
+  });
+
+  yPos = doc.lastAutoTable.finalY + 10;
+
+  // Totals
+  checkPageBreak(60);
+  
+  const totalsX = pageWidth - margins.right - 80;
+  const totalsWidth = 80;
+
+  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont(fontFamily, 'normal');
+  
+  doc.text('Subtotal (Net):', totalsX, yPos);
+  doc.text(formatCurrency(document.subtotal), totalsX + totalsWidth, yPos, { align: 'right' });
+  yPos += 6;
+
+  // Tax breakdown
+  const taxBreakdown = lineItems.reduce((acc, item) => {
+    const rate = item.tax_rate || 0;
+    if (!acc[rate]) acc[rate] = 0;
+    acc[rate] += item.total_tax || 0;
+    return acc;
+  }, {});
+
+  doc.setTextColor(102, 102, 102);
+  Object.entries(taxBreakdown).forEach(([rate, amount]) => {
+    doc.text(`VAT ${rate}%:`, totalsX, yPos);
+    doc.text(formatCurrency(amount), totalsX + totalsWidth, yPos, { align: 'right' });
+    yPos += 6;
+  });
+
+  // Total
+  doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
+  doc.setLineWidth(0.5);
+  doc.line(totalsX, yPos - 2, totalsX + totalsWidth, yPos - 2);
+  
+  yPos += 2;
+  doc.setFontSize(12);
+  doc.setTextColor(0, 0, 0);
+  doc.setFont(fontFamily, 'bold');
+  doc.text('Total (Gross):', totalsX, yPos);
+  doc.text(formatCurrency(document.total), totalsX + totalsWidth, yPos, { align: 'right' });
+  yPos += 8;
+
+  // Payment info for invoices
+  if (isInvoice && document.paid_amount > 0) {
+    doc.setFontSize(10);
+    doc.setTextColor(5, 150, 105);
+    doc.text('Paid:', totalsX, yPos);
+    doc.text(`-${formatCurrency(document.paid_amount)}`, totalsX + totalsWidth, yPos, { align: 'right' });
+    yPos += 6;
+
+    const outstanding = (document.total || 0) - (document.paid_amount || 0);
+    doc.setFont(fontFamily, 'bold');
+    doc.setTextColor(outstanding > 0 ? 220 : 5, outstanding > 0 ? 38 : 150, outstanding > 0 ? 38 : 105);
+    doc.text('Outstanding:', totalsX, yPos);
+    doc.text(formatCurrency(outstanding), totalsX + totalsWidth, yPos, { align: 'right' });
+    yPos += 10;
+  } else {
+    yPos += 5;
+  }
+
+  // Notes
+  if (document.public_notes) {
+    checkPageBreak(30);
+    doc.setFillColor(245, 245, 245);
+    const notesHeight = 20;
+    doc.rect(margins.left, yPos - 3, contentWidth, notesHeight, 'F');
+    
+    doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
+    doc.setLineWidth(1);
+    doc.line(margins.left, yPos - 3, margins.left, yPos + notesHeight - 3);
+
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(fontFamily, 'bold');
+    doc.text('Notes:', margins.left + 3, yPos + 2);
+    
+    doc.setFont(fontFamily, 'normal');
+    const noteLines = doc.splitTextToSize(document.public_notes, contentWidth - 6);
+    doc.text(noteLines, margins.left + 3, yPos + 8);
+    yPos += notesHeight + 5;
+  }
+
+  // Bank info for invoices
+  if (isInvoice && template.bank_iban) {
+    checkPageBreak(25);
+    doc.setFillColor(239, 246, 255);
+    doc.roundedRect(margins.left, yPos - 3, contentWidth, 20, 1, 1, 'F');
+    
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(fontFamily, 'bold');
+    doc.text('Payment Information:', margins.left + 3, yPos + 2);
+    
+    doc.setFontSize(9);
+    doc.setFont(fontFamily, 'normal');
+    yPos += 7;
+    if (template.bank_name) {
+      doc.text(`Bank: ${template.bank_name}`, margins.left + 3, yPos);
+      yPos += 5;
+    }
+    doc.text(`IBAN: ${template.bank_iban}`, margins.left + 3, yPos);
+    yPos += 5;
+    if (template.bank_bic) {
+      doc.text(`BIC: ${template.bank_bic}`, margins.left + 3, yPos);
+    }
+    yPos += 10;
+  }
+
+  // Footer
+  const footerY = pageHeight - margins.bottom - 15;
+  doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
+  doc.setLineWidth(0.3);
+  doc.line(margins.left, footerY, pageWidth - margins.right, footerY);
+
+  doc.setFontSize(8);
+  doc.setTextColor(102, 102, 102);
+  doc.setFont(fontFamily, 'normal');
+  
+  if (template.footer_text) {
+    const footerLines = doc.splitTextToSize(template.footer_text, contentWidth);
+    doc.text(footerLines, margins.left, footerY + 5);
+  }
+
+  doc.text(
+    template.company_name || 'Alpha Yachting',
+    margins.left,
+    pageHeight - margins.bottom - 3
+  );
+  
+  const timestamp = new Date().toLocaleDateString('de-DE', { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  doc.text(timestamp, pageWidth - margins.right, pageHeight - margins.bottom - 3, { align: 'right' });
+
+  return doc;
+}
