@@ -188,6 +188,8 @@ export default function TeamWorkOrderDetail() {
         });
         
         setElapsedSeconds(0);
+        // Clear localStorage
+        localStorage.removeItem(`timer_${workOrder.id}`);
       } else {
         // Start timer
         setTimerRunning(true);
