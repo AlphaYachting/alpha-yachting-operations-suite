@@ -261,10 +261,23 @@ export default function Projects() {
       getCustomerName(project.customer_id).toLowerCase().includes(searchLower) ||
       getBoatName(project.boat_id).toLowerCase().includes(searchLower);
 
+    const filterParam = searchParams.get('filter');
+    let matchesFilter = true;
+
+    if (filterParam === 'active') {
+      matchesFilter = !['Completed', 'Invoiced', 'Cancelled'].includes(project.status);
+    } else if (filterParam === 'overdue') {
+      const today = new Date();
+      matchesFilter = project.requested_date && 
+                     isPast(parseISO(project.requested_date)) && 
+                     !isToday(parseISO(project.requested_date)) &&
+                     !['Completed', 'Invoiced', 'Cancelled'].includes(project.status);
+    }
+
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || project.priority === priorityFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority;
+    return matchesSearch && matchesStatus && matchesPriority && matchesFilter;
   });
 
   return (
