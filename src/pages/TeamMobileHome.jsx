@@ -52,20 +52,49 @@ export default function TeamMobileHome() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
-      const [tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData] = await Promise.all([
-      base44.entities.Task.list(),
-      base44.entities.WorkOrder.list(),
-      base44.entities.Location.list(),
-      base44.entities.Technician.list(),
-      base44.entities.Boat.list(),
-      base44.entities.Job.list()]
-      );
+      let tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData;
 
-      setWorkOrders(workOrdersData);
-      setLocations(locationsData);
-      setBoats(boatsData);
-      setJobs(jobsData);
-      setTasks(tasksData);
+      try {
+        // Try to load from server
+        [tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData] = await Promise.all([
+          base44.entities.Task.list(),
+          base44.entities.WorkOrder.list(),
+          base44.entities.Location.list(),
+          base44.entities.Technician.list(),
+          base44.entities.Boat.list(),
+          base44.entities.Job.list()
+        ]);
+
+        // Cache all data for offline access
+        if (workOrdersData) {
+          await offlineStorage.saveMultiple(offlineStorage.STORES.workOrders, workOrdersData);
+        }
+        if (tasksData) {
+          await offlineStorage.saveMultiple(offlineStorage.STORES.tasks, tasksData);
+        }
+        if (locationsData) {
+          await offlineStorage.saveMultiple(offlineStorage.STORES.locations, locationsData);
+        }
+        if (boatsData) {
+          await offlineStorage.saveMultiple(offlineStorage.STORES.boats, boatsData);
+        }
+        if (jobsData) {
+          await offlineStorage.saveMultiple(offlineStorage.STORES.jobs, jobsData);
+        }
+      } catch (error) {
+        // Fall back to offline cache
+        workOrdersData = await offlineStorage.getAllData(offlineStorage.STORES.workOrders);
+        tasksData = await offlineStorage.getAllData(offlineStorage.STORES.tasks);
+        locationsData = await offlineStorage.getAllData(offlineStorage.STORES.locations);
+        boatsData = await offlineStorage.getAllData(offlineStorage.STORES.boats);
+        jobsData = await offlineStorage.getAllData(offlineStorage.STORES.jobs);
+      }
+
+      setWorkOrders(workOrdersData || []);
+      setLocations(locationsData || []);
+      setBoats(boatsData || []);
+      setJobs(jobsData || []);
+      setTasks(tasksData || []);
     } catch (error) {
       console.error('Error loading team data:', error);
     } finally {
