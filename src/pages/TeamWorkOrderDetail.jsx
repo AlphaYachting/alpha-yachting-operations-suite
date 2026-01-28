@@ -58,7 +58,19 @@ export default function TeamWorkOrderDetail() {
     let interval;
     if (timerRunning) {
       interval = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
+        setElapsedSeconds((prev) => {
+          const newSeconds = prev + 1;
+          // Save timer state to localStorage
+          const params = new URLSearchParams(window.location.search);
+          const woId = params.get('woId');
+          if (woId) {
+            localStorage.setItem(`timer_${woId}`, JSON.stringify({
+              timerRunning: true,
+              elapsedSeconds: newSeconds
+            }));
+          }
+          return newSeconds;
+        });
       }, 1000);
     }
     return () => clearInterval(interval);
