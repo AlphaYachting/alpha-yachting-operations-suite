@@ -36,6 +36,22 @@ export default function TeamWorkOrderDetail() {
       }
     };
     loadUser();
+
+    // Restore timer state from localStorage
+    const params = new URLSearchParams(window.location.search);
+    const woId = params.get('woId');
+    if (woId) {
+      const savedTimerState = localStorage.getItem(`timer_${woId}`);
+      if (savedTimerState) {
+        try {
+          const { timerRunning: savedRunning, elapsedSeconds: savedElapsed } = JSON.parse(savedTimerState);
+          setTimerRunning(savedRunning);
+          setElapsedSeconds(savedElapsed);
+        } catch (e) {
+          console.error('Error restoring timer state:', e);
+        }
+      }
+    }
   }, []);
 
   useEffect(() => {
