@@ -136,16 +136,16 @@ export default function Dashboard() {
         }
 
         const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData, locationsData, leadsData] = await Promise.all([
-          base44.entities.Job.list(),
-          base44.entities.WorkOrder.list('-scheduled_date', 100),
-          base44.entities.Task.list(),
-          base44.entities.Customer.list(),
-          base44.entities.Boat.list(),
-          base44.entities.Technician.list(),
+          base44.entities.Job.list('-created_date', 500), // Limit to 500 most recent
+          base44.entities.WorkOrder.list('-scheduled_date', 200), // Already has limit
+          base44.entities.Task.filter({ status: { $ne: 'Completed' } }, '-created_date', 500), // Only unfinished tasks
+          base44.entities.Customer.list('-created_date', 200), // Limit customers
+          base44.entities.Boat.filter({ status: { $ne: 'Sold' } }, '-created_date', 200), // Only active boats
+          base44.entities.Technician.filter({ status: 'Active' }), // Only active technicians
           base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-          base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' }),
-          base44.entities.Location.list(),
-          base44.entities.Lead.list()
+          base44.entities.InventoryItem.filter({ item_type: 'VEHICLE', status: { $ne: 'Retired' } }),
+          base44.entities.Location.filter({ status: 'Active' }),
+          base44.entities.Lead.filter({ status: { $ne: 'Converted' } }) // Exclude converted leads
         ]);
         
         // Sort jobs: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
