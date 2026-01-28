@@ -420,10 +420,10 @@ export default function DragDropCalendar({
                                      borderBottomLeftRadius: '0px'
                                    }}
                                   >
-                                    {/* Green line at top */}
+                                    {/* Red line at top */}
                                     <div 
                                       className="absolute top-0 left-0 right-0 h-[2px]" 
-                                      style={{ backgroundColor: '#86efac' }}
+                                      style={{ backgroundColor: '#ef4444' }}
                                     />
                                     
                                     <div className="p-1.5 pt-2">
@@ -552,11 +552,11 @@ export default function DragDropCalendar({
                                          borderLeftColor: techColor.border
                                        }}
                                       >
-                                        {/* Green line at top for multi-day tasks */}
+                                        {/* Red line at top for multi-day tasks */}
                                         {isMultiDay && (
                                           <div 
                                             className="absolute top-0 left-0 right-0 h-[2px]" 
-                                            style={{ backgroundColor: '#86efac' }}
+                                            style={{ backgroundColor: '#ef4444' }}
                                           />
                                         )}
                                         
