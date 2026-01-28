@@ -529,12 +529,18 @@ export default function WorkOrderDetail() {
           onEdit={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
           onGenerateBrief={async () => {
             try {
+              setBriefError(null);
+              console.log('Starting partner brief generation...', { workOrderId, teamOrderId: teamOrder.id });
+              
               const response = await base44.functions.invoke('generatePartnerBrief', {
                 workOrderId,
                 teamOrderId: teamOrder.id
               });
 
+              console.log('Response received:', response);
+
               if (response.data.success && response.data.pdf) {
+                console.log('Downloading PDF...');
                 const link = document.createElement('a');
                 link.href = response.data.pdf;
                 link.download = response.data.fileName;
@@ -542,11 +548,14 @@ export default function WorkOrderDetail() {
                 link.click();
                 document.body.removeChild(link);
               } else {
-                alert('Failed to generate partner brief');
+                const errorMsg = response.data.error || 'Unknown error';
+                console.error('PDF generation failed:', errorMsg);
+                setBriefError(`Failed to generate partner brief: ${errorMsg}`);
               }
             } catch (error) {
               console.error('Error generating partner brief:', error);
-              alert('Failed to generate partner brief');
+              console.error('Error details:', error.response?.data || error.message);
+              setBriefError(`Error: ${error.response?.data?.error || error.message}`);
             }
           }}
         />
