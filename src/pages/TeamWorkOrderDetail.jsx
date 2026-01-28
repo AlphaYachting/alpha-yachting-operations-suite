@@ -42,6 +42,11 @@ export default function TeamWorkOrderDetail() {
     };
     loadUser();
 
+    // Monitor connection status
+    const unsubscribe = connectionMonitor.subscribe((status) => {
+      setIsOnline(status.isOnline);
+    });
+
     // Restore timer state from localStorage
     const params = new URLSearchParams(window.location.search);
     const woId = params.get('woId');
@@ -57,6 +62,8 @@ export default function TeamWorkOrderDetail() {
         }
       }
     }
+
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
