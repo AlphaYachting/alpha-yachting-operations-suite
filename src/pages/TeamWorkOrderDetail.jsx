@@ -217,18 +217,25 @@ export default function TeamWorkOrderDetail() {
         // Stop timer and save time entry
         setTimerRunning(false);
         const durationMinutes = Math.ceil(elapsedSeconds / 60);
-        
-        await base44.entities.TimeEntry.create({
+        const timeEntryData = {
           work_order_id: workOrder.id,
           technician_id: user?.id,
           entry_date: new Date().toISOString().split('T')[0],
           duration_minutes: durationMinutes,
           is_billable: true,
           notes: `Time tracked: ${Math.floor(elapsedSeconds / 3600)}h ${Math.floor((elapsedSeconds % 3600) / 60)}m`
-        });
-        
+        };
+
+        if (isOnline) {
+          const result = await base44.entities.TimeEntry.create(timeEntryData);
+          await offlineStorage.saveData(offlineStorage.STORES.timeEntries, result);
+        } else {
+          // Queue for offline sync
+          await syncQueue.addToQueue('TimeEntry', 'create', timeEntryData, `temp_${Date.now()}`);
+          setPendingChanges(prev => [...prev, { entity: 'TimeEntry', id: `temp_${Date.now()}` }]);
+        }
+
         setElapsedSeconds(0);
-        // Clear localStorage
         localStorage.removeItem(`timer_${workOrder.id}`);
       } else {
         // Start timer
