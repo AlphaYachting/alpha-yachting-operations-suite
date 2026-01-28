@@ -17,6 +17,7 @@ import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
 import LeadTaskList from '@/components/leads/LeadTaskList';
+import LeadStatusChange from '@/components/leads/LeadStatusChange';
 
 const statusColors = {
   'Pending': 'bg-amber-100 text-amber-700',
