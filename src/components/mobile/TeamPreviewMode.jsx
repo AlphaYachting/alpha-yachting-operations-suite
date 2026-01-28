@@ -3,15 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Search, X } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 export default function TeamPreviewMode({ onUserSelect, currentUserId }) {
   const [technicians, setTechnicians] = useState([]);
@@ -58,7 +50,6 @@ export default function TeamPreviewMode({ onUserSelect, currentUserId }) {
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Search */}
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
           <Input
@@ -69,7 +60,6 @@ export default function TeamPreviewMode({ onUserSelect, currentUserId }) {
           />
         </div>
 
-        {/* Technician List */}
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {filteredTechs.map(tech => (
             <button
@@ -95,7 +85,6 @@ export default function TeamPreviewMode({ onUserSelect, currentUserId }) {
           </p>
         )}
 
-        {/* Clear Button */}
         {currentUserId && (
           <Button
             onClick={() => onUserSelect(null)}
