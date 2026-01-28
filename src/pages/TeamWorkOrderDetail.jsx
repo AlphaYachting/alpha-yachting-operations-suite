@@ -200,14 +200,18 @@ export default function TeamWorkOrderDetail() {
         </Button>
         <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
         <Button
-          onClick={handleTaskStatusToggle}
+          onClick={handleTimerToggle}
           className={`text-base font-semibold px-4 py-1.5 rounded-lg text-white ${
-          isTaskStarted ?
-          'bg-blue-600 hover:bg-blue-700' :
+          timerRunning ?
+          'bg-red-600 hover:bg-red-700' :
           'bg-green-600 hover:bg-green-700'}`
           }>
 
-          {isTaskStarted ? 'Task Done' : 'Start Task'}
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            <span>{timerRunning ? 'Stop Timer' : 'Start Timer'}</span>
+            {timerRunning && <span className="font-mono text-sm">{formatTime(elapsedSeconds)}</span>}
+          </div>
         </Button>
       </div>
 
