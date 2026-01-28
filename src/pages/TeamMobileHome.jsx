@@ -182,37 +182,40 @@ export default function TeamMobileHome() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header with Time & Date */}
+      {/* Header with Logo & Time */}
       <div className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white sticky top-0 z-10 shadow-lg">
-        <div className="p-4">
+        <div className="p-3 flex items-center justify-between gap-4">
           {/* Logo */}
-          <div className="mb-4">
-            <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/27c878803_alpha-yachting-logo-weiss.png"
-              alt="Alpha Yachting"
-              className="h-12 object-contain"
-            />
+          <img 
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/27c878803_alpha-yachting-logo-weiss.png"
+            alt="Alpha Yachting"
+            className="h-10 object-contain"
+          />
+          
+          {/* Time & Date */}
+          <div className="flex-1">
+            <p className="text-2xl font-bold font-mono leading-none">{timeString}</p>
+            <p className="text-xs text-blue-100">{dateString}</p>
           </div>
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-blue-100 text-sm font-medium">Current Time</p>
-              <p className="text-4xl font-bold font-mono">{timeString}</p>
-              <p className="text-blue-100 text-sm mt-1">{dateString}</p>
-            </div>
-            {user?.role === 'admin' && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setShowPreviewMode(!showPreviewMode)}
-                className="h-9 w-9 hover:bg-white/20"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <div className="bg-white/20 rounded-lg px-3 py-2">
+
+          {/* Admin Settings */}
+          {user?.role === 'admin' && (
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setShowPreviewMode(!showPreviewMode)}
+              className="h-8 w-8 hover:bg-white/20 flex-shrink-0"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        
+        {/* Tasks Today Badge */}
+        <div className="px-3 pb-3">
+          <div className="bg-white/20 rounded-lg px-3 py-2 inline-block">
             <p className="text-sm">
-              <span className="font-bold text-lg">{sections.today.length}</span>
+              <span className="font-bold">{sections.today.length}</span>
               <span className="text-blue-100 ml-2">tasks today</span>
             </p>
           </div>
