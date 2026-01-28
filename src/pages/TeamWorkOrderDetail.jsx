@@ -238,6 +238,28 @@ export default function TeamWorkOrderDetail() {
           </Card>
         }
 
+        {/* Photos Section */}
+        <Card>
+         <CardContent className="p-4">
+           <h2 className="text-sm font-semibold text-slate-900 mb-4">Documentation Photos</h2>
+           <div className="mb-4">
+             <PhotoUpload 
+               workOrderId={workOrder.id} 
+               tasks={tasks}
+               onSuccess={() => loadData()} 
+             />
+           </div>
+           {photos.length > 0 && (
+             <PhotoGallery 
+               photos={photos}
+               tasks={tasks}
+               onPhotoDeleted={() => loadData()}
+               onPhotoUpdated={() => loadData()}
+             />
+           )}
+         </CardContent>
+        </Card>
+
         {/* Tasks Section */}
         {tasks.length > 0 &&
         <div>
