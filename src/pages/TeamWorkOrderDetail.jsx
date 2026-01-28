@@ -49,8 +49,10 @@ export default function TeamWorkOrderDetail() {
   const [pendingChanges, setPendingChanges] = useState([]);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
+  const [accessLogId, setAccessLogId] = useState(null);
 
   useEffect(() => {
+    logAccessStart();
     loadData();
     const loadUser = async () => {
       try {
