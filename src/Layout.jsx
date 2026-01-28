@@ -171,13 +171,13 @@ export default function Layout({ children, currentPageName }) {
               <Upload className="h-5 w-5" />
               Tasklist Import
             </Link>
-            <Link
-              to={createPageUrl('TeamMobileHome')}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600 transition-all"
+            <button
+              onClick={() => window.open(createPageUrl('TeamMobileHome'), 'TeamApp', 'width=480,height=900,resizable=yes')}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600 transition-all"
             >
               <Smartphone className="h-5 w-5" />
               Mobile App
-            </Link>
+            </button>
             </div>
 
           {/* User Menu */}
