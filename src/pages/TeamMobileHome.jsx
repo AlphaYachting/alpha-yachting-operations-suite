@@ -189,7 +189,7 @@ export default function TeamMobileHome() {
           <img 
             src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/27c878803_alpha-yachting-logo-weiss.png"
             alt="Alpha Yachting"
-            className="h-10 object-contain"
+            className="h-16 object-contain"
           />
           
           {/* Time & Date */}
