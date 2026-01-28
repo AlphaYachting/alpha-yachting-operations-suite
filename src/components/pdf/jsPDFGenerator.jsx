@@ -34,23 +34,15 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   function addLetterhead() {
     if (template.letterhead_image_url && template.letterhead_enabled) {
       try {
-        // Try different image formats
-        const formats = ['JPEG', 'PNG', 'JPG'];
-        let loaded = false;
-        for (const format of formats) {
-          try {
-            doc.addImage(template.letterhead_image_url, format, 0, 0, pageWidth, pageHeight);
-            loaded = true;
-            break;
-          } catch (e) {
-            // Try next format
-          }
-        }
-        if (!loaded) {
-          console.error('Failed to load letterhead image');
-        }
+        // Add letterhead as full-page background image
+        doc.addImage(template.letterhead_image_url, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'NONE');
       } catch (e) {
-        console.error('Letterhead error:', e);
+        try {
+          // Fallback to JPEG if PNG fails
+          doc.addImage(template.letterhead_image_url, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'NONE');
+        } catch (err) {
+          console.error('Failed to load letterhead:', err);
+        }
       }
     }
   }
@@ -108,8 +100,8 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     doc.restoreGraphicsState();
   }
 
-  // Logo
-  if (template.logo_url) {
+  // Logo (only if no letterhead, or letterhead is disabled)
+  if (template.logo_url && (!template.letterhead_enabled || !template.letterhead_image_url)) {
     try {
       const logoHeight = template.logo_height_mm || 20;
       const logoWidth = logoHeight * 3; // Assume 3:1 aspect ratio
@@ -379,7 +371,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   // Totals
   checkPageBreak(60);
   
-  const totalsX = pageWidth - margins.right - 80;
+  const totalsX = margins.left + contentWidth - 80;
   const totalsWidth = 80;
 
   doc.setFontSize(10);
