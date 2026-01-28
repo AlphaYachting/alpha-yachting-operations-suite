@@ -29,8 +29,23 @@ export default function TeamMobileHome() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
+    // Monitor connection status
+    const unsubscribe = connectionMonitor.subscribe((status) => {
+      setIsOnline(status.isOnline);
+      if (status.isOnline) {
+        // Auto sync when connection restored
+        syncPendingChanges();
+      }
+    });
+
     loadData();
+    return unsubscribe;
   }, [previewUserId]);
+
+  const syncPendingChanges = async () => {
+    await syncQueue.processQueue();
+    await syncQueue.clearCompletedItems();
+  };
 
   const loadData = async () => {
     try {
