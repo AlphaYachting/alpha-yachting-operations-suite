@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { ChevronLeft, MapPin, Ship, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, MapPin, Ship, Clock, AlertCircle, CheckCircle2, WifiOff } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import PhotoUpload from '@/components/photos/PhotoUpload';
 import PhotoGallery from '@/components/photos/PhotoGallery';
+import { offlineStorage } from '@/components/offline/offlineStorage';
+import { connectionMonitor } from '@/components/offline/connectionMonitor';
+import { syncQueue } from '@/components/offline/syncQueue';
 
 export default function TeamWorkOrderDetail() {
   const navigate = useNavigate();
