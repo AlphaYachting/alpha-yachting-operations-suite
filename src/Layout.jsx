@@ -172,7 +172,7 @@ export default function Layout({ children, currentPageName }) {
               Tasklist Import
             </Link>
             <Link
-              to={createPageUrl('MobileHome')}
+              to={createPageUrl('TeamMobileHome')}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600 transition-all"
             >
               <Smartphone className="h-5 w-5" />
