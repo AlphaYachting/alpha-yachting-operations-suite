@@ -30,7 +30,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
 
     const today = format(new Date(), 'yyyy-MM-dd');
     const cacheKey = `welcome_${user.id}_${today}`;
-    
+
     // Check if we have cached message for today
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
@@ -48,7 +48,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
 
       const message = response.trim();
       setWelcomeMessage(message);
-      
+
       // Cache for the day
       localStorage.setItem(cacheKey, message);
     } catch (error) {
@@ -73,46 +73,46 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
     flexDirection: 'row',
     padding: { x: 16, y: 16 },
     gap: 16,
-    elementsOrder: ['logo', 'time', 'tasks'],
+    elementsOrder: ['logo', 'time', 'tasks']
   };
 
   const styling = config?.styling || {
     backgroundColor: 'from-blue-600 via-blue-500 to-cyan-500',
     welcomeBackground: 'bg-white/15',
     borderRadius: 'rounded-lg',
-    headerHeight: 140,
+    headerHeight: 140
   };
 
   const elements = {
-    logo: (
-      <img 
-        key="logo"
-        src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"
-        alt="Alpha Yachting"
-        className="object-contain flex-shrink-0"
-        style={{ height: layout.logoHeight }}
-      />
-    ),
-    time: (
-      <div key="time" className="flex-1">
+    logo:
+    <img
+      key="logo"
+      src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"
+      alt="Alpha Yachting" className="mr-1 mb-1 ml-4 object-contain flex-shrink-0"
+
+      style={{ height: layout.logoHeight }} />,
+
+
+    time:
+    <div key="time" className="flex-1">
         <p className="text-2xl md:text-3xl font-bold font-mono leading-none">{timeString}</p>
         <p className="text-xs text-blue-100">{dateString}</p>
-      </div>
-    ),
-    tasks: (
-      <div key="tasks" className="bg-white/20 rounded-full px-3 py-1">
-        <p className="text-2xl md:text-3xl font-bold text-white">{taskCount}</p>
+      </div>,
+
+    tasks:
+    <div key="tasks" className="bg-white/20 rounded-full px-3 py-1">
+        <p className="text-white px-1 text-2xl font-bold md:text-3xl">{taskCount}</p>
         <p className="text-xs text-blue-100">tasks</p>
       </div>
-    ),
+
   };
 
-  const orderedElements = layout.elementsOrder.map(key => elements[key]);
+  const orderedElements = layout.elementsOrder.map((key) => elements[key]);
 
   return (
     <div className={`bg-gradient-to-br ${config?.styling?.backgroundColor || 'from-blue-600 via-blue-500 to-cyan-500'} text-white sticky top-0 z-10 shadow-xl`}>
       {/* Header Top Row - Logo, Time, Tasks Count */}
-      <div 
+      <div
         className="relative"
         style={{
           height: `${styling.headerHeight}px`,
@@ -121,9 +121,9 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
           padding: `${layout.padding.y}px ${layout.padding.x}px`,
           gap: layout.gap,
           alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
+          justifyContent: 'space-between'
+        }}>
+
         <div
           style={{
             display: 'flex',
@@ -131,34 +131,34 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
             gap: layout.gap,
             alignItems: 'center',
             justifyContent: 'space-between',
-            width: '100%',
-          }}
-        >
+            width: '100%'
+          }}>
+
           {orderedElements}
         </div>
-        {user?.role === 'admin' && (
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={onSettingsClick}
-            className="absolute top-2 right-2 h-7 w-7 hover:bg-white/20 flex-shrink-0"
-          >
+        {user?.role === 'admin' &&
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onSettingsClick}
+          className="absolute top-2 right-2 h-7 w-7 hover:bg-white/20 flex-shrink-0">
+
             <Settings className="h-4 w-4" />
           </Button>
-        )}
+        }
       </div>
 
       {/* Welcome Message */}
       <div className="px-4 md:px-5 pb-4">
         <div className="bg-white/15 backdrop-blur-sm rounded-lg p-3 border border-white/20 flex items-start gap-2">
-          {loadingWelcome && (
-            <Loader2 className="h-4 w-4 mt-0.5 animate-spin flex-shrink-0" />
-          )}
-          <p className="text-sm font-medium text-white leading-relaxed">
+          {loadingWelcome &&
+          <Loader2 className="h-4 w-4 mt-0.5 animate-spin flex-shrink-0" />
+          }
+          <p className="text-white text-sm font-medium leading-relaxed">
             {welcomeMessage || 'Loading your message...'}
           </p>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
