@@ -121,6 +121,8 @@ export default function Dashboard() {
   const [showBlockedOnly, setShowBlockedOnly] = useState(false);
   const [focusBlockedDays, setFocusBlockedDays] = useState(false);
   const [overviewStartDate, setOverviewStartDate] = useState(startOfDay(new Date()));
+  const [showLeadForm, setShowLeadForm] = useState(false);
+  const [leads, setLeads] = useState([]);
 
   useEffect(() => {
     const loadData = async () => {
