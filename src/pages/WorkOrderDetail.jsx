@@ -322,17 +322,6 @@ export default function WorkOrderDetail() {
     }
   };
 
-  const handleDeleteTask = async (taskId) => {
-    if (window.confirm('Delete this task? This cannot be undone.')) {
-      try {
-        await base44.entities.Task.delete(taskId);
-        setTasks(tasks.filter(t => t.id !== taskId));
-      } catch (error) {
-        console.error('Error deleting task:', error);
-      }
-    }
-  };
-
   const isAdmin = currentUser?.role === 'admin';
   const canEditTasks = isAdmin;
 
