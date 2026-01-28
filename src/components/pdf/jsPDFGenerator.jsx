@@ -329,10 +329,8 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     const descLines = item.description ? doc.splitTextToSize(item.description, colWidths[1] - 4) : [];
     const requiredHeight = (titleLines.length * 4) + (descLines.length * 3.5) + 10;
 
-    // Check if we have minimum lines rendered before allowing break
-    if (idx >= minLinesBeforeBreak) {
-      checkPageBreak(requiredHeight);
-    }
+    // Always check for page breaks to prevent overflow
+    checkPageBreak(requiredHeight);
 
     xPos = margins.left;
     const rowY = yPos;
@@ -391,7 +389,8 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     doc.addPage();
     addLetterhead();
     yPos = margins.top;
-  } else if (keepTotalsWithItems) {
+  } else if (keepTotalsWithItems && lineItems.length >= minLinesBeforeBreak) {
+    // Only keep totals with items if we have rendered minimum lines
     checkPageBreak(60);
   } else {
     checkPageBreak(30);
