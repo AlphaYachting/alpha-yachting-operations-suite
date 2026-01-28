@@ -283,6 +283,49 @@ export default function Leads() {
         </DialogContent>
       </Dialog>
 
+      {/* Lead Detail Dialog (with tasks) */}
+      <Dialog open={!!selectedLeadDetail} onOpenChange={(open) => !open && setSelectedLeadDetail(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedLeadDetail?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedLeadDetail && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-slate-500">Phone</p>
+                  <p className="font-medium">{selectedLeadDetail.phone}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Email</p>
+                  <p className="font-medium">{selectedLeadDetail.email || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Boat</p>
+                  <p className="font-medium">{selectedLeadDetail.boat_name || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Location</p>
+                  <p className="font-medium">{selectedLeadDetail.location || '-'}</p>
+                </div>
+              </div>
+
+              {selectedLeadDetail.description && (
+                <div className="bg-slate-50 p-4 rounded-lg">
+                  <p className="text-sm text-slate-600 mb-2 font-medium">Description/Inquiry</p>
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedLeadDetail.description}</p>
+                </div>
+              )}
+
+              <LeadTaskList
+                leadId={selectedLeadDetail.id}
+                leadDescription={selectedLeadDetail.description}
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Conversion Dialog */}
       {convertingLead && (
         <LeadConversionDialog
