@@ -85,7 +85,11 @@ export default function TeamWorkOrderDetail() {
       }
     }
 
-    return unsubscribe;
+    return () => {
+      // Log access close on unmount
+      logAccessClose();
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
