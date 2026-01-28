@@ -93,21 +93,9 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
       </div>
     ),
     tasks: (
-      <div key="tasks" className="text-right flex flex-col items-end gap-2">
-        <div className="bg-white/20 rounded-full px-3 py-1">
-          <p className="text-lg md:text-xl font-bold text-white">{taskCount}</p>
-          <p className="text-xs text-blue-100">tasks</p>
-        </div>
-        {user?.role === 'admin' && (
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={onSettingsClick}
-            className="h-7 w-7 hover:bg-white/20 flex-shrink-0"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-        )}
+      <div key="tasks" className="bg-white/20 rounded-full px-3 py-1">
+        <p className="text-lg md:text-xl font-bold text-white">{taskCount}</p>
+        <p className="text-xs text-blue-100">tasks</p>
       </div>
     ),
   };
@@ -117,17 +105,29 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
   return (
     <div className={`bg-gradient-to-br ${config?.styling?.backgroundColor || 'from-blue-600 via-blue-500 to-cyan-500'} text-white sticky top-0 z-10 shadow-xl`}>
       {/* Header Top Row - Logo, Time, Tasks Count */}
-      <div
-        style={{
-          padding: `${layout.padding.y}px ${layout.padding.x}px`,
-          display: 'flex',
-          flexDirection: layout.flexDirection,
-          gap: layout.gap,
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        {orderedElements}
+      <div className="relative">
+        <div
+          style={{
+            padding: `${layout.padding.y}px ${layout.padding.x}px`,
+            display: 'flex',
+            flexDirection: layout.flexDirection,
+            gap: layout.gap,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          {orderedElements}
+        </div>
+        {user?.role === 'admin' && (
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={onSettingsClick}
+            className="absolute top-2 right-2 h-7 w-7 hover:bg-white/20 flex-shrink-0"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Welcome Message */}

@@ -191,7 +191,7 @@ export default function MobileHeaderEditor() {
                 value={[config.layout.logoHeight]}
                 onValueChange={(value) => updateLayout('logoHeight', value[0])}
                 min={30}
-                max={80}
+                max={140}
                 step={2}
                 className="w-full"
               />
