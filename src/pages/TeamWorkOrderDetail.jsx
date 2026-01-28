@@ -117,6 +117,17 @@ export default function TeamWorkOrderDetail() {
     workOrder.status === 'Dispatched' ? 'bg-purple-100 text-purple-800' :
     'bg-slate-100 text-slate-800';
 
+  const handleTaskStatusToggle = async () => {
+    try {
+      const newStatus = isTaskStarted ? 'Completed' : 'In Progress';
+      await base44.entities.WorkOrder.update(workOrder.id, { status: newStatus });
+      setWorkOrder({ ...workOrder, status: newStatus });
+      setIsTaskStarted(!isTaskStarted);
+    } catch (error) {
+      console.error('Error updating work order status:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
