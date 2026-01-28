@@ -333,7 +333,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
       item.description.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n') : 
       '';
     const descLines = descText ? doc.splitTextToSize(descText, colWidths[1] - 4) : [];
-    const requiredHeight = (titleLines.length * 4) + (descLines.length > 0 ? 3 : 0) + (descLines.length * 3.8) + 10;
+    const requiredHeight = (titleLines.length * 4) + (descLines.length > 0 ? 1.5 : 0) + (descLines.length * 3.8) + 10;
 
     // Always check for page breaks to prevent overflow
     checkPageBreak(requiredHeight);
@@ -349,7 +349,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     doc.setFont(fontFamily, 'bold');
     doc.setFontSize(9);
     doc.text(titleLines, xPos + 2, rowY);
-    let descY = rowY + (titleLines.length * 4) + 3;
+    let descY = rowY + (titleLines.length * 4) + 1.5;
 
     if (item.description) {
       doc.setFont(fontFamily, 'normal');
