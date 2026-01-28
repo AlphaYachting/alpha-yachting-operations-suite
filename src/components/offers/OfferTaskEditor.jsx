@@ -121,7 +121,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                   <div>
                     <h4 className="font-semibold text-slate-900">{task.title}</h4>
                     {task.description && (
-                      <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+                      <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{task.description}</p>
                     )}
                   </div>
                   <div className="grid grid-cols-3 gap-3">

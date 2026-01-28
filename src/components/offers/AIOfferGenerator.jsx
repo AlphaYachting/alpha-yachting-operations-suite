@@ -62,7 +62,7 @@ ${prompt}
 
 Generate a detailed list of tasks for this service offer. For each task, provide:
 - A clear, specific title in ${languageMap[formData.language] || 'German'}
-- ${detailedExplanations ? 'A detailed technical description including specific procedures, tools, and technical specifications' : 'A brief, simple description that a non-technical customer can understand'}
+- ${detailedExplanations ? 'A detailed technical description including specific procedures, tools, and technical specifications. Use bullet points (- or •) for lists and separate items with line breaks (\\n) for better readability' : 'A brief, simple description that a non-technical customer can understand'}
 - Quantity needed (e.g., hours for labor, pieces for parts, square meters for surface work, etc.)
 - Appropriate unit type (Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, or Lump Sum)
 
