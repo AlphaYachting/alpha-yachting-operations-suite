@@ -27,6 +27,8 @@ export default function TeamWorkOrderDetail() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
   const [user, setUser] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingChanges, setPendingChanges] = useState([]);
 
   useEffect(() => {
     loadData();
