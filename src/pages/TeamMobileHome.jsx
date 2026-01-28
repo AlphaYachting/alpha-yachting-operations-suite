@@ -26,6 +26,7 @@ export default function TeamMobileHome() {
   const [previewUserId, setPreviewUserId] = useState(null);
   const [showPreviewMode, setShowPreviewMode] = useState(false);
   const [previewTechnicianName, setPreviewTechnicianName] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
     loadData();
