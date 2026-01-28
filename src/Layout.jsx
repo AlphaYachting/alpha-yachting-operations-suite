@@ -4,28 +4,29 @@ import { createPageUrl } from './utils';
 import { base44 } from '@/api/base44Client';
 import MobileAppModal from '@/components/mobile/MobileAppModal';
 import { 
-  LayoutDashboard, 
-  Users, 
-  Ship, 
-  MapPin, 
-  Briefcase, 
-  ClipboardList,
-  Package, 
-  Wrench,
-  Clock,
-  BarChart3,
-  Settings,
-  Menu,
-  X,
-  LogOut,
-  ChevronDown,
-  Anchor,
-  Smartphone,
-  Upload,
-  FileText,
-  Receipt,
-  Bug
-} from 'lucide-react';
+        LayoutDashboard, 
+        Users, 
+        Ship, 
+        MapPin, 
+        Briefcase, 
+        ClipboardList,
+        Package, 
+        Wrench,
+        Clock,
+        BarChart3,
+        Settings,
+        Menu,
+        X,
+        LogOut,
+        ChevronDown,
+        Anchor,
+        Smartphone,
+        Upload,
+        FileText,
+        Receipt,
+        Bug,
+        Phone
+      } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
