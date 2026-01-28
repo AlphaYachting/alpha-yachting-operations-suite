@@ -149,28 +149,26 @@ export default function TeamMobileHome() {
     return (
       <Link to={createPageUrl('TeamTaskDetail') + `?woId=${workOrder.id}`}>
         <div className="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden">
-          {/* Top Section: Colored Box + Title + Status */}
-          <div className="flex items-stretch">
-            {/* Left: Cyan Gradient Time Box */}
-            <div className="bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg m-3 p-4 flex flex-col items-center justify-center min-w-fit text-white shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wider">{dayName}</p>
-              <p className="text-2xl font-bold leading-tight mt-1">{dateString}</p>
-              <p className="text-xs opacity-90 mt-0.5">{monthString}</p>
-              {timeString !== '—' && <p className="text-xs mt-2 font-medium">{timeString}</p>}
+          {/* Top Section: Date Box + Title + Status */}
+          <div className="flex gap-4 p-4">
+            {/* Left: Blue Gradient Date Box */}
+            <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl p-3 flex flex-col items-center justify-center min-w-fit text-white shadow-md flex-shrink-0" style={{ width: '100px' }}>
+              <p className="text-xs font-bold uppercase tracking-wide leading-tight">{dayName}</p>
+              <p className="text-3xl font-bold leading-tight">{dateString}</p>
+              <p className="text-xs mt-0.5">{monthString}</p>
+              {timeString !== '—' && <p className="text-xs mt-1 font-medium">{timeString}</p>}
             </div>
 
-            {/* Center + Right: Title & Status */}
-            <div className="flex-1 p-4 flex flex-col justify-between">
-              <div>
-                <p className="text-base font-bold text-slate-900 leading-tight">{workOrder.title}</p>
-                {boat?.vessel_name && (
-                  <p className="text-sm text-slate-600 mt-1">{boat.vessel_name}</p>
-                )}
-              </div>
+            {/* Center: Title & Boat */}
+            <div className="flex-1 min-w-0">
+              <p className="text-lg font-bold text-slate-900">{workOrder.title}</p>
+              {boat?.vessel_name && (
+                <p className="text-sm text-slate-600 mt-1">{boat.vessel_name}</p>
+              )}
             </div>
 
             {/* Right: Status Badge */}
-            <div className="p-4 flex items-start">
+            <div className="flex-shrink-0">
               <Badge className={`text-xs whitespace-nowrap ${statusBadgeColor}`}>
                 {workOrder.status}
               </Badge>
@@ -179,31 +177,37 @@ export default function TeamMobileHome() {
 
           {/* Location Section */}
           {location && (
-            <div className="px-4 py-3 border-t border-slate-200">
+            <div className="px-4 py-3 border-t border-slate-100">
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                <p className="text-sm font-medium text-slate-700">{location}</p>
+                <p className="text-sm font-semibold text-slate-700">{location}</p>
               </div>
             </div>
           )}
 
-          {/* Bottom Section: Task Count & Additional Info */}
-          <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+          {/* Description Section */}
+          {job?.description && (
+            <div className="px-4 py-3 border-t border-slate-100">
+              <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Description</p>
+              <p className="text-sm text-slate-600 line-clamp-2">{job.description}</p>
+            </div>
+          )}
+
+          {/* Bottom Section: Task Count & Notes */}
+          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
             {/* Task Count */}
             <div className="flex items-center gap-2 text-slate-700">
-              <CheckCircle2 className="h-5 w-5 text-slate-400" />
+              <CheckCircle2 className="h-5 w-5 text-slate-300" />
               <span className="text-sm font-medium">{taskCount} {taskCount === 1 ? 'task' : 'tasks'}</span>
             </div>
 
-            {/* Additional Info Badges */}
-            <div className="flex items-center gap-2">
-              {workOrder.internal_notes && (
-                <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                  <span>📝</span>
-                  <span>Notes</span>
-                </div>
-              )}
-            </div>
+            {/* Notes Badge */}
+            {workOrder.internal_notes && (
+              <div className="flex items-center gap-1.5 border border-amber-300 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                <span>📝</span>
+                <span>Notes</span>
+              </div>
+            )}
           </div>
         </div>
       </Link>
