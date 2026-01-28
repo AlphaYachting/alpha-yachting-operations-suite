@@ -30,6 +30,17 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   const primaryColor = hexToRgb(template.primary_color || '#2563eb');
   const secondaryColor = hexToRgb(template.secondary_color || '#06b6d4');
 
+  // Helper to add letterhead to current page
+  function addLetterhead() {
+    if (template.letterhead_url) {
+      try {
+        doc.addImage(template.letterhead_url, 'PNG', 0, 0, pageWidth, pageHeight);
+      } catch (e) {
+        console.log('Letterhead not loaded');
+      }
+    }
+  }
+
   // Fonts
   const fontFamily = template.font_family || 'helvetica';
   const fontSizeBody = template.font_size_body || 11;
@@ -58,11 +69,15 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   function checkPageBreak(requiredSpace) {
     if (yPos + requiredSpace > pageHeight - margins.bottom) {
       doc.addPage();
+      addLetterhead();
       yPos = margins.top;
       return true;
     }
     return false;
   }
+
+  // Add letterhead to first page
+  addLetterhead();
 
   // Watermark
   if (template.watermark_enabled) {
