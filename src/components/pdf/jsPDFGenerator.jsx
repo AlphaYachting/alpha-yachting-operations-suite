@@ -266,13 +266,13 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   // Calculate column widths based on template settings or defaults
   const totalWidth = contentWidth;
   const colConfig = template.table_column_widths || {
-    index: 4,
-    description: 38,
-    quantity: 8,
-    unit: 8,
-    unit_price: 13,
-    vat: 8,
-    total: 13
+    index: 3,
+    description: 70,
+    quantity: 6,
+    unit: 5,
+    unit_price: 8,
+    vat: 0,
+    total: 8
   };
   
   const colWidths = [
@@ -330,7 +330,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     // Calculate required height for this row
     const titleLines = doc.splitTextToSize(item.title || '', colWidths[1] - 4);
     const descLines = item.description ? doc.splitTextToSize(item.description, colWidths[1] - 4) : [];
-    const requiredHeight = (titleLines.length * 4) + (descLines.length * 3.5) + 10;
+    const requiredHeight = (titleLines.length * 4) + (descLines.length > 0 ? 2 : 0) + (descLines.length * 3.5) + 10;
 
     // Always check for page breaks to prevent overflow
     checkPageBreak(requiredHeight);
@@ -345,8 +345,8 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     // Description
     doc.setFont(fontFamily, 'bold');
     doc.text(titleLines, xPos + 2, rowY);
-    let descY = rowY + (titleLines.length * 4);
-    
+    let descY = rowY + (titleLines.length * 4) + 2;
+
     if (item.description) {
       doc.setFont(fontFamily, 'normal');
       doc.setFontSize(8);
