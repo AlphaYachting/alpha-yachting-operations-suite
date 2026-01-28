@@ -48,6 +48,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { format, parseISO } from 'date-fns';
+import { Textarea } from '@/components/ui/textarea';
 import TimeEntriesSection from '@/components/timeentries/TimeEntriesSection';
 import PhotoUpload from '@/components/photos/PhotoUpload';
 import PhotoGallery from '@/components/photos/PhotoGallery';
