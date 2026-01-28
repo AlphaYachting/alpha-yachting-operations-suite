@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
+import PhotoUpload from '@/components/photos/PhotoUpload';
+import PhotoGallery from '@/components/photos/PhotoGallery';
 
 export default function TeamWorkOrderDetail() {
   const navigate = useNavigate();
