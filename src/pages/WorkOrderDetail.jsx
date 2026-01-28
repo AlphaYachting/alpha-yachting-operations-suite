@@ -108,6 +108,7 @@ export default function WorkOrderDetail() {
   const [teamOrder, setTeamOrder] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
+  const [timeEntries, setTimeEntries] = useState([]);
 
   useEffect(() => {
     loadCurrentUser();
