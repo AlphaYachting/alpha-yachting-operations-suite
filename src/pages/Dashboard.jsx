@@ -422,13 +422,17 @@ export default function Dashboard() {
           color="bg-red-500"
           loading={loading}
         />
-        <StatCard 
-          title="Open Leads" 
-          value={leads.filter(l => l.status === 'Pending').length} 
-          icon={Phone}
-          color="bg-amber-500"
-          loading={loading}
-        />
+        <div asChild className="cursor-pointer">
+          <Link to={createPageUrl('Leads')}>
+            <StatCard 
+              title="Open Leads" 
+              value={leads.filter(l => !['Lost', 'Converted'].includes(l.status)).length} 
+              icon={Phone}
+              color="bg-amber-500"
+              loading={loading}
+            />
+          </Link>
+        </div>
       </div>
 
       {/* Secondary Stats Grid */}
