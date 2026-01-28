@@ -117,6 +117,8 @@ export default function PDFTemplateSettings() {
     const file = e.target.files[0];
     if (!file) return;
 
+    console.log('File selected:', file.name, file.type, file.size);
+
     if (!file.type.startsWith('image/')) {
       setError('Please upload an image file (PNG, JPG, etc.)');
       return;
@@ -124,8 +126,12 @@ export default function PDFTemplateSettings() {
 
     setUploading(true);
     setError('');
+    setSuccess('Uploading letterhead...');
+    
     try {
+      console.log('Starting upload...');
       const result = await base44.integrations.Core.UploadFile({ file });
+      console.log('Upload result:', result);
       
       const updatedTemplate = { 
         ...template, 
@@ -134,21 +140,27 @@ export default function PDFTemplateSettings() {
         letterhead_enabled: true
       };
       
+      console.log('Updating template with:', updatedTemplate);
       setTemplate(updatedTemplate);
       
       // Save to database immediately
       if (templateId) {
+        console.log('Updating existing template:', templateId);
         await base44.entities.PDFTemplate.update(templateId, updatedTemplate);
       } else {
+        console.log('Creating new template');
         const created = await base44.entities.PDFTemplate.create(updatedTemplate);
         setTemplateId(created.id);
       }
       
-      setSuccess('Letterhead uploaded successfully!');
+      setSuccess('Letterhead uploaded and saved successfully!');
       setTimeout(() => setSuccess(''), 3000);
+      
+      // Reset file input
+      e.target.value = '';
     } catch (error) {
       console.error('Error uploading letterhead:', error);
-      setError('Failed to upload letterhead. Please try again.');
+      setError(`Failed to upload letterhead: ${error.message || 'Unknown error'}`);
     } finally {
       setUploading(false);
     }
