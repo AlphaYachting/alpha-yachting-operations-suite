@@ -294,25 +294,40 @@ export default function TeamWorkOrderDetail() {
     if (!commentText.trim()) return;
 
     try {
+      const tempId = `temp_${Date.now()}`;
       const newComment = {
+        id: tempId,
         work_order_id: workOrder.id,
         author_name: user?.full_name || 'Unknown',
         author_email: user?.email || '',
         content: commentText,
-        comment_type: 'worker_note'
+        comment_type: 'worker_note',
+        created_date: new Date().toISOString()
       };
 
-      if (isOnline) {
-        const savedComment = await base44.entities.WorkOrderComment.create(newComment);
-        await offlineStorage.saveData(offlineStorage.STORES.comments, savedComment);
-        setComments([...comments, savedComment]);
-      } else {
-        await syncQueue.addToQueue('WorkOrderComment', 'create', newComment, `temp_${Date.now()}`);
-        setPendingChanges(prev => [...prev, { entity: 'WorkOrderComment', id: `temp_${Date.now()}` }]);
-        setComments([...comments, { id: `temp_${Date.now()}`, ...newComment }]);
-      }
-
+      // Always save to offline storage first
+      await offlineStorage.saveData(offlineStorage.STORES.comments, newComment);
+      setComments([...comments, newComment]);
       setCommentText('');
+
+      // Try to sync if online
+      if (isOnline) {
+        try {
+          const savedComment = await base44.entities.WorkOrderComment.create(newComment);
+          // Update with server response (which includes server-generated ID)
+          await offlineStorage.saveData(offlineStorage.STORES.comments, savedComment);
+          setComments(prev => prev.map(c => c.id === tempId ? savedComment : c));
+        } catch (syncError) {
+          console.error('Error syncing comment to server:', syncError);
+          // Queue for later sync
+          await syncQueue.addToQueue('WorkOrderComment', 'create', newComment, tempId);
+          setPendingChanges(prev => [...prev, { entity: 'WorkOrderComment', id: tempId }]);
+        }
+      } else {
+        // Queue for offline sync
+        await syncQueue.addToQueue('WorkOrderComment', 'create', newComment, tempId);
+        setPendingChanges(prev => [...prev, { entity: 'WorkOrderComment', id: tempId }]);
+      }
     } catch (error) {
       console.error('Error adding comment:', error);
     }
