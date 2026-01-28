@@ -144,14 +144,14 @@ export default function WorkOrderDetail() {
       setTeamOrder(teamOrders.length > 0 ? teamOrders[0] : null);
 
       if (wo.job_id) {
-        const [jobData] = await base44.entities.Job.filter({ id: wo.job_id });
-        if (jobData) {
-          setJob(jobData);
-          
+        const [projectData] = await base44.entities.Job.filter({ id: wo.job_id });
+        if (projectData) {
+          setJob(projectData);
+
           const [custData, boatData, locData] = await Promise.all([
-            jobData.customer_id ? base44.entities.Customer.filter({ id: jobData.customer_id }) : Promise.resolve([]),
-            jobData.boat_id ? base44.entities.Boat.filter({ id: jobData.boat_id }) : Promise.resolve([]),
-            jobData.location_id ? base44.entities.Location.filter({ id: jobData.location_id }) : Promise.resolve([])
+            projectData.customer_id ? base44.entities.Customer.filter({ id: projectData.customer_id }) : Promise.resolve([]),
+            projectData.boat_id ? base44.entities.Boat.filter({ id: projectData.boat_id }) : Promise.resolve([]),
+            projectData.location_id ? base44.entities.Location.filter({ id: projectData.location_id }) : Promise.resolve([])
           ]);
 
           if (custData.length > 0) setCustomer(custData[0]);

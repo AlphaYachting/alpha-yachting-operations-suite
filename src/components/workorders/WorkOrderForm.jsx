@@ -39,11 +39,11 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [suggestedTasks, setSuggestedTasks] = useState([]);
 
-  const getJobLabel = (job) => {
-    const customer = customers.find(c => c.id === job.customer_id);
-    const boat = boats.find(b => b.id === job.boat_id);
+  const getProjectLabel = (project) => {
+    const customer = customers.find(c => c.id === project.customer_id);
+    const boat = boats.find(b => b.id === project.boat_id);
     const customerName = customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim();
-    return `${job.title} (${customerName} - ${boat?.vessel_name || 'Unknown'})`;
+    return `${project.title} (${customerName} - ${boat?.vessel_name || 'Unknown'})`;
   };
 
   const activeTechnicians = technicians.filter(t => t.status === 'Active');
@@ -56,7 +56,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     try {
       // Validate required fields
       if (!formData.job_id) {
-        throw new Error('Please select a parent job');
+        throw new Error('Please select a parent project');
       }
       if (!formData.title?.trim()) {
         throw new Error('Work order title is required');
@@ -126,17 +126,17 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         />
       )}
 
-      {/* Job Selection */}
-      <div className="space-y-2">
-        <Label>Parent Job *</Label>
-        <Select value={formData.job_id} onValueChange={(v) => updateField('job_id', v)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select job" />
+      {/* Project Selection */}
+       <div className="space-y-2">
+         <Label>Parent Project *</Label>
+         <Select value={formData.job_id} onValueChange={(v) => updateField('job_id', v)}>
+           <SelectTrigger>
+             <SelectValue placeholder="Select project" />
           </SelectTrigger>
           <SelectContent>
-            {jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status)).map(job => (
-              <SelectItem key={job.id} value={job.id}>
-                {getJobLabel(job)}
+            {jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status)).map(project => (
+              <SelectItem key={project.id} value={project.id}>
+                {getProjectLabel(project)}
               </SelectItem>
             ))}
           </SelectContent>

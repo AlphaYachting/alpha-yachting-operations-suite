@@ -325,16 +325,16 @@ export default function WorkOrders() {
     }
   };
 
-  const getJobInfo = (jobId) => {
-    const job = jobs.find(j => j.id === jobId);
-    if (!job) return { title: 'Unknown', customer: '', boat: '', location: '' };
-    
-    const customer = customers.find(c => c.id === job.customer_id);
-    const boat = boats.find(b => b.id === job.boat_id);
-    const location = locations.find(l => l.id === job.location_id);
-    
+  const getProjectInfo = (projectId) => {
+    const project = jobs.find(j => j.id === projectId);
+    if (!project) return { title: 'Unknown', customer: '', boat: '', location: '' };
+
+    const customer = customers.find(c => c.id === project.customer_id);
+    const boat = boats.find(b => b.id === project.boat_id);
+    const location = locations.find(l => l.id === project.location_id);
+
     return {
-      title: job.title,
+      title: project.title,
       customer: customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown',
       boat: boat?.vessel_name || 'Unknown',
       location: location?.name || ''
@@ -470,12 +470,12 @@ export default function WorkOrders() {
   };
 
   const filteredWorkOrders = workOrders.filter(wo => {
-    const jobInfo = getJobInfo(wo.job_id);
+    const projectInfo = getProjectInfo(wo.job_id);
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = wo.title?.toLowerCase().includes(searchLower) ||
       wo.work_order_number?.toLowerCase().includes(searchLower) ||
-      jobInfo.customer.toLowerCase().includes(searchLower) ||
-      jobInfo.boat.toLowerCase().includes(searchLower);
+      projectInfo.customer.toLowerCase().includes(searchLower) ||
+      projectInfo.boat.toLowerCase().includes(searchLower);
     
     const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
     
@@ -615,7 +615,7 @@ export default function WorkOrders() {
       ) : viewMode === 'list' ? (
         <div className="grid gap-4">
           {filteredWorkOrders.map((wo) => {
-            const jobInfo = getJobInfo(wo.job_id);
+            const projectInfo = getProjectInfo(wo.job_id);
             const techNames = getTechnicianNames(wo.assigned_technicians);
             const agg = wo._aggregates || {};
             
@@ -635,7 +635,7 @@ export default function WorkOrders() {
                       </div>
                       
                       <p className="text-sm text-slate-500 mt-1">
-                        {jobInfo.customer} • {jobInfo.boat}
+                        {projectInfo.customer} • {projectInfo.boat}
                       </p>
 
                       <div className="flex flex-wrap items-center gap-4 mt-3">
@@ -705,10 +705,10 @@ export default function WorkOrders() {
                           </Select>
                         </div>
 
-                        {jobInfo.location && (
+                        {projectInfo.location && (
                           <div className="flex items-center gap-1 text-sm text-slate-500">
                             <MapPin className="h-4 w-4" />
-                            {jobInfo.location}
+                            {projectInfo.location}
                           </div>
                         )}
                       </div>
@@ -892,7 +892,7 @@ export default function WorkOrders() {
                 {isExpanded && (
                   <CardContent className="p-0">
                     {boatWorkOrders.map((wo, idx) => {
-                      const jobInfo = getJobInfo(wo.job_id);
+                      const projectInfo = getProjectInfo(wo.job_id);
                       const techNames = getTechnicianNames(wo.assigned_technicians);
                       const agg = wo._aggregates || {};
                       const isWoExpanded = expandedWorkOrders[wo.id];
