@@ -15,6 +15,23 @@ import { offlineStorage } from '@/components/offline/offlineStorage';
 import { connectionMonitor } from '@/components/offline/connectionMonitor';
 import { syncQueue } from '@/components/offline/syncQueue';
 
+// Get IP address info
+const getClientInfo = async () => {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return {
+      ip_address: data.ip,
+      device_info: `${navigator.userAgent.substring(0, 200)}`
+    };
+  } catch (error) {
+    return {
+      ip_address: null,
+      device_info: navigator.userAgent.substring(0, 200)
+    };
+  }
+};
+
 export default function TeamWorkOrderDetail() {
   const navigate = useNavigate();
   const [workOrder, setWorkOrder] = useState(null);
