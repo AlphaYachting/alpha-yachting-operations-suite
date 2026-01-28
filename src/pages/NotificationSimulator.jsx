@@ -78,21 +78,23 @@ export default function NotificationSimulator() {
   useEffect(() => {
     if (!isRunning) return;
 
+    const scenario = notificationScenarios[scenarioIndex];
+
     const timer = setTimeout(async () => {
       if (scenarioIndex >= notificationScenarios.length) {
         setIsRunning(false);
         return;
       }
 
-      const scenario = notificationScenarios[scenarioIndex];
+      const currentScenario = notificationScenarios[scenarioIndex];
       
       // Add to simulated notifications list
       const newNotification = {
         id: `sim-${Date.now()}`,
-        title: scenario.title,
-        type: scenario.type,
-        message: scenario.message,
-        icon: scenario.icon,
+        title: currentScenario.title,
+        type: currentScenario.type,
+        message: currentScenario.message,
+        icon: currentScenario.icon,
         is_read: false,
         created_date: new Date().toISOString(),
         timestamp: Date.now()
@@ -105,9 +107,9 @@ export default function NotificationSimulator() {
         try {
           await base44.entities.Notification.create({
             user_email: user.email,
-            title: scenario.title,
-            type: scenario.type,
-            message: scenario.message,
+            title: currentScenario.title,
+            type: currentScenario.type,
+            message: currentScenario.message,
             is_read: false
           });
         } catch (error) {
