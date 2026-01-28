@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { base44 } from '@/api/base44Client';
+import MobileAppModal from '@/components/mobile/MobileAppModal';
 import { 
   LayoutDashboard, 
   Users, 
@@ -61,6 +62,7 @@ const navItems = [
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [mobileAppOpen, setMobileAppOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -172,7 +174,7 @@ export default function Layout({ children, currentPageName }) {
               Tasklist Import
             </Link>
             <button
-              onClick={() => window.open(createPageUrl('TeamMobileHome'), 'TeamApp', 'width=480,height=900,resizable=yes')}
+              onClick={() => setMobileAppOpen(true)}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-cyan-500 text-white hover:from-blue-700 hover:to-cyan-600 transition-all"
             >
               <Smartphone className="h-5 w-5" />
@@ -228,6 +230,9 @@ export default function Layout({ children, currentPageName }) {
           {children}
         </div>
       </main>
-    </div>
-  );
-}
+
+      {/* Mobile App Modal */}
+      <MobileAppModal open={mobileAppOpen} onOpenChange={setMobileAppOpen} />
+      </div>
+      );
+      }
