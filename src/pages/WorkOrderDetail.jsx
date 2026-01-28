@@ -283,6 +283,26 @@ export default function WorkOrderDetail() {
     setSavingTemplate(false);
   };
 
+  const handleAddComment = async () => {
+    if (!commentText.trim()) return;
+
+    try {
+      const newComment = {
+        work_order_id: workOrderId,
+        author_name: currentUser?.full_name || 'Unknown',
+        author_email: currentUser?.email || '',
+        content: commentText,
+        comment_type: 'worker_note'
+      };
+
+      const savedComment = await base44.entities.WorkOrderComment.create(newComment);
+      setComments([...comments, savedComment]);
+      setCommentText('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
   const isAdmin = currentUser?.role === 'admin';
   const canEditTasks = isAdmin;
 
