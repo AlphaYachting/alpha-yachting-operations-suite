@@ -341,7 +341,7 @@ export default function DragDropCalendar({
     return parts.join('\n');
   };
 
-  // Find multi-day work orders and their spans for header rendering
+  // Find multi-day work orders and organize into rows to avoid overlap
   const multiDaySpans = useMemo(() => {
     const spans = [];
     const processedWOs = new Set();
@@ -354,7 +354,6 @@ export default function DragDropCalendar({
       const totalDays = differenceInDays(endDate, startDate) + 1;
       
       if (totalDays > 1) {
-        // Find start and end indices in calendarDays
         const startIdx = calendarDays.findIndex(day => isSameDay(day, startDate));
         const endIdx = calendarDays.findIndex(day => isSameDay(day, endDate));
         
@@ -367,37 +366,77 @@ export default function DragDropCalendar({
             title: wo.title,
             color: techColor.bg,
             totalDays,
-            startCol: startIdx + 1,
-            endCol: endIdx + 2
+            row: 0 // Will be assigned below
           });
           processedWOs.add(wo.id);
         }
       }
     });
     
+    // Assign rows to prevent overlap
+    spans.sort((a, b) => a.startIdx - b.startIdx);
+    spans.forEach(span => {
+      let row = 0;
+      while (true) {
+        const conflicts = spans.filter(s => 
+          s.row === row && 
+          s !== span && 
+          !(s.endIdx < span.startIdx || s.startIdx > span.endIdx)
+        );
+        if (conflicts.length === 0) {
+          span.row = row;
+          break;
+        }
+        row++;
+      }
+    });
+    
     return spans;
   }, [workOrders, calendarDays, technicianColorMap]);
 
+  const maxRow = multiDaySpans.length > 0 ? Math.max(...multiDaySpans.map(s => s.row)) + 1 : 0;
+
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="space-y-2">
-        {/* Multi-day span indicators at the top */}
+      <div className="space-y-3">
+        {/* Multi-day span indicators */}
         {multiDaySpans.length > 0 && (
-          <div className="grid gap-2 grid-cols-7 relative" style={{ minHeight: multiDaySpans.length * 24 + 'px' }}>
-            {multiDaySpans.map((span, spanIdx) => (
-              <div
-                key={span.id}
-                className="h-4 rounded-full flex items-center px-2 shadow-sm col-span-1"
-                style={{
-                  gridColumn: `${span.startCol} / ${span.endCol}`,
-                  backgroundColor: 'rgba(134, 239, 172, 0.9)',
-                  position: 'relative',
-                  top: spanIdx * 24 + 'px'
-                }}
-              >
-                <span className="text-[10px] font-semibold text-green-900 truncate">
-                  {span.title} ({span.totalDays} days)
-                </span>
+          <div className="space-y-1">
+            {Array.from({ length: maxRow }).map((_, rowIdx) => (
+              <div key={rowIdx} className="grid gap-2 grid-cols-7">
+                {calendarDays.map((day, dayIdx) => {
+                  const span = multiDaySpans.find(s => 
+                    s.row === rowIdx && 
+                    dayIdx >= s.startIdx && 
+                    dayIdx <= s.endIdx
+                  );
+                  
+                  if (!span) {
+                    return <div key={dayIdx} className="h-6" />;
+                  }
+                  
+                  // Only render the full span on the start day
+                  if (dayIdx !== span.startIdx) {
+                    return <div key={dayIdx} className="h-6" />;
+                  }
+                  
+                  const spanWidth = span.endIdx - span.startIdx + 1;
+                  
+                  return (
+                    <div
+                      key={span.id}
+                      className="h-6 rounded-lg flex items-center px-3 shadow-md border-2 border-green-600"
+                      style={{
+                        gridColumn: `span ${spanWidth}`,
+                        backgroundColor: 'rgba(134, 239, 172, 0.95)'
+                      }}
+                    >
+                      <span className="text-xs font-bold text-green-900 truncate">
+                        {span.title} ({span.totalDays} days)
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
