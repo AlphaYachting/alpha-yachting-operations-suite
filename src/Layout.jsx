@@ -136,10 +136,25 @@ export default function Layout({ children, currentPageName }) {
           {/* Logo */}
           <div className="h-16 px-3 flex items-center justify-between border-b border-slate-100">
             <div className="flex items-center justify-between flex-1">
-              <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"
-                alt="Alpha Yachting"
-                className="h-12 object-contain"
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="relative group h-12 flex items-center hover:opacity-75 transition-opacity"
+              >
+                <img 
+                  src={logoUrl || "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"}
+                  alt="Company Logo"
+                  className="h-12 object-contain"
+                />
+                <div className="absolute inset-0 bg-black/30 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Camera className="h-4 w-4 text-white" />
+                </div>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
               />
               {user && <NotificationBell userEmail={user.email} />}
             </div>
