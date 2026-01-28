@@ -317,13 +317,13 @@ export default function TeamWorkOrderDetail() {
 
                     {/* Estimated Time */}
                     {task.estimated_minutes &&
-                <div className="mt-2 text-xs text-slate-600">
+                    <div className="mt-2 text-xs text-slate-600">
                         <span className="font-medium">Estimated:</span> {Math.round(task.estimated_minutes / 60)} min
                       </div>
                 }
-                  </CardContent>
-                </Card>
-            )}
+              </CardContent>
+            </Card>
+            ))
             </div>
           </div>
         }
