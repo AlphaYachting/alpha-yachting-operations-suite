@@ -33,13 +33,13 @@ export default function TeamMobileHome() {
       setUser(currentUser);
 
       const [tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData] = await Promise.all([
-        base44.entities.Task.list(),
-        base44.entities.WorkOrder.list(),
-        base44.entities.Location.list(),
-        base44.entities.Technician.list(),
-        base44.entities.Boat.list(),
-        base44.entities.Job.list()
-      ]);
+      base44.entities.Task.list(),
+      base44.entities.WorkOrder.list(),
+      base44.entities.Location.list(),
+      base44.entities.Technician.list(),
+      base44.entities.Boat.list(),
+      base44.entities.Job.list()]
+      );
 
       setWorkOrders(workOrdersData);
       setLocations(locationsData);
@@ -56,16 +56,16 @@ export default function TeamMobileHome() {
   const groupWorkOrdersBySection = () => {
     const today = startOfDay(new Date());
     const sections = { today: [], upcoming: [], later: [] };
-    
+
     // Use preview user if in preview mode, otherwise use current user
     const technicianId = previewUserId || user?.id;
 
     // Get unique work orders assigned to this technician
-    const userWorkOrders = workOrders.filter(wo => 
-      wo.assigned_technicians?.includes(technicianId) || wo.lead_technician_id === technicianId
+    const userWorkOrders = workOrders.filter((wo) =>
+    wo.assigned_technicians?.includes(technicianId) || wo.lead_technician_id === technicianId
     );
 
-    userWorkOrders.forEach(wo => {
+    userWorkOrders.forEach((wo) => {
       const woDate = wo.scheduled_date ? startOfDay(parseISO(wo.scheduled_date)) : null;
       if (!woDate) {
         sections.later.push(wo);
@@ -79,7 +79,7 @@ export default function TeamMobileHome() {
     });
 
     // Sort each section by date and time
-    [sections.today, sections.upcoming, sections.later].forEach(section => {
+    [sections.today, sections.upcoming, sections.later].forEach((section) => {
       section.sort((a, b) => {
         const dateA = a.scheduled_date ? parseISO(a.scheduled_date) : new Date();
         const dateB = b.scheduled_date ? parseISO(b.scheduled_date) : new Date();
@@ -92,26 +92,26 @@ export default function TeamMobileHome() {
   };
 
   const getWorkOrderInfo = (taskId) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = tasks.find((t) => t.id === taskId);
     if (!task) return null;
-    return workOrders.find(w => w.id === task.work_order_id);
+    return workOrders.find((w) => w.id === task.work_order_id);
   };
 
   const getLocationName = (locationId) => {
     if (!locationId) return null;
-    const loc = locations.find(l => l.id === locationId);
+    const loc = locations.find((l) => l.id === locationId);
     return loc?.name || null;
   };
 
   const getBoatInfo = (jobId) => {
     if (!jobId) return null;
-    const job = jobs.find(j => j.id === jobId);
+    const job = jobs.find((j) => j.id === jobId);
     if (!job?.boat_id) return null;
-    return boats.find(b => b.id === job.boat_id);
+    return boats.find((b) => b.id === job.boat_id);
   };
 
   const getWorkOrderTasks = (woId) => {
-    return tasks.filter(t => t.work_order_id === woId);
+    return tasks.filter((t) => t.work_order_id === woId);
   };
 
   const sections = groupWorkOrdersBySection();
@@ -119,17 +119,17 @@ export default function TeamMobileHome() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50">
-        <MobileHeaderWithWelcome 
+        <MobileHeaderWithWelcome
           user={user}
           taskCount={0}
           onSettingsClick={() => {}}
-          showSettings={false}
-        />
+          showSettings={false} />
+
         <div className="p-4 space-y-4">
-          {[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   const WorkOrderCard = ({ workOrder, woTasks }) => {
@@ -138,37 +138,39 @@ export default function TeamMobileHome() {
     const dateString = woDate ? format(woDate, 'd') : '—';
     const monthString = woDate ? format(woDate, 'MMM') : '—';
     const timeString = workOrder.scheduled_start_time || '—';
-    const job = jobs.find(j => j.id === workOrder.job_id);
-    const boat = job?.boat_id ? boats.find(b => b.id === job.boat_id) : null;
+    const job = jobs.find((j) => j.id === workOrder.job_id);
+    const boat = job?.boat_id ? boats.find((b) => b.id === job.boat_id) : null;
     const location = getLocationName(job?.location_id);
     const taskCount = woTasks?.length || 0;
     const statusBadgeColor = workOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                            workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                            'bg-slate-100 text-slate-800';
+    workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+    'bg-slate-100 text-slate-800';
 
     return (
       <Link to={createPageUrl('TeamTaskDetail') + `?woId=${workOrder.id}`}>
-        <div className="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden">
-          {/* Top Section: Date Box + Title + Status */}
-          <div className="flex gap-4 p-4">
-            {/* Left: Blue Gradient Date Box */}
-            <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl p-3 flex flex-col items-center justify-center min-w-fit text-white shadow-md flex-shrink-0" style={{ width: '100px' }}>
-              <p className="text-xs font-bold uppercase tracking-wide leading-tight">{dayName}</p>
-              <p className="text-3xl font-bold leading-tight">{dateString}</p>
-              <p className="text-xs mt-0.5">{monthString}</p>
-              {timeString !== '—' && <p className="text-xs mt-1 font-medium">{timeString}</p>}
+        <div className="bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden">
+          {/* Top Section: Colored Box + Title + Status */}
+          <div className="flex items-stretch">
+            {/* Left: Cyan Gradient Time Box */}
+            <div className="bg-gradient-to-br text-white pt-3 pr-6 pb-5 pl-5 rounded-xl from-blue-400 to-blue-600 flex flex-col items-center justify-center min-w-fit shadow-md flex-shrink-0">
+              <p className="text-xs font-bold uppercase tracking-wider">{dayName}</p>
+              <p className="text-2xl font-bold leading-tight mt-1">{dateString}</p>
+              <p className="text-xs opacity-90 mt-0.5">{monthString}</p>
+              {timeString !== '—' && <p className="text-xs mt-2 font-medium">{timeString}</p>}
             </div>
 
-            {/* Center: Title & Boat */}
-            <div className="flex-1 min-w-0">
-              <p className="text-lg font-bold text-slate-900">{workOrder.title}</p>
-              {boat?.vessel_name && (
+            {/* Center + Right: Title & Status */}
+            <div className="flex-1 p-4 flex flex-col justify-between">
+              <div>
+                <p className="text-base font-bold text-slate-900 leading-tight">{workOrder.title}</p>
+                {boat?.vessel_name &&
                 <p className="text-sm text-slate-600 mt-1">{boat.vessel_name}</p>
-              )}
+                }
+              </div>
             </div>
 
             {/* Right: Status Badge */}
-            <div className="flex-shrink-0">
+            <div className="p-4 flex items-start">
               <Badge className={`text-xs whitespace-nowrap ${statusBadgeColor}`}>
                 {workOrder.status}
               </Badge>
@@ -176,42 +178,36 @@ export default function TeamMobileHome() {
           </div>
 
           {/* Location Section */}
-          {location && (
-            <div className="px-4 py-3 border-t border-slate-100">
+          {location &&
+          <div className="px-4 py-3 border-t border-slate-200">
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                <p className="text-sm font-semibold text-slate-700">{location}</p>
+                <p className="text-sm font-medium text-slate-700">{location}</p>
               </div>
             </div>
-          )}
+          }
 
-          {/* Description Section */}
-          {job?.description && (
-            <div className="px-4 py-3 border-t border-slate-100">
-              <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Description</p>
-              <p className="text-sm text-slate-600 line-clamp-2">{job.description}</p>
-            </div>
-          )}
-
-          {/* Bottom Section: Task Count & Notes */}
-          <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
+          {/* Bottom Section: Task Count & Additional Info */}
+          <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
             {/* Task Count */}
             <div className="flex items-center gap-2 text-slate-700">
-              <CheckCircle2 className="h-5 w-5 text-slate-300" />
+              <CheckCircle2 className="h-5 w-5 text-slate-400" />
               <span className="text-sm font-medium">{taskCount} {taskCount === 1 ? 'task' : 'tasks'}</span>
             </div>
 
-            {/* Notes Badge */}
-            {workOrder.internal_notes && (
-              <div className="flex items-center gap-1.5 border border-amber-300 bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                <span>📝</span>
-                <span>Notes</span>
-              </div>
-            )}
+            {/* Additional Info Badges */}
+            <div className="flex items-center gap-2">
+              {workOrder.internal_notes &&
+              <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                  <span>📝</span>
+                  <span>Notes</span>
+                </div>
+              }
+            </div>
           </div>
         </div>
-      </Link>
-    );
+      </Link>);
+
   };
 
 
@@ -219,92 +215,92 @@ export default function TeamMobileHome() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Improved Header with Welcome Message */}
-      <MobileHeaderWithWelcome 
+      <MobileHeaderWithWelcome
         user={user}
         taskCount={sections.today.length}
         onSettingsClick={() => setShowPreviewMode(!showPreviewMode)}
-        showSettings={showPreviewMode}
-      />
+        showSettings={showPreviewMode} />
+
 
       {/* Test Mode Badge */}
-      {previewUserId && (
-        <div className="bg-orange-50 border-b border-orange-200 px-4 py-3 flex items-center justify-between">
+      {previewUserId &&
+      <div className="bg-orange-50 border-b border-orange-200 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge className="bg-orange-500 text-white">🧪 TEST MODE</Badge>
             <span className="text-sm font-medium text-orange-900">{previewTechnicianName}</span>
           </div>
           <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setPreviewUserId(null);
-              setPreviewTechnicianName(null);
-            }}
-            className="h-8 w-8 hover:bg-orange-100"
-          >
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            setPreviewUserId(null);
+            setPreviewTechnicianName(null);
+          }}
+          className="h-8 w-8 hover:bg-orange-100">
+
             <X className="h-4 w-4 text-orange-600" />
           </Button>
         </div>
-      )}
+      }
 
       {/* Preview Mode */}
-      {showPreviewMode && user?.role === 'admin' && (
-        <TeamPreviewMode 
-          onUserSelect={(techId, techName) => {
-            setPreviewUserId(techId);
-            setPreviewTechnicianName(techName);
-            setShowPreviewMode(false);
-          }} 
-          currentUserId={previewUserId} 
-        />
-      )}
+      {showPreviewMode && user?.role === 'admin' &&
+      <TeamPreviewMode
+        onUserSelect={(techId, techName) => {
+          setPreviewUserId(techId);
+          setPreviewTechnicianName(techName);
+          setShowPreviewMode(false);
+        }}
+        currentUserId={previewUserId} />
+
+      }
 
       {/* Content */}
       <div className="p-4 space-y-6">
         {/* Today */}
-        {sections.today.length > 0 && (
-          <div>
+        {sections.today.length > 0 &&
+        <div>
             <h2 className="text-sm font-semibold text-slate-900 mb-3">Today</h2>
             <div className="space-y-3">
-              {sections.today.map(wo => (
-                <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
-              ))}
+              {sections.today.map((wo) =>
+            <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
+            )}
             </div>
           </div>
-        )}
+        }
 
         {/* Upcoming */}
-        {sections.upcoming.length > 0 && (
-          <div>
+        {sections.upcoming.length > 0 &&
+        <div>
             <h2 className="text-sm font-semibold text-slate-900 mb-3">Upcoming (Next 7 days)</h2>
             <div className="space-y-3">
-              {sections.upcoming.map(wo => (
-                <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
-              ))}
+              {sections.upcoming.map((wo) =>
+            <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
+            )}
             </div>
           </div>
-        )}
+        }
 
         {/* Later */}
-        {sections.later.length > 0 && (
-          <div>
+        {sections.later.length > 0 &&
+        <div>
             <h2 className="text-sm font-semibold text-slate-900 mb-3">Later</h2>
             <div className="space-y-3">
-              {sections.later.map(wo => (
-                <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
-              ))}
+              {sections.later.map((wo) =>
+            <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
+            )}
             </div>
           </div>
-        )}
+        }
 
         {/* No Work Orders */}
-        {workOrders.length === 0 && (
-          <div className="text-center py-12">
+        {workOrders.length === 0 &&
+        <div className="text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-500 text-sm">No work orders assigned yet</p>
           </div>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
