@@ -84,9 +84,21 @@ export default function Projects() {
    const [tasks, setTasks] = useState([]);
    const [loading, setLoading] = useState(true);
    const [searchTerm, setSearchTerm] = useState('');
-   const [statusFilter, setStatusFilter] = useState('all');
-   const [priorityFilter, setPriorityFilter] = useState('all');
-   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [priorityFilter, setPriorityFilter] = useState('all');
+    const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
+
+    // Apply filter from dashboard
+    useEffect(() => {
+      const filterParam = searchParams.get('filter');
+      if (filterParam === 'active') {
+        setStatusFilter('all');
+        setPriorityFilter('all');
+      } else if (filterParam === 'overdue') {
+        setStatusFilter('all');
+        setPriorityFilter('all');
+      }
+    }, [searchParams]);
    const [editingProject, setEditingProject] = useState(null);
    const [deletingProject, setDeletingProject] = useState(null);
    const [deleteRelated, setDeleteRelated] = useState(true);
