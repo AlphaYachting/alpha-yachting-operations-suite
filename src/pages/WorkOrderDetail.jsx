@@ -523,11 +523,18 @@ export default function WorkOrderDetail() {
 
       {/* Team Order Section */}
       {teamOrder && (
-        <TeamOrderCard
-          teamOrder={teamOrder}
-          workOrder={workOrder}
-          onEdit={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
-          onGenerateBrief={async () => {
+        <>
+          {briefError && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm font-medium text-red-900">Partner Brief Error</p>
+              <p className="text-sm text-red-700 mt-1 font-mono">{briefError}</p>
+            </div>
+          )}
+          <TeamOrderCard
+            teamOrder={teamOrder}
+            workOrder={workOrder}
+            onEdit={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
+            onGenerateBrief={async () => {
             try {
               setBriefError(null);
               console.log('Starting partner brief generation...', { workOrderId, teamOrderId: teamOrder.id });
