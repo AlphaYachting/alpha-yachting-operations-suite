@@ -17,6 +17,7 @@ export default function TeamMobileHome() {
   const [workOrders, setWorkOrders] = useState([]);
   const [locations, setLocations] = useState([]);
   const [boats, setBoats] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewUserId, setPreviewUserId] = useState(null);
   const [showPreviewMode, setShowPreviewMode] = useState(false);
@@ -31,17 +32,19 @@ export default function TeamMobileHome() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
-      const [tasksData, workOrdersData, locationsData, techniciansData, boatsData] = await Promise.all([
+      const [tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData] = await Promise.all([
         base44.entities.Task.list(),
         base44.entities.WorkOrder.list(),
         base44.entities.Location.list(),
         base44.entities.Technician.list(),
-        base44.entities.Boat.list()
+        base44.entities.Boat.list(),
+        base44.entities.Job.list()
       ]);
 
       setWorkOrders(workOrdersData);
       setLocations(locationsData);
       setBoats(boatsData);
+      setJobs(jobsData);
       setTasks(tasksData);
     } catch (error) {
       console.error('Error loading team data:', error);
@@ -100,9 +103,11 @@ export default function TeamMobileHome() {
     return loc?.name || null;
   };
 
-  const getBoatInfo = (boatId) => {
-    if (!boatId) return null;
-    return boats.find(b => b.id === boatId);
+  const getBoatInfo = (jobId) => {
+    if (!jobId) return null;
+    const job = jobs.find(j => j.id === jobId);
+    if (!job?.boat_id) return null;
+    return boats.find(b => b.id === job.boat_id);
   };
 
   const getWorkOrderTasks = (woId) => {
@@ -130,8 +135,10 @@ export default function TeamMobileHome() {
   const WorkOrderCard = ({ workOrder, woTasks }) => {
     const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
     const dateString = woDate ? format(woDate, 'MMM d, yyyy') : '—';
-    const location = getLocationName(workOrder.location_id);
-    const boat = getBoatInfo(workOrder.boat_id);
+    const timeString = workOrder.scheduled_start_time || '—';
+    const job = jobs.find(j => j.id === workOrder.job_id);
+    const boat = job?.boat_id ? boats.find(b => b.id === job.boat_id) : null;
+    const location = getLocationName(job?.location_id);
     const statusBadgeColor = workOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
                             workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                             'bg-slate-100 text-slate-800';
@@ -149,16 +156,17 @@ export default function TeamMobileHome() {
             </Badge>
           </div>
 
-          {/* Subtitle: Customer • Boat */}
+          {/* Subtitle: Boat */}
           <p className="text-sm text-slate-600">
-            {boat?.vessel_name || 'Unknown Boat'}
+            {boat?.vessel_name || '—'}
           </p>
 
           {/* Info Cards Row: Date | Status */}
           <div className="grid grid-cols-2 gap-2">
-            {/* Date Card */}
+            {/* Date & Time Card */}
             <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
               <p className="text-xs font-medium text-slate-900">{dateString}</p>
+              {timeString !== '—' && <p className="text-xs text-slate-600 mt-1">{timeString}</p>}
             </div>
 
             {/* Status Card */}
@@ -168,10 +176,12 @@ export default function TeamMobileHome() {
           </div>
 
           {/* Location */}
-          <div className="flex items-center gap-2 text-slate-600">
-            <MapPin className="h-4 w-4 text-slate-400" />
-            <p className="text-sm font-medium text-slate-700">{location || 'No location'}</p>
-          </div>
+          {location && (
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-slate-400" />
+              <p className="text-sm font-medium text-slate-700">{location}</p>
+            </div>
+          )}
 
           {/* Notes Badge */}
           {workOrder.internal_notes && (
