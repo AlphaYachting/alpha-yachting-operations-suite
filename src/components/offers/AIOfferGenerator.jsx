@@ -7,13 +7,25 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
-export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated, onDescriptionGenerated }) {
+export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated, onDescriptionGenerated, existingTasks = [] }) {
   const [prompt, setPrompt] = useState('');
   const [defaultUnitPrice, setDefaultUnitPrice] = useState(70);
   const [detailedExplanations, setDetailedExplanations] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState([]);
+  const [pendingDescription, setPendingDescription] = useState('');
+  const [keepExisting, setKeepExisting] = useState(true);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -93,11 +105,21 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
           unit_price: defaultUnitPrice,
           total_amount: task.quantity * defaultUnitPrice
         }));
-        onTasksGenerated(tasksWithPrices);
         
-        // Pass the generated client description back to parent
-        if (response.client_description && onDescriptionGenerated) {
-          onDescriptionGenerated(response.client_description);
+        // Check if there are existing tasks
+        if (existingTasks && existingTasks.length > 0) {
+          setPendingTasks(tasksWithPrices);
+          setPendingDescription(response.client_description || '');
+          setShowConfirmDialog(true);
+          setGenerating(false);
+        } else {
+          // No existing tasks, apply directly
+          onTasksGenerated(tasksWithPrices);
+          if (response.client_description && onDescriptionGenerated) {
+            onDescriptionGenerated(response.client_description);
+          }
+          setGenerating(false);
+          setPrompt('');
         }
       } else {
         throw new Error('Invalid response from AI');
@@ -107,6 +129,24 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
       setError(err.message || 'Failed to generate tasks. Please try again.');
       setGenerating(false);
     }
+  };
+
+  const handleConfirmApply = () => {
+    const finalTasks = keepExisting 
+      ? [...existingTasks, ...pendingTasks]
+      : pendingTasks;
+    
+    onTasksGenerated(finalTasks);
+    
+    if (pendingDescription && onDescriptionGenerated) {
+      onDescriptionGenerated(pendingDescription);
+    }
+    
+    setShowConfirmDialog(false);
+    setPendingTasks([]);
+    setPendingDescription('');
+    setPrompt('');
+    setKeepExisting(true);
   };
 
   return (
@@ -181,6 +221,52 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
           </>
         )}
       </Button>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bestehende Tasks gefunden</DialogTitle>
+            <DialogDescription>
+              Es gibt bereits {existingTasks.length} Task(s) in diesem Angebot. 
+              Möchten Sie die bestehenden Tasks behalten und die neuen hinzufügen?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="keep-existing"
+                checked={keepExisting}
+                onCheckedChange={setKeepExisting}
+              />
+              <label
+                htmlFor="keep-existing"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Bestehende Tasks behalten ({existingTasks.length} Task(s))
+              </label>
+            </div>
+            
+            <div className="text-sm text-slate-600">
+              {keepExisting ? (
+                <p>✓ Die {pendingTasks.length} neuen Task(s) werden zu den bestehenden hinzugefügt.</p>
+              ) : (
+                <p className="text-amber-600">⚠ Die bestehenden Tasks werden durch {pendingTasks.length} neue ersetzt.</p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleConfirmApply} className="bg-blue-600 hover:bg-blue-700">
+              Anwenden
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
