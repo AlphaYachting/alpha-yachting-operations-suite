@@ -421,6 +421,24 @@ export default function Dashboard() {
           loading={loading}
         />
         <StatCard 
+          title="Open Leads" 
+          value={leads.filter(l => l.status === 'Pending').length} 
+          icon={Phone}
+          color="bg-amber-500"
+          loading={loading}
+        />
+      </div>
+
+      {/* Secondary Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <StatCard 
+          title="Pending Work Orders" 
+          value={draftWorkOrders.length} 
+          icon={ClipboardList}
+          color="bg-slate-500"
+          loading={loading}
+        />
+        <StatCard 
           title="Total Customers" 
           value={customers.length} 
           icon={Users}
