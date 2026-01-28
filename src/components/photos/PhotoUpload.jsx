@@ -145,16 +145,16 @@ export default function PhotoUpload({ workOrderId, tasks, onSuccess }) {
           if (!open) setUploadQueue([]);
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-auto px-4 sm:px-0">
           <DialogHeader>
             <DialogTitle>Upload Photos ({uploadQueue.length})</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             {uploadQueue.map((item) => (
-              <div key={item.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
+              <div key={item.id} className="border rounded-lg p-3 sm:p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-slate-900 truncate">
                       {item.file.name}
                     </p>
@@ -167,23 +167,24 @@ export default function PhotoUpload({ workOrderId, tasks, onSuccess }) {
                       variant="ghost"
                       size="icon"
                       onClick={() => removeQueueItem(item.id)}
+                      className="h-8 w-8 flex-shrink-0"
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   )}
                   {item.status === 'success' && (
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
                   )}
                   {item.status === 'error' && (
-                    <AlertCircle className="h-5 w-5 text-red-600" />
+                    <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
                   )}
                   {item.status === 'processing' && (
-                    <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+                    <Loader2 className="h-5 w-5 text-blue-600 animate-spin flex-shrink-0" />
                   )}
                 </div>
 
                 {item.status === 'pending' && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label className="text-xs">Category</Label>
                       <Select
