@@ -372,10 +372,15 @@ export default function BoatDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {location && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-slate-400" />
-                    <span className="font-medium">{location.name}</span>
-                  </div>
+                  <button
+                    onClick={openMapsRoute}
+                    disabled={!location.latitude || !location.longitude}
+                    className="flex items-center gap-2 p-3 rounded-lg bg-blue-50 hover:bg-blue-100 disabled:bg-slate-50 disabled:cursor-not-allowed transition-colors w-full"
+                  >
+                    <MapPin className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <span className="font-medium text-blue-600 flex-1 text-left">{location.name}</span>
+                    <Navigation className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                  </button>
                 )}
                 {boat.berth_number && (
                   <div>
