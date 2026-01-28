@@ -533,48 +533,16 @@ export default function WorkOrderDetail() {
                 teamOrderId: teamOrder.id
               });
 
-              // Use html2canvas and jsPDF to generate PDF from HTML
-              const html2canvas = (await import('html2canvas')).default;
-              const jsPDF = (await import('jspdf')).jsPDF;
-
-              // Create a temporary div with the HTML
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = response.data.html;
-              tempDiv.style.position = 'fixed';
-              tempDiv.style.left = '-9999px';
-              tempDiv.style.top = '-9999px';
-              tempDiv.style.width = '210mm';
-              tempDiv.style.backgroundColor = 'white';
-              document.body.appendChild(tempDiv);
-
-              // Convert to canvas
-              const canvas = await html2canvas(tempDiv, { 
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff'
-              });
-
-              // Create PDF
-              const pdf = new jsPDF('p', 'mm', 'a4');
-              const imgData = canvas.toDataURL('image/png');
-              const imgWidth = 210;
-              const imgHeight = (canvas.height * imgWidth) / canvas.width;
-              let heightLeft = imgHeight;
-              let position = 0;
-
-              pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-              heightLeft -= 297;
-
-              while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= 297;
+              if (response.data.success && response.data.pdf) {
+                const link = document.createElement('a');
+                link.href = response.data.pdf;
+                link.download = response.data.fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              } else {
+                alert('Failed to generate partner brief');
               }
-
-              pdf.save(`partner-brief-${workOrder.work_order_number || workOrderId}.pdf`);
-
-              document.body.removeChild(tempDiv);
             } catch (error) {
               console.error('Error generating partner brief:', error);
               alert('Failed to generate partner brief');
