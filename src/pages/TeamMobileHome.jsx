@@ -111,46 +111,55 @@ export default function TeamMobileHome() {
 
     const location = getLocationName(wo.location_id);
     const taskDate = wo.scheduled_date ? parseISO(wo.scheduled_date) : null;
-    const dateLabel = taskDate ? (
-      isToday(taskDate) ? 'Today' : 
-      isTomorrow(taskDate) ? 'Tomorrow' : 
-      format(taskDate, 'MMM d')
-    ) : 'TBD';
+    const isTaskToday = taskDate && isToday(taskDate);
+    const timeString = wo.scheduled_start_time || '—';
 
     return (
       <Link to={createPageUrl('TeamTaskDetail') + `?taskId=${task.id}`}>
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4">
-            <div className="space-y-3">
-              {/* Task Title */}
-              <div>
-                <p className="font-semibold text-slate-900 text-sm">{task.title}</p>
-                <p className="text-xs text-slate-500 mt-1">WO: {wo.work_order_number}</p>
+        <Card className={`border-l-4 hover:shadow-lg transition-all ${
+          task.status === 'Completed' ? 'border-l-green-500 opacity-60' :
+          task.status === 'In Progress' ? 'border-l-blue-500 bg-blue-50' :
+          'border-l-slate-300'
+        }`}>
+          <CardContent className="p-4 space-y-3">
+            {/* Time - Large & Prominent */}
+            <div className="flex items-baseline gap-2">
+              <div className="text-2xl font-bold text-slate-900 font-mono">
+                {timeString}
               </div>
+              {isTaskToday && (
+                <Badge className="bg-red-100 text-red-700 border-red-300">Today</Badge>
+              )}
+            </div>
 
-              {/* Time & Location */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span>{dateLabel}</span>
-                  {wo.scheduled_start_time && <span>• {wo.scheduled_start_time}</span>}
+            {/* Task Title - Bold & Clear */}
+            <div>
+              <p className="text-lg font-bold text-slate-900 leading-tight">
+                {task.title}
+              </p>
+            </div>
+
+            {/* Location - Prominent */}
+            {location && (
+              <div className="bg-slate-100 rounded-lg p-3 flex items-start gap-2">
+                <MapPin className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs text-slate-500 font-medium">Location</p>
+                  <p className="text-sm font-semibold text-slate-900">{location}</p>
                 </div>
-                {location && (
-                  <div className="flex items-center gap-2 text-xs text-slate-600">
-                    <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span>{location}</span>
-                  </div>
-                )}
               </div>
+            )}
 
-              {/* Status Badge */}
-              <Badge variant="outline" className={`text-xs w-fit ${
+            {/* Status Bar */}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+              <Badge variant="outline" className={`text-xs ${
                 task.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-300' :
                 task.status === 'In Progress' ? 'bg-blue-100 text-blue-700 border-blue-300' :
                 'bg-slate-100 text-slate-700'
               }`}>
                 {task.status}
               </Badge>
+              <p className="text-xs text-slate-500">WO: {wo.work_order_number}</p>
             </div>
           </CardContent>
         </Card>
