@@ -286,16 +286,15 @@ export default function TeamWorkOrderDetail() {
 
                         {task.status === 'Completed' ? 'Done' : task.status === 'In Progress' ? 'Finish' : 'Start'}
                      </Button>
-                     <div>
+                     <div className="flex-shrink-0">
                            {task.status === 'Completed' ?
                       <CheckCircle2 className="h-5 w-5 text-green-600" /> :
                       task.status === 'In Progress' ?
                       <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" /> :
-
                       <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
                       }
-                         </div>
-                       </div>
+                     </div>
+                 </div>
                      </div>
 
                     {/* Task Description */}
