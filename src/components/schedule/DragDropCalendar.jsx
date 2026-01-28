@@ -379,7 +379,17 @@ export default function DragDropCalendar({
                         {snapshot.isDraggingOver ? 'Drop here' : ''}
                       </p>
                     ) : (
-                      dayWorkOrders.map((wo, index) => {
+                      dayWorkOrders
+                        .sort((a, b) => {
+                          // Multi-day tasks first, then by total days (longer first), then by index
+                          if (a._multiDay && !b._multiDay) return -1;
+                          if (!a._multiDay && b._multiDay) return 1;
+                          if (a._multiDay && b._multiDay) {
+                            return (b._totalDays || 0) - (a._totalDays || 0);
+                          }
+                          return 0;
+                        })
+                        .map((wo, index) => {
                         const jobInfo = getJobInfo(wo.job_id);
                         const techs = getTechnicianInitials(wo.assigned_technicians);
                         const techColor = getTechnicianColor(wo.assigned_technicians);
@@ -420,10 +430,10 @@ export default function DragDropCalendar({
                                      borderBottomLeftRadius: '0px'
                                    }}
                                   >
-                                    {/* Red line at top */}
+                                    {/* Green line at top */}
                                     <div 
-                                      className="absolute top-0 left-0 right-0 h-[2px]" 
-                                      style={{ backgroundColor: '#ef4444' }}
+                                      className="absolute top-0 left-0 right-0 h-[4px]" 
+                                      style={{ backgroundColor: '#10b981' }}
                                     />
                                     
                                     <div className="p-1.5 pt-2">
@@ -552,11 +562,11 @@ export default function DragDropCalendar({
                                          borderLeftColor: techColor.border
                                        }}
                                       >
-                                        {/* Red line at top for multi-day tasks */}
+                                        {/* Green line at top for multi-day tasks */}
                                         {isMultiDay && (
                                           <div 
-                                            className="absolute top-0 left-0 right-0 h-[2px]" 
-                                            style={{ backgroundColor: '#ef4444' }}
+                                            className="absolute top-0 left-0 right-0 h-[4px]" 
+                                            style={{ backgroundColor: '#10b981' }}
                                           />
                                         )}
                                         
