@@ -322,7 +322,7 @@ export default function TeamWorkOrderDetail() {
                 }
               </CardContent>
             </Card>
-            ))
+            ))}
             </div>
           </div>
         }
