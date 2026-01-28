@@ -45,8 +45,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const StatCard = ({ title, value, icon: Icon, trend, color, loading }) => (
-  <Card className="relative overflow-hidden">
+const StatCard = ({ title, value, icon: Icon, trend, color, loading, onClick }) => (
+  <Card className="relative overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={onClick}>
     <div className={`absolute top-0 right-0 w-24 h-24 rounded-full -mr-8 -mt-8 opacity-10 ${color}`} />
     <CardContent className="p-6">
       <div className="flex items-start justify-between">
