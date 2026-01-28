@@ -82,7 +82,10 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   }
 
   function checkPageBreak(requiredSpace) {
-    if (yPos + requiredSpace > pageHeight - margins.bottom) {
+    // Account for footer space (footer starts at pageHeight - margins.bottom - 15)
+    // Add extra buffer of 25mm to ensure content doesn't overlap footer
+    const footerBuffer = 25;
+    if (yPos + requiredSpace > pageHeight - margins.bottom - footerBuffer) {
       doc.addPage();
       addLetterhead();
       yPos = margins.top;
