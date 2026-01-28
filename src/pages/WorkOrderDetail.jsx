@@ -363,10 +363,22 @@ export default function WorkOrderDetail() {
             WO #{workOrder.work_order_number || workOrder.id.slice(-6)}
           </p>
         </div>
-        <Button onClick={() => setShowEditWorkOrder(true)}>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Work Order
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            asChild
+            variant="outline"
+            size="sm"
+          >
+            <Link to={createPageUrl('AccessLogs') + `?workOrderId=${workOrderId}`}>
+              <Eye className="h-4 w-4 mr-2" />
+              View Access Logs
+            </Link>
+          </Button>
+          <Button onClick={() => setShowEditWorkOrder(true)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Work Order
+          </Button>
+        </div>
       </div>
 
       {/* Overview Grid */}
