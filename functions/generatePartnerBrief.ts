@@ -223,7 +223,7 @@ Deno.serve(async (req) => {
 
     const { workOrderId, teamOrderId } = await req.json();
 
-    const [workOrders, teamOrders, jobs, customers, boats, locations, tasks, technicians] = await Promise.all([
+    const [workOrders, teamOrders, jobs, customers, boats, locations, tasks, technicians, templates] = await Promise.all([
       base44.entities.WorkOrder.filter({ id: workOrderId }),
       base44.entities.TeamOrder.filter({ id: teamOrderId }),
       base44.entities.Job.list(),
@@ -231,7 +231,8 @@ Deno.serve(async (req) => {
       base44.entities.Boat.list(),
       base44.entities.Location.list(),
       base44.entities.Task.filter({ work_order_id: workOrderId }),
-      base44.entities.Technician.list()
+      base44.entities.Technician.list(),
+      base44.entities.PDFTemplate.list()
     ]);
 
     if (workOrders.length === 0 || teamOrders.length === 0) {
