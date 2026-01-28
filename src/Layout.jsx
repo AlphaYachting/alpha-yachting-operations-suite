@@ -76,12 +76,26 @@ export default function Layout({ children, currentPageName }) {
       try {
         const userData = await base44.auth.me();
         setUser(userData);
+        setLogoUrl(userData?.company_logo);
       } catch (e) {
         console.log('User not logged in');
       }
     };
     loadUser();
   }, []);
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setLogoUrl(file_url);
+      await base44.auth.updateMe({ company_logo: file_url });
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+    }
+  };
 
   const isMobilePage = currentPageName?.startsWith('Mobile') || currentPageName?.startsWith('Team');
 
