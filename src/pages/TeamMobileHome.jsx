@@ -305,7 +305,14 @@ export default function TeamMobileHome() {
       }
 
       {/* Content */}
-      <div className="p-4 space-y-6">
+            <div className="p-4 space-y-6">
+              {/* Connection Status */}
+              {!isOnline && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-2">
+                  <WifiOff className="h-5 w-5 text-orange-600 flex-shrink-0" />
+                  <span className="text-sm font-medium text-orange-900">You're offline. Data is cached.</span>
+                </div>
+              )}
         {/* Today */}
         {sections.today.length > 0 &&
         <div>
