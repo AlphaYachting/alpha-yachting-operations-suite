@@ -265,8 +265,8 @@ export default function TeamWorkOrderDetail() {
         <div>
             <h2 className="text-sm font-semibold text-slate-900 mb-3">Tasks ({tasks.length})</h2>
             <div className="space-y-3">
-              {tasks.map((task) =>
-            <Card key={task.id}>
+              {tasks.map((task) => (
+              <Card key={task.id}>
               <CardContent className="p-4 relative">
                 {/* Task Title & Status */}
                  <div className="mb-2">
