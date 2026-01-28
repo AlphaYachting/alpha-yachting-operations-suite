@@ -16,6 +16,7 @@ export default function TeamMobileHome() {
   const [tasks, setTasks] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewUserId, setPreviewUserId] = useState(null);
   const [showPreviewMode, setShowPreviewMode] = useState(false);
@@ -30,15 +31,17 @@ export default function TeamMobileHome() {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
-      const [tasksData, workOrdersData, locationsData, techniciansData] = await Promise.all([
+      const [tasksData, workOrdersData, locationsData, techniciansData, boatsData] = await Promise.all([
         base44.entities.Task.list(),
         base44.entities.WorkOrder.list(),
         base44.entities.Location.list(),
-        base44.entities.Technician.list()
+        base44.entities.Technician.list(),
+        base44.entities.Boat.list()
       ]);
 
       setWorkOrders(workOrdersData);
       setLocations(locationsData);
+      setBoats(boatsData);
 
       // Filter tasks assigned to current user (via technician relationship)
       const userTechnicianId = techniciansData.find(t => t.email === (previewUserId ? currentUser.email : currentUser.email))?.id;
@@ -105,6 +108,11 @@ export default function TeamMobileHome() {
     return loc?.name || null;
   };
 
+  const getBoatInfo = (boatId) => {
+    if (!boatId) return null;
+    return boats.find(b => b.id === boatId);
+  };
+
   const sections = groupTasksBySection();
 
   if (loading) {
@@ -128,6 +136,7 @@ export default function TeamMobileHome() {
     if (!wo) return null;
 
     const location = getLocationName(wo.location_id);
+    const boat = getBoatInfo(wo.boat_id);
     const taskDate = wo.scheduled_date ? parseISO(wo.scheduled_date) : null;
     const isTaskToday = taskDate && isToday(taskDate);
     const timeString = wo.scheduled_start_time || '—';
@@ -173,16 +182,30 @@ export default function TeamMobileHome() {
               </div>
             )}
 
-            {/* Location */}
-            {location && (
-              <div className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs text-slate-500">Location</p>
-                  <p className="text-sm font-medium text-slate-900">{location}</p>
+            {/* Location & Boat Info */}
+            <div className="space-y-2">
+              {location && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-slate-500">Location</p>
+                    <p className="text-sm font-medium text-slate-900">{location}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              {boat && (
+                <div className="flex items-start gap-2">
+                  <div className="h-4 w-4 text-slate-400 flex-shrink-0 mt-0.5 flex items-center justify-center">
+                    <span className="text-xs font-bold">⛵</span>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Boat</p>
+                    <p className="text-sm font-medium text-slate-900">{boat.vessel_name}</p>
+                    <p className="text-xs text-slate-500">{boat.vessel_type}</p>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Status Bar */}
             <div className="flex items-center justify-between pt-2 border-t border-slate-200">
