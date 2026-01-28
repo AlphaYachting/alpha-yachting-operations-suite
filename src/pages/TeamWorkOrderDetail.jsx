@@ -182,6 +182,21 @@ export default function TeamWorkOrderDetail() {
           </Card>
         )}
 
+        {/* Safety Notes */}
+        {workOrder.safety_notes && (
+          <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="p-4">
+              <div className="flex gap-3">
+                <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-orange-900 uppercase mb-1">Safety Notes</p>
+                  <p className="text-sm text-orange-900">{workOrder.safety_notes}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Tasks Section */}
         {tasks.length > 0 && (
           <div>
