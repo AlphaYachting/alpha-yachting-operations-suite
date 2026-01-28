@@ -37,7 +37,6 @@ export default function TimeBooking({ taskId }) {
       const task = tasksData.find(t => t.id === taskId);
       setTaskData(task);
       
-      // Load existing time entries
       if (task) {
         const timeEntries = await base44.entities.TimeEntry.filter({
           task_id: taskId,
@@ -86,7 +85,6 @@ export default function TimeBooking({ taskId }) {
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
     return `${hours}h ${minutes}m`;
   };
 
@@ -98,7 +96,6 @@ export default function TimeBooking({ taskId }) {
           <p className="text-sm font-medium text-slate-900">Time Tracking</p>
         </div>
 
-        {/* Current Session */}
         <div className="bg-slate-100 rounded-lg p-4">
           <p className="text-xs text-slate-500 mb-2">Current Session</p>
           <p className="text-2xl font-bold text-slate-900 font-mono">
@@ -106,7 +103,6 @@ export default function TimeBooking({ taskId }) {
           </p>
         </div>
 
-        {/* Controls */}
         <div className="flex gap-2">
           {!isRunning ? (
             <Button
@@ -137,7 +133,6 @@ export default function TimeBooking({ taskId }) {
           </Button>
         </div>
 
-        {/* Save Button */}
         {sessionSeconds > 0 && (
           <Button
             onClick={handleStop}
@@ -148,7 +143,6 @@ export default function TimeBooking({ taskId }) {
           </Button>
         )}
 
-        {/* Total Logged */}
         <div className="pt-2 border-t border-slate-200">
           <p className="text-xs text-slate-500 mb-2">Total Logged Today</p>
           <Badge variant="outline" className="text-sm">
