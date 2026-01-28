@@ -48,9 +48,10 @@ export default function TeamWorkOrderDetail() {
       setIsTaskStarted(wo.status === 'In Progress' || wo.status === 'Completed');
 
       // Load related data
-      const [jobData, tasksData] = await Promise.all([
+      const [jobData, tasksData, photosData] = await Promise.all([
       base44.entities.Job.filter({ id: wo.job_id }),
-      base44.entities.Task.filter({ work_order_id: woId })]
+      base44.entities.Task.filter({ work_order_id: woId }),
+      base44.entities.WorkOrderPhoto.filter({ work_order_id: woId })]
       );
 
       if (jobData && jobData.length > 0) {
