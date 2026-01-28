@@ -150,6 +150,7 @@ export default function WorkOrderDetail() {
       setPhotos(allPhotos);
       setTeamOrder(teamOrders.length > 0 ? teamOrders[0] : null);
       setComments(allComments);
+      setTimeEntries(allTimeEntries);
 
       if (wo.job_id) {
         const [projectData] = await base44.entities.Job.filter({ id: wo.job_id });
