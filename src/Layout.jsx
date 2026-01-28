@@ -60,6 +60,7 @@ const navItems = [
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
   { name: 'PDF Debugger', icon: Bug, page: 'PDFExportDebugger', adminOnly: true },
   { name: 'Header Editor', icon: Smartphone, page: 'MobileHeaderEditor', adminOnly: true },
+  { name: 'Notification Simulator', icon: Bell, page: 'NotificationSimulator', adminOnly: true },
   { name: 'Settings', icon: Settings, page: 'Settings' },
 ];
 
