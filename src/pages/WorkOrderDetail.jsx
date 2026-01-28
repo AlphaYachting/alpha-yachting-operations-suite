@@ -112,6 +112,7 @@ export default function WorkOrderDetail() {
   const [commentText, setCommentText] = useState('');
   const [timeEntries, setTimeEntries] = useState([]);
   const [accessLogs, setAccessLogs] = useState([]);
+  const [briefError, setBriefError] = useState(null);
 
   useEffect(() => {
     loadCurrentUser();
