@@ -46,6 +46,10 @@ const initDB = () => {
             store.createIndex('status', 'status', { unique: false });
             store.createIndex('timestamp', 'timestamp', { unique: false });
           }
+          
+          if (storeName === 'comments' || storeName === 'tasks' || storeName === 'photos') {
+            store.createIndex('work_order_id', 'work_order_id', { unique: false });
+          }
         }
       });
     };
