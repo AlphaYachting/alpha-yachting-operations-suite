@@ -122,6 +122,13 @@ export default function Dashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Auth check - critical security
+        const user = await base44.auth.me();
+        if (!user) {
+          base44.auth.redirectToLogin();
+          return;
+        }
+
         const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData, locationsData] = await Promise.all([
           base44.entities.Job.list(),
           base44.entities.WorkOrder.list('-scheduled_date', 100),
