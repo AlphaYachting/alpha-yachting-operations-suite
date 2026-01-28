@@ -134,7 +134,7 @@ export default function Dashboard() {
           return;
         }
 
-        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData, locationsData] = await Promise.all([
+        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData, locationsData, leadsData] = await Promise.all([
           base44.entities.Job.list(),
           base44.entities.WorkOrder.list('-scheduled_date', 100),
           base44.entities.Task.list(),
@@ -143,7 +143,8 @@ export default function Dashboard() {
           base44.entities.Technician.list(),
           base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
           base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' }),
-          base44.entities.Location.list()
+          base44.entities.Location.list(),
+          base44.entities.Lead.list()
         ]);
         
         // Sort jobs: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
