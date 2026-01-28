@@ -565,7 +565,8 @@ export default function WorkOrderDetail() {
               setBriefError(`Error: ${error.response?.data?.error || error.message}`);
             }
           }}
-        />
+          />
+        </>
       )}
 
       {!teamOrder && isAdmin && (
