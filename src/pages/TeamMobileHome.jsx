@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight } from 'lucide-react';
+import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -134,62 +134,72 @@ export default function TeamMobileHome() {
 
   const WorkOrderCard = ({ workOrder, woTasks }) => {
     const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
-    const dateString = woDate ? format(woDate, 'MMM d, yyyy') : '—';
+    const dayName = woDate ? format(woDate, 'EEE') : '—';
+    const dateString = woDate ? format(woDate, 'MMM d') : '—';
     const timeString = workOrder.scheduled_start_time || '—';
     const job = jobs.find(j => j.id === workOrder.job_id);
     const boat = job?.boat_id ? boats.find(b => b.id === job.boat_id) : null;
     const location = getLocationName(job?.location_id);
+    const taskCount = woTasks?.length || 0;
     const statusBadgeColor = workOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
                             workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                             'bg-slate-100 text-slate-800';
 
     return (
       <Link to={createPageUrl('TeamTaskDetail') + `?woId=${workOrder.id}`}>
-        <div className="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer p-4 space-y-3">
-          {/* Header: Title + Status Badge */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1">
-              <p className="text-lg font-bold text-slate-900">{workOrder.title}</p>
-            </div>
-            <Badge className={`text-xs whitespace-nowrap flex-shrink-0 ${statusBadgeColor}`}>
-              {workOrder.status}
-            </Badge>
-          </div>
+        <div className="bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden">
+          {/* Top Section: Left Time/Day, Center Title, Right Status */}
+          <div className="p-4 border-b border-slate-200">
+            <div className="flex items-start justify-between gap-3">
+              {/* Left: Day & Time */}
+              <div className="flex flex-col items-center min-w-fit">
+                <p className="text-xs font-semibold text-slate-500 uppercase">{dayName}</p>
+                <p className="text-sm font-bold text-slate-900">{dateString}</p>
+                {timeString !== '—' && <p className="text-xs text-slate-600 mt-0.5">{timeString}</p>}
+              </div>
 
-          {/* Subtitle: Boat */}
-          <p className="text-sm text-slate-600">
-            {boat?.vessel_name || '—'}
-          </p>
+              {/* Center: Title */}
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-bold text-slate-900 truncate">{workOrder.title}</p>
+                {boat?.vessel_name && (
+                  <p className="text-xs text-slate-600 mt-1">{boat.vessel_name}</p>
+                )}
+              </div>
 
-          {/* Info Cards Row: Date | Status */}
-          <div className="grid grid-cols-2 gap-2">
-            {/* Date & Time Card */}
-            <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
-              <p className="text-xs font-medium text-slate-900">{dateString}</p>
-              {timeString !== '—' && <p className="text-xs text-slate-600 mt-1">{timeString}</p>}
-            </div>
-
-            {/* Status Card */}
-            <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
-              <p className="text-xs font-medium text-slate-900">{workOrder.status}</p>
+              {/* Right: Status Badge */}
+              <Badge className={`text-xs whitespace-nowrap flex-shrink-0 ${statusBadgeColor}`}>
+                {workOrder.status}
+              </Badge>
             </div>
           </div>
 
-          {/* Location */}
+          {/* Location Section */}
           {location && (
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-slate-400" />
-              <p className="text-sm font-medium text-slate-700">{location}</p>
+            <div className="px-4 py-3 border-b border-slate-200">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                <p className="text-sm font-medium text-slate-700">{location}</p>
+              </div>
             </div>
           )}
 
-          {/* Notes Badge */}
-          {workOrder.internal_notes && (
-            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5 w-fit">
-              <span className="text-lg">📝</span>
-              <span className="text-xs font-semibold text-amber-800">Notes</span>
+          {/* Bottom Section: Task Count & Additional Info */}
+          <div className="px-4 py-3 bg-slate-50 flex items-center justify-between text-xs">
+            {/* Task Count */}
+            <div className="flex items-center gap-1.5 text-slate-600">
+              <CheckCircle2 className="h-4 w-4 text-slate-400" />
+              <span className="font-medium">{taskCount} {taskCount === 1 ? 'task' : 'tasks'}</span>
             </div>
-          )}
+
+            {/* Additional Info Badges */}
+            <div className="flex items-center gap-1.5">
+              {workOrder.internal_notes && (
+                <div className="bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium">
+                  📝
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </Link>
     );
