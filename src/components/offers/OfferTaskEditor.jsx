@@ -69,6 +69,18 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
     setTasks(tasks.filter((_, i) => i !== index));
   };
 
+  const updateTaskField = (index, field, value) => {
+    const updated = [...tasks];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    // Recalculate total if quantity or unit_price changes
+    if (field === 'quantity' || field === 'unit_price') {
+      updated[index].total_amount = updated[index].quantity * updated[index].unit_price;
+    }
+    
+    setTasks(updated);
+  };
+
   const moveTask = (index, direction) => {
     const newTasks = [...tasks];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -105,15 +117,61 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                     <GripVertical className="h-4 w-4 text-slate-400" />
                   </Button>
                 </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-slate-900">{task.title}</h4>
-                  {task.description && (
-                    <p className="text-sm text-slate-600 mt-1">{task.description}</p>
-                  )}
-                  <div className="flex gap-6 mt-2 text-sm text-slate-600">
-                    <span>{task.quantity || 0} {task.unit_type || 'Hour'}</span>
-                    <span>€{(task.unit_price || 0).toFixed(2)}/{task.unit_type || 'Hour'}</span>
-                    <span className="font-semibold text-slate-900">
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-slate-900">{task.title}</h4>
+                    {task.description && (
+                      <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs text-slate-500">Quantity</Label>
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={task.quantity || 0}
+                        onChange={(e) => updateTaskField(index, 'quantity', parseFloat(e.target.value) || 0)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500">Unit</Label>
+                      <Select 
+                        value={task.unit_type || 'Hour'} 
+                        onValueChange={(v) => updateTaskField(index, 'unit_type', v)}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Hour">Hour</SelectItem>
+                          <SelectItem value="Piece">Piece</SelectItem>
+                          <SelectItem value="Square Meter">m²</SelectItem>
+                          <SelectItem value="Linear Meter">m</SelectItem>
+                          <SelectItem value="Liter">L</SelectItem>
+                          <SelectItem value="Kilogram">kg</SelectItem>
+                          <SelectItem value="Set">Set</SelectItem>
+                          <SelectItem value="Lump Sum">Lump Sum</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-500">Price/Unit (€)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={task.unit_price || 0}
+                        onChange={(e) => updateTaskField(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="text-sm text-slate-600">Total</span>
+                    <span className="text-lg font-bold text-slate-900">
                       €{((task.quantity || 0) * (task.unit_price || 0)).toFixed(2)}
                     </span>
                   </div>
