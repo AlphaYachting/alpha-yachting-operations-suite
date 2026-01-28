@@ -628,6 +628,7 @@ export default function OfferDetail() {
             customers={customers}
             boats={boats}
             jobs={jobs}
+            existingTasks={tasks}
             onTasksGenerated={(generatedTasks) => {
               setTasks(generatedTasks);
               setShowAIDialog(false);
