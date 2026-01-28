@@ -384,6 +384,10 @@ export default function Dashboard() {
             <Calendar className="h-4 w-4 mr-2" />
             Schedule
           </Button>
+          <Button onClick={() => setShowLeadForm(true)} className="bg-amber-600 hover:bg-amber-700">
+            <Phone className="h-4 w-4 mr-2" />
+            New Lead
+          </Button>
           <Button asChild className="bg-blue-600 hover:bg-blue-700">
             <Link to={createPageUrl('Jobs') + '?new=true'}>
               <Briefcase className="h-4 w-4 mr-2" />
