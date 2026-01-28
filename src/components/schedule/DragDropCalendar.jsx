@@ -341,13 +341,77 @@ export default function DragDropCalendar({
     return parts.join('\n');
   };
 
+  // Find multi-day work orders and their spans for header rendering
+  const multiDaySpans = useMemo(() => {
+    const spans = [];
+    const processedWOs = new Set();
+    
+    workOrders.forEach(wo => {
+      if (!wo.scheduled_date || !wo.scheduled_end_date || processedWOs.has(wo.id)) return;
+      
+      const startDate = parseISO(wo.scheduled_date);
+      const endDate = parseISO(wo.scheduled_end_date);
+      const totalDays = differenceInDays(endDate, startDate) + 1;
+      
+      if (totalDays > 1) {
+        // Find start and end indices in calendarDays
+        const startIdx = calendarDays.findIndex(day => isSameDay(day, startDate));
+        const endIdx = calendarDays.findIndex(day => isSameDay(day, endDate));
+        
+        if (startIdx !== -1 && endIdx !== -1) {
+          const techColor = getTechnicianColor(wo.assigned_technicians);
+          spans.push({
+            id: wo.id,
+            startIdx,
+            endIdx,
+            title: wo.title,
+            color: techColor.bg,
+            totalDays
+          });
+          processedWOs.add(wo.id);
+        }
+      }
+    });
+    
+    return spans;
+  }, [workOrders, calendarDays, technicianColorMap]);
+
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className={`grid gap-2 grid-cols-7`}>
-        {calendarDays.map((day, dayIndex) => {
-          const dayWorkOrders = getWorkOrdersForDay(day);
-          const isToday = isSameDay(day, new Date());
-          const isCurrentMonth = viewType === 'week' || format(day, 'M') === format(currentWeekStart, 'M');
+      <div className="space-y-1">
+        {/* Multi-day span indicators at the top */}
+        {multiDaySpans.length > 0 && (
+          <div className="grid gap-2 grid-cols-7 mb-2" style={{ height: multiDaySpans.length * 20 + 'px' }}>
+            {multiDaySpans.map((span, spanIdx) => (
+              <div
+                key={span.id}
+                className="col-span-1 relative"
+                style={{
+                  gridColumn: `${span.startIdx + 1} / ${span.endIdx + 2}`,
+                  top: spanIdx * 20 + 'px',
+                  position: 'absolute',
+                  width: `calc((100% + 8px) * ${span.endIdx - span.startIdx + 1} - 8px)`,
+                  left: `calc((100% + 8px) * ${span.startIdx})`
+                }}
+              >
+                <div 
+                  className="h-3 rounded-full flex items-center px-2 shadow-sm"
+                  style={{ backgroundColor: 'rgba(134, 239, 172, 0.8)' }}
+                >
+                  <span className="text-[9px] font-medium text-green-900 truncate">
+                    {span.title} ({span.totalDays} days)
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        <div className={`grid gap-2 grid-cols-7`}>
+          {calendarDays.map((day, dayIndex) => {
+            const dayWorkOrders = getWorkOrdersForDay(day);
+            const isToday = isSameDay(day, new Date());
+            const isCurrentMonth = viewType === 'week' || format(day, 'M') === format(currentWeekStart, 'M');
           
           return (
             <Droppable key={dayIndex} droppableId={dayIndex.toString()}>
@@ -655,6 +719,7 @@ export default function DragDropCalendar({
             </Droppable>
           );
         })}
+        </div>
       </div>
     </DragDropContext>
   );
