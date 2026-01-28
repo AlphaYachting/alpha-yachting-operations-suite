@@ -632,6 +632,9 @@ export default function OfferDetail() {
               setTasks(generatedTasks);
               setShowAIDialog(false);
             }}
+            onDescriptionGenerated={(description) => {
+              updateField('description', description);
+            }}
           />
         </DialogContent>
       </Dialog>
