@@ -18,7 +18,8 @@ import {
   Edit,
   MoreVertical,
   ClipboardList,
-  Save
+  Save,
+  FileText as FileTextIcon
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ import TaskForm from '@/components/tasks/TaskForm';
 import QuickTaskUpdate from '@/components/tasks/QuickTaskUpdate';
 import TemplateSelector from '@/components/templates/TemplateSelector';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
+import TeamOrderCard from '@/components/teamorder/TeamOrderCard';
 import { notifyTaskStatusChange } from '@/components/notifications/notificationUtils';
 
 const statusColors = {
@@ -101,6 +103,7 @@ export default function WorkOrderDetail() {
   const [templateName, setTemplateName] = useState('');
   const [templateCategory, setTemplateCategory] = useState('General Service');
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [teamOrder, setTeamOrder] = useState(null);
 
   useEffect(() => {
     loadCurrentUser();
@@ -120,11 +123,12 @@ export default function WorkOrderDetail() {
 
   const loadWorkOrderDetails = async () => {
     try {
-      const [woData, allTasks, allTechs, allPhotos] = await Promise.all([
+      const [woData, allTasks, allTechs, allPhotos, teamOrders] = await Promise.all([
         base44.entities.WorkOrder.filter({ id: workOrderId }),
         base44.entities.Task.filter({ work_order_id: workOrderId }),
         base44.entities.Technician.list(),
-        base44.entities.WorkOrderPhoto.filter({ work_order_id: workOrderId }, '-created_date')
+        base44.entities.WorkOrderPhoto.filter({ work_order_id: workOrderId }, '-created_date'),
+        base44.entities.TeamOrder.filter({ work_order_id: workOrderId })
       ]);
 
       if (woData.length === 0) {
@@ -137,6 +141,7 @@ export default function WorkOrderDetail() {
       setTasks(allTasks);
       setTechnicians(allTechs);
       setPhotos(allPhotos);
+      setTeamOrder(teamOrders.length > 0 ? teamOrders[0] : null);
 
       if (wo.job_id) {
         const [jobData] = await base44.entities.Job.filter({ id: wo.job_id });
@@ -457,6 +462,34 @@ export default function WorkOrderDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Team Order Section */}
+      {teamOrder && (
+        <TeamOrderCard
+          teamOrder={teamOrder}
+          workOrder={workOrder}
+          onEdit={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
+          onGenerateBrief={() => {
+            // TODO: Implement Partner Brief generation
+            alert('Partner Brief generation coming soon');
+          }}
+        />
+      )}
+
+      {!teamOrder && isAdmin && (
+        <Card className="border-dashed border-2 border-purple-200 bg-purple-50/30">
+          <CardContent className="p-6 text-center">
+            <p className="text-slate-700 mb-4">No Team Order assigned for this work order</p>
+            <Button
+              onClick={() => window.location.href = createPageUrl('TeamOrderDetail') + `?workOrderId=${workOrderId}`}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Team Order
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Vehicle Reservation Section */}
       <VehicleReservation 
