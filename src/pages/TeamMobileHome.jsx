@@ -166,25 +166,38 @@ export default function TeamMobileHome() {
     );
   }
 
+  const now = new Date();
+  const timeString = format(now, 'HH:mm');
+  const dateString = format(now, 'EEE, MMM d');
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="p-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-bold text-slate-900">My Tasks</h1>
-            <p className="text-xs text-slate-500">Today: {sections.today.length} tasks</p>
+      {/* Header with Time & Date */}
+      <div className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white sticky top-0 z-10 shadow-lg">
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="text-blue-100 text-sm font-medium">Current Time</p>
+              <p className="text-4xl font-bold font-mono">{timeString}</p>
+              <p className="text-blue-100 text-sm mt-1">{dateString}</p>
+            </div>
+            {user?.role === 'admin' && (
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setShowPreviewMode(!showPreviewMode)}
+                className="h-9 w-9 hover:bg-white/20"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
           </div>
-          {user?.role === 'admin' && (
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setShowPreviewMode(!showPreviewMode)}
-              className="h-9 w-9"
-            >
-              <Settings className="h-4 w-4 text-slate-500" />
-            </Button>
-          )}
+          <div className="bg-white/20 rounded-lg px-3 py-2">
+            <p className="text-sm">
+              <span className="font-bold text-lg">{sections.today.length}</span>
+              <span className="text-blue-100 ml-2">tasks today</span>
+            </p>
+          </div>
         </div>
       </div>
 
