@@ -320,6 +320,15 @@ export default function Dashboard() {
       console.error('Error updating work order:', error);
     }
   };
+
+  const handleSaveLead = async (leadData) => {
+    try {
+      await base44.entities.Lead.create(leadData);
+      setShowLeadForm(false);
+    } catch (error) {
+      console.error('Error creating lead:', error);
+    }
+  };
   
   // Schedule navigation functions
   const prevWeek = () => setCurrentWeekStart(calendarViewType === 'month' ? addMonths(currentWeekStart, -1) : addDays(currentWeekStart, -7));
