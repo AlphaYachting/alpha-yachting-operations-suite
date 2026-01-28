@@ -115,17 +115,13 @@ export default function Layout({ children, currentPageName }) {
       )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="h-16 px-6 flex items-center justify-between border-b border-slate-100">
+          <div className="h-16 px-3 flex items-center justify-between border-b border-slate-100">
             <div className="flex items-center justify-between flex-1">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                  <Anchor className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <span className="font-bold text-slate-900">Alpha Yachting</span>
-                  <p className="text-[10px] text-slate-500 -mt-0.5">Service Management</p>
-                </div>
-              </div>
+              <img 
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"
+                alt="Alpha Yachting"
+                className="h-12 object-contain"
+              />
               {user && <NotificationBell userEmail={user.email} />}
             </div>
             <Button 
