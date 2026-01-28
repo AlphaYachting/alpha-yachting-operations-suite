@@ -129,6 +129,19 @@ export default function TeamWorkOrderDetail() {
     }
   };
 
+  const handleIndividualTaskStatusToggle = async (taskId, currentStatus) => {
+    try {
+      setUpdatingTaskId(taskId);
+      const newStatus = currentStatus === 'In Progress' ? 'Completed' : 'In Progress';
+      await base44.entities.Task.update(taskId, { status: newStatus });
+      setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    } catch (error) {
+      console.error('Error updating task status:', error);
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
