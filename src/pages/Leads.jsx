@@ -16,6 +16,7 @@ import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2 } from 'l
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
+import LeadTaskList from '@/components/leads/LeadTaskList';
 
 const statusColors = {
   'Pending': 'bg-amber-100 text-amber-700',
