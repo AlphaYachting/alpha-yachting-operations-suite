@@ -42,7 +42,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
     try {
       const firstName = user.full_name?.split(' ')[0] || 'Team';
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `Generate a short, uplifting, and professional welcome message for a yacht service technician named "${firstName}" for the Alpha Yachting team mobile app. The message should be 1-2 sentences, encouraging, and relate to their marine service work. Make it feel fresh and unique. Keep it under 50 words.`,
+        prompt: `Generate one short, uplifting sentence (max 12 words) welcoming yacht service technician "${firstName}" to their day. Keep it encouraging and marine-related.`,
         add_context_from_internet: false
       });
 
