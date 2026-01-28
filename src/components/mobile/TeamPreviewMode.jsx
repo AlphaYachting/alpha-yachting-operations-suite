@@ -64,7 +64,7 @@ export default function TeamPreviewMode({ onUserSelect, currentUserId }) {
           {filteredTechs.map(tech => (
             <button
               key={tech.id}
-              onClick={() => onUserSelect(tech.id)}
+              onClick={() => onUserSelect(tech.id, `${tech.first_name} ${tech.last_name}`)}
               className={`w-full text-left p-2 rounded-lg border-2 transition-all text-xs ${
                 currentUserId === tech.id
                   ? 'border-blue-600 bg-blue-100'
