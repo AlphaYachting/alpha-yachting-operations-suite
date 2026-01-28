@@ -27,7 +27,26 @@ export default function TeamWorkOrderDetail() {
 
   useEffect(() => {
     loadData();
+    const loadUser = async () => {
+      try {
+        const userData = await base44.auth.me();
+        setUser(userData);
+      } catch (error) {
+        console.error('Error loading user:', error);
+      }
+    };
+    loadUser();
   }, []);
+
+  useEffect(() => {
+    let interval;
+    if (timerRunning) {
+      interval = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timerRunning]);
 
   const loadData = async () => {
     try {
