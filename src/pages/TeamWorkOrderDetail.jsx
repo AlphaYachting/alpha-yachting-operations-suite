@@ -46,9 +46,9 @@ export default function TeamWorkOrderDetail() {
 
       // Load related data
       const [jobData, tasksData] = await Promise.all([
-        base44.entities.Job.filter({ id: wo.job_id }),
-        base44.entities.Task.filter({ work_order_id: woId })
-      ]);
+      base44.entities.Job.filter({ id: wo.job_id }),
+      base44.entities.Task.filter({ work_order_id: woId })]
+      );
 
       if (jobData && jobData.length > 0) {
         const j = jobData[0];
@@ -89,8 +89,8 @@ export default function TeamWorkOrderDetail() {
         <div className="p-4 space-y-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 w-full" />)}
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (!workOrder) {
@@ -105,8 +105,8 @@ export default function TeamWorkOrderDetail() {
           <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-3" />
           <p className="text-slate-500">Work order not found</p>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
@@ -114,9 +114,9 @@ export default function TeamWorkOrderDetail() {
   const timeString = workOrder.scheduled_start_time || '—';
 
   const statusBadgeColor = workOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
-    workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-    workOrder.status === 'Dispatched' ? 'bg-purple-100 text-purple-800' :
-    'bg-slate-100 text-slate-800';
+  workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+  workOrder.status === 'Dispatched' ? 'bg-purple-100 text-purple-800' :
+  'bg-slate-100 text-slate-800';
 
   const handleTaskStatusToggle = async () => {
     try {
@@ -134,7 +134,7 @@ export default function TeamWorkOrderDetail() {
       setUpdatingTaskId(taskId);
       const newStatus = currentStatus === 'In Progress' ? 'Completed' : 'In Progress';
       await base44.entities.Task.update(taskId, { status: newStatus });
-      setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+      setTasks(tasks.map((t) => t.id === taskId ? { ...t, status: newStatus } : t));
     } catch (error) {
       console.error('Error updating task status:', error);
     } finally {
@@ -153,11 +153,11 @@ export default function TeamWorkOrderDetail() {
         <Button
           onClick={handleTaskStatusToggle}
           className={`text-sm font-semibold px-3 py-1 rounded-lg text-white ${
-            isTaskStarted
-              ? 'bg-blue-600 hover:bg-blue-700'
-              : 'bg-green-600 hover:bg-green-700'
-          }`}
-        >
+          isTaskStarted ?
+          'bg-blue-600 hover:bg-blue-700' :
+          'bg-green-600 hover:bg-green-700'}`
+          }>
+
           {isTaskStarted ? 'Task Done' : 'Start Task'}
         </Button>
       </div>
@@ -183,18 +183,18 @@ export default function TeamWorkOrderDetail() {
             </div>
 
             {/* Boat */}
-            {boat && (
-              <div className="flex items-center gap-2 text-sm text-slate-600">
+            {boat &&
+            <div className="flex items-center gap-2 text-sm text-slate-600">
                 <Ship className="h-4 w-4" />
                 <span>{boat.vessel_name}</span>
               </div>
-            )}
+            }
           </CardContent>
         </Card>
 
         {/* Location Card */}
-        {location && (
-          <Card>
+        {location &&
+        <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0" />
@@ -206,21 +206,21 @@ export default function TeamWorkOrderDetail() {
               </div>
             </CardContent>
           </Card>
-        )}
+        }
 
         {/* Description */}
-        {job?.description && (
-          <Card>
+        {job?.description &&
+        <Card>
             <CardContent className="p-4">
               <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Description</p>
               <p className="text-sm text-slate-700 leading-relaxed">{job.description}</p>
             </CardContent>
           </Card>
-        )}
+        }
 
         {/* Safety Notes */}
-        {workOrder.safety_notes && (
-          <Card className="border-orange-200 bg-orange-50">
+        {workOrder.safety_notes &&
+        <Card className="border-orange-200 bg-orange-50">
             <CardContent className="p-4">
               <div className="flex gap-3">
                 <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
@@ -231,51 +231,51 @@ export default function TeamWorkOrderDetail() {
               </div>
             </CardContent>
           </Card>
-        )}
+        }
 
         {/* Tasks Section */}
-        {tasks.length > 0 && (
-          <div>
+        {tasks.length > 0 &&
+        <div>
             <h2 className="text-sm font-semibold text-slate-900 mb-3">Tasks ({tasks.length})</h2>
             <div className="space-y-3">
-              {tasks.map((task) => (
-                <Card key={task.id}>
+              {tasks.map((task) =>
+            <Card key={task.id}>
                   <CardContent className="p-4">
                     {/* Task Title & Status */}
                      <div className="flex items-start justify-between gap-3 mb-2">
                        <div className="flex-1">
-                         <p className="text-sm font-semibold text-slate-900">{task.title}</p>
+                         <p className="text-slate-900 text-base font-semibold">{task.title}</p>
                        </div>
                        <div className="flex items-center gap-2 flex-shrink-0">
                          <Button
-                           onClick={() => handleIndividualTaskStatusToggle(task.id, task.status)}
-                           disabled={updatingTaskId === task.id}
-                           className={`text-sm font-semibold px-4 py-2 rounded-lg text-white ${
-                             task.status === 'In Progress'
-                               ? 'bg-blue-600 hover:bg-blue-700'
-                               : task.status === 'Completed'
-                               ? 'bg-green-600 hover:bg-green-700'
-                               : 'bg-slate-600 hover:bg-slate-700'
-                           }`}
-                         >
+                      onClick={() => handleIndividualTaskStatusToggle(task.id, task.status)}
+                      disabled={updatingTaskId === task.id}
+                      className={`text-xs font-semibold px-2 py-1 rounded text-white ${
+                      task.status === 'In Progress' ?
+                      'bg-blue-600 hover:bg-blue-700' :
+                      task.status === 'Completed' ?
+                      'bg-green-600 hover:bg-green-700' :
+                      'bg-slate-600 hover:bg-slate-700'}`
+                      }>
+
                            {task.status === 'Completed' ? 'Done' : task.status === 'In Progress' ? 'Finish' : 'Start'}
                          </Button>
                          <div className="flex-shrink-0">
-                           {task.status === 'Completed' ? (
-                             <CheckCircle2 className="h-5 w-5 text-green-600" />
-                           ) : task.status === 'In Progress' ? (
-                             <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
-                           ) : (
-                             <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
-                           )}
+                           {task.status === 'Completed' ?
+                      <CheckCircle2 className="h-5 w-5 text-green-600" /> :
+                      task.status === 'In Progress' ?
+                      <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" /> :
+
+                      <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
+                      }
                          </div>
                        </div>
                      </div>
 
                     {/* Task Description */}
-                    {task.description && (
-                      <p className="text-xs text-slate-600 leading-relaxed mb-2">{task.description}</p>
-                    )}
+                    {task.description &&
+                <p className="text-xs text-slate-600 leading-relaxed mb-2">{task.description}</p>
+                }
 
                     {/* Task Status Badge */}
                     <Badge variant="outline" className="text-xs">
@@ -283,34 +283,34 @@ export default function TeamWorkOrderDetail() {
                     </Badge>
 
                     {/* Task Notes */}
-                    {task.notes && (
-                      <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+                    {task.notes &&
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
                         <p className="font-medium mb-1">Notes:</p>
                         <p>{task.notes}</p>
                       </div>
-                    )}
+                }
 
                     {/* Estimated Time */}
-                    {task.estimated_minutes && (
-                      <div className="mt-2 text-xs text-slate-600">
+                    {task.estimated_minutes &&
+                <div className="mt-2 text-xs text-slate-600">
                         <span className="font-medium">Estimated:</span> {Math.round(task.estimated_minutes / 60)} min
                       </div>
-                    )}
+                }
                   </CardContent>
                 </Card>
-              ))}
+            )}
             </div>
           </div>
-        )}
+        }
 
         {/* No Tasks */}
-        {tasks.length === 0 && (
-          <div className="text-center py-8">
+        {tasks.length === 0 &&
+        <div className="text-center py-8">
             <CheckCircle2 className="h-12 w-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-500 text-sm">No tasks assigned yet</p>
           </div>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
