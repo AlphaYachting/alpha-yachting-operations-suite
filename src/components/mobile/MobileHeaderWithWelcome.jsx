@@ -7,10 +7,23 @@ import { format } from 'date-fns';
 export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsClick, showSettings }) {
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [loadingWelcome, setLoadingWelcome] = useState(true);
+  const [config, setConfig] = useState(null);
 
   useEffect(() => {
+    loadConfig();
     generateDailyWelcome();
   }, [user]);
+
+  const loadConfig = async () => {
+    try {
+      const configs = await base44.entities.MobileHeaderConfig.list();
+      if (configs.length > 0) {
+        setConfig(configs[0]);
+      }
+    } catch (error) {
+      console.error('Error loading header config:', error);
+    }
+  };
 
   const generateDailyWelcome = async () => {
     if (!user) return;
