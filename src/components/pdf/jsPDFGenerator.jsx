@@ -16,8 +16,11 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   const pageHeight = doc.internal.pageSize.getHeight();
 
   // Margins
+  const letterheadUrl = template.letterhead_url || template.letterhead_image_url;
+  const hasLetterhead = letterheadUrl && template.letterhead_enabled;
+  
   const margins = {
-    top: template.margin_top_mm || 20,
+    top: hasLetterhead ? (template.margin_top_mm || 60) : (template.margin_top_mm || 20),
     right: template.margin_right_mm || 20,
     bottom: template.margin_bottom_mm || 20,
     left: template.margin_left_mm || 20
@@ -32,15 +35,14 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
 
   // Helper to add letterhead to current page
   function addLetterhead() {
-    const letterheadUrl = template.letterhead_url || template.letterhead_image_url;
-    if (letterheadUrl && template.letterhead_enabled) {
+    if (hasLetterhead) {
       try {
-        // Add letterhead as full-page background image
-        doc.addImage(letterheadUrl, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'NONE');
+        // Add letterhead as full-page background image (no compression to preserve quality)
+        doc.addImage(letterheadUrl, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
       } catch (e) {
         try {
           // Fallback to JPEG if PNG fails
-          doc.addImage(letterheadUrl, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'NONE');
+          doc.addImage(letterheadUrl, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
         } catch (err) {
           console.error('Failed to load letterhead:', err);
         }
@@ -101,38 +103,39 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     doc.restoreGraphicsState();
   }
 
-  // Logo (only if no letterhead, or letterhead is disabled)
-  const letterheadUrl = template.letterhead_url || template.letterhead_image_url;
-  if (template.logo_url && (!template.letterhead_enabled || !letterheadUrl)) {
-    try {
-      const logoHeight = template.logo_height_mm || 20;
-      const logoWidth = logoHeight * 3; // Assume 3:1 aspect ratio
-      doc.addImage(template.logo_url, 'PNG', margins.left, yPos, logoWidth, logoHeight);
-    } catch (e) {
-      console.log('Logo not loaded');
+  // Logo and company info (only if no letterhead)
+  if (!hasLetterhead) {
+    if (template.logo_url) {
+      try {
+        const logoHeight = template.logo_height_mm || 20;
+        const logoWidth = logoHeight * 3; // Assume 3:1 aspect ratio
+        doc.addImage(template.logo_url, 'PNG', margins.left, yPos, logoWidth, logoHeight);
+      } catch (e) {
+        console.log('Logo not loaded');
+      }
     }
-  }
 
-  // Company info (right aligned)
-  doc.setFontSize(template.font_size_company_name || 20);
-  doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
-  doc.setFont(fontFamily, 'bold');
-  doc.text(template.company_name || 'Alpha Yachting', pageWidth - margins.right, yPos, { align: 'right' });
-  
-  yPos += 7;
-  doc.setFontSize(9);
-  doc.setTextColor(85, 85, 85);
-  doc.setFont(fontFamily, 'normal');
-  if (template.company_address) {
-    doc.text(template.company_address, pageWidth - margins.right, yPos, { align: 'right' });
-    yPos += 5;
-  }
-  if (template.company_vat) {
-    doc.text(`VAT: ${template.company_vat}`, pageWidth - margins.right, yPos, { align: 'right' });
-    yPos += 5;
-  }
+    // Company info (right aligned)
+    doc.setFontSize(template.font_size_company_name || 20);
+    doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+    doc.setFont(fontFamily, 'bold');
+    doc.text(template.company_name || 'Alpha Yachting', pageWidth - margins.right, yPos, { align: 'right' });
+    
+    yPos += 7;
+    doc.setFontSize(9);
+    doc.setTextColor(85, 85, 85);
+    doc.setFont(fontFamily, 'normal');
+    if (template.company_address) {
+      doc.text(template.company_address, pageWidth - margins.right, yPos, { align: 'right' });
+      yPos += 5;
+    }
+    if (template.company_vat) {
+      doc.text(`VAT: ${template.company_vat}`, pageWidth - margins.right, yPos, { align: 'right' });
+      yPos += 5;
+    }
 
-  yPos += 10;
+    yPos += 10;
+  }
 
   // Document Title
   doc.setFontSize(fontSizeHeading);
