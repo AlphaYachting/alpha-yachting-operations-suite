@@ -141,7 +141,7 @@ export default function Layout({ children, currentPageName }) {
                 className="relative group h-12 flex items-center hover:opacity-75 transition-opacity"
               >
                 <img 
-                  src={logoUrl || "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"}
+                  src={logoUrl || "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"}
                   alt="Company Logo"
                   className="h-12 object-contain"
                 />
