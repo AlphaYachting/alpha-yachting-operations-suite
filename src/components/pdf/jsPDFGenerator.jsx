@@ -317,8 +317,13 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   // Table rows
   doc.setFont(fontFamily, 'normal');
   lineItems.forEach((item, idx) => {
-    checkPageBreak(20);
-    
+    // Calculate required height for this row
+    const titleLines = doc.splitTextToSize(item.title || '', colWidths[1] - 4);
+    const descLines = item.description ? doc.splitTextToSize(item.description, colWidths[1] - 4) : [];
+    const requiredHeight = (titleLines.length * 4) + (descLines.length * 3.5) + 10;
+
+    checkPageBreak(requiredHeight);
+
     xPos = margins.left;
     const rowY = yPos;
     
