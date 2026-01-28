@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users } from 'lucide-react';
+import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users, WifiOff, Wifi } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO, isToday, isTomorrow, startOfDay, formatDistanceToNow } from 'date-fns';
 import TeamPreviewMode from '@/components/mobile/TeamPreviewMode';
 import MobileHeaderWithWelcome from '@/components/mobile/MobileHeaderWithWelcome';
+import SyncStatus from '@/components/mobile/SyncStatus';
+import { offlineStorage } from '@/components/offline/offlineStorage';
+import { connectionMonitor } from '@/components/offline/connectionMonitor';
+import { syncQueue } from '@/components/offline/syncQueue';
 
 export default function TeamMobileHome() {
   const [user, setUser] = useState(null);
