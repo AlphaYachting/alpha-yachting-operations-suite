@@ -10,7 +10,7 @@ import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated, onDescriptionGenerated }) {
   const [prompt, setPrompt] = useState('');
-  const [defaultUnitPrice, setDefaultUnitPrice] = useState(50);
+  const [defaultUnitPrice, setDefaultUnitPrice] = useState(70);
   const [detailedExplanations, setDetailedExplanations] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -139,7 +139,7 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
           step="1"
           min="0"
           value={defaultUnitPrice}
-          onChange={(e) => setDefaultUnitPrice(parseFloat(e.target.value) || 50)}
+          onChange={(e) => setDefaultUnitPrice(parseFloat(e.target.value) || 70)}
           disabled={generating}
         />
         <p className="text-xs text-slate-500">
