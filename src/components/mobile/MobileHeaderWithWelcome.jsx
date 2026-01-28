@@ -76,6 +76,13 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
     elementsOrder: ['logo', 'time', 'tasks'],
   };
 
+  const styling = config?.styling || {
+    backgroundColor: 'from-blue-600 via-blue-500 to-cyan-500',
+    welcomeBackground: 'bg-white/15',
+    borderRadius: 'rounded-lg',
+    headerHeight: 140,
+  };
+
   const elements = {
     logo: (
       <img 
