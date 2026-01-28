@@ -604,6 +604,58 @@ export default function WorkOrderDetail() {
         </Card>
       </div>
 
+      {/* Access Logs Section - Admin Only */}
+      {isAdmin && accessLogs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Access Logs</CardTitle>
+            <p className="text-sm text-slate-500 mt-1">When technicians viewed this work order</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {accessLogs.map((log) => (
+                <div key={log.id} className="p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="font-semibold text-slate-900">{log.technician_email}</p>
+                        <Badge variant="outline" className="text-xs">
+                          {log.duration_seconds ? `${Math.round(log.duration_seconds / 60)}m` : 'Viewing'}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
+                        <div>
+                          <p className="text-xs text-slate-500 font-medium mb-0.5">Accessed</p>
+                          <p>{format(parseISO(log.accessed_at), 'MMM d, yyyy HH:mm:ss')}</p>
+                        </div>
+                        {log.closed_at && (
+                          <div>
+                            <p className="text-xs text-slate-500 font-medium mb-0.5">Closed</p>
+                            <p>{format(parseISO(log.closed_at), 'MMM d, yyyy HH:mm:ss')}</p>
+                          </div>
+                        )}
+                        {log.ip_address && (
+                          <div>
+                            <p className="text-xs text-slate-500 font-medium mb-0.5">IP Address</p>
+                            <p className="font-mono text-xs">{log.ip_address}</p>
+                          </div>
+                        )}
+                        {log.device_info && (
+                          <div>
+                            <p className="text-xs text-slate-500 font-medium mb-0.5">Device</p>
+                            <p className="text-xs truncate" title={log.device_info}>{log.device_info.substring(0, 40)}...</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Work Order Comments Section */}
       <Card>
         <CardHeader>
