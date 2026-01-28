@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
 
-export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated }) {
+export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated, onDescriptionGenerated }) {
   const [prompt, setPrompt] = useState('');
   const [defaultUnitPrice, setDefaultUnitPrice] = useState(50);
   const [detailedExplanations, setDetailedExplanations] = useState(false);
@@ -52,6 +52,10 @@ Be practical and realistic with estimates. Consider travel time if it's mobile s
         response_json_schema: {
           type: 'object',
           properties: {
+            client_description: {
+              type: 'string',
+              description: 'A brief, professional description for the client explaining the issue and proposed solution (2-4 sentences)'
+            },
             tasks: {
               type: 'array',
               items: {
@@ -66,7 +70,7 @@ Be practical and realistic with estimates. Consider travel time if it's mobile s
               }
             }
           },
-          required: ['tasks']
+          required: ['client_description', 'tasks']
         }
       });
 
@@ -78,6 +82,11 @@ Be practical and realistic with estimates. Consider travel time if it's mobile s
           total_amount: task.quantity * defaultUnitPrice
         }));
         onTasksGenerated(tasksWithPrices);
+        
+        // Pass the generated client description back to parent
+        if (response.client_description && onDescriptionGenerated) {
+          onDescriptionGenerated(response.client_description);
+        }
       } else {
         throw new Error('Invalid response from AI');
       }
