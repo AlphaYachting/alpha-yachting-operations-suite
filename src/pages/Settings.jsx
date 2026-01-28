@@ -43,6 +43,33 @@ export default function Settings() {
     }
   ];
 
+  const adminCategories = [
+    {
+      title: 'Header Editor',
+      description: 'Customize mobile app header layout and styling',
+      icon: Smartphone,
+      page: 'MobileHeaderEditor'
+    },
+    {
+      title: 'PDF Debugger',
+      description: 'Debug and test PDF export functionality',
+      icon: Bug,
+      page: 'PDFExportDebugger'
+    },
+    {
+      title: 'Notification Simulator',
+      description: 'Test notification system with live scenarios',
+      icon: Bell,
+      page: 'NotificationSimulator'
+    },
+    {
+      title: 'PDF Template Manager',
+      description: 'Manage PDF templates',
+      icon: FileText,
+      page: 'PDFTemplateManager'
+    }
+  ];
+
   return (
     <div className="space-y-6">
       <div>
