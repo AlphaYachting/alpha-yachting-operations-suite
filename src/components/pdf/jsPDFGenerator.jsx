@@ -333,7 +333,6 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     
     // Description
     doc.setFont(fontFamily, 'bold');
-    const titleLines = doc.splitTextToSize(item.title || '', colWidths[1] - 4);
     doc.text(titleLines, xPos + 2, rowY);
     let descY = rowY + (titleLines.length * 4);
     
