@@ -439,6 +439,51 @@ export default function TeamWorkOrderDetail() {
          </CardContent>
         </Card>
 
+        {/* Comments Section */}
+        <Card>
+          <CardContent className="p-4">
+            <h2 className="text-sm font-semibold text-slate-900 mb-4">Work Notes</h2>
+
+            {/* Comment Input */}
+            <div className="space-y-2 mb-4">
+              <Textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Leave a note about this work order..."
+                rows={3}
+                className="text-sm"
+              />
+              <Button
+                onClick={handleAddComment}
+                disabled={!commentText.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Add Note
+              </Button>
+            </div>
+
+            {/* Comments List */}
+            {comments.length > 0 && (
+              <div className="space-y-3 border-t pt-4">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="bg-slate-50 rounded-lg p-3">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="font-medium text-sm text-slate-900">{comment.author_name}</p>
+                      <span className="text-xs text-slate-500">{comment.created_date ? format(parseISO(comment.created_date), 'MMM d, HH:mm') : 'Just now'}</span>
+                    </div>
+                    <p className="text-sm text-slate-700 leading-relaxed">{comment.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {comments.length === 0 && (
+              <p className="text-sm text-slate-500 text-center py-4">No notes yet</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Tasks Section */}
         {tasks.length > 0 &&
         <div>
