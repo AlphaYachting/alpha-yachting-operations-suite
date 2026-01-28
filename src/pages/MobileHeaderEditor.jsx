@@ -210,9 +210,9 @@ export default function MobileHeaderEditor() {
 
             {/* Header Height */}
             <div className="space-y-2">
-              <Label>Header Height: {config.styling.headerHeight}px</Label>
+              <Label>Header Height: {config.styling.headerHeight || 140}px</Label>
               <Slider
-                value={[config.styling.headerHeight]}
+                value={[config.styling.headerHeight || 140]}
                 onValueChange={(value) => updateStyling('headerHeight', value[0])}
                 min={80}
                 max={200}
