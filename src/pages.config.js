@@ -72,16 +72,16 @@ import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import TaskTemplates from './pages/TaskTemplates';
 import TasklistImport from './pages/TasklistImport';
+import TeamMobileHome from './pages/TeamMobileHome';
 import TeamOrderDetail from './pages/TeamOrderDetail';
 import TeamOrders from './pages/TeamOrders';
+import TeamTaskDetail from './pages/TeamTaskDetail';
 import Technicians from './pages/Technicians';
 import TemplateDetail from './pages/TemplateDetail';
 import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import TeamMobileHome from './pages/TeamMobileHome';
-import TeamTaskDetail from './pages/TeamTaskDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -111,16 +111,16 @@ export const PAGES = {
     "Settings": Settings,
     "TaskTemplates": TaskTemplates,
     "TasklistImport": TasklistImport,
+    "TeamMobileHome": TeamMobileHome,
     "TeamOrderDetail": TeamOrderDetail,
     "TeamOrders": TeamOrders,
+    "TeamTaskDetail": TeamTaskDetail,
     "Technicians": Technicians,
     "TemplateDetail": TemplateDetail,
     "VehicleDetail": VehicleDetail,
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "TeamMobileHome": TeamMobileHome,
-    "TeamTaskDetail": TeamTaskDetail,
 }
 
 export const pagesConfig = {

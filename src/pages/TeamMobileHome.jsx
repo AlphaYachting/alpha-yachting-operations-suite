@@ -185,6 +185,14 @@ export default function TeamMobileHome() {
       {/* Header with Time & Date */}
       <div className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white sticky top-0 z-10 shadow-lg">
         <div className="p-4">
+          {/* Logo */}
+          <div className="mb-4">
+            <img 
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/27c878803_alpha-yachting-logo-weiss.png"
+              alt="Alpha Yachting"
+              className="h-12 object-contain"
+            />
+          </div>
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-blue-100 text-sm font-medium">Current Time</p>
