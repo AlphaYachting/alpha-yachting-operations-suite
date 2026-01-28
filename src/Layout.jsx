@@ -75,7 +75,7 @@ export default function Layout({ children, currentPageName }) {
     loadUser();
   }, []);
 
-  const isMobilePage = currentPageName?.startsWith('Mobile');
+  const isMobilePage = currentPageName?.startsWith('Mobile') || currentPageName?.startsWith('Team');
 
   if (isMobilePage) {
     return <>{children}</>;
