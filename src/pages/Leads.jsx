@@ -226,6 +226,13 @@ export default function Leads() {
                   </div>
 
                   <div className="flex gap-2 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedLeadDetail(lead)}
+                    >
+                      Tasks & Notes
+                    </Button>
                     {lead.status === 'Pending' && (
                       <Button
                         size="sm"
