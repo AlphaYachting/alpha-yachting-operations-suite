@@ -79,6 +79,7 @@ export default function NotificationSimulator() {
     if (!isRunning) return;
 
     const scenario = notificationScenarios[scenarioIndex];
+    if (!scenario) return;
 
     const timer = setTimeout(async () => {
       if (scenarioIndex >= notificationScenarios.length) {
