@@ -483,19 +483,29 @@ export default function WorkOrders() {
       wo.work_order_number?.toLowerCase().includes(searchLower) ||
       projectInfo.customer.toLowerCase().includes(searchLower) ||
       projectInfo.boat.toLowerCase().includes(searchLower);
-    
+
+    const filterParam = searchParams.get('filter');
+    let matchesFilter = true;
+
+    if (filterParam === 'today') {
+      const today = new Date();
+      matchesFilter = wo.scheduled_date && isToday(parseISO(wo.scheduled_date)) && wo.status !== 'Completed' && wo.status !== 'Cancelled';
+    } else if (filterParam === 'pending') {
+      matchesFilter = wo.status === 'Draft';
+    }
+
     const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
-    
+
     const job = jobs.find(j => j.id === wo.job_id);
     const matchesBoat = boatFilter === 'all' || job?.boat_id === boatFilter;
-    
+
     const agg = wo._aggregates || {};
     const matchesDetails = detailsFilter === 'all' ||
       (detailsFilter === 'time' && agg.timeEntryCount > 0) ||
       (detailsFilter === 'photos' && agg.photoCount > 0) ||
       (detailsFilter === 'notes' && agg.hasNotes);
-    
-    return matchesSearch && matchesStatus && matchesBoat && matchesDetails;
+
+    return matchesSearch && matchesStatus && matchesBoat && matchesDetails && matchesFilter;
   }).sort((a, b) => {
     if (sortBy === 'date-asc') {
       return (a.scheduled_date || '').localeCompare(b.scheduled_date || '');
