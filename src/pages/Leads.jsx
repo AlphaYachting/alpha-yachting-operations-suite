@@ -177,9 +177,7 @@ export default function Leads() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-slate-900">{lead.name}</h3>
-                      <Badge className={statusColors[lead.status]}>
-                        {lead.status}
-                      </Badge>
+                      <LeadStatusChange lead={lead} onStatusChange={loadData} />
                       <Badge className={priorityColors[lead.priority]}>
                         {lead.priority}
                       </Badge>
