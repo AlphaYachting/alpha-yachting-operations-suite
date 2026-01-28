@@ -106,6 +106,8 @@ export default function WorkOrderDetail() {
   const [templateCategory, setTemplateCategory] = useState('General Service');
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [teamOrder, setTeamOrder] = useState(null);
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
 
   useEffect(() => {
     loadCurrentUser();
