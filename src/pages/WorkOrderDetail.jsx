@@ -528,49 +528,18 @@ export default function WorkOrderDetail() {
           onEdit={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
           onGenerateBrief={async () => {
             try {
-              const html2canvas = (await import('html2canvas')).default;
-              const jsPDF = (await import('jspdf')).jsPDF;
-
               const response = await base44.functions.invoke('generatePartnerBrief', {
                 workOrderId,
                 teamOrderId: teamOrder.id
               });
 
-              if (response.data.success && response.data.html) {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = response.data.html;
-                tempDiv.style.position = 'fixed';
-                tempDiv.style.left = '-9999px';
-                tempDiv.style.top = '-9999px';
-                tempDiv.style.width = '210mm';
-                tempDiv.style.backgroundColor = 'white';
-                document.body.appendChild(tempDiv);
-
-                const canvas = await html2canvas(tempDiv, { 
-                  scale: 2,
-                  useCORS: true,
-                  backgroundColor: '#ffffff'
-                });
-
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                const imgData = canvas.toDataURL('image/png');
-                const imgWidth = 210;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                let heightLeft = imgHeight;
-                let position = 0;
-
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= 297;
-
-                while (heightLeft > 0) {
-                  position = heightLeft - imgHeight;
-                  pdf.addPage();
-                  pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                  heightLeft -= 297;
-                }
-
-                pdf.save(response.data.fileName);
-                document.body.removeChild(tempDiv);
+              if (response.data.success && response.data.pdf) {
+                const link = document.createElement('a');
+                link.href = response.data.pdf;
+                link.download = response.data.fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
               } else {
                 alert('Failed to generate partner brief');
               }
