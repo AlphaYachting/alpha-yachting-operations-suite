@@ -245,8 +245,9 @@ Deno.serve(async (req) => {
     const customer = customers.find(c => c.id === job?.customer_id);
     const boat = boats.find(b => b.id === job?.boat_id);
     const location = locations.find(l => l.id === job?.location_id);
+    const template = templates.find(t => t.is_default) || templates[0];
 
-    const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians);
+    const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template);
     
     // Return HTML as data URL (browser will convert to PDF on download)
     const base64Html = btoa(unescape(encodeURIComponent(html)));
