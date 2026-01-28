@@ -526,9 +526,27 @@ export default function WorkOrderDetail() {
           teamOrder={teamOrder}
           workOrder={workOrder}
           onEdit={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
-          onGenerateBrief={() => {
-            // TODO: Implement Partner Brief generation
-            alert('Partner Brief generation coming soon');
+          onGenerateBrief={async () => {
+            try {
+              const response = await base44.functions.invoke('generatePartnerBrief', {
+                workOrderId,
+                teamOrderId: teamOrder.id
+              });
+
+              // Create blob and download
+              const blob = new Blob([response.data], { type: 'application/pdf' });
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              a.remove();
+            } catch (error) {
+              console.error('Error generating partner brief:', error);
+              alert('Failed to generate partner brief');
+            }
           }}
         />
       )}
