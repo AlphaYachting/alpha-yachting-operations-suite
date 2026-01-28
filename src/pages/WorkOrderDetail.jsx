@@ -533,8 +533,9 @@ export default function WorkOrderDetail() {
                 teamOrderId: teamOrder.id
               });
 
-              // Create blob and download
-              const blob = new Blob([response.data], { type: 'application/pdf' });
+              // Create blob from response - response.data is already the PDF bytes
+              const pdfData = new Uint8Array(response.data);
+              const blob = new Blob([pdfData], { type: 'application/pdf' });
               const url = window.URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
