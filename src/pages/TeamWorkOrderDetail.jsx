@@ -251,8 +251,18 @@ export default function TeamWorkOrderDetail() {
     try {
       setUpdatingTaskId(taskId);
       const newStatus = currentStatus === 'In Progress' ? 'Completed' : 'In Progress';
-      await base44.entities.Task.update(taskId, { status: newStatus });
-      setTasks(tasks.map((t) => t.id === taskId ? { ...t, status: newStatus } : t));
+      const updatedTask = { ...tasks.find(t => t.id === taskId), status: newStatus };
+
+      if (isOnline) {
+        await base44.entities.Task.update(taskId, { status: newStatus });
+      } else {
+        // Queue for offline sync
+        await syncQueue.addToQueue('Task', 'update', { status: newStatus }, taskId);
+        setPendingChanges(prev => [...prev, { entity: 'Task', id: taskId }]);
+      }
+
+      setTasks(tasks.map((t) => t.id === taskId ? updatedTask : t));
+      await offlineStorage.saveData(offlineStorage.STORES.tasks, updatedTask);
     } catch (error) {
       console.error('Error updating task status:', error);
     } finally {
