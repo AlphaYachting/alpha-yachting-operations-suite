@@ -1,5 +1,4 @@
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
 
 export async function generatePDFWithJsPDF(document, lineItems, template, payments = []) {
   const isInvoice = document.document_type === 'Invoice';
@@ -222,66 +221,85 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   // Line items table
   checkPageBreak(40);
   
-  const tableColumns = [
-    { header: '#', dataKey: 'index' },
-    { header: 'Description', dataKey: 'description' },
-    { header: 'Qty', dataKey: 'quantity' },
-    { header: 'Unit', dataKey: 'unit' },
-    { header: 'Unit Price', dataKey: 'unit_price' },
-  ];
+  // Table header
+  doc.setFontSize(9);
+  doc.setTextColor(51, 51, 51);
+  doc.setFont(fontFamily, 'bold');
   
-  if (template.show_vat_column) {
-    tableColumns.push({ header: 'VAT %', dataKey: 'vat' });
-  }
+  let xPos = margins.left;
+  const colWidths = [10, 70, 20, 15, 25];
+  if (template.show_vat_column) colWidths.push(20);
+  colWidths.push(25);
   
-  tableColumns.push({ header: 'Total', dataKey: 'total' });
-
-  const tableData = lineItems.map((item, idx) => ({
-    index: (idx + 1).toString(),
-    description: `${item.title || ''}\n${item.description || ''}`,
-    quantity: (item.quantity || 0).toFixed(2),
-    unit: item.unit || '-',
-    unit_price: formatCurrency(item.unit_price),
-    vat: `${item.tax_rate || 0}%`,
-    total: formatCurrency(item.total_gross)
-  }));
-
-  doc.autoTable({
-    startY: yPos,
-    head: [tableColumns.map(col => col.header)],
-    body: tableData.map(row => tableColumns.map(col => row[col.dataKey])),
-    margin: { left: margins.left, right: margins.right },
-    styles: {
-      fontSize: 9,
-      cellPadding: 2,
-      lineColor: [255, 255, 255],
-      lineWidth: 0
-    },
-    headStyles: {
-      fillColor: [255, 255, 255],
-      textColor: [51, 51, 51],
-      fontStyle: 'bold',
-      lineWidth: 0
-    },
-    bodyStyles: {
-      fillColor: [255, 255, 255],
-      textColor: [51, 51, 51]
-    },
-    alternateRowStyles: {
-      fillColor: [255, 255, 255]
-    },
-    columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 'auto' },
-      2: { cellWidth: 20, halign: 'right' },
-      3: { cellWidth: 15, halign: 'center' },
-      4: { cellWidth: 25, halign: 'right' },
-      5: { cellWidth: 20, halign: 'right' },
-      6: { cellWidth: 25, halign: 'right' }
-    }
+  const headers = ['#', 'Description', 'Qty', 'Unit', 'Unit Price'];
+  if (template.show_vat_column) headers.push('VAT %');
+  headers.push('Total');
+  
+  // Draw headers
+  headers.forEach((header, i) => {
+    doc.text(header, xPos + 2, yPos);
+    xPos += colWidths[i];
   });
-
-  yPos = doc.lastAutoTable.finalY + 10;
+  
+  yPos += 6;
+  
+  // Table rows
+  doc.setFont(fontFamily, 'normal');
+  lineItems.forEach((item, idx) => {
+    checkPageBreak(20);
+    
+    xPos = margins.left;
+    const rowY = yPos;
+    
+    // Index
+    doc.text((idx + 1).toString(), xPos + colWidths[0] / 2, rowY, { align: 'center' });
+    xPos += colWidths[0];
+    
+    // Description
+    doc.setFont(fontFamily, 'bold');
+    const titleLines = doc.splitTextToSize(item.title || '', colWidths[1] - 4);
+    doc.text(titleLines, xPos + 2, rowY);
+    let descY = rowY + (titleLines.length * 4);
+    
+    if (item.description) {
+      doc.setFont(fontFamily, 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(102, 102, 102);
+      const descLines = doc.splitTextToSize(item.description, colWidths[1] - 4);
+      doc.text(descLines, xPos + 2, descY);
+      descY += descLines.length * 3.5;
+      doc.setFontSize(9);
+      doc.setTextColor(51, 51, 51);
+    }
+    doc.setFont(fontFamily, 'normal');
+    xPos += colWidths[1];
+    
+    // Quantity
+    doc.text((item.quantity || 0).toFixed(2), xPos + colWidths[2] - 2, rowY, { align: 'right' });
+    xPos += colWidths[2];
+    
+    // Unit
+    doc.text(item.unit || '-', xPos + colWidths[3] / 2, rowY, { align: 'center' });
+    xPos += colWidths[3];
+    
+    // Unit Price
+    doc.text(formatCurrency(item.unit_price), xPos + colWidths[4] - 2, rowY, { align: 'right' });
+    xPos += colWidths[4];
+    
+    // VAT
+    if (template.show_vat_column) {
+      doc.text(`${item.tax_rate || 0}%`, xPos + colWidths[5] - 2, rowY, { align: 'right' });
+      xPos += colWidths[5];
+    }
+    
+    // Total
+    const totalColIdx = template.show_vat_column ? 6 : 5;
+    doc.text(formatCurrency(item.total_gross), xPos + colWidths[totalColIdx] - 2, rowY, { align: 'right' });
+    
+    yPos = Math.max(descY, rowY + 5) + 2;
+  });
+  
+  yPos += 5;
 
   // Totals
   checkPageBreak(60);
