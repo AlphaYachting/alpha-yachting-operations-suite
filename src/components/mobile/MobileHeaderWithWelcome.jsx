@@ -87,7 +87,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
     logo: (
       <img 
         key="logo"
-        src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/27c878803_alpha-yachting-logo-weiss.png"
+        src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"
         alt="Alpha Yachting"
         className="object-contain flex-shrink-0"
         style={{ height: layout.logoHeight }}
@@ -101,7 +101,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
     ),
     tasks: (
       <div key="tasks" className="bg-white/20 rounded-full px-3 py-1">
-        <p className="text-lg md:text-xl font-bold text-white">{taskCount}</p>
+        <p className="text-2xl md:text-3xl font-bold text-white">{taskCount}</p>
         <p className="text-xs text-blue-100">tasks</p>
       </div>
     ),
