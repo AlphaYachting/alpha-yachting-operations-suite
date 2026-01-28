@@ -248,38 +248,12 @@ Deno.serve(async (req) => {
     const template = templates.find(t => t.is_default) || templates[0];
 
     const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template);
-    
-    const puppeteer = (await import('npm:puppeteer')).default;
-    let browser;
 
-    try {
-      browser = await puppeteer.launch({ headless: 'new' });
-      const page = await browser.newPage();
-      
-      await page.setContent(html, { waitUntil: 'networkidle2' });
-      
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        displayHeaderFooter: false
-      });
-      
-      await browser.close();
-      
-      const base64PDF = pdfBuffer.toString('base64');
-
-      return Response.json({
-        success: true,
-        pdf: `data:application/pdf;base64,${base64PDF}`,
-        fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
-      });
-    } catch (error) {
-      if (browser) await browser.close();
-      return Response.json({
-        success: false,
-        error: error.message
-      }, { status: 500 });
-    }
+    return Response.json({
+      success: true,
+      html: html,
+      fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
