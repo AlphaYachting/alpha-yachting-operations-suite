@@ -40,6 +40,14 @@ export default function Leads() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+
+  // Apply filter from dashboard
+  useEffect(() => {
+    const filterParam = new URLSearchParams(window.location.search).get('filter');
+    if (filterParam === 'open') {
+      setStatusFilter('Open');
+    }
+  }, []);
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
