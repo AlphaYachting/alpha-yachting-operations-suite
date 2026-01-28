@@ -11,7 +11,8 @@ const STORES = {
   timeEntries: 'timeEntries',
   photos: 'photos',
   photoQueue: 'photoQueue',
-  syncQueue: 'syncQueue'
+  syncQueue: 'syncQueue',
+  comments: 'comments'
 };
 
 let db = null;
