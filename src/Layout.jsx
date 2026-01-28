@@ -67,6 +67,8 @@ export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [mobileAppOpen, setMobileAppOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState(user?.company_logo);
+  const fileInputRef = useRef(null);
   const location = useLocation();
 
   useEffect(() => {
