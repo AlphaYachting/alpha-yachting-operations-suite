@@ -806,6 +806,20 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      {/* New Lead Dialog */}
+      <Dialog open={showLeadForm} onOpenChange={setShowLeadForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>New Lead</DialogTitle>
+          </DialogHeader>
+          <LeadForm
+            locations={locations}
+            onSave={handleSaveLead}
+            onCancel={() => setShowLeadForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Work Order Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
