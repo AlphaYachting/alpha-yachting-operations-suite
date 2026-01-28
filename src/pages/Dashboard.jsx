@@ -427,13 +427,13 @@ export default function Dashboard() {
            onClick={() => navigate(createPageUrl('Jobs') + '?filter=overdue')}
          />
          <StatCard 
-           title="Open Leads" 
-           value={leads.filter(l => !['Lost', 'Converted'].includes(l.status)).length} 
-           icon={Phone}
-           color="bg-amber-500"
-           loading={loading}
-           onClick={() => navigate(createPageUrl('Leads') + '?filter=open')}
-         />
+            title="Open Leads" 
+            value={leads.filter(l => !['Lost', 'Converted'].includes(l.status)).length} 
+            icon={Phone}
+            color="bg-amber-500"
+            loading={loading}
+            onClick={() => navigate(createPageUrl('Leads'))}
+          />
       </div>
 
       {/* Secondary Stats Grid */}
