@@ -79,6 +79,7 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import TeamOrderDetail from './pages/TeamOrderDetail';
+import TeamOrders from './pages/TeamOrders';
 import __Layout from './Layout.jsx';
 
 
@@ -115,6 +116,7 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "TeamOrderDetail": TeamOrderDetail,
+    "TeamOrders": TeamOrders,
 }
 
 export const pagesConfig = {

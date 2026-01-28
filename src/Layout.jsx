@@ -44,6 +44,7 @@ const navItems = [
   { name: 'Locations', icon: MapPin, page: 'Locations' },
   { name: 'Jobs', icon: Briefcase, page: 'Jobs' },
   { name: 'Work Orders', icon: ClipboardList, page: 'WorkOrders' },
+  { name: 'Team Orders', icon: Users, page: 'TeamOrders' },
   { name: 'Schedule', icon: Clock, page: 'Schedule' },
   { name: 'Technicians', icon: Wrench, page: 'Technicians' },
   { name: 'Tools & Inventory', icon: Package, page: 'Inventory' },
