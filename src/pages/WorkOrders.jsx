@@ -22,7 +22,8 @@ import {
   LayoutList,
   Grip,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Briefcase
 } from 'lucide-react';
 import { notifyWorkOrderAssignment } from '@/components/notifications/notificationUtils';
 import { Card, CardContent } from '@/components/ui/card';
@@ -117,6 +118,9 @@ export default function WorkOrders() {
         base44.entities.Task.list()
       ]);
 
+      // Fetch team orders
+      const allTeamOrders = await base44.entities.TeamOrder.list();
+
       // Calculate aggregates per work order
       const woAggregates = {};
       woData.forEach(wo => {
@@ -124,10 +128,11 @@ export default function WorkOrders() {
         const woPhotos = photos.filter(p => p.work_order_id === wo.id);
         const woReservations = reservationsData.filter(r => r.work_order_id === wo.id);
         const woTasks = tasksData.filter(t => t.work_order_id === wo.id);
-        
+        const woTeamOrder = allTeamOrders.find(to => to.work_order_id === wo.id);
+
         const openTasks = woTasks.filter(t => t.status === 'Not Started' || t.status === 'In Progress');
         const blockedTasks = woTasks.filter(t => t.status === 'Needs Approval' || t.status === 'Not Possible');
-        
+
         woAggregates[wo.id] = {
           timeEntryCount: woTimeEntries.length,
           timeEntryTotalMinutes: woTimeEntries.reduce((sum, te) => sum + (te.duration_minutes || 0), 0),
@@ -138,7 +143,8 @@ export default function WorkOrders() {
           openTasks: openTasks.length,
           blockedTasks: blockedTasks.length,
           completedTasks: woTasks.filter(t => t.status === 'Completed').length,
-          nextOpenTasks: openTasks.slice(0, 3)
+          nextOpenTasks: openTasks.slice(0, 3),
+          hasTeamOrder: !!woTeamOrder
         };
       });
 
@@ -353,9 +359,9 @@ export default function WorkOrders() {
 
   const getVehicleDisplay = (woReservations) => {
     if (!woReservations || woReservations.length === 0) return null;
-    
+
     const uniqueVehicleIds = [...new Set(woReservations.map(r => r.inventory_item_id))];
-    
+
     if (uniqueVehicleIds.length === 1) {
       const vehicle = vehicles.find(v => v.id === uniqueVehicleIds[0]);
       if (!vehicle) return null;
@@ -372,6 +378,16 @@ export default function WorkOrders() {
         vehicleId: null,
         reservations: woReservations
       };
+    }
+  };
+
+  const getTeamOrderInfo = async (woId) => {
+    try {
+      const teamOrders = await base44.entities.TeamOrder.filter({ work_order_id: woId });
+      return teamOrders.length > 0 ? teamOrders[0] : null;
+    } catch (error) {
+      console.error('Error fetching team order:', error);
+      return null;
     }
   };
 
@@ -698,8 +714,22 @@ export default function WorkOrders() {
                       </div>
 
                       {/* Details Chips */}
-                      {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes || (agg.vehicleReservations && agg.vehicleReservations.length > 0)) && (
+                      {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes || agg.hasTeamOrder || (agg.vehicleReservations && agg.vehicleReservations.length > 0)) && (
                         <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                          {agg.hasTeamOrder && (
+                            <Link 
+                              to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                              className="group"
+                            >
+                              <Badge 
+                                variant="outline" 
+                                className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer"
+                              >
+                                <Briefcase className="h-3 w-3 mr-1" />
+                                Team Order
+                              </Badge>
+                            </Link>
+                          )}
                           {(() => {
                             const vehicleInfo = getVehicleDisplay(agg.vehicleReservations);
                             return vehicleInfo && (
@@ -947,8 +977,22 @@ export default function WorkOrders() {
                               </div>
 
                               {/* D) Documentation Line - Fourth Priority (compact chips) */}
-                              {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes) && (
+                              {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes || agg.hasTeamOrder) && (
                                 <div className="flex flex-wrap items-center gap-2 ml-7 mb-2">
+                                  {agg.hasTeamOrder && (
+                                    <Link 
+                                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                                      className="group"
+                                    >
+                                      <Badge 
+                                        variant="outline" 
+                                        className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 transition-colors text-xs cursor-pointer"
+                                      >
+                                        <Briefcase className="h-3 w-3 mr-1" />
+                                        Team Order
+                                      </Badge>
+                                    </Link>
+                                  )}
                                   {agg.timeEntryCount > 0 && (
                                     <Link 
                                       to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}#time`}
