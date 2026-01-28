@@ -42,19 +42,7 @@ export default function TeamMobileHome() {
       setWorkOrders(workOrdersData);
       setLocations(locationsData);
       setBoats(boatsData);
-
-      // Filter tasks assigned to current user (via technician relationship)
-      const userTechnicianId = techniciansData.find(t => t.email === (previewUserId ? currentUser.email : currentUser.email))?.id;
-      const assignedTechId = previewUserId || userTechnicianId;
-
-      const userTasks = tasksData.filter(task => {
-        const wo = workOrdersData.find(w => w.id === task.work_order_id);
-        if (!wo) return false;
-        // Check if user is assigned to this work order
-        return wo.assigned_technicians?.includes(assignedTechId) || wo.lead_technician_id === assignedTechId;
-      });
-
-      setTasks(userTasks);
+      setTasks(tasksData);
     } catch (error) {
       console.error('Error loading team data:', error);
     } finally {
@@ -65,11 +53,13 @@ export default function TeamMobileHome() {
   const groupWorkOrdersBySection = () => {
     const today = startOfDay(new Date());
     const sections = { today: [], upcoming: [], later: [] };
-    const userTechnicianId = user?.id;
+    
+    // Use preview user if in preview mode, otherwise use current user
+    const technicianId = previewUserId || user?.id;
 
     // Get unique work orders assigned to this technician
     const userWorkOrders = workOrders.filter(wo => 
-      wo.assigned_technicians?.includes(userTechnicianId) || wo.lead_technician_id === userTechnicianId
+      wo.assigned_technicians?.includes(technicianId) || wo.lead_technician_id === technicianId
     );
 
     userWorkOrders.forEach(wo => {
