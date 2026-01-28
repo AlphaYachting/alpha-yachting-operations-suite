@@ -39,7 +39,7 @@ export default function Leads() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Pending');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
