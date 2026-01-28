@@ -166,6 +166,16 @@ export default function TeamWorkOrderDetail() {
 
       setTasks(tasksData || []);
       setPhotos(photosData || []);
+
+      // Load comments
+      let commentsData = [];
+      try {
+        commentsData = await base44.entities.WorkOrderComment.filter({ work_order_id: woId });
+        await offlineStorage.saveMultiple(offlineStorage.STORES.comments, commentsData);
+      } catch (error) {
+        commentsData = await offlineStorage.getByIndex(offlineStorage.STORES.comments, 'work_order_id', woId) || [];
+      }
+      setComments(commentsData);
     } catch (error) {
       console.error('Error loading work order detail:', error);
     } finally {
