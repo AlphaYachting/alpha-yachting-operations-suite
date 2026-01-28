@@ -100,7 +100,14 @@ export default function WorkOrders() {
 
   useEffect(() => {
     loadData();
-  }, []);
+    // Apply filter from dashboard
+    const filterParam = searchParams.get('filter');
+    if (filterParam === 'today') {
+      setStatusFilter('all');
+    } else if (filterParam === 'pending') {
+      setStatusFilter('Draft');
+    }
+  }, [searchParams]);
 
   const loadData = async () => {
     try {
