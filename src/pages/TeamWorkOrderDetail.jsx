@@ -144,15 +144,38 @@ export default function TeamWorkOrderDetail() {
   workOrder.status === 'Dispatched' ? 'bg-purple-100 text-purple-800' :
   'bg-slate-100 text-slate-800';
 
-  const handleTaskStatusToggle = async () => {
+  const handleTimerToggle = async () => {
     try {
-      const newStatus = isTaskStarted ? 'Completed' : 'In Progress';
-      await base44.entities.WorkOrder.update(workOrder.id, { status: newStatus });
-      setWorkOrder({ ...workOrder, status: newStatus });
-      setIsTaskStarted(!isTaskStarted);
+      if (timerRunning) {
+        // Stop timer and save time entry
+        setTimerRunning(false);
+        const durationMinutes = Math.ceil(elapsedSeconds / 60);
+        
+        await base44.entities.TimeEntry.create({
+          work_order_id: workOrder.id,
+          technician_id: user?.id,
+          entry_date: new Date().toISOString().split('T')[0],
+          duration_minutes: durationMinutes,
+          is_billable: true,
+          notes: `Time tracked: ${Math.floor(elapsedSeconds / 3600)}h ${Math.floor((elapsedSeconds % 3600) / 60)}m`
+        });
+        
+        setElapsedSeconds(0);
+      } else {
+        // Start timer
+        setTimerRunning(true);
+      }
     } catch (error) {
-      console.error('Error updating work order status:', error);
+      console.error('Error toggling timer:', error);
+      setTimerRunning(false);
     }
+  };
+
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleIndividualTaskStatusToggle = async (taskId, currentStatus) => {
