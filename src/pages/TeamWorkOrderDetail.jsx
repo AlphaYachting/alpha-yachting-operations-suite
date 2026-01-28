@@ -114,6 +114,65 @@ export default function TeamWorkOrderDetail() {
     return () => clearInterval(interval);
   }, [timerRunning]);
 
+  const logAccessStart = async () => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const woId = params.get('woId');
+      
+      if (!woId) return;
+
+      // Get client info silently (don't block UI)
+      const clientInfo = await getClientInfo();
+      
+      // Create access log entry
+      const logEntry = {
+        work_order_id: woId,
+        technician_id: user?.id || '',
+        technician_email: user?.email || 'unknown',
+        accessed_at: new Date().toISOString(),
+        ip_address: clientInfo.ip_address,
+        device_info: clientInfo.device_info
+      };
+
+      if (isOnline) {
+        try {
+          const savedLog = await base44.entities.WorkOrderAccessLog.create(logEntry);
+          setAccessLogId(savedLog.id);
+        } catch (error) {
+          console.error('Error logging access:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error in logAccessStart:', error);
+    }
+  };
+
+  const logAccessClose = async () => {
+    try {
+      if (!accessLogId) return;
+
+      const now = new Date();
+      const params = new URLSearchParams(window.location.search);
+      const woId = params.get('woId');
+      
+      if (!woId) return;
+
+      // Get the original access log to calculate duration
+      const logs = await base44.entities.WorkOrderAccessLog.filter({ id: accessLogId });
+      if (logs.length > 0) {
+        const logEntry = logs[0];
+        const duration = Math.round((now - new Date(logEntry.accessed_at)) / 1000);
+        
+        await base44.entities.WorkOrderAccessLog.update(accessLogId, {
+          closed_at: now.toISOString(),
+          duration_seconds: duration
+        });
+      }
+    } catch (error) {
+      console.error('Error logging access close:', error);
+    }
+  };
+
   const loadData = async () => {
     try {
       const params = new URLSearchParams(window.location.search);
