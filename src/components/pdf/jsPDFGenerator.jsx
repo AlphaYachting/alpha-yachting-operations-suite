@@ -32,11 +32,11 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
 
   // Helper to add letterhead to current page
   function addLetterhead() {
-    if (template.letterhead_url) {
+    if (template.letterhead_image_url && template.letterhead_enabled) {
       try {
-        doc.addImage(template.letterhead_url, 'PNG', 0, 0, pageWidth, pageHeight);
+        doc.addImage(template.letterhead_image_url, 'JPEG', 0, 0, pageWidth, pageHeight);
       } catch (e) {
-        console.log('Letterhead not loaded');
+        console.log('Letterhead not loaded:', e);
       }
     }
   }
