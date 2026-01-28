@@ -366,7 +366,7 @@ export default function Projects() {
                           isDueSoon ? 'bg-yellow-500 text-white border-yellow-600' : 
                           'bg-slate-100 text-slate-700'
                         }`}>
-                          <AlertTriangle className={`h-3 w-3 mr-1 ${isDueOverdue || isDueToday || isDueSoon ? 'animate-pulse' : ''}`} />
+                          <AlertTriangle className={`h-3 w-3 mr-1 text-red-600 ${isDueOverdue || isDueToday || isDueSoon ? 'animate-pulse' : ''}`} />
                           {isDueOverdue ? 'OVERDUE' : isDueToday ? 'DUE TODAY' : `Due ${format(parseISO(project.requested_date), 'MMM d')}`}
                         </Badge>
                       )}
