@@ -290,6 +290,34 @@ export default function TeamWorkOrderDetail() {
     }
   };
 
+  const handleAddComment = async () => {
+    if (!commentText.trim()) return;
+
+    try {
+      const newComment = {
+        work_order_id: workOrder.id,
+        author_name: user?.full_name || 'Unknown',
+        author_email: user?.email || '',
+        content: commentText,
+        comment_type: 'worker_note'
+      };
+
+      if (isOnline) {
+        const savedComment = await base44.entities.WorkOrderComment.create(newComment);
+        await offlineStorage.saveData(offlineStorage.STORES.comments, savedComment);
+        setComments([...comments, savedComment]);
+      } else {
+        await syncQueue.addToQueue('WorkOrderComment', 'create', newComment, `temp_${Date.now()}`);
+        setPendingChanges(prev => [...prev, { entity: 'WorkOrderComment', id: `temp_${Date.now()}` }]);
+        setComments([...comments, { id: `temp_${Date.now()}`, ...newComment }]);
+      }
+
+      setCommentText('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
