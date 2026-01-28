@@ -563,6 +563,58 @@ export default function WorkOrderDetail() {
         </Card>
       </div>
 
+      {/* Work Order Comments Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Work Notes</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Comment Input */}
+          <div className="space-y-2">
+            <Label>Leave a Note</Label>
+            <Textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Add notes, observations, or follow-up items..."
+              rows={3}
+              className="text-sm"
+            />
+            <Button
+              onClick={handleAddComment}
+              disabled={!commentText.trim()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Add Note
+            </Button>
+          </div>
+
+          {/* Comments List */}
+          {comments.length > 0 && (
+            <div className="space-y-3 border-t pt-4">
+              {comments.map((comment) => (
+                <div key={comment.id} className="bg-slate-50 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <p className="font-semibold text-sm text-slate-900">{comment.author_name}</p>
+                      <p className="text-xs text-slate-500">{comment.author_email}</p>
+                    </div>
+                    <span className="text-xs text-slate-500">{format(parseISO(comment.created_date), 'MMM d, HH:mm')}</span>
+                  </div>
+                  <p className="text-sm text-slate-700 leading-relaxed">{comment.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {comments.length === 0 && (
+            <div className="text-center py-8 text-slate-500">
+              <p className="text-sm">No notes yet. Add one to document your progress.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Tasks Section */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
