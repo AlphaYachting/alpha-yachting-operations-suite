@@ -146,14 +146,14 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Hour">Hour</SelectItem>
-                          <SelectItem value="Piece">Piece</SelectItem>
+                          <SelectItem value="Hour">hrs</SelectItem>
+                          <SelectItem value="Piece">pcs</SelectItem>
                           <SelectItem value="Square Meter">m²</SelectItem>
                           <SelectItem value="Linear Meter">m</SelectItem>
                           <SelectItem value="Liter">L</SelectItem>
                           <SelectItem value="Kilogram">kg</SelectItem>
-                          <SelectItem value="Set">Set</SelectItem>
-                          <SelectItem value="Lump Sum">Lump Sum</SelectItem>
+                          <SelectItem value="Set">set</SelectItem>
+                          <SelectItem value="Lump Sum">job</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -239,14 +239,14 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Hour">Hour</SelectItem>
-                  <SelectItem value="Piece">Piece</SelectItem>
-                  <SelectItem value="Square Meter">Square Meter</SelectItem>
-                  <SelectItem value="Linear Meter">Linear Meter</SelectItem>
-                  <SelectItem value="Liter">Liter</SelectItem>
-                  <SelectItem value="Kilogram">Kilogram</SelectItem>
-                  <SelectItem value="Set">Set</SelectItem>
-                  <SelectItem value="Lump Sum">Lump Sum</SelectItem>
+                  <SelectItem value="Hour">hrs</SelectItem>
+                  <SelectItem value="Piece">pcs</SelectItem>
+                  <SelectItem value="Square Meter">m²</SelectItem>
+                  <SelectItem value="Linear Meter">m</SelectItem>
+                  <SelectItem value="Liter">L</SelectItem>
+                  <SelectItem value="Kilogram">kg</SelectItem>
+                  <SelectItem value="Set">set</SelectItem>
+                  <SelectItem value="Lump Sum">job</SelectItem>
                 </SelectContent>
               </Select>
             </div>
