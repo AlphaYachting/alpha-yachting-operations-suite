@@ -465,21 +465,25 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     } else {
       checkPageBreak(30);
     }
+    
+    // Calculate actual height needed for notes
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(10);
+    const noteLines = doc.splitTextToSize(document.public_notes, contentWidth - 6);
+    const notesHeight = 6 + (noteLines.length * 4.5) + 3; // Title + line spacing + padding
+    
     doc.setFillColor(245, 245, 245);
-    const notesHeight = 20;
     doc.rect(margins.left, yPos - 3, contentWidth, notesHeight, 'F');
     
     doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
     doc.setLineWidth(1);
     doc.line(margins.left, yPos - 3, margins.left, yPos + notesHeight - 3);
 
-    doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     doc.setFont(fontFamily, 'bold');
     doc.text('Notes:', margins.left + 3, yPos + 2);
     
     doc.setFont(fontFamily, 'normal');
-    const noteLines = doc.splitTextToSize(document.public_notes, contentWidth - 6);
     doc.text(noteLines, margins.left + 3, yPos + 8);
     yPos += notesHeight + 5;
   }
