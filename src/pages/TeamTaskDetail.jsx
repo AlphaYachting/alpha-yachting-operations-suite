@@ -18,6 +18,7 @@ export default function TeamTaskDetail() {
   const [task, setTask] = useState(null);
   const [workOrder, setWorkOrder] = useState(null);
   const [location, setLocation] = useState(null);
+  const [boat, setBoat] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,10 +27,11 @@ export default function TeamTaskDetail() {
 
   const loadData = async () => {
     try {
-      const [tasksData, workOrdersData, locationsData] = await Promise.all([
+      const [tasksData, workOrdersData, locationsData, boatsData] = await Promise.all([
         base44.entities.Task.list(),
         base44.entities.WorkOrder.list(),
-        base44.entities.Location.list()
+        base44.entities.Location.list(),
+        base44.entities.Boat.list()
       ]);
 
       const currentTask = tasksData.find(t => t.id === taskId);
@@ -40,6 +42,10 @@ export default function TeamTaskDetail() {
         if (wo?.location_id) {
           const loc = locationsData.find(l => l.id === wo.location_id);
           setLocation(loc);
+        }
+        if (wo?.boat_id) {
+          const b = boatsData.find(b => b.id === wo.boat_id);
+          setBoat(b);
         }
       }
     } catch (error) {
@@ -122,7 +128,7 @@ export default function TeamTaskDetail() {
 
         {/* Date & Location */}
         <Card>
-          <CardContent className="p-4 space-y-3">
+          <CardContent className="p-4 space-y-4">
             {workOrder.scheduled_date && (
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-slate-400 flex-shrink-0" />
@@ -136,28 +142,66 @@ export default function TeamTaskDetail() {
               </div>
             )}
             {location && (
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 flex-1">
-                  <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-xs text-slate-500">Location</p>
-                    <p className="text-sm font-medium text-slate-900">{location.name}</p>
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-3 flex-1">
+                    <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-slate-500">Location</p>
+                      <p className="text-sm font-medium text-slate-900">{location.name}</p>
+                    </div>
                   </div>
+                  {location.latitude && location.longitude && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleNavigate}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <Navigation className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-                {location.latitude && location.longitude && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleNavigate}
-                    className="text-blue-600 hover:text-blue-700"
-                  >
-                    <Navigation className="h-4 w-4" />
-                  </Button>
+                {location.contact_phone && (
+                  <div className="text-xs text-slate-600 ml-7">
+                    <span className="font-medium">Marina Phone:</span> {location.contact_phone}
+                  </div>
                 )}
               </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Boat Information */}
+        {boat && (
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div>
+                <p className="text-xs text-slate-500 font-medium mb-1">Boat Details</p>
+                <p className="text-sm font-semibold text-slate-900">{boat.vessel_name}</p>
+                <p className="text-xs text-slate-600">{boat.vessel_type}</p>
+              </div>
+              {boat.known_issues && (
+                <div>
+                  <p className="text-xs text-slate-500 font-medium mb-1">Boat Position & Access</p>
+                  <p className="text-sm text-slate-700">{boat.known_issues}</p>
+                </div>
+              )}
+              {boat.access_details && (
+                <div>
+                  <p className="text-xs text-slate-500 font-medium mb-1">Access Details</p>
+                  <p className="text-sm text-slate-700">{boat.access_details}</p>
+                </div>
+              )}
+              {boat.systems_notes && (
+                <div>
+                  <p className="text-xs text-slate-500 font-medium mb-1">Boat Conditions</p>
+                  <p className="text-sm text-slate-700">{boat.systems_notes}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Description */}
         {task.description && (
