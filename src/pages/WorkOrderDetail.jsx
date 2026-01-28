@@ -21,7 +21,8 @@ import {
   Save,
   FileText as FileTextIcon,
   Send,
-  Eye
+  Eye,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -806,7 +807,7 @@ export default function WorkOrderDetail() {
                         <Badge className={taskStatusColors[task.status]}>
                           {task.status}
                         </Badge>
-                        {canEditTasks ? (
+                        {canEditTasks && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -827,18 +828,11 @@ export default function WorkOrderDetail() {
                                 onClick={() => handleDeleteTask(task.id)}
                                 className="text-red-600"
                               >
+                                <Trash2 className="h-4 w-4 mr-2" />
                                 Delete Task
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setQuickUpdateTask(task)}
-                          >
-                            Update
-                          </Button>
                         )}
                       </div>
                     </div>
