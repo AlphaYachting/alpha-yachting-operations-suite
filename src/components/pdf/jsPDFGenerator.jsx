@@ -34,9 +34,23 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   function addLetterhead() {
     if (template.letterhead_image_url && template.letterhead_enabled) {
       try {
-        doc.addImage(template.letterhead_image_url, 'JPEG', 0, 0, pageWidth, pageHeight);
+        // Try different image formats
+        const formats = ['JPEG', 'PNG', 'JPG'];
+        let loaded = false;
+        for (const format of formats) {
+          try {
+            doc.addImage(template.letterhead_image_url, format, 0, 0, pageWidth, pageHeight);
+            loaded = true;
+            break;
+          } catch (e) {
+            // Try next format
+          }
+        }
+        if (!loaded) {
+          console.error('Failed to load letterhead image');
+        }
       } catch (e) {
-        console.log('Letterhead not loaded:', e);
+        console.error('Letterhead error:', e);
       }
     }
   }
@@ -242,17 +256,63 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   doc.setFont(fontFamily, 'bold');
   
   let xPos = margins.left;
-  const colWidths = [10, 70, 20, 15, 25];
-  if (template.show_vat_column) colWidths.push(20);
-  colWidths.push(25);
+  
+  // Calculate column widths based on template settings or defaults
+  const totalWidth = contentWidth;
+  const colConfig = template.table_column_widths || {
+    index: 4,
+    description: 38,
+    quantity: 8,
+    unit: 8,
+    unit_price: 13,
+    vat: 8,
+    total: 13
+  };
+  
+  const colWidths = [
+    (colConfig.index / 100) * totalWidth,
+    (colConfig.description / 100) * totalWidth,
+    (colConfig.quantity / 100) * totalWidth,
+    (colConfig.unit / 100) * totalWidth,
+    (colConfig.unit_price / 100) * totalWidth
+  ];
+  
+  if (template.show_vat_column) {
+    colWidths.push((colConfig.vat / 100) * totalWidth);
+  }
+  colWidths.push((colConfig.total / 100) * totalWidth);
   
   const headers = ['#', 'Description', 'Qty', 'Unit', 'Unit Price'];
   if (template.show_vat_column) headers.push('VAT %');
   headers.push('Total');
   
+  const colAlign = template.table_column_align || {
+    index: 'center',
+    description: 'left',
+    quantity: 'right',
+    unit: 'center',
+    unit_price: 'right',
+    vat: 'right',
+    total: 'right'
+  };
+  
   // Draw headers
   headers.forEach((header, i) => {
-    doc.text(header, xPos + 2, yPos);
+    const align = i === 0 ? colAlign.index :
+                  i === 1 ? colAlign.description :
+                  i === 2 ? colAlign.quantity :
+                  i === 3 ? colAlign.unit :
+                  i === 4 ? colAlign.unit_price :
+                  template.show_vat_column && i === 5 ? colAlign.vat :
+                  colAlign.total;
+    
+    if (align === 'center') {
+      doc.text(header, xPos + colWidths[i] / 2, yPos, { align: 'center' });
+    } else if (align === 'right') {
+      doc.text(header, xPos + colWidths[i] - 2, yPos, { align: 'right' });
+    } else {
+      doc.text(header, xPos + 2, yPos);
+    }
     xPos += colWidths[i];
   });
   
