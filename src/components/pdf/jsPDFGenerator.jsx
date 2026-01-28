@@ -16,8 +16,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   const pageHeight = doc.internal.pageSize.getHeight();
 
   // Margins
-  const letterheadUrl = template.letterhead_url || template.letterhead_image_url;
-  const hasLetterhead = letterheadUrl && template.letterhead_enabled;
+  const hasLetterhead = template.letterhead_url && template.letterhead_enabled;
   
   const margins = {
     top: hasLetterhead ? (template.margin_top_mm || 60) : (template.margin_top_mm || 20),
@@ -35,14 +34,14 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
 
   // Helper to add letterhead to current page
   function addLetterhead() {
-    if (hasLetterhead) {
+    if (hasLetterhead && template.letterhead_url) {
       try {
         // Add letterhead as full-page background image (no compression to preserve quality)
-        doc.addImage(letterheadUrl, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+        doc.addImage(template.letterhead_url, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
       } catch (e) {
         try {
           // Fallback to JPEG if PNG fails
-          doc.addImage(letterheadUrl, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+          doc.addImage(template.letterhead_url, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
         } catch (err) {
           console.error('Failed to load letterhead:', err);
         }
