@@ -444,7 +444,7 @@ export default function Dashboard() {
           icon={ClipboardList}
           color="bg-slate-500"
           loading={loading}
-          onClick={() => window.location.href = createPageUrl('WorkOrders') + '?filter=pending'}
+          onClick={() => navigate(createPageUrl('WorkOrders') + '?filter=pending')}
         />
         <StatCard 
           title="Total Customers" 
@@ -452,7 +452,7 @@ export default function Dashboard() {
           icon={Users}
           color="bg-emerald-500"
           loading={loading}
-          onClick={() => window.location.href = createPageUrl('Customers')}
+          onClick={() => navigate(createPageUrl('Customers'))}
         />
       </div>
 
