@@ -28,6 +28,13 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   const contentWidth = pageWidth - margins.left - margins.right;
   let yPos = margins.top;
 
+  // Page break rules
+  const pageBreakRules = template.page_break_rules || {};
+  const minLinesBeforeBreak = pageBreakRules.min_lines_before_break || 3;
+  const keepTotalsWithItems = pageBreakRules.keep_totals_with_items !== false;
+  const breakBeforeTotals = pageBreakRules.break_before_totals || false;
+  const breakBeforeNotes = pageBreakRules.break_before_notes || false;
+
   // Colors
   const primaryColor = hexToRgb(template.primary_color || '#2563eb');
   const secondaryColor = hexToRgb(template.secondary_color || '#06b6d4');
@@ -322,7 +329,10 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     const descLines = item.description ? doc.splitTextToSize(item.description, colWidths[1] - 4) : [];
     const requiredHeight = (titleLines.length * 4) + (descLines.length * 3.5) + 10;
 
-    checkPageBreak(requiredHeight);
+    // Check if we have minimum lines rendered before allowing break
+    if (idx >= minLinesBeforeBreak) {
+      checkPageBreak(requiredHeight);
+    }
 
     xPos = margins.left;
     const rowY = yPos;
@@ -377,7 +387,15 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   yPos += 5;
 
   // Totals
-  checkPageBreak(60);
+  if (breakBeforeTotals) {
+    doc.addPage();
+    addLetterhead();
+    yPos = margins.top;
+  } else if (keepTotalsWithItems) {
+    checkPageBreak(60);
+  } else {
+    checkPageBreak(30);
+  }
   
   const totalsX = margins.left + contentWidth - 80;
   const totalsWidth = 80;
@@ -438,7 +456,13 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
 
   // Notes
   if (document.public_notes) {
-    checkPageBreak(30);
+    if (breakBeforeNotes) {
+      doc.addPage();
+      addLetterhead();
+      yPos = margins.top;
+    } else {
+      checkPageBreak(30);
+    }
     doc.setFillColor(245, 245, 245);
     const notesHeight = 20;
     doc.rect(margins.left, yPos - 3, contentWidth, notesHeight, 'F');
