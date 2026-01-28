@@ -262,7 +262,7 @@ export default function ProjectDetail() {
             </div>
             <div className={project.requested_date && (isDueOverdue || isDueToday || isDueSoon) ? 'col-span-2' : ''}>
               <p className="text-sm text-slate-500 flex items-center gap-1">
-                <AlertTriangle className="h-3.5 w-3.5" />
+                <AlertTriangle className={`h-3.5 w-3.5 ${project.requested_date ? 'text-red-600' : ''}`} />
                 Project Due Date (Deadline)
               </p>
               <p className={`font-bold text-lg ${
