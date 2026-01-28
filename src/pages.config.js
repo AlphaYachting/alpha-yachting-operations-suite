@@ -77,13 +77,13 @@ import TeamMobileHome from './pages/TeamMobileHome';
 import TeamOrderDetail from './pages/TeamOrderDetail';
 import TeamOrders from './pages/TeamOrders';
 import TeamTaskDetail from './pages/TeamTaskDetail';
+import TeamWorkOrderDetail from './pages/TeamWorkOrderDetail';
 import Technicians from './pages/Technicians';
 import TemplateDetail from './pages/TemplateDetail';
 import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import TeamWorkOrderDetail from './pages/TeamWorkOrderDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -118,13 +118,13 @@ export const PAGES = {
     "TeamOrderDetail": TeamOrderDetail,
     "TeamOrders": TeamOrders,
     "TeamTaskDetail": TeamTaskDetail,
+    "TeamWorkOrderDetail": TeamWorkOrderDetail,
     "Technicians": Technicians,
     "TemplateDetail": TemplateDetail,
     "VehicleDetail": VehicleDetail,
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "TeamWorkOrderDetail": TeamWorkOrderDetail,
 }
 
 export const pagesConfig = {

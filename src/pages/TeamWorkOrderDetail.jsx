@@ -294,7 +294,6 @@ export default function TeamWorkOrderDetail() {
                       <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
                       }
                      </div>
-                 </div>
                      </div>
 
                     {/* Task Description */}
