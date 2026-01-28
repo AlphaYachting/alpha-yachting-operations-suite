@@ -98,7 +98,43 @@ export default function TeamWorkOrderDetail() {
         return;
       }
 
-      const woData = await base44.entities.WorkOrder.filter({ id: woId });
+      let woData, jobData, tasksData, photosData;
+
+      try {
+        // Try to load from server
+        [woData, jobData, tasksData, photosData] = await Promise.all([
+          base44.entities.WorkOrder.filter({ id: woId }),
+          base44.entities.Job.filter({ id: await offlineStorage.getData(offlineStorage.STORES.workOrders, woId).then(wo => wo?.job_id) }),
+          base44.entities.Task.filter({ work_order_id: woId }),
+          base44.entities.WorkOrderPhoto.filter({ work_order_id: woId })
+        ]);
+
+        // Cache data for offline access
+        if (woData && woData.length > 0) {
+          await offlineStorage.saveData(offlineStorage.STORES.workOrders, woData[0]);
+        }
+        if (jobData && jobData.length > 0) {
+          await offlineStorage.saveData(offlineStorage.STORES.jobs, jobData[0]);
+        }
+        if (tasksData) {
+          await offlineStorage.saveMultiple(offlineStorage.STORES.tasks, tasksData);
+        }
+        if (photosData) {
+          await offlineStorage.saveMultiple(offlineStorage.STORES.photos, photosData);
+        }
+      } catch (error) {
+        // Fall back to offline data
+        const cachedWo = await offlineStorage.getData(offlineStorage.STORES.workOrders, woId);
+        if (!cachedWo) {
+          navigate(createPageUrl('TeamMobileHome'));
+          return;
+        }
+        woData = [cachedWo];
+        jobData = [await offlineStorage.getData(offlineStorage.STORES.jobs, cachedWo.job_id)];
+        tasksData = await offlineStorage.getByIndex(offlineStorage.STORES.tasks, 'work_order_id', woId) || [];
+        photosData = await offlineStorage.getByIndex(offlineStorage.STORES.photos, 'work_order_id', woId) || [];
+      }
+
       if (!woData || woData.length === 0) {
         navigate(createPageUrl('TeamMobileHome'));
         return;
@@ -107,29 +143,21 @@ export default function TeamWorkOrderDetail() {
       const wo = woData[0];
       setWorkOrder(wo);
 
-      // Load related data
-      const [jobData, tasksData, photosData] = await Promise.all([
-      base44.entities.Job.filter({ id: wo.job_id }),
-      base44.entities.Task.filter({ work_order_id: woId }),
-      base44.entities.WorkOrderPhoto.filter({ work_order_id: woId })]
-      );
-
       if (jobData && jobData.length > 0) {
         const j = jobData[0];
         setJob(j);
 
-        // Load location and boat if available
-        if (j.location_id) {
-          const locData = await base44.entities.Location.filter({ id: j.location_id });
-          if (locData && locData.length > 0) {
-            setLocation(locData[0]);
+        if (j?.location_id) {
+          const cachedLoc = await offlineStorage.getData(offlineStorage.STORES.locations, j.location_id);
+          if (cachedLoc) {
+            setLocation(cachedLoc);
           }
         }
 
-        if (j.boat_id) {
-          const boatData = await base44.entities.Boat.filter({ id: j.boat_id });
-          if (boatData && boatData.length > 0) {
-            setBoat(boatData[0]);
+        if (j?.boat_id) {
+          const cachedBoat = await offlineStorage.getData(offlineStorage.STORES.boats, j.boat_id);
+          if (cachedBoat) {
+            setBoat(cachedBoat);
           }
         }
       }
