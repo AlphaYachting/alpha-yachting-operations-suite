@@ -105,15 +105,26 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
   return (
     <div className={`bg-gradient-to-br ${config?.styling?.backgroundColor || 'from-blue-600 via-blue-500 to-cyan-500'} text-white sticky top-0 z-10 shadow-xl`}>
       {/* Header Top Row - Logo, Time, Tasks Count */}
-      <div className="relative">
+      <div 
+        className="relative"
+        style={{
+          height: `${styling.headerHeight}px`,
+          display: 'flex',
+          flexDirection: layout.flexDirection,
+          padding: `${layout.padding.y}px ${layout.padding.x}px`,
+          gap: layout.gap,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
         <div
           style={{
-            padding: `${layout.padding.y}px ${layout.padding.x}px`,
             display: 'flex',
             flexDirection: layout.flexDirection,
             gap: layout.gap,
             alignItems: 'center',
             justifyContent: 'space-between',
+            width: '100%',
           }}
         >
           {orderedElements}

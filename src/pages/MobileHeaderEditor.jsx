@@ -197,6 +197,19 @@ export default function MobileHeaderEditor() {
               />
             </div>
 
+            {/* Header Height */}
+            <div className="space-y-2">
+              <Label>Header Height: {config.styling.headerHeight}px</Label>
+              <Slider
+                value={[config.styling.headerHeight]}
+                onValueChange={(value) => updateStyling('headerHeight', value[0])}
+                min={80}
+                max={200}
+                step={5}
+                className="w-full"
+              />
+            </div>
+
             {/* Gap */}
             <div className="space-y-2">
               <Label>Gap Between Elements: {config.layout.gap}px</Label>
