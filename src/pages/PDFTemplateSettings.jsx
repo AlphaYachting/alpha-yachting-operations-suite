@@ -45,6 +45,10 @@ export default function PDFTemplateSettings() {
       const defaultTemplate = templates.find(t => t.is_default) || templates[0];
       
       if (defaultTemplate) {
+        console.log('Loaded template:', defaultTemplate);
+        console.log('Letterhead URL:', defaultTemplate.letterhead_url);
+        console.log('Letterhead Image URL:', defaultTemplate.letterhead_image_url);
+        console.log('Letterhead Enabled:', defaultTemplate.letterhead_enabled);
         setTemplate(defaultTemplate);
         setTemplateId(defaultTemplate.id);
       }
@@ -251,6 +255,13 @@ export default function PDFTemplateSettings() {
             <CardDescription>Upload a PDF letterhead to use as background for all invoices and offers</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="p-3 mb-4 bg-blue-50 border border-blue-200 rounded text-xs">
+              <p><strong>Debug Info:</strong></p>
+              <p>letterhead_url: {template.letterhead_url || 'not set'}</p>
+              <p>letterhead_image_url: {template.letterhead_image_url || 'not set'}</p>
+              <p>letterhead_enabled: {String(template.letterhead_enabled)}</p>
+            </div>
+
             <div className="flex items-center justify-between">
               <Label>Enable Letterhead</Label>
               <Switch
