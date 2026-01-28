@@ -433,7 +433,7 @@ export default function DragDropCalendar({
                                     {/* Green line at top */}
                                     <div 
                                       className="absolute top-0 left-0 right-0 h-[4px]" 
-                                      style={{ backgroundColor: '#10b981' }}
+                                      style={{ backgroundColor: '#00ff00' }}
                                     />
                                     
                                     <div className="p-1.5 pt-2">
@@ -566,7 +566,7 @@ export default function DragDropCalendar({
                                         {isMultiDay && (
                                           <div 
                                             className="absolute top-0 left-0 right-0 h-[4px]" 
-                                            style={{ backgroundColor: '#10b981' }}
+                                            style={{ backgroundColor: '#00ff00' }}
                                           />
                                         )}
                                         
