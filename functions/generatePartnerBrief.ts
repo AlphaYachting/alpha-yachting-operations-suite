@@ -202,30 +202,17 @@ Deno.serve(async (req) => {
     const boat = boats.find(b => b.id === job?.boat_id);
     const location = locations.find(l => l.id === job?.location_id);
 
-    const puppeteer = (await import('npm:puppeteer')).default;
-    let browser;
+    const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians);
+    
+    // Return HTML as data URL (browser will convert to PDF on download)
+    const base64Html = btoa(unescape(encodeURIComponent(html)));
+    const htmlDataUrl = `data:text/html;base64,${base64Html}`;
 
-    try {
-      browser = await puppeteer.launch({ headless: 'new' });
-      const page = await browser.newPage();
-      
-      const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians);
-      await page.setContent(html, { waitUntil: 'networkidle2' });
-      
-      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-      await browser.close();
-
-      return new Response(pdfBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="partner-brief-${workOrder.work_order_number || workOrderId}.pdf"`
-        }
-      });
-    } catch (error) {
-      if (browser) await browser.close();
-      return Response.json({ error: error.message }, { status: 500 });
-    }
+    return Response.json({
+      success: true,
+      html: html,
+      fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
+    });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
