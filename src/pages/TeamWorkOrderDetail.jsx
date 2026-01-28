@@ -284,7 +284,11 @@ export default function TeamWorkOrderDetail() {
         <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl('TeamMobileHome'))}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
+          {!isOnline && <WifiOff className="h-4 w-4 text-orange-600" />}
+          {pendingChanges.length > 0 && <Badge className="bg-orange-100 text-orange-800 text-xs">{pendingChanges.length} pending</Badge>}
+        </div>
         <Button
           onClick={handleTimerToggle}
           className={`text-base font-semibold px-4 py-1.5 rounded-lg text-white ${
