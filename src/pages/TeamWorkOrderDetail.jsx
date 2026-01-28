@@ -18,6 +18,7 @@ export default function TeamWorkOrderDetail() {
   const [job, setJob] = useState(null);
   const [location, setLocation] = useState(null);
   const [boat, setBoat] = useState(null);
+  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isTaskStarted, setIsTaskStarted] = useState(false);
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
