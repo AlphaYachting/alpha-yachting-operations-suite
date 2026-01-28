@@ -121,8 +121,6 @@ export default function PDFTemplateSettings() {
     const file = e.target.files[0];
     if (!file) return;
 
-    console.log('File selected:', file.name, file.type, file.size);
-
     if (!file.type.startsWith('image/')) {
       setError('Please upload an image file (PNG, JPG, etc.)');
       return;
@@ -130,38 +128,32 @@ export default function PDFTemplateSettings() {
 
     setUploading(true);
     setError('');
-    setSuccess('Uploading letterhead...');
     
     try {
-      console.log('Starting upload...');
       const result = await base44.integrations.Core.UploadFile({ file });
-      console.log('Upload result:', result);
       
       const updatedTemplate = { 
         ...template, 
         letterhead_url: result.file_url,
-        letterhead_image_url: result.file_url,
-        letterhead_upload_date: new Date().toISOString(),
         letterhead_enabled: true
       };
       
-      console.log('Updating template with:', updatedTemplate);
       setTemplate(updatedTemplate);
       
       // Save to database immediately
       if (templateId) {
-        console.log('Updating existing template:', templateId);
         await base44.entities.PDFTemplate.update(templateId, updatedTemplate);
+        // Reload to confirm save
+        await loadTemplate();
       } else {
-        console.log('Creating new template');
         const created = await base44.entities.PDFTemplate.create(updatedTemplate);
         setTemplateId(created.id);
+        await loadTemplate();
       }
       
       setSuccess('Letterhead uploaded and saved successfully!');
       setTimeout(() => setSuccess(''), 3000);
       
-      // Reset file input
       e.target.value = '';
     } catch (error) {
       console.error('Error uploading letterhead:', error);
@@ -255,13 +247,6 @@ export default function PDFTemplateSettings() {
             <CardDescription>Upload a PDF letterhead to use as background for all invoices and offers</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-3 mb-4 bg-blue-50 border border-blue-200 rounded text-xs">
-              <p><strong>Debug Info:</strong></p>
-              <p>letterhead_url: {template.letterhead_url || 'not set'}</p>
-              <p>letterhead_image_url: {template.letterhead_image_url || 'not set'}</p>
-              <p>letterhead_enabled: {String(template.letterhead_enabled)}</p>
-            </div>
-
             <div className="flex items-center justify-between">
               <Label>Enable Letterhead</Label>
               <Switch
@@ -270,24 +255,13 @@ export default function PDFTemplateSettings() {
               />
             </div>
 
-            {(template.letterhead_url || template.letterhead_image_url) && (
+            {template.letterhead_url && (
               <div className="border rounded-lg p-4 bg-slate-50">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="text-sm font-medium">Current Letterhead</p>
-                    <p className="text-xs text-slate-500">
-                      Uploaded: {template.letterhead_upload_date ? new Date(template.letterhead_upload_date).toLocaleDateString() : 'Unknown'}
-                    </p>
-                  </div>
-                </div>
+                <p className="text-sm font-medium mb-3">Current Letterhead</p>
                 <img 
-                  src={template.letterhead_url || template.letterhead_image_url} 
+                  src={template.letterhead_url} 
                   alt="Letterhead" 
                   className="w-full max-w-md border rounded"
-                  onError={(e) => {
-                    console.error('Image failed to load:', template.letterhead_url || template.letterhead_image_url);
-                    e.target.style.display = 'none';
-                  }}
                 />
               </div>
             )}
@@ -308,7 +282,7 @@ export default function PDFTemplateSettings() {
                 disabled={uploading}
               >
                 <Upload className="h-4 w-4 mr-2" />
-                {uploading ? 'Uploading...' : (template.letterhead_image_url ? 'Replace Letterhead' : 'Upload Letterhead')}
+                {uploading ? 'Uploading...' : (template.letterhead_url ? 'Replace Letterhead' : 'Upload Letterhead')}
               </Button>
             </div>
 
