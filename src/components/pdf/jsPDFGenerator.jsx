@@ -32,14 +32,15 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
 
   // Helper to add letterhead to current page
   function addLetterhead() {
-    if (template.letterhead_image_url && template.letterhead_enabled) {
+    const letterheadUrl = template.letterhead_url || template.letterhead_image_url;
+    if (letterheadUrl && template.letterhead_enabled) {
       try {
         // Add letterhead as full-page background image
-        doc.addImage(template.letterhead_image_url, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'NONE');
+        doc.addImage(letterheadUrl, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'NONE');
       } catch (e) {
         try {
           // Fallback to JPEG if PNG fails
-          doc.addImage(template.letterhead_image_url, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'NONE');
+          doc.addImage(letterheadUrl, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'NONE');
         } catch (err) {
           console.error('Failed to load letterhead:', err);
         }
@@ -101,7 +102,8 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   }
 
   // Logo (only if no letterhead, or letterhead is disabled)
-  if (template.logo_url && (!template.letterhead_enabled || !template.letterhead_image_url)) {
+  const letterheadUrl = template.letterhead_url || template.letterhead_image_url;
+  if (template.logo_url && (!template.letterhead_enabled || !letterheadUrl)) {
     try {
       const logoHeight = template.logo_height_mm || 20;
       const logoWidth = logoHeight * 3; // Assume 3:1 aspect ratio

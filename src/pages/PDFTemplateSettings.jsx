@@ -135,6 +135,7 @@ export default function PDFTemplateSettings() {
       
       const updatedTemplate = { 
         ...template, 
+        letterhead_url: result.file_url,
         letterhead_image_url: result.file_url,
         letterhead_upload_date: new Date().toISOString(),
         letterhead_enabled: true
@@ -258,7 +259,7 @@ export default function PDFTemplateSettings() {
               />
             </div>
 
-            {template.letterhead_image_url && (
+            {(template.letterhead_url || template.letterhead_image_url) && (
               <div className="border rounded-lg p-4 bg-slate-50">
                 <div className="flex items-center justify-between mb-2">
                   <div>
@@ -269,11 +270,11 @@ export default function PDFTemplateSettings() {
                   </div>
                 </div>
                 <img 
-                  src={template.letterhead_image_url} 
+                  src={template.letterhead_url || template.letterhead_image_url} 
                   alt="Letterhead" 
                   className="w-full max-w-md border rounded"
                   onError={(e) => {
-                    console.error('Image failed to load:', template.letterhead_image_url);
+                    console.error('Image failed to load:', template.letterhead_url || template.letterhead_image_url);
                     e.target.style.display = 'none';
                   }}
                 />
