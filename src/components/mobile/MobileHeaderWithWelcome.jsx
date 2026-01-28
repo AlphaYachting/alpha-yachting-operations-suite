@@ -65,40 +65,69 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
   const timeString = format(now, 'HH:mm');
   const dateString = format(now, 'EEE, MMM d');
 
-  return (
-    <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 text-white sticky top-0 z-10 shadow-xl">
-      {/* Header Top Row - Logo, Time, Tasks Count */}
-      <div className="p-4 md:p-5 flex items-center justify-between gap-4">
-        {/* Logo */}
-        <img 
-          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/27c878803_alpha-yachting-logo-weiss.png"
-          alt="Alpha Yachting"
-          className="h-12 md:h-14 object-contain flex-shrink-0"
-        />
-        
-        {/* Time */}
-        <div className="flex-1">
-          <p className="text-2xl md:text-3xl font-bold font-mono leading-none">{timeString}</p>
-          <p className="text-xs text-blue-100">{dateString}</p>
-        </div>
+  const layout = config?.layout || {
+    logoPosition: 'left',
+    logoHeight: 48,
+    timePosition: 'center',
+    tasksPosition: 'right',
+    flexDirection: 'row',
+    padding: { x: 16, y: 16 },
+    gap: 16,
+    elementsOrder: ['logo', 'time', 'tasks'],
+  };
 
-        {/* Tasks Count & Admin */}
-        <div className="text-right flex flex-col items-end gap-2">
-          <div className="bg-white/20 rounded-full px-3 py-1">
-            <p className="text-lg md:text-xl font-bold text-white">{taskCount}</p>
-            <p className="text-xs text-blue-100">tasks</p>
-          </div>
-          {user?.role === 'admin' && (
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={onSettingsClick}
-              className="h-7 w-7 hover:bg-white/20 flex-shrink-0"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-          )}
+  const elements = {
+    logo: (
+      <img 
+        key="logo"
+        src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/27c878803_alpha-yachting-logo-weiss.png"
+        alt="Alpha Yachting"
+        className="object-contain flex-shrink-0"
+        style={{ height: layout.logoHeight }}
+      />
+    ),
+    time: (
+      <div key="time" className="flex-1">
+        <p className="text-2xl md:text-3xl font-bold font-mono leading-none">{timeString}</p>
+        <p className="text-xs text-blue-100">{dateString}</p>
+      </div>
+    ),
+    tasks: (
+      <div key="tasks" className="text-right flex flex-col items-end gap-2">
+        <div className="bg-white/20 rounded-full px-3 py-1">
+          <p className="text-lg md:text-xl font-bold text-white">{taskCount}</p>
+          <p className="text-xs text-blue-100">tasks</p>
         </div>
+        {user?.role === 'admin' && (
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={onSettingsClick}
+            className="h-7 w-7 hover:bg-white/20 flex-shrink-0"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    ),
+  };
+
+  const orderedElements = layout.elementsOrder.map(key => elements[key]);
+
+  return (
+    <div className={`bg-gradient-to-br ${config?.styling?.backgroundColor || 'from-blue-600 via-blue-500 to-cyan-500'} text-white sticky top-0 z-10 shadow-xl`}>
+      {/* Header Top Row - Logo, Time, Tasks Count */}
+      <div
+        style={{
+          padding: `${layout.padding.y}px ${layout.padding.x}px`,
+          display: 'flex',
+          flexDirection: layout.flexDirection,
+          gap: layout.gap,
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        {orderedElements}
       </div>
 
       {/* Welcome Message */}
