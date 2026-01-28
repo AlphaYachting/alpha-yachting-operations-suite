@@ -299,7 +299,7 @@ export default function TeamWorkOrderDetail() {
 
                     {/* Task Description */}
                     {task.description &&
-                <p className="text-xs text-slate-600 leading-relaxed mb-2">{task.description}</p>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-2">{task.description}</p>
                 }
 
                     {/* Task Status Badge */}
