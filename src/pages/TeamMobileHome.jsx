@@ -147,7 +147,7 @@ export default function TeamMobileHome() {
     'bg-slate-100 text-slate-800';
 
     return (
-      <Link to={createPageUrl('TeamTaskDetail') + `?woId=${workOrder.id}`}>
+      <Link to={createPageUrl('TeamWorkOrderDetail') + `?woId=${workOrder.id}`}>
         <div className="bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden">
           {/* Top Section: Colored Box + Title + Status */}
           <div className="flex items-stretch">
