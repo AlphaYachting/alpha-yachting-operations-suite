@@ -91,7 +91,8 @@ const statusColors = {
 };
 
 export default function Dashboard() {
-  const [jobs, setJobs] = useState([]);
+   const navigate = useNavigate();
+   const [jobs, setJobs] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [customers, setCustomers] = useState([]);
