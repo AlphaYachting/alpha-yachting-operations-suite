@@ -128,13 +128,14 @@ export default function WorkOrderDetail() {
 
   const loadWorkOrderDetails = async () => {
     try {
-      const [woData, allTasks, allTechs, allPhotos, teamOrders, allComments] = await Promise.all([
+      const [woData, allTasks, allTechs, allPhotos, teamOrders, allComments, allTimeEntries] = await Promise.all([
         base44.entities.WorkOrder.filter({ id: workOrderId }),
         base44.entities.Task.filter({ work_order_id: workOrderId }),
         base44.entities.Technician.list(),
         base44.entities.WorkOrderPhoto.filter({ work_order_id: workOrderId }, '-created_date'),
         base44.entities.TeamOrder.filter({ work_order_id: workOrderId }),
-        base44.entities.WorkOrderComment.filter({ work_order_id: workOrderId }, '-created_date')
+        base44.entities.WorkOrderComment.filter({ work_order_id: workOrderId }, '-created_date'),
+        base44.entities.TimeEntry.filter({ work_order_id: workOrderId }, '-entry_date')
       ]);
 
       if (woData.length === 0) {
