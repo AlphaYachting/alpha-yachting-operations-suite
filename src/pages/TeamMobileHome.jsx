@@ -131,7 +131,7 @@ export default function TeamMobileHome() {
     const location = getLocationName(workOrder.location_id);
     const boat = getBoatInfo(workOrder.boat_id);
     const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
-    const isToday = woDate && isToday(woDate);
+    const isWorkOrderToday = woDate && isToday(woDate);
     const timeString = workOrder.scheduled_start_time || '—';
     const dateFormatted = woDate ? format(woDate, 'EEE, MMM d') : '—';
     const completedCount = woTasks.filter(t => t.status === 'Completed').length;
@@ -147,7 +147,7 @@ export default function TeamMobileHome() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="text-sm font-medium text-slate-600">{dateFormatted}</div>
-              {isToday && (
+              {isWorkOrderToday && (
                 <Badge className="bg-red-100 text-red-700 border-red-300 text-xs">Today</Badge>
               )}
             </div>
