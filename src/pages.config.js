@@ -59,6 +59,7 @@ import Invoices from './pages/Invoices';
 import JobDetail from './pages/JobDetail';
 import Jobs from './pages/Jobs';
 import Locations from './pages/Locations';
+import MobileHeaderEditor from './pages/MobileHeaderEditor';
 import NotificationPreferences from './pages/NotificationPreferences';
 import OfferDetail from './pages/OfferDetail';
 import Offers from './pages/Offers';
@@ -82,7 +83,6 @@ import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import MobileHeaderEditor from './pages/MobileHeaderEditor';
 import __Layout from './Layout.jsx';
 
 
@@ -99,6 +99,7 @@ export const PAGES = {
     "JobDetail": JobDetail,
     "Jobs": Jobs,
     "Locations": Locations,
+    "MobileHeaderEditor": MobileHeaderEditor,
     "NotificationPreferences": NotificationPreferences,
     "OfferDetail": OfferDetail,
     "Offers": Offers,
@@ -122,7 +123,6 @@ export const PAGES = {
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "MobileHeaderEditor": MobileHeaderEditor,
 }
 
 export const pagesConfig = {

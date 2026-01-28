@@ -52,6 +52,7 @@ export default function MobileHeaderEditor() {
             backgroundColor: 'from-blue-600 via-blue-500 to-cyan-500',
             welcomeBackground: 'bg-white/15',
             borderRadius: 'rounded-lg',
+            headerHeight: 140,
           },
         };
         setConfig(defaultConfig);
@@ -82,6 +83,16 @@ export default function MobileHeaderEditor() {
           ...prev.layout.padding,
           [axis]: value,
         },
+      },
+    }));
+  };
+
+  const updateStyling = (field, value) => {
+    setConfig(prev => ({
+      ...prev,
+      styling: {
+        ...prev.styling,
+        [field]: value,
       },
     }));
   };
