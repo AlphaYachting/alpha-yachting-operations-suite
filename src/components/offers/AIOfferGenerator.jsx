@@ -29,7 +29,17 @@ export default function AIOfferGenerator({ formData, customers, boats, jobs, onT
       const boat = boats.find(b => b.id === formData.boat_id);
       const job = jobs.find(j => j.id === formData.job_id);
 
+      const languageMap = {
+        'German': 'German (Deutsch)',
+        'English': 'English',
+        'Italian': 'Italian (Italiano)',
+        'Slovenian': 'Slovenian (Slovenščina)',
+        'Croatian': 'Croatian (Hrvatski)'
+      };
+
       const context = `
+IMPORTANT: Generate ALL content in ${languageMap[formData.language] || 'German'}.
+
 Customer: ${customer?.company_name || `${customer?.first_name} ${customer?.last_name}`}
 ${boat ? `Boat: ${boat.vessel_name} (${boat.manufacturer} ${boat.model}, ${boat.year})` : ''}
 ${boat?.engine_manufacturer ? `Engine: ${boat.engine_manufacturer} ${boat.engine_model || ''}` : ''}
@@ -39,12 +49,14 @@ Work Description:
 ${prompt}
 
 Generate a detailed list of tasks for this service offer. For each task, provide:
-- A clear, specific title
+- A clear, specific title in ${languageMap[formData.language] || 'German'}
 - ${detailedExplanations ? 'A detailed technical description including specific procedures, tools, and technical specifications' : 'A brief, simple description that a non-technical customer can understand'}
 - Quantity needed (e.g., hours for labor, pieces for parts, square meters for surface work, etc.)
 - Appropriate unit type (Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, or Lump Sum)
 
 Be practical and realistic with estimates. Consider travel time if it's mobile service work.
+
+REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
 `.trim();
 
       const response = await base44.integrations.Core.InvokeLLM({
