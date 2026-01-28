@@ -366,7 +366,9 @@ export default function DragDropCalendar({
             endIdx,
             title: wo.title,
             color: techColor.bg,
-            totalDays
+            totalDays,
+            startCol: startIdx + 1,
+            endCol: endIdx + 2
           });
           processedWOs.add(wo.id);
         }
@@ -378,30 +380,24 @@ export default function DragDropCalendar({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="space-y-1">
+      <div className="space-y-2">
         {/* Multi-day span indicators at the top */}
         {multiDaySpans.length > 0 && (
-          <div className="grid gap-2 grid-cols-7 mb-2" style={{ height: multiDaySpans.length * 20 + 'px' }}>
+          <div className="grid gap-2 grid-cols-7 relative" style={{ minHeight: multiDaySpans.length * 24 + 'px' }}>
             {multiDaySpans.map((span, spanIdx) => (
               <div
                 key={span.id}
-                className="col-span-1 relative"
+                className="h-4 rounded-full flex items-center px-2 shadow-sm col-span-1"
                 style={{
-                  gridColumn: `${span.startIdx + 1} / ${span.endIdx + 2}`,
-                  top: spanIdx * 20 + 'px',
-                  position: 'absolute',
-                  width: `calc((100% + 8px) * ${span.endIdx - span.startIdx + 1} - 8px)`,
-                  left: `calc((100% + 8px) * ${span.startIdx})`
+                  gridColumn: `${span.startCol} / ${span.endCol}`,
+                  backgroundColor: 'rgba(134, 239, 172, 0.9)',
+                  position: 'relative',
+                  top: spanIdx * 24 + 'px'
                 }}
               >
-                <div 
-                  className="h-3 rounded-full flex items-center px-2 shadow-sm"
-                  style={{ backgroundColor: 'rgba(134, 239, 172, 0.8)' }}
-                >
-                  <span className="text-[9px] font-medium text-green-900 truncate">
-                    {span.title} ({span.totalDays} days)
-                  </span>
-                </div>
+                <span className="text-[10px] font-semibold text-green-900 truncate">
+                  {span.title} ({span.totalDays} days)
+                </span>
               </div>
             ))}
           </div>
