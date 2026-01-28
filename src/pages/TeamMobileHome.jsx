@@ -55,10 +55,16 @@ export default function TeamMobileHome() {
       let tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData;
 
       try {
-        // Try to load from server
+        // Try to load from server - filter work orders by assigned technician
+        const technicianId = previewUserId || currentUser?.id;
         [tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData] = await Promise.all([
           base44.entities.Task.list(),
-          base44.entities.WorkOrder.list(),
+          base44.entities.WorkOrder.filter({
+            $or: [
+              { assigned_technicians: { $in: [technicianId] } },
+              { lead_technician_id: technicianId }
+            ]
+          }),
           base44.entities.Location.list(),
           base44.entities.Technician.list(),
           base44.entities.Boat.list(),

@@ -47,6 +47,7 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import AccessLogs from './pages/AccessLogs';
 import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
 import Customers from './pages/Customers';
@@ -84,11 +85,11 @@ import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import AccessLogs from './pages/AccessLogs';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AccessLogs": AccessLogs,
     "BoatDetail": BoatDetail,
     "Boats": Boats,
     "Customers": Customers,
@@ -126,7 +127,6 @@ export const PAGES = {
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "AccessLogs": AccessLogs,
 }
 
 export const pagesConfig = {

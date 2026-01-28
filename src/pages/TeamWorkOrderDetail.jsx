@@ -116,6 +116,8 @@ export default function TeamWorkOrderDetail() {
 
   const logAccessStart = async () => {
     try {
+      if (!user?.id) return; // Validate user is authenticated
+      
       const params = new URLSearchParams(window.location.search);
       const woId = params.get('woId');
       
@@ -127,8 +129,8 @@ export default function TeamWorkOrderDetail() {
       // Create access log entry
       const logEntry = {
         work_order_id: woId,
-        technician_id: user?.id || '',
-        technician_email: user?.email || 'unknown',
+        technician_id: user.id,
+        technician_email: user.email,
         accessed_at: new Date().toISOString(),
         ip_address: clientInfo.ip_address,
         device_info: clientInfo.device_info
@@ -138,9 +140,15 @@ export default function TeamWorkOrderDetail() {
         try {
           const savedLog = await base44.entities.WorkOrderAccessLog.create(logEntry);
           setAccessLogId(savedLog.id);
+          // Store backup ID in sessionStorage for recovery
+          sessionStorage.setItem(`accessLog_${woId}`, savedLog.id);
         } catch (error) {
           console.error('Error logging access:', error);
+          // Fallback: store in local state for potential retry
         }
+      } else {
+        // Offline: queue for sync
+        await offlineStorage.save(offlineStorage.STORES.workOrderAccessLogs, logEntry);
       }
     } catch (error) {
       console.error('Error in logAccessStart:', error);
@@ -149,27 +157,35 @@ export default function TeamWorkOrderDetail() {
 
   const logAccessClose = async () => {
     try {
-      if (!accessLogId) return;
-
-      const now = new Date();
       const params = new URLSearchParams(window.location.search);
       const woId = params.get('woId');
       
       if (!woId) return;
 
+      // Use stored ID or try sessionStorage recovery
+      let logId = accessLogId || sessionStorage.getItem(`accessLog_${woId}`);
+      
+      if (!logId) return;
+
+      const now = new Date();
+
       // Get the original access log to calculate duration
-      const logs = await base44.entities.WorkOrderAccessLog.filter({ id: accessLogId });
+      const logs = await base44.entities.WorkOrderAccessLog.filter({ id: logId });
       if (logs.length > 0) {
         const logEntry = logs[0];
         const duration = Math.round((now - new Date(logEntry.accessed_at)) / 1000);
         
-        await base44.entities.WorkOrderAccessLog.update(accessLogId, {
+        await base44.entities.WorkOrderAccessLog.update(logId, {
           closed_at: now.toISOString(),
           duration_seconds: duration
         });
       }
+      
+      // Cleanup sessionStorage
+      sessionStorage.removeItem(`accessLog_${woId}`);
     } catch (error) {
       console.error('Error logging access close:', error);
+      // Non-blocking: don't prevent page exit
     }
   };
 
