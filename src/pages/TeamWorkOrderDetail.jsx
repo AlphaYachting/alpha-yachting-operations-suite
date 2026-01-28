@@ -20,8 +20,10 @@ export default function TeamWorkOrderDetail() {
   const [boat, setBoat] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isTaskStarted, setIsTaskStarted] = useState(false);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     loadData();
