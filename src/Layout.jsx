@@ -95,7 +95,11 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
-  const isMobilePage = currentPageName?.startsWith('Mobile') || currentPageName?.startsWith('Team');
+  const isMobilePage = currentPageName?.startsWith('Mobile') || 
+                       currentPageName === 'TeamMobileHome' || 
+                       currentPageName === 'TeamWorkOrderDetail' || 
+                       currentPageName === 'TeamTaskDetail' || 
+                       currentPageName === 'TeamPreviewMode';
 
   if (isMobilePage) {
     return <>{children}</>;
