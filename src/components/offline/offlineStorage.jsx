@@ -12,7 +12,8 @@ const STORES = {
   photos: 'photos',
   photoQueue: 'photoQueue',
   syncQueue: 'syncQueue',
-  comments: 'comments'
+  comments: 'comments',
+  workOrderAccessLogs: 'workOrderAccessLogs'
 };
 
 let db = null;
@@ -47,7 +48,7 @@ const initDB = () => {
             store.createIndex('timestamp', 'timestamp', { unique: false });
           }
           
-          if (storeName === 'comments' || storeName === 'tasks' || storeName === 'photos') {
+          if (storeName === 'comments' || storeName === 'tasks' || storeName === 'photos' || storeName === 'workOrderAccessLogs') {
             store.createIndex('work_order_id', 'work_order_id', { unique: false });
           }
         }
