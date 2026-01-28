@@ -24,6 +24,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
     contact_method: 'Phone',
     inquiry_type: 'Service Inquiry',
     notes: '',
+    description: '',
     priority: 'Medium'
   });
   const [error, setError] = useState('');
