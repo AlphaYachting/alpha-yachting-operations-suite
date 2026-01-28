@@ -128,13 +128,10 @@ export default function TeamMobileHome() {
   }
 
   const WorkOrderCard = ({ workOrder, woTasks }) => {
-    const location = getLocationName(workOrder.location_id);
-    const boat = getBoatInfo(workOrder.boat_id);
-    const job = workOrders.length > 0 ? workOrders.find(wo => wo.id === workOrder.id)?.job_id : null;
     const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
     const dateString = woDate ? format(woDate, 'MMM d, yyyy') : '—';
-    const leadTech = workOrder.lead_technician_id ? 
-      boats.find(b => b.id === workOrder.lead_technician_id)?.vessel_name : 'Unassigned';
+    const location = getLocationName(workOrder.location_id);
+    const boat = getBoatInfo(workOrder.boat_id);
     const statusBadgeColor = workOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
                             workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
                             'bg-slate-100 text-slate-800';
@@ -157,24 +154,16 @@ export default function TeamMobileHome() {
             {boat?.vessel_name || 'Unknown Boat'}
           </p>
 
-          {/* Info Cards Row: Date | Status | Technician */}
-          <div className="grid grid-cols-3 gap-2">
+          {/* Info Cards Row: Date | Status */}
+          <div className="grid grid-cols-2 gap-2">
             {/* Date Card */}
             <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
-              <div className="flex items-center gap-2 text-slate-600">
-                <MapPin className="h-4 w-4" />
-                <p className="text-xs font-medium">{dateString}</p>
-              </div>
+              <p className="text-xs font-medium text-slate-900">{dateString}</p>
             </div>
 
             {/* Status Card */}
             <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
               <p className="text-xs font-medium text-slate-900">{workOrder.status}</p>
-            </div>
-
-            {/* Technician Card */}
-            <div className="border border-slate-200 rounded-lg px-3 py-2 bg-slate-50">
-              <p className="text-xs font-medium text-slate-900">{leadTech}</p>
             </div>
           </div>
 
