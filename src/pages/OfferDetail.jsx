@@ -44,6 +44,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import OfferTaskEditor from '@/components/offers/OfferTaskEditor';
 import AIOfferGenerator from '@/components/offers/AIOfferGenerator';
+import PaymentTermsSection from '@/components/offers/PaymentTermsSection';
 import PDFExportButton from '@/components/pdf/PDFExportButton';
 import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
 
