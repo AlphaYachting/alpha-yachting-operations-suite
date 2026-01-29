@@ -251,7 +251,7 @@ export default function TasklistImport() {
       } else {
         // Create new parent job - need to ensure we have customer and boat
         // Get first customer from the data
-        const firstGroup = Object.values(jobGroups)[0];
+        const firstGroup = Object.values(serviceAreaGroups)[0];
         let customer = existingCustomers.find(c => 
           c.last_name?.toLowerCase() === firstGroup.customerName?.toLowerCase() ||
           c.company_name?.toLowerCase() === firstGroup.customerName?.toLowerCase()
