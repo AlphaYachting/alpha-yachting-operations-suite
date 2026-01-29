@@ -404,6 +404,59 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
           margin-bottom: 6px;
         }
 
+        .payment-terms-box {
+          margin-bottom: 15px;
+          padding: 12px;
+          background-color: #fef3c7;
+          border: 1px solid #fcd34d;
+          border-radius: 3px;
+          font-size: 9pt;
+          line-height: 1.3;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        .payment-terms-title {
+          font-size: 10pt;
+          font-weight: bold;
+          margin-bottom: 6px;
+          color: #92400e;
+        }
+
+        .downpayment-info {
+          margin: 6px 0;
+          padding: 6px 0;
+          border-bottom: 1px solid #fcd34d;
+        }
+
+        .downpayment-info:last-child {
+          border-bottom: none;
+        }
+
+        .ownership-notice {
+          margin-bottom: 15px;
+          padding: 12px;
+          background-color: #fee2e2;
+          border-left: 4px solid #dc2626;
+          border-radius: 3px;
+          font-size: 9pt;
+          line-height: 1.3;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        .ownership-title {
+          font-size: 10pt;
+          font-weight: bold;
+          margin-bottom: 6px;
+          color: #7f1d1d;
+        }
+
+        .ownership-text {
+          color: #7f1d1d;
+          white-space: pre-line;
+        }
+
         /* Footer */
         .footer {
           margin-top: ${paragraphSpacing * 2}pt;
