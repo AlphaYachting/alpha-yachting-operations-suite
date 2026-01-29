@@ -681,6 +681,16 @@ export default function TasklistImport() {
           </CardContent>
         </Card>
 
+        {/* Info Banner */}
+        <Card className="mb-6 bg-blue-50 border-blue-200">
+          <CardContent className="pt-4">
+            <p className="text-sm text-blue-900">
+              <strong>Structure:</strong> Each Excel row becomes a <strong>Work Order</strong> (under a Job). 
+              Tasks are created within each Work Order. This maps to: Job → Work Order → Task
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Step Content */}
         {currentStep === 1 && (
           <FileUploadStep onUpload={handleFileUpload} />
