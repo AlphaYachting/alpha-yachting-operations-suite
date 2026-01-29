@@ -134,8 +134,103 @@ export default function ConfigStep({ config, onConfigChange, onNext, onBack, isP
           </p>
         </div>
 
-        {/* Due Date Configuration */}
+        {/* Work Order Date Configuration */}
         <div className="border rounded-lg p-4 space-y-4">
+          <Label>Work Order Scheduled Date</Label>
+          <p className="text-xs text-gray-600 mb-2">
+            When importing tasklists to work orders, set the scheduled date for created work orders
+          </p>
+
+          <Select
+            value={config.workOrderDateMode || 'column'}
+            onValueChange={(value) => updateConfig('workOrderDateMode', value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="column">From Excel Column (if exists)</SelectItem>
+              <SelectItem value="single">Single Default Date</SelectItem>
+              <SelectItem value="priority-based">Priority-Based Offsets</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {config.workOrderDateMode === 'single' && (
+            <div>
+              <Label className="text-sm">Default Scheduled Date</Label>
+              <Input
+                type="date"
+                value={config.workOrderBaseDate || ''}
+                onChange={(e) => updateConfig('workOrderBaseDate', e.target.value)}
+                className="mt-2"
+              />
+            </div>
+          )}
+
+          {config.workOrderDateMode === 'priority-based' && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm">Base Scheduled Date</Label>
+                <Input
+                  type="date"
+                  value={config.workOrderBaseDate || ''}
+                  onChange={(e) => updateConfig('workOrderBaseDate', e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-xs">High Priority</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      type="number"
+                      value={config.workOrderOffsets?.High || 2}
+                      onChange={(e) => updateConfig('workOrderOffsets', {
+                        ...config.workOrderOffsets,
+                        High: parseInt(e.target.value)
+                      })}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-gray-500">days</span>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Medium Priority</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      type="number"
+                      value={config.workOrderOffsets?.Medium || 5}
+                      onChange={(e) => updateConfig('workOrderOffsets', {
+                        ...config.workOrderOffsets,
+                        Medium: parseInt(e.target.value)
+                      })}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-gray-500">days</span>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Low Priority</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input
+                      type="number"
+                      value={config.workOrderOffsets?.Low || 10}
+                      onChange={(e) => updateConfig('workOrderOffsets', {
+                        ...config.workOrderOffsets,
+                        Low: parseInt(e.target.value)
+                      })}
+                      className="w-20"
+                    />
+                    <span className="text-xs text-gray-500">days</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Due Date Configuration (legacy - removed) */}
+        <div className="border rounded-lg p-4 space-y-4" style={{display: 'none'}}>
           <Label>Due Date Assignment</Label>
           
           <Select
