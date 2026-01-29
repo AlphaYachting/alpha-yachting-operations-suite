@@ -1282,14 +1282,16 @@ export default function WorkOrders() {
             );
             })}
             </div>
+            </div>
+            )}
 
             {/* Work Order Form Dialog */}
-      <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) { setEditingWorkOrder(null); setSearchParams({}); }}}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+            <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) { setEditingWorkOrder(null); setSearchParams({}); }}}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
             <DialogTitle>{editingWorkOrder ? 'Edit Work Order' : 'Create Work Order'}</DialogTitle>
-          </DialogHeader>
-          <WorkOrderForm
+            </DialogHeader>
+            <WorkOrderForm
             workOrder={editingWorkOrder}
             jobs={jobs}
             technicians={technicians}
@@ -1298,9 +1300,9 @@ export default function WorkOrders() {
             preselectedJobId={preselectedJobId}
             onSave={handleSave}
             onCancel={() => { setShowForm(false); setEditingWorkOrder(null); setSearchParams({}); }}
-          />
-        </DialogContent>
-      </Dialog>
-    </div>
+            />
+            </DialogContent>
+            </Dialog>
+            </div>
   );
 }
