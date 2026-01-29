@@ -375,14 +375,15 @@ export default function TasklistImport() {
         createdBoats,
         createdLocations,
         createdJobs,
+        createdWorkOrders,
         createdTasks,
         reviewList,
         parentJobId: parentJob.id
       };
-    }
+      }
 
-    // GROUPED JOBS MODE: Original behavior
-    for (const [groupKey, group] of Object.entries(jobGroups)) {
+      // GROUPED JOBS MODE: Original behavior
+      for (const [groupKey, group] of Object.entries(serviceAreaGroups)) {
       // Find or create customer
       let customer = existingCustomers.find(c => 
         c.last_name?.toLowerCase() === group.customerName?.toLowerCase() ||
