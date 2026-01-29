@@ -257,6 +257,8 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
                          ? 'bg-green-50 border-green-500 border-2' 
                          : item.checklist_state === 'ConfirmedAvailable'
                          ? 'bg-white border-green-300 border-2'
+                         : (item.procurement_status === 'ToOrder' || item.procurement_status === 'NeedsClarification')
+                         ? 'bg-white border-red-500 border-2 hover:bg-red-50'
                          : 'bg-white hover:bg-slate-50'
                      }`}
                    >
