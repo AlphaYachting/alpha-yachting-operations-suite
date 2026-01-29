@@ -23,7 +23,8 @@ import {
   Grip,
   AlertCircle,
   AlertTriangle,
-  Briefcase
+  Briefcase,
+  Trash2
 } from 'lucide-react';
 import { notifyWorkOrderAssignment } from '@/components/notifications/notificationUtils';
 import { Card, CardContent } from '@/components/ui/card';
