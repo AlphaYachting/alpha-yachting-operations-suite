@@ -30,6 +30,12 @@ export default function Settings() {
       page: 'NotificationPreferences'
     },
     {
+      title: 'Unit Settings',
+      description: 'Manage measurement units used across the application',
+      icon: Ruler,
+      page: 'UnitSettingsPage'
+    },
+    {
       title: 'PDF Templates',
       description: 'Configure document templates for offers and invoices',
       icon: FileText,
