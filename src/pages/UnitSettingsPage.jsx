@@ -158,12 +158,22 @@ export default function UnitSettingsPage() {
               <div key={category}>
                 <h2 className="text-lg font-semibold text-slate-900 mb-3">{category}</h2>
                 <div className="grid gap-3">
-                  {categoryUnits.map((unit) => (
+                  {categoryUnits.map((unit) => {
+                    const isUsed = usedUnits.has(unit.value);
+                    return (
                     <Card key={unit.id} className={!unit.active ? 'opacity-50' : ''}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <div className="font-semibold text-slate-900">{unit.label}</div>
+                            <div className="flex items-center gap-2">
+                              <div className="font-semibold text-slate-900">{unit.label}</div>
+                              {isUsed && (
+                                <Badge className="bg-green-100 text-green-800 flex items-center gap-1 text-xs">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  In Use
+                                </Badge>
+                              )}
+                            </div>
                             <div className="text-sm text-slate-600 mt-1">
                               Value: <code className="bg-slate-100 px-2 py-1 rounded">{unit.value}</code>
                               {' '}Display: <code className="bg-slate-100 px-2 py-1 rounded">{unit.display}</code>
