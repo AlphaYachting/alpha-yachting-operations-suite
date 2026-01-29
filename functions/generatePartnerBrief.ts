@@ -251,22 +251,35 @@ Deno.serve(async (req) => {
 
     const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template);
 
+    console.log('[DEBUG] Starting Puppeteer import...');
     const puppeteer = (await import('npm:puppeteer@23.11.1')).default;
+    console.log('[DEBUG] Puppeteer imported:', typeof puppeteer);
+    
     let browser;
 
     try {
+      console.log('[DEBUG] Attempting to launch browser with config:', { headless: 'new' });
+      console.log('[DEBUG] Deno.env.get("DENO_DEPLOYMENT_ID"):', Deno.env.get('DENO_DEPLOYMENT_ID'));
+      console.log('[DEBUG] Deno.build:', Deno.build);
+      
       browser = await puppeteer.launch({ headless: 'new' });
+      console.log('[DEBUG] Browser launched successfully');
+      
       const page = await browser.newPage();
+      console.log('[DEBUG] New page created');
       
       await page.setContent(html, { waitUntil: 'networkidle2' });
+      console.log('[DEBUG] HTML content set');
       
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
         displayHeaderFooter: false
       });
+      console.log('[DEBUG] PDF generated, buffer length:', pdfBuffer.length);
       
       await browser.close();
+      console.log('[DEBUG] Browser closed');
       
       const base64PDF = pdfBuffer.toString('base64');
 
@@ -276,10 +289,13 @@ Deno.serve(async (req) => {
         fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
       });
     } catch (error) {
+      console.error('[ERROR] Puppeteer error:', error);
+      console.error('[ERROR] Error stack:', error.stack);
       if (browser) await browser.close();
       return Response.json({
         success: false,
-        error: error.message
+        error: error.message,
+        stack: error.stack
       }, { status: 500 });
     }
   } catch (error) {
