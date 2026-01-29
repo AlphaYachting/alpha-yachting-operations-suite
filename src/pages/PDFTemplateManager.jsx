@@ -70,7 +70,8 @@ export default function PDFTemplateManager() {
     try {
       const newTemplate = {
         ...base44.entities.PDFTemplate.schema(),
-        company_name: newTemplateName,
+        template_name: newTemplateName,
+        company_name: 'Alpha Yachting',
         primary_color: '#2563eb',
         secondary_color: '#06b6d4',
         is_default: templates.length === 0,
@@ -85,6 +86,39 @@ export default function PDFTemplateManager() {
     } catch (err) {
       console.error('Error creating template:', err);
       setError('Failed to create template');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRenameTemplate = async () => {
+    if (!editingTemplateName.trim() || !selectedTemplate) {
+      setError('Please enter a valid name');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+
+    try {
+      await base44.entities.PDFTemplate.update(selectedTemplate.id, {
+        template_name: editingTemplateName
+      });
+      
+      setTemplates(templates.map(t => 
+        t.id === selectedTemplate.id 
+          ? { ...t, template_name: editingTemplateName }
+          : t
+      ));
+      
+      setSuccess('Template renamed successfully!');
+      setShowRenameDialog(false);
+      setEditingTemplateName('');
+      setSelectedTemplate(null);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Error renaming template:', err);
+      setError('Failed to rename template');
     } finally {
       setSaving(false);
     }
