@@ -1,5 +1,3 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-
 function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template) {
   const margins = {
     top: template?.margin_top_mm || 20,
@@ -218,6 +216,7 @@ Deno.serve(async (req) => {
   try {
     const { workOrderId, teamOrderId } = await req.json();
     
+    const { createClientFromRequest } = await import('npm:@base44/sdk@0.8.6');
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
