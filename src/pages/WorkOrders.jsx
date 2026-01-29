@@ -1283,34 +1283,7 @@ export default function WorkOrders() {
             })}
             </div>
 
-            {/* Pagination Controls */}
-            <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200">
-            <div className="text-sm text-slate-600">
-              Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{Math.max(1, totalPages)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadData(currentPage - 1)}
-                disabled={!hasPrevPage || loading}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadData(currentPage + 1)}
-                disabled={!hasNextPage || loading}
-              >
-                Next
-              </Button>
-            </div>
-            </div>
-            </div>
-            )}
-
-      {/* Work Order Form Dialog */}
+            {/* Work Order Form Dialog */}
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) { setEditingWorkOrder(null); setSearchParams({}); }}}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
