@@ -114,6 +114,16 @@ export default function Boats() {
     return location?.name || '';
   };
 
+  const isDataComplete = (boat) => {
+    return boat.vessel_name && 
+           boat.vessel_type && 
+           boat.manufacturer && 
+           boat.model && 
+           boat.length_m && 
+           boat.engine_type &&
+           boat.current_location_id;
+  };
+
   const filteredBoats = boats.filter(boat => {
     const searchLower = searchTerm.toLowerCase();
     return boat.vessel_name?.toLowerCase().includes(searchLower) ||
