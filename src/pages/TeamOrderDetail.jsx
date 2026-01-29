@@ -258,6 +258,12 @@ export default function TeamOrderDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          {pdfTemplate && !isNew && (
+            <Button onClick={handlePrintPDF} variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={saving} className="bg-purple-600 hover:bg-purple-700">
             <Save className="h-4 w-4 mr-2" />
             {saving ? 'Saving...' : 'Save Team Order'}
