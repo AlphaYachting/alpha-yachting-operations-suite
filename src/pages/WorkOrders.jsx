@@ -99,6 +99,9 @@ export default function WorkOrders() {
   const [expandedWorkOrders, setExpandedWorkOrders] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalWorkOrders, setTotalWorkOrders] = useState(0);
   const preselectedJobId = searchParams.get('job');
 
   useEffect(() => {
@@ -114,7 +117,7 @@ export default function WorkOrders() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    loadData(1);
     // Apply filter from dashboard
     const filterParam = searchParams.get('filter');
     if (filterParam === 'today') {
@@ -124,26 +127,42 @@ export default function WorkOrders() {
     }
   }, [searchParams]);
 
-  const loadData = async () => {
+  const loadData = async (page = 1) => {
     try {
-      const [woData, jobsData, techData, custData, boatsData, locData, timeEntries, photos, reservationsData, vehiclesData, tasksData] = await Promise.all([
-        base44.entities.WorkOrder.list('scheduled_date'),
+      setLoading(true);
+      const offset = (page - 1) * pageSize;
+      
+      // Load base lookup data once (not paginated)
+      const [jobsData, techData, custData, boatsData, locData, vehiclesData] = await Promise.all([
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
         base44.entities.Customer.list(),
         base44.entities.Boat.list(),
         base44.entities.Location.list(),
-        base44.entities.TimeEntry.list(),
-        base44.entities.WorkOrderPhoto.list(),
-        base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' }),
-        base44.entities.Task.list()
+        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
       ]);
 
-      // Fetch team orders
+      // Get total count of work orders
+      const allWO = await base44.entities.WorkOrder.list();
+      setTotalWorkOrders(allWO.length);
+
+      // Paginate work orders (get only current page)
+      const woData = allWO
+        .sort((a, b) => (b.scheduled_date || '').localeCompare(a.scheduled_date || ''))
+        .slice(offset, offset + pageSize);
+
+      // Lazy load aggregates only for current page work orders
+      const woIds = woData.map(wo => wo.id);
+      const [timeEntries, photos, reservationsData, tasksData] = await Promise.all([
+        base44.entities.TimeEntry.filter({}),
+        base44.entities.WorkOrderPhoto.filter({}),
+        base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
+        base44.entities.Task.filter({})
+      ]);
+
       const allTeamOrders = await base44.entities.TeamOrder.list();
 
-      // Calculate aggregates per work order
+      // Calculate aggregates only for current page
       const woAggregates = {};
       woData.forEach(wo => {
         const woTimeEntries = timeEntries.filter(te => te.work_order_id === wo.id);
@@ -179,6 +198,7 @@ export default function WorkOrders() {
       setReservations(reservationsData);
       setVehicles(vehiclesData);
       setTasks(tasksData);
+      setCurrentPage(page);
     } catch (error) {
       console.error('Error loading work orders:', error);
     } finally {
@@ -314,7 +334,7 @@ export default function WorkOrders() {
       }
       
       console.log('Reloading data...');
-      await loadData();
+      await loadData(1);
       console.log('Closing form...');
       setShowForm(false);
       setEditingWorkOrder(null);
@@ -396,7 +416,7 @@ export default function WorkOrders() {
       await base44.entities.WorkOrder.delete(id);
 
       toast.success('Work order and all associated data deleted');
-      await loadData();
+      await loadData(1);
     } catch (error) {
       console.error('Error deleting work order:', error);
       toast.error('Failed to delete work order');
@@ -597,13 +617,19 @@ export default function WorkOrders() {
     return 0;
   });
 
+  const totalPages = Math.ceil(totalWorkOrders / pageSize);
+  const hasNextPage = currentPage < totalPages;
+  const hasPrevPage = currentPage > 1;
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Work Orders</h1>
-          <p className="text-slate-500 mt-1">{workOrders.length} total work orders</p>
+          <p className="text-slate-500 mt-1">
+            Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalWorkOrders)} of {totalWorkOrders} work orders
+          </p>
         </div>
         <div className="flex items-center gap-3">
           {/* View Toggle */}
@@ -703,7 +729,7 @@ export default function WorkOrders() {
             <Skeleton key={i} className="h-28 w-full" />
           ))}
         </div>
-      ) : filteredWorkOrders.length === 0 ? (
+      ) : workOrders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <ClipboardList className="h-12 w-12 mx-auto text-slate-300 mb-4" />
@@ -712,8 +738,9 @@ export default function WorkOrders() {
           </CardContent>
         </Card>
       ) : viewMode === 'list' ? (
-        <div className="grid gap-4">
-          {filteredWorkOrders.map((wo) => {
+        <div className="space-y-4">
+          <div className="grid gap-4">
+            {workOrders.map((wo) => {
             const projectInfo = getProjectInfo(wo.job_id);
             const techNames = getTechnicianNames(wo.assigned_technicians);
             const agg = wo._aggregates || {};
@@ -958,12 +985,39 @@ export default function WorkOrders() {
                 </CardContent>
               </Card>
             );
-          })}
+            })}
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200">
+            <div className="text-sm text-slate-600">
+              Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{Math.max(1, totalPages)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadData(currentPage - 1)}
+                disabled={!hasPrevPage || loading}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadData(currentPage + 1)}
+                disabled={!hasNextPage || loading}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       ) : (
         /* By Boat View */
-        <div className="space-y-4">
-          {Object.entries(groupedByBoat()).map(([boatId, boatWorkOrders]) => {
+          <div className="space-y-4">
+            <div className="space-y-4">
+              {Object.entries(groupedByBoat()).map(([boatId, boatWorkOrders]) => {
             const boatInfo = getBoatInfo(boatId);
             const isExpanded = expandedBoats[boatId] !== false; // Default expanded
             
@@ -1281,9 +1335,35 @@ export default function WorkOrders() {
                 )}
               </Card>
             );
-          })}
-        </div>
-      )}
+            })}
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200">
+            <div className="text-sm text-slate-600">
+              Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{Math.max(1, totalPages)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadData(currentPage - 1)}
+                disabled={!hasPrevPage || loading}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadData(currentPage + 1)}
+                disabled={!hasNextPage || loading}
+              >
+                Next
+              </Button>
+            </div>
+            </div>
+            </div>
+            )}
 
       {/* Work Order Form Dialog */}
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) { setEditingWorkOrder(null); setSearchParams({}); }}}>
