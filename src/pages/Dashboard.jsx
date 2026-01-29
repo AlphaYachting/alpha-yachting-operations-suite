@@ -397,7 +397,7 @@ export default function Dashboard() {
       {/* Priority Stats - Top Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard 
-           title="🔴 Overdue Jobs" 
+           title="Overdue Jobs" 
            value={overdueJobs.length} 
            icon={AlertTriangle}
            color="bg-red-500"
@@ -405,7 +405,7 @@ export default function Dashboard() {
            onClick={() => navigate(createPageUrl('Jobs') + '?filter=overdue')}
          />
          <StatCard 
-           title="📋 Today's Work" 
+           title="Today's Work" 
            value={todayWorkOrders.length} 
            icon={ClipboardList}
            color="bg-amber-500"
@@ -413,7 +413,7 @@ export default function Dashboard() {
            onClick={() => navigate(createPageUrl('WorkOrders') + '?filter=today')}
          />
         <StatCard 
-          title="⏳ Stuck in Quote" 
+          title="Stuck in Quote" 
           value={offers.filter(o => o.status === 'Draft').length} 
           icon={FileText}
           color="bg-purple-500"
@@ -421,7 +421,7 @@ export default function Dashboard() {
           onClick={() => navigate(createPageUrl('Offers'))}
         />
         <StatCard 
-          title="⚙️ No Parts" 
+          title="Waiting for Parts" 
           value={jobs.filter(j => j.status === 'Waiting for Parts' && !['Completed', 'Invoiced'].includes(j.status)).length} 
           icon={Package}
           color="bg-orange-500"
@@ -429,7 +429,7 @@ export default function Dashboard() {
           onClick={() => navigate(createPageUrl('Jobs'))}
         />
         <StatCard 
-           title="📞 New Leads" 
+           title="New Leads" 
            value={leads.filter(l => l.status === 'Pending').length} 
            icon={Phone}
            color="bg-blue-500"
