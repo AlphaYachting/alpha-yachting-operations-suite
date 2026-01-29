@@ -97,7 +97,21 @@ export default function WorkOrders() {
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('workOrdersViewMode') || 'list');
   const [expandedBoats, setExpandedBoats] = useState({});
   const [expandedWorkOrders, setExpandedWorkOrders] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const preselectedJobId = searchParams.get('job');
+
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const user = await base44.auth.me();
+        setCurrentUser(user);
+      } catch (error) {
+        console.log('User not logged in');
+      }
+    };
+    loadCurrentUser();
+  }, []);
 
   useEffect(() => {
     loadData();
