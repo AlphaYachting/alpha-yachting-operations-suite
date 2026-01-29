@@ -506,7 +506,7 @@ export default function PDFTemplateManager() {
         <AlertDialogContent>
           <AlertDialogTitle>Delete Template</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete "{selectedTemplate?.company_name}"? This action cannot be undone.
+            Are you sure you want to delete "{selectedTemplate?.template_name || selectedTemplate?.company_name}"? This action cannot be undone.
           </AlertDialogDescription>
           <DialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
