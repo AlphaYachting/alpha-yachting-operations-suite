@@ -761,6 +761,21 @@ export default function WorkOrders() {
                           </Popover>
                         </div>
 
+                        {agg.hasTeamOrder && (
+                          <Link 
+                            to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                            className="group"
+                          >
+                            <Badge 
+                              variant="outline" 
+                              className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer"
+                            >
+                              <Briefcase className="h-3 w-3 mr-1" />
+                              Team Order
+                            </Badge>
+                          </Link>
+                        )}
+
                         <div className="flex items-center gap-2">
                            <Select
                              value={wo.status}
@@ -851,22 +866,8 @@ export default function WorkOrders() {
                       )}
 
                       {/* Details Chips */}
-                      {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes || agg.hasTeamOrder || (agg.vehicleReservations && agg.vehicleReservations.length > 0)) && (
+                      {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes || (agg.vehicleReservations && agg.vehicleReservations.length > 0)) && (
                         <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
-                          {agg.hasTeamOrder && (
-                            <Link 
-                              to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                              className="group"
-                            >
-                              <Badge 
-                                variant="outline" 
-                                className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer"
-                              >
-                                <Briefcase className="h-3 w-3 mr-1" />
-                                Team Order
-                              </Badge>
-                            </Link>
-                          )}
                           {(() => {
                             const vehicleInfo = getVehicleDisplay(agg.vehicleReservations);
                             return vehicleInfo && (
