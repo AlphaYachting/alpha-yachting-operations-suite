@@ -328,13 +328,80 @@ export default function WorkOrders() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this work order?')) {
-      try {
-        await base44.entities.WorkOrder.delete(id);
-        await loadData();
-      } catch (error) {
-        console.error('Error deleting work order:', error);
+    if (!window.confirm('Are you absolutely sure? This will permanently delete the work order and ALL associated data (tasks, photos, time entries, comments, etc.) with no recovery possible.')) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      // Delete all related data
+      const [allTasks, allPhotos, allTimeEntries, allComments, allMaterials, allTeamOrders, allAccessLogs, allRequirements, allReservations] = await Promise.all([
+        base44.entities.Task.filter({ work_order_id: id }),
+        base44.entities.WorkOrderPhoto.filter({ work_order_id: id }),
+        base44.entities.TimeEntry.filter({ work_order_id: id }),
+        base44.entities.WorkOrderComment.filter({ work_order_id: id }),
+        base44.entities.MaterialUsage.filter({ work_order_id: id }),
+        base44.entities.TeamOrder.filter({ work_order_id: id }),
+        base44.entities.WorkOrderAccessLog.filter({ work_order_id: id }),
+        base44.entities.WorkOrderRequirementList.filter({ work_order_id: id }),
+        base44.entities.InventoryReservation.filter({ work_order_id: id })
+      ]);
+
+      // Delete all tasks
+      for (const task of allTasks) {
+        await base44.entities.Task.delete(task.id);
       }
+
+      // Delete photos
+      for (const photo of allPhotos) {
+        await base44.entities.WorkOrderPhoto.delete(photo.id);
+      }
+
+      // Delete time entries
+      for (const entry of allTimeEntries) {
+        await base44.entities.TimeEntry.delete(entry.id);
+      }
+
+      // Delete comments
+      for (const comment of allComments) {
+        await base44.entities.WorkOrderComment.delete(comment.id);
+      }
+
+      // Delete material usage
+      for (const material of allMaterials) {
+        await base44.entities.MaterialUsage.delete(material.id);
+      }
+
+      // Delete team orders
+      for (const order of allTeamOrders) {
+        await base44.entities.TeamOrder.delete(order.id);
+      }
+
+      // Delete access logs
+      for (const log of allAccessLogs) {
+        await base44.entities.WorkOrderAccessLog.delete(log.id);
+      }
+
+      // Delete requirements
+      for (const req of allRequirements) {
+        await base44.entities.WorkOrderRequirementList.delete(req.id);
+      }
+
+      // Delete reservations
+      for (const res of allReservations) {
+        await base44.entities.InventoryReservation.delete(res.id);
+      }
+
+      // Finally, delete the work order itself
+      await base44.entities.WorkOrder.delete(id);
+
+      toast.success('Work order and all associated data deleted');
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting work order:', error);
+      toast.error('Failed to delete work order');
+    } finally {
+      setDeleting(false);
     }
   };
 
