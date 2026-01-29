@@ -131,7 +131,7 @@ export default function PDFTemplateManager() {
     try {
       const duplicated = {
         ...template,
-        company_name: `${template.company_name} (Copy)`,
+        template_name: `${template.template_name || template.company_name} (Copy)`,
         is_default: false,
       };
       delete duplicated.id;
