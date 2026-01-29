@@ -58,8 +58,9 @@ const navItems = [
   { name: 'Offers', icon: FileText, page: 'Offers' },
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
-  { name: 'Settings', icon: Settings, page: 'Settings' },
-];
+    { name: 'Workshop Display', icon: Monitor, page: 'WorkshopDisplay' },
+    { name: 'Settings', icon: Settings, page: 'Settings' },
+  ];
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
