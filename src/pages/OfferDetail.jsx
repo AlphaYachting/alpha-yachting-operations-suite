@@ -429,7 +429,7 @@ export default function OfferDetail() {
 
       {/* PDF Template for Print */}
       {template && formData.customer_id && formData.title && (
-        <div id="pdf-print-template" key={`${formData.total_amount}-${tasks.length}`} style={{ display: 'none' }}>
+        <div id="pdf-print-template" key={`${formData.total_amount}-${tasks.length}-${formData.payment_terms_type}-${formData.downpayment_percent}`} style={{ display: 'none' }}>
           <PDFDocumentTemplate 
             document={getPDFDocument()}
             lineItems={getPDFLineItems()}
