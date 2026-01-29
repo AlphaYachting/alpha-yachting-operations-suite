@@ -99,9 +99,6 @@ export default function WorkOrders() {
   const [expandedWorkOrders, setExpandedWorkOrders] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(25);
-  const [allCachedWorkOrders, setAllCachedWorkOrders] = useState([]);
   const preselectedJobId = searchParams.get('job');
 
   useEffect(() => {
@@ -117,7 +114,7 @@ export default function WorkOrders() {
   }, []);
 
   useEffect(() => {
-    loadData(1);
+    loadData();
     // Apply filter from dashboard
     const filterParam = searchParams.get('filter');
     if (filterParam === 'today') {
@@ -127,21 +124,10 @@ export default function WorkOrders() {
     }
   }, [searchParams]);
 
-  const loadData = async (pageNum = 1, useCache = false) => {
+  const loadData = async () => {
     try {
-      // If we have cached data and just paginating, skip API calls
-      if (useCache && allCachedWorkOrders.length > 0) {
-        const offset = (pageNum - 1) * pageSize;
-        setWorkOrders(allCachedWorkOrders.slice(offset, offset + pageSize));
-        setCurrentPage(pageNum);
-        return;
-      }
-
-      setLoading(true);
-      
-      // Load all data once
       const [woData, jobsData, techData, custData, boatsData, locData, timeEntries, photos, reservationsData, vehiclesData, tasksData] = await Promise.all([
-        base44.entities.WorkOrder.list('-scheduled_date'),
+        base44.entities.WorkOrder.list('scheduled_date'),
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
         base44.entities.Customer.list(),
@@ -156,7 +142,6 @@ export default function WorkOrders() {
 
       const allTeamOrders = await base44.entities.TeamOrder.list();
 
-      // Calculate aggregates for ALL work orders
       const woAggregates = {};
       woData.forEach(wo => {
         const woTimeEntries = timeEntries.filter(te => te.work_order_id === wo.id);
@@ -183,13 +168,7 @@ export default function WorkOrders() {
         };
       });
 
-      // Cache all work orders with aggregates
-      const allWithAggregates = woData.map(wo => ({ ...wo, _aggregates: woAggregates[wo.id] }));
-      setAllCachedWorkOrders(allWithAggregates);
-
-      // Set current page
-      const offset = (pageNum - 1) * pageSize;
-      setWorkOrders(allWithAggregates.slice(offset, offset + pageSize));
+      setWorkOrders(woData.map(wo => ({ ...wo, _aggregates: woAggregates[wo.id] })));
       setJobs(jobsData);
       setTechnicians(techData);
       setCustomers(custData);
@@ -198,7 +177,6 @@ export default function WorkOrders() {
       setReservations(reservationsData);
       setVehicles(vehiclesData);
       setTasks(tasksData);
-      setCurrentPage(pageNum);
     } catch (error) {
       console.error('Error loading work orders:', error);
     } finally {
@@ -334,7 +312,7 @@ export default function WorkOrders() {
       }
       
       console.log('Reloading data...');
-      await loadData(1);
+      await loadData();
       console.log('Closing form...');
       setShowForm(false);
       setEditingWorkOrder(null);
@@ -416,7 +394,7 @@ export default function WorkOrders() {
       await base44.entities.WorkOrder.delete(id);
 
       toast.success('Work order and all associated data deleted');
-      await loadData(1);
+      await loadData();
     } catch (error) {
       console.error('Error deleting work order:', error);
       toast.error('Failed to delete work order');
@@ -617,19 +595,13 @@ export default function WorkOrders() {
     return 0;
   });
 
-  const totalPages = Math.ceil(allCachedWorkOrders.length / pageSize);
-  const hasNextPage = currentPage < totalPages;
-  const hasPrevPage = currentPage > 1;
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Work Orders</h1>
-          <p className="text-slate-500 mt-1">
-            Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, allCachedWorkOrders.length)} of {allCachedWorkOrders.length} work orders
-          </p>
+          <p className="text-slate-500 mt-1">{workOrders.length} total work orders</p>
         </div>
         <div className="flex items-center gap-3">
           {/* View Toggle */}
@@ -723,13 +695,13 @@ export default function WorkOrders() {
             </div>
 
       {/* Work Orders List */}
-      {loading && allCachedWorkOrders.length === 0 ? (
+      {loading ? (
         <div className="grid gap-4">
           {[1,2,3].map(i => (
             <Skeleton key={i} className="h-28 w-full" />
           ))}
         </div>
-      ) : workOrders.length === 0 && allCachedWorkOrders.length === 0 ? (
+      ) : filteredWorkOrders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <ClipboardList className="h-12 w-12 mx-auto text-slate-300 mb-4" />
@@ -738,9 +710,8 @@ export default function WorkOrders() {
           </CardContent>
         </Card>
       ) : viewMode === 'list' ? (
-        <div className="space-y-4">
-          <div className="grid gap-4">
-            {workOrders.map((wo) => {
+        <div className="grid gap-4">
+          {filteredWorkOrders.map((wo) => {
             const projectInfo = getProjectInfo(wo.job_id);
             const techNames = getTechnicianNames(wo.assigned_technicians);
             const agg = wo._aggregates || {};
@@ -985,33 +956,7 @@ export default function WorkOrders() {
                 </CardContent>
               </Card>
             );
-            })}
-          </div>
-
-          {/* Pagination Controls */}
-          <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200">
-            <div className="text-sm text-slate-600">
-              Page <span className="font-semibold">{currentPage}</span> of <span className="font-semibold">{Math.max(1, totalPages)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadData(currentPage - 1, true)}
-                disabled={!hasPrevPage}
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadData(currentPage + 1, true)}
-                disabled={!hasNextPage}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          })}
         </div>
       ) : (
         /* By Boat View */
