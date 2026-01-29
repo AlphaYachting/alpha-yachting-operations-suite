@@ -216,14 +216,14 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
 
 Deno.serve(async (req) => {
   try {
+    const { workOrderId, teamOrderId } = await req.json();
+    
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const { workOrderId, teamOrderId } = await req.json();
 
     const [workOrders, teamOrders, jobs, customers, boats, locations, tasks, technicians, templates] = await Promise.all([
       base44.entities.WorkOrder.filter({ id: workOrderId }),
@@ -283,9 +283,9 @@ Deno.serve(async (req) => {
       }, { status: 500 });
     }
   } catch (error) {
-    return Response.json({
+    return Response.json({ 
       success: false,
-      error: error.message
-    }, { status: 500 });
+      error: error.message 
+    }, { status: 400 });
   }
 });
