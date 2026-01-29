@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Edit, GripVertical } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { UNIT_OPTIONS, getUnitDisplay } from './unitMapping';
+import { UNIT_OPTIONS, getUnitOptions } from './unitMapping';
 
 export default function OfferTaskEditor({ tasks, setTasks }) {
   const [editingTask, setEditingTask] = useState(null);
