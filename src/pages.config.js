@@ -63,6 +63,7 @@ import Leads from './pages/Leads';
 import Locations from './pages/Locations';
 import MobileHeaderEditor from './pages/MobileHeaderEditor';
 import NotificationPreferences from './pages/NotificationPreferences';
+import NotificationSimulator from './pages/NotificationSimulator';
 import OfferDetail from './pages/OfferDetail';
 import Offers from './pages/Offers';
 import PDFExportDebugger from './pages/PDFExportDebugger';
@@ -86,7 +87,6 @@ import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import NotificationSimulator from './pages/NotificationSimulator';
 import __Layout from './Layout.jsx';
 
 
@@ -107,6 +107,7 @@ export const PAGES = {
     "Locations": Locations,
     "MobileHeaderEditor": MobileHeaderEditor,
     "NotificationPreferences": NotificationPreferences,
+    "NotificationSimulator": NotificationSimulator,
     "OfferDetail": OfferDetail,
     "Offers": Offers,
     "PDFExportDebugger": PDFExportDebugger,
@@ -130,7 +131,6 @@ export const PAGES = {
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "NotificationSimulator": NotificationSimulator,
 }
 
 export const pagesConfig = {

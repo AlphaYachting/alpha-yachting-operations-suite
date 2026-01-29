@@ -112,7 +112,6 @@ export default function WorkOrderDetail() {
   const [commentText, setCommentText] = useState('');
   const [timeEntries, setTimeEntries] = useState([]);
   const [accessLogs, setAccessLogs] = useState([]);
-  const [briefError, setBriefError] = useState(null);
 
   useEffect(() => {
     loadCurrentUser();
@@ -524,46 +523,12 @@ export default function WorkOrderDetail() {
       {/* Team Order Section */}
       {teamOrder && (
         <>
-          {briefError && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm font-medium text-red-900">Partner Brief Error</p>
-              <p className="text-sm text-red-700 mt-1 font-mono">{briefError}</p>
-            </div>
-          )}
           <TeamOrderCard
             teamOrder={teamOrder}
             workOrder={workOrder}
             onEdit={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
-            onGenerateBrief={async () => {
-              try {
-                setBriefError(null);
-                console.log('Starting partner brief generation...', { workOrderId, teamOrderId: teamOrder.id });
-                
-                const response = await base44.functions.invoke('generatePartnerBrief', {
-                  workOrderId,
-                  teamOrderId: teamOrder.id
-                });
-
-                console.log('Response received:', response);
-
-                if (response.data.success && response.data.pdf) {
-                  console.log('Downloading PDF...');
-                  const link = document.createElement('a');
-                  link.href = response.data.pdf;
-                  link.download = response.data.fileName;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                } else {
-                  const errorMsg = response.data.error || 'Unknown error';
-                  console.error('PDF generation failed:', errorMsg);
-                  setBriefError(`Failed to generate partner brief: ${errorMsg}`);
-                }
-              } catch (error) {
-                console.error('Error generating partner brief:', error);
-                console.error('Error details:', error.response?.data || error.message);
-                setBriefError(`Error: ${error.response?.data?.error || error.message}`);
-              }
+            onGenerateBrief={() => {
+              window.print();
             }}
           />
         </>
