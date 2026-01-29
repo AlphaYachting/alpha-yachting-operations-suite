@@ -819,12 +819,15 @@ export default function WorkOrders() {
                             Tasks: {agg.completedTasks}/{agg.totalTasks} done
                           </p>
                           <div className="space-y-1">
-                            {agg.nextOpenTasks.slice(0, 2).map((task) => (
-                              <div key={task.id} className="flex items-center gap-2 text-xs">
-                                <div className={`h-1.5 w-1.5 rounded-full ${task.status === 'In Progress' ? 'bg-blue-500' : 'bg-slate-400'}`} />
-                                <span className="text-slate-700 line-clamp-1">{task.title}</span>
-                              </div>
-                            ))}
+                            {agg.nextOpenTasks.slice(0, 2).map((task) => {
+                              if (!task || !task.id) return null;
+                              return (
+                                <div key={task.id} className="flex items-center gap-2 text-xs">
+                                  <div className={`h-1.5 w-1.5 rounded-full ${task.status === 'In Progress' ? 'bg-blue-500' : 'bg-slate-400'}`} />
+                                  <span className="text-slate-700 line-clamp-1">{task.title || 'Untitled Task'}</span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
