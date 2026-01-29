@@ -12,16 +12,18 @@ import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function VehicleReservation({ workOrder, onReservationChange }) {
-  const [reservation, setReservation] = useState(null);
-  const [vehicles, setVehicles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showDialog, setShowDialog] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState('');
-  const [availableVehicles, setAvailableVehicles] = useState([]);
-  const [checkingAvailability, setCheckingAvailability] = useState(false);
-  const [conflicts, setConflicts] = useState([]);
+   const [reservation, setReservation] = useState(null);
+   const [vehicles, setVehicles] = useState([]);
+   const [loading, setLoading] = useState(true);
+   const [showDialog, setShowDialog] = useState(false);
+   const [selectedVehicle, setSelectedVehicle] = useState('');
+   const [availableVehicles, setAvailableVehicles] = useState([]);
+   const [checkingAvailability, setCheckingAvailability] = useState(false);
+   const [conflicts, setConflicts] = useState([]);
 
-  const hasSchedule = !!(workOrder?.scheduled_date && workOrder?.scheduled_start_time && workOrder?.scheduled_end_time);
+   if (!workOrder) return null;
+
+   const hasSchedule = !!(workOrder.scheduled_date && workOrder.scheduled_start_time && workOrder.scheduled_end_time);
 
   const getPlannedWindow = () => {
     if (!workOrder?.scheduled_date || !workOrder?.scheduled_start_time || !workOrder?.scheduled_end_time) return null;
