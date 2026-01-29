@@ -56,17 +56,23 @@ export default function OfferDetail() {
   const isNewOffer = !offerId;
 
   const [formData, setFormData] = useState({
-    customer_id: '',
-    boat_id: '',
-    job_id: '',
-    title: '',
-    description: '',
-    language: 'German',
-    status: 'Draft',
-    valid_until: '',
-    notes: '',
-    customer_notes: '',
-    total_amount: 0,
+   customer_id: '',
+   boat_id: '',
+   job_id: '',
+   title: '',
+   description: '',
+   language: 'German',
+   status: 'Draft',
+   valid_until: '',
+   notes: '',
+   customer_notes: '',
+   total_amount: 0,
+   payment_terms_type: 'Full',
+   downpayment_percent: 0,
+   downpayment_amount: 0,
+   payment_schedule: '',
+   retention_of_title_enabled: true,
+   retention_of_title_text: '',
   });
   const [tasks, setTasks] = useState([]);
   const [showAIDialog, setShowAIDialog] = useState(false);
