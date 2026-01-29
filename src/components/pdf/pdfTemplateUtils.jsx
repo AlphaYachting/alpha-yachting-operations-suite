@@ -625,6 +625,34 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
 ${document.public_notes}</div>
         ` : ''}
 
+        <!-- Payment Terms (Offers Only) -->
+        ${!isInvoice && document.payment_terms_type ? `
+          <div class="payment-terms-box">
+            <div class="payment-terms-title">Payment Terms</div>
+            ${document.payment_terms_type === 'Downpayment' ? `
+              <div class="downpayment-info">
+                <div><strong>Downpayment:</strong> ${document.downpayment_percent || 0}% (${document.currency || 'EUR'}${(document.downpayment_amount || 0).toFixed(2)})</div>
+                <div><strong>Remaining:</strong> ${100 - (document.downpayment_percent || 0)}% (${document.currency || 'EUR'}${((document.total || 0) - (document.downpayment_amount || 0)).toFixed(2)})</div>
+              </div>
+              ${document.payment_schedule ? `<div class="downpayment-info" style="border-bottom: none;">${document.payment_schedule}</div>` : ''}
+            ` : ''}
+            ${document.payment_terms_type === 'Installments' ? `
+              <div style="margin: 6px 0;">${document.payment_schedule || 'Payment in installments as agreed'}</div>
+            ` : ''}
+            ${document.payment_terms_type === 'Full' ? `
+              <div style="margin: 6px 0;">Payment in full upon invoice</div>
+            ` : ''}
+          </div>
+        ` : ''}
+
+        <!-- Retention of Title (Offers Only) -->
+        ${!isInvoice && document.retention_of_title_enabled ? `
+          <div class="ownership-notice">
+            <div class="ownership-title">⚠️ Retention of Title / Eigentumsvorbehalt</div>
+            <div class="ownership-text">${document.retention_of_title_text || 'All delivered goods and services remain the property of Alpha Yachting until full payment has been received.'}</div>
+          </div>
+        ` : ''}
+
         <!-- Payment Info -->
         ${isInvoice && template.bank_iban ? `
           <div class="payment-info">
