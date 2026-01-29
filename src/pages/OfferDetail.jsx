@@ -296,18 +296,21 @@ export default function OfferDetail() {
   };
 
   const getPDFLineItems = () => {
-    return tasks.map((task, index) => ({
-      sort_order: task.sequence_order || index,
-      title: task.title,
-      description: task.description,
-      quantity: task.quantity || 0,
-      unit: getUnitDisplay(task.unit_type || 'Hour'),
-      unit_price: task.unit_price || 0,
-      tax_rate: 0,
-      total_net: task.total_amount || 0,
-      total_tax: 0,
-      total_gross: task.total_amount || 0
-    }));
+    return tasks.map((task, index) => {
+      const unit = task.unit_type || 'Hour';
+      return {
+        sort_order: task.sequence_order || index,
+        title: task.title,
+        description: task.description,
+        quantity: task.quantity || 0,
+        unit: unit,
+        unit_price: task.unit_price || 0,
+        tax_rate: 0,
+        total_net: task.total_amount || 0,
+        total_tax: 0,
+        total_gross: task.total_amount || 0
+      };
+    });
   };
 
   return (
