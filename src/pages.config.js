@@ -52,8 +52,6 @@ import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
 import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
-import ExcelImport from './pages/ExcelImport';
-import ImportDiagnostics from './pages/ImportDiagnostics';
 import Inventory from './pages/Inventory';
 import InvoiceDetail from './pages/InvoiceDetail';
 import Invoices from './pages/Invoices';
@@ -76,7 +74,6 @@ import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import TaskTemplates from './pages/TaskTemplates';
-import TasklistImport from './pages/TasklistImport';
 import TeamCalendar from './pages/TeamCalendar';
 import TeamMobileHome from './pages/TeamMobileHome';
 import TeamOrderDetail from './pages/TeamOrderDetail';
@@ -100,8 +97,6 @@ export const PAGES = {
     "Boats": Boats,
     "Customers": Customers,
     "Dashboard": Dashboard,
-    "ExcelImport": ExcelImport,
-    "ImportDiagnostics": ImportDiagnostics,
     "Inventory": Inventory,
     "InvoiceDetail": InvoiceDetail,
     "Invoices": Invoices,
@@ -124,7 +119,6 @@ export const PAGES = {
     "Schedule": Schedule,
     "Settings": Settings,
     "TaskTemplates": TaskTemplates,
-    "TasklistImport": TasklistImport,
     "TeamCalendar": TeamCalendar,
     "TeamMobileHome": TeamMobileHome,
     "TeamOrderDetail": TeamOrderDetail,
