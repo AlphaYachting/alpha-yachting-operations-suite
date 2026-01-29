@@ -60,6 +60,7 @@ import QuickTaskUpdate from '@/components/tasks/QuickTaskUpdate';
 import TemplateSelector from '@/components/templates/TemplateSelector';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import TeamOrderCard from '@/components/teamorder/TeamOrderCard';
+import PartnerBriefTemplate from '@/components/pdf/PartnerBriefTemplate';
 import { notifyTaskStatusChange } from '@/components/notifications/notificationUtils';
 
 const statusColors = {
@@ -112,13 +113,25 @@ export default function WorkOrderDetail() {
   const [commentText, setCommentText] = useState('');
   const [timeEntries, setTimeEntries] = useState([]);
   const [accessLogs, setAccessLogs] = useState([]);
+  const [pdfTemplate, setPdfTemplate] = useState(null);
 
   useEffect(() => {
     loadCurrentUser();
     if (workOrderId) {
       loadWorkOrderDetails();
     }
+    loadPDFTemplate();
   }, [workOrderId]);
+
+  const loadPDFTemplate = async () => {
+    try {
+      const templates = await base44.entities.PDFTemplate.list();
+      const defaultTemplate = templates.find(t => t.is_default) || templates[0];
+      setPdfTemplate(defaultTemplate);
+    } catch (error) {
+      console.error('Error loading PDF template:', error);
+    }
+  };
 
   const loadCurrentUser = async () => {
     try {
@@ -330,7 +343,40 @@ export default function WorkOrderDetail() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <>
+      <style>{`
+        @media print {
+          @page { size: A4; }
+          body * { visibility: hidden; }
+          #partner-brief-print, #partner-brief-print * { visibility: visible; }
+          #partner-brief-print {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
+      {/* Hidden Partner Brief Template for Print */}
+      {teamOrder && pdfTemplate && (
+        <div style={{ display: 'none' }}>
+          <PartnerBriefTemplate
+            workOrder={workOrder}
+            teamOrder={teamOrder}
+            job={job}
+            customer={customer}
+            boat={boat}
+            location={location}
+            tasks={tasks}
+            technicians={technicians}
+            template={pdfTemplate}
+          />
+        </div>
+      )}
+
+      <div className="space-y-6 no-print">
         <Skeleton className="h-12 w-64" />
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-96 w-full" />
@@ -997,6 +1043,7 @@ export default function WorkOrderDetail() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
+      </div>
+      </>
+      );
+      }
