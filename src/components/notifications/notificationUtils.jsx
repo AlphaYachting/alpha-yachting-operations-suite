@@ -62,13 +62,14 @@ export async function createNotification(userEmail, type, title, message, relate
     // Send email notification if enabled
     if (method === 'both' || method === 'email_only') {
       try {
+        const appUrl = 'https://preview-sandbox--b5d6997ad3a5f562c7aad0549632426f.base44.app';
         await base44.integrations.Core.SendEmail({
           to: userEmail,
           subject: `[Alpha Yachting] ${title}`,
           body: `
             <h2>${title}</h2>
             <p>${message}</p>
-            ${relatedWorkOrderId ? `<p><a href="${window.location.origin}/#/WorkOrderDetail?id=${relatedWorkOrderId}">View Work Order</a></p>` : ''}
+            ${relatedWorkOrderId ? `<p style="margin-top: 20px;"><a href="${appUrl}/WorkOrderDetail?id=${relatedWorkOrderId}" style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">View Work Order</a></p>` : ''}
             <br>
             <p style="color: #666; font-size: 12px;">This is an automated notification from Alpha Yachting Service Management.</p>
           `
