@@ -355,20 +355,6 @@ export default function TasklistImport() {
             taskId ? `Task ID: ${taskId}` : ''
           ].filter(Boolean).join(' | ');
 
-          // Calculate work order scheduled date
-          let scheduledDate = null;
-          if (cfg.workOrderDateMode === 'column') {
-            const dateStr = data[getHeaderByMapping(mapping, 'dueDate')];
-            if (dateStr) scheduledDate = new Date(dateStr).toISOString().split('T')[0];
-          } else if (cfg.workOrderDateMode === 'single' && cfg.workOrderBaseDate) {
-            scheduledDate = cfg.workOrderBaseDate;
-          } else if (cfg.workOrderDateMode === 'priority-based' && cfg.workOrderBaseDate) {
-            const baseDate = new Date(cfg.workOrderBaseDate);
-            const offset = cfg.workOrderOffsets[priority] || 5;
-            baseDate.setDate(baseDate.getDate() + offset);
-            scheduledDate = baseDate.toISOString().split('T')[0];
-          }
-
           // Find assigned technician
           let assignedTechId = null;
           if (assignedPerson) {
