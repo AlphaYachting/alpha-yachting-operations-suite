@@ -542,11 +542,12 @@ export default function TasklistImport() {
       createdBoats,
       createdLocations,
       createdJobs,
+      createdWorkOrders,
       createdTasks,
       reviewList,
       parentJobId: null
     };
-  };
+    };
 
   const resetImport = () => {
     setCurrentStep(1);
