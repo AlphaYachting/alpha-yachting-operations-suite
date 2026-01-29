@@ -293,7 +293,12 @@ export default function PDFTemplateManager() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{template.company_name}</CardTitle>
+                    <CardTitle className="text-lg">{template.template_name || template.company_name}</CardTitle>
+                    {template.template_type && template.template_type !== 'Generic' && (
+                      <CardDescription className="text-xs mt-1">
+                        Type: {template.template_type}
+                      </CardDescription>
+                    )}
                     <CardDescription className="text-xs mt-1">
                       ID: {template.id.substring(0, 8)}...
                     </CardDescription>
