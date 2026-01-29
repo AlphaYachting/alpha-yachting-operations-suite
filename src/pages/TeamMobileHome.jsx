@@ -15,7 +15,7 @@ import { offlineStorage } from '@/components/offline/offlineStorage';
 import { connectionMonitor } from '@/components/offline/connectionMonitor';
 import { syncQueue } from '@/components/offline/syncQueue';
 
-export default function TeamMobileHome({ onNavigate }) {
+export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUserChange }) {
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);

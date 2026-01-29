@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { offlineStorage } from '@/components/offline/offlineStorage';
 
-export default function TeamCalendar({ onNavigate }) {
+export default function TeamCalendar({ onNavigate, previewUserId }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,12 +17,15 @@ export default function TeamCalendar({ onNavigate }) {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [previewUserId]);
 
   const loadData = async () => {
     try {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
+
+      // Use preview user ID if provided, otherwise use current user
+      const effectiveUserId = previewUserId || currentUser.id;
 
       let workOrdersData, jobsData, boatsData;
 
@@ -31,8 +34,8 @@ export default function TeamCalendar({ onNavigate }) {
         [workOrdersData, jobsData, boatsData] = await Promise.all([
           base44.entities.WorkOrder.filter({
             $or: [
-              { assigned_technicians: { $in: [currentUser.id] } },
-              { lead_technician_id: currentUser.id }
+              { assigned_technicians: { $in: [effectiveUserId] } },
+              { lead_technician_id: effectiveUserId }
             ]
           }),
           base44.entities.Job.list(),
