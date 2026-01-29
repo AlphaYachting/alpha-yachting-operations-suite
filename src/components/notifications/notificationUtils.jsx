@@ -93,6 +93,28 @@ export async function createNotification(userEmail, type, title, message, relate
 export async function notifyWorkOrderAssignment(workOrder, technicians, workOrderTitle) {
   const assignedTechIds = workOrder.assigned_technicians || [];
   
+  // Fetch additional details for the email
+  let job = null;
+  let boat = null;
+  let location = null;
+  let tasks = [];
+  
+  try {
+    if (workOrder.job_id) {
+      job = await base44.entities.Job.list().then(jobs => jobs.find(j => j.id === workOrder.job_id));
+      if (job?.boat_id) {
+        boat = await base44.entities.Boat.list().then(boats => boats.find(b => b.id === job.boat_id));
+      }
+      if (job?.location_id) {
+        location = await base44.entities.Location.list().then(locs => locs.find(l => l.id === job.location_id));
+      }
+    }
+    
+    tasks = await base44.entities.Task.filter({ work_order_id: workOrder.id });
+  } catch (error) {
+    console.error('Error fetching work order details:', error);
+  }
+  
   for (const techId of assignedTechIds) {
     const tech = technicians.find(t => t.id === techId);
     if (tech && tech.email) {
@@ -104,11 +126,36 @@ export async function notifyWorkOrderAssignment(workOrder, technicians, workOrde
         continue;
       }
       
+      // Build detailed message with HTML formatting
+      const boatName = boat?.vessel_name || 'Unknown Vessel';
+      const marineName = location?.name || 'Not specified';
+      const workDate = workOrder.scheduled_date 
+        ? new Date(workOrder.scheduled_date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
+        : 'Not scheduled';
+      const taskList = tasks.length > 0 
+        ? tasks.map(t => `<li>${t.title}</li>`).join('')
+        : '<li>No tasks specified</li>';
+      
+      const detailedMessage = `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <p><strong>Work Order:</strong> ${workOrderTitle}</p>
+          <p><strong>Boat:</strong> ${boatName}</p>
+          <p><strong>Marina:</strong> ${marineName}</p>
+          <p><strong>Scheduled Date:</strong> ${workDate}</p>
+          <div style="margin-top: 15px;">
+            <p><strong>Tasks to Complete:</strong></p>
+            <ul style="margin: 10px 0;">
+              ${taskList}
+            </ul>
+          </div>
+        </div>
+      `;
+      
       await createNotification(
         tech.email,
         'work_order_assignment',
         'New Work Order Assignment',
-        `You have been assigned to work order: ${workOrderTitle}`,
+        detailedMessage,
         workOrder.id
       );
     }
