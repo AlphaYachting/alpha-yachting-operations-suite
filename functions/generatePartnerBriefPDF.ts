@@ -288,43 +288,13 @@ Deno.serve(async (req) => {
     const boat = boats.find(b => b.id === job?.boat_id);
     const location = locations.find(l => l.id === job?.location_id);
 
-    const puppeteer = (await import('npm:puppeteer@23.11.1')).default;
-    let browser;
+    const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, templateData);
     
-    try {
-      browser = await puppeteer.launch({ 
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
-      const page = await browser.newPage();
-      
-      const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, templateData);
-      
-      await page.setContent(html, { waitUntil: 'networkidle2' });
-      
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        displayHeaderFooter: false
-      });
-      
-      await browser.close();
-      
-      const base64PDF = pdfBuffer.toString('base64');
-      
-      return Response.json({
-        success: true,
-        pdf: `data:application/pdf;base64,${base64PDF}`,
-        fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
-      });
-    } catch (puppeteerError) {
-      if (browser) await browser.close();
-      return Response.json({
-        success: false,
-        error: `PDF generation failed: ${puppeteerError.message}`,
-        stack: puppeteerError.stack
-      }, { status: 500 });
-    }
+    return Response.json({
+      success: true,
+      html: html,
+      fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
+    });
   } catch (error) {
     return Response.json({
       success: false,
