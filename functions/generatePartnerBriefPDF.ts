@@ -111,7 +111,56 @@ function buildPartnerBriefLineItems(tasks, teamOrder) {
 }
 
 function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template) {
+  const assignedTechs = technicians.filter(t => workOrder.assigned_technicians?.includes(t.id));
+  const customerName = customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown';
+  const costPolicies = [];
+  if (teamOrder.accommodation_paid) {
+    costPolicies.push(`<li>Accommodation: up to €${teamOrder.accommodation_max_per_night || 'TBD'}/night</li>`);
+  }
+  if (teamOrder.meals_per_diem_paid) {
+    costPolicies.push(`<li>Per Diem: €${teamOrder.per_diem_rate_per_day || 'TBD'}/day</li>`);
+  }
+  if (teamOrder.mileage_paid) {
+    costPolicies.push(`<li>Mileage: €${teamOrder.mileage_rate_per_km || '0.35'}/km (cap: €${teamOrder.mileage_cap_total || 'TBD'})</li>`);
+  }
+  if (teamOrder.travel_time_paid) {
+    costPolicies.push(`<li>Travel Time: €${teamOrder.travel_time_rate_per_hour || 'TBD'}/hour</li>`);
+  }
+  
+  return `<html><head><style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; font-size: 11pt; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+    .logo { max-width: 150px; }
+    .logo img { max-width: 100%; height: auto; }
+    .company-info { text-align: right; font-size: 9pt; }
+    .company-name { font-weight: bold; color: #0099cc; font-size: 12pt; }
+    h1.doc-type { color: #0099cc; border-bottom: 2px solid #0099cc; padding-bottom: 8px; font-size: 18pt; margin: 20px 0; }
+    h2.section-title { color: #0099cc; border-bottom: 1px solid #0099cc; padding-bottom: 5px; margin-top: 15px; font-size: 12pt; }
+    .meta-info { font-size: 9pt; color: #666; margin-bottom: 10px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px; }
+    .info-field { margin-bottom: 8px; }
+    .info-label { font-weight: bold; font-size: 10pt; color: #0099cc; }
+    .info-value { margin-top: 2px; }
+    .section-content { margin: 10px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    th { background-color: #00bcd4; color: white; padding: 6px; text-align: left; font-weight: bold; }
+    td { padding: 6px; border-bottom: 1px solid #ddd; }
+    ul { margin: 10px 0; padding-left: 20px; }
+    li { margin: 5px 0; }
+    .notes-box { background-color: #f5f5f5; border-left: 4px solid #0099cc; padding: 10px; margin: 10px 0; }
+    .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 9pt; text-align: center; }
+    .footer-graphic { max-width: 100%; max-height: 30px; margin-bottom: 5px; }
+  </style></head><body>
     <div class="header">
+      <div class="logo">${template.logo_url ? `<img src="${template.logo_url}" alt="Logo">` : ''}</div>
+      <div class="company-info">
+        <div class="company-name">${template.company_name || 'Alpha Yachting'}</div>
+        <div class="company-details">
+          ${template.company_address ? `<div>${template.company_address}</div>` : ''}
+          ${template.company_vat ? `<div>VAT: ${template.company_vat}</div>` : ''}
+        </div>
+      </div>
+    </div>
       <div class="logo">${template.logo_url ? `<img src="${template.logo_url}" alt="Logo">` : ''}</div>
       <div class="company-info">
         <div class="company-name">${template.company_name || 'Alpha Yachting'}</div>
