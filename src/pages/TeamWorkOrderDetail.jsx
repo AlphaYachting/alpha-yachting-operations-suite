@@ -103,8 +103,16 @@ function RequirementsModal({ workOrderId }) {
   const availableCount = items.filter(i => i.checklist_state === 'ConfirmedAvailable').length;
 
   const sortedItems = [...items].sort((a, b) => {
+    // Packed items go to bottom
     if (a.checklist_state === 'Packed' && b.checklist_state !== 'Packed') return 1;
     if (a.checklist_state !== 'Packed' && b.checklist_state === 'Packed') return -1;
+    
+    // Within unpacked items, prioritize those not in stock or needing order
+    const aNotInStock = a.procurement_status !== 'InStock' && a.procurement_status !== 'ConfirmedAvailable';
+    const bNotInStock = b.procurement_status !== 'InStock' && b.procurement_status !== 'ConfirmedAvailable';
+    if (aNotInStock && !bNotInStock) return -1;
+    if (!aNotInStock && bNotInStock) return 1;
+    
     return 0;
   });
   
