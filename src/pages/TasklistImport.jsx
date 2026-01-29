@@ -220,11 +220,12 @@ export default function TasklistImport() {
     }
   };
 
-  const performImport = async (jobGroups, mapping, cfg) => {
+  const performImport = async (serviceAreaGroups, mapping, cfg) => {
     const createdCustomers = [];
     const createdBoats = [];
     const createdLocations = [];
     const createdJobs = [];
+    const createdWorkOrders = [];
     const createdTasks = [];
     const reviewList = [];
 
@@ -237,7 +238,7 @@ export default function TasklistImport() {
       base44.entities.Job.list()
     ]);
 
-    // SINGLE JOB MODE: Create or use one parent job for all tasks
+    // SINGLE JOB MODE: Create or use one parent job, with one WorkOrder per Service Area
     if (cfg.importMode === 'single-job') {
       let parentJob;
       
