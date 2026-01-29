@@ -20,7 +20,10 @@ import {
   Truck,
   Flag,
   ChevronRight,
-  Search
+  Search,
+  FileText,
+  AlertCircle,
+  Zap
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
