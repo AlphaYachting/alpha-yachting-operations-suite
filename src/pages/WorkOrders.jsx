@@ -551,6 +551,55 @@ export default function WorkOrders() {
     });
   }, [workOrders, searchTerm, statusFilter, boatFilter, sortBy, detailsFilter, searchParams, getProjectInfo, jobMap]);
 
+  const getBoatInfo = useMemo(() => {
+    return (boatId) => {
+      const boat = boatMap[boatId];
+      if (!boat) return null;
+      
+      const boatWorkOrders = filteredWorkOrders.filter(wo => {
+        const job = jobMap[wo.job_id];
+        return job?.boat_id === boatId;
+      });
+      
+      const nextScheduledWO = boatWorkOrders
+        .filter(wo => wo.scheduled_date && wo.status !== 'Completed' && wo.status !== 'Cancelled')
+        .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))[0];
+      
+      const totalOpenTasks = boatWorkOrders.reduce((sum, wo) => sum + (wo._aggregates?.openTasks || 0), 0);
+      const totalBlocked = boatWorkOrders.reduce((sum, wo) => sum + (wo._aggregates?.blockedTasks || 0), 0);
+      const unassignedCount = boatWorkOrders.filter(wo => !wo.assigned_technicians || wo.assigned_technicians.length === 0).length;
+      
+      const firstJob = boatWorkOrders.length > 0 ? jobMap[boatWorkOrders[0].job_id] : null;
+      const customer = firstJob ? customerMap[firstJob.customer_id] : null;
+      const location = firstJob ? locationMap[firstJob.location_id] : null;
+      
+      const openWOCount = boatWorkOrders.filter(wo => wo.status !== 'Completed' && wo.status !== 'Cancelled').length;
+      
+      return { boat, customer, location, workOrderCount: boatWorkOrders.length, openWOCount, nextScheduledDate: nextScheduledWO?.scheduled_date, totalOpenTasks, attentionCount: totalBlocked + unassignedCount };
+    };
+  }, [boatMap, jobMap, customerMap, locationMap, filteredWorkOrders]);
+
+  const groupedByBoat = useMemo(() => {
+    const groups = {};
+    filteredWorkOrders.forEach(wo => {
+      const job = jobMap[wo.job_id];
+      const boatId = job?.boat_id || 'unknown';
+      if (!groups[boatId]) groups[boatId] = [];
+      groups[boatId].push(wo);
+    });
+    Object.keys(groups).forEach(boatId => {
+      groups[boatId].sort((a, b) => {
+        const dateCompare = (a.scheduled_date || '').localeCompare(b.scheduled_date || '');
+        if (dateCompare !== 0) return dateCompare;
+        const priorityOrder = { 'Urgent': 0, 'Express': 1, 'High': 2, 'Normal': 3, 'Low': 4 };
+        const jobA = jobMap[a.job_id];
+        const jobB = jobMap[b.job_id];
+        return (priorityOrder[jobA?.priority] || 99) - (priorityOrder[jobB?.priority] || 99);
+      });
+    });
+    return groups;
+  }, [filteredWorkOrders, jobMap]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
