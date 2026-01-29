@@ -521,6 +521,23 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         </Button>
       </div>
 
+      {/* Requirements Modal */}
+      {showRequirements && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end">
+          <div className="bg-white w-full max-h-[90vh] rounded-t-lg flex flex-col overflow-hidden">
+            <div className="sticky top-0 flex items-center justify-between p-4 border-b border-slate-200 bg-white">
+              <h2 className="text-lg font-semibold text-slate-900">Requirements & Shopping List</h2>
+              <Button variant="ghost" size="icon" onClick={() => setShowRequirements(false)}>
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <RequirementsModal workOrderId={workOrder.id} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="p-4 space-y-4">
         {/* Title & Status Card */}
