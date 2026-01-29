@@ -266,7 +266,18 @@ Deno.serve(async (req) => {
     let browser;
 
     try {
-      browser = await puppeteer.launch({ headless: 'new' });
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process'
+        ]
+      });
       const page = await browser.newPage();
       
       await page.setContent(html, { waitUntil: 'networkidle2' });
