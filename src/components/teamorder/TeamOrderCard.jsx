@@ -5,16 +5,6 @@ import { Button } from '@/components/ui/button';
 import { FileText, Users, Euro, CheckCircle2, Clock, XCircle, Loader2 } from 'lucide-react';
 
 export default function TeamOrderCard({ teamOrder, workOrder, onEdit, onGenerateBrief, isGenerating = false }) {
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const handleGenerateBrief = async () => {
-    setIsGenerating(true);
-    try {
-      await onGenerateBrief();
-    } finally {
-      setIsGenerating(false);
-    }
-  };
   const statusConfig = {
     'Draft': { color: 'bg-slate-100 text-slate-700', icon: Clock },
     'Sent': { color: 'bg-blue-100 text-blue-700', icon: Clock },
@@ -88,7 +78,7 @@ export default function TeamOrderCard({ teamOrder, workOrder, onEdit, onGenerate
             Edit Team Order
           </Button>
           <Button 
-            onClick={handleGenerateBrief} 
+            onClick={onGenerateBrief} 
             disabled={isGenerating}
             size="sm" 
             className="flex-1 bg-purple-600 hover:bg-purple-700"
