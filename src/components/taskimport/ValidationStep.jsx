@@ -19,11 +19,11 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <div className="text-2xl font-bold text-blue-900">{results.jobCount}</div>
-            <div className="text-sm text-blue-700">Jobs to be created</div>
-          </div>
+         <div className="grid grid-cols-2 gap-4">
+           <div className="p-4 bg-blue-50 rounded-lg">
+             <div className="text-2xl font-bold text-blue-900">{results.workOrderCount}</div>
+             <div className="text-sm text-blue-700">Work Orders to be created</div>
+           </div>
           <div className="p-4 bg-green-50 rounded-lg">
             <div className="text-2xl font-bold text-green-900">{results.taskCount}</div>
             <div className="text-sm text-green-700">Tasks to be created</div>
