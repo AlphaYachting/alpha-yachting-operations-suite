@@ -157,7 +157,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
           <Input
             type="number"
             value={formData.year}
-            onChange={(e) => updateField('year', parseInt(e.target.value) || '')}
+            onChange={(e) => updateField('year', e.target.value ? parseInt(e.target.value) : null)}
             placeholder="2020"
           />
         </div>
@@ -167,7 +167,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
             type="number"
             step="0.1"
             value={formData.length_m}
-            onChange={(e) => updateField('length_m', parseFloat(e.target.value) || '')}
+            onChange={(e) => updateField('length_m', e.target.value ? parseFloat(e.target.value) : null)}
             placeholder="12.5"
           />
         </div>
@@ -177,7 +177,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
             type="number"
             step="0.1"
             value={formData.beam_m}
-            onChange={(e) => updateField('beam_m', parseFloat(e.target.value) || '')}
+            onChange={(e) => updateField('beam_m', e.target.value ? parseFloat(e.target.value) : null)}
             placeholder="4.2"
           />
         </div>
@@ -187,7 +187,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
             type="number"
             step="0.1"
             value={formData.draft_m}
-            onChange={(e) => updateField('draft_m', parseFloat(e.target.value) || '')}
+            onChange={(e) => updateField('draft_m', e.target.value ? parseFloat(e.target.value) : null)}
             placeholder="2.1"
           />
         </div>
@@ -309,7 +309,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
             <Input
               type="number"
               value={formData.engine_hours}
-              onChange={(e) => updateField('engine_hours', parseInt(e.target.value) || '')}
+              onChange={(e) => updateField('engine_hours', e.target.value ? parseInt(e.target.value) : null)}
               placeholder="0"
             />
           </div>
