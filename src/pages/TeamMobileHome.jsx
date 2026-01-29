@@ -312,15 +312,12 @@ export default function TeamMobileHome() {
 
       {/* Quick Actions */}
       <div className="px-4 pt-4">
-        <Button
-          asChild
-          className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white shadow-lg"
-        >
-          <Link to={createPageUrl('TeamCalendar')}>
+        <Link to={createPageUrl('TeamCalendar')}>
+          <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white shadow-lg">
             <Calendar className="h-5 w-5 mr-2" />
             Calendar View
-          </Link>
-        </Button>
+          </Button>
+        </Link>
       </div>
 
       {/* Content */}
