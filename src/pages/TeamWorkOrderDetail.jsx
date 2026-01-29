@@ -15,6 +15,111 @@ import { offlineStorage } from '@/components/offline/offlineStorage';
 import { connectionMonitor } from '@/components/offline/connectionMonitor';
 import { syncQueue } from '@/components/offline/syncQueue';
 
+// Requirements Modal Component
+function RequirementsModal({ workOrderId }) {
+  const [items, setItems] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    loadRequirements();
+  }, [workOrderId]);
+
+  const loadRequirements = async () => {
+    try {
+      setLoading(true);
+      const allItems = await base44.entities.WorkOrderRequirementItem.filter({ work_order_id: workOrderId });
+      setItems(allItems || []);
+    } catch (error) {
+      console.error('Error loading requirements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCheckItem = async (item) => {
+    try {
+      const updates = {
+        checked: !item.checked,
+        checked_at: !item.checked ? new Date().toISOString() : null
+      };
+      await base44.entities.WorkOrderRequirementItem.update(item.id, updates);
+      await loadRequirements();
+    } catch (error) {
+      console.error('Error updating item:', error);
+    }
+  };
+
+  const typeIcons = {
+    SparePart: '📦',
+    Material: '🛒',
+    Tool: '🔧',
+    Vehicle: '🚚',
+    Other: '⚠️'
+  };
+
+  const statusColors = {
+    NeedsClarification: 'bg-orange-100 text-orange-700',
+    ToOrder: 'bg-red-100 text-red-700',
+    Ordered: 'bg-blue-100 text-blue-700',
+    Available: 'bg-emerald-100 text-emerald-700',
+    Packed: 'bg-purple-100 text-purple-700',
+    NotNeeded: 'bg-slate-100 text-slate-500'
+  };
+
+  if (loading) {
+    return <div className="text-sm text-slate-500">Loading...</div>;
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <ShoppingCart className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+        <p className="text-sm text-slate-500">No requirements added yet</p>
+      </div>
+    );
+  }
+
+  const checkedCount = items.filter(i => i.checked).length;
+  
+  return (
+    <div className="space-y-3">
+      <div className="text-sm font-medium text-slate-600 mb-4">
+        Packed: {checkedCount}/{items.length}
+      </div>
+      {items.map((item) => (
+        <div
+          key={item.id}
+          className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+            item.checked ? 'bg-green-50 border-green-200' : 'bg-white'
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={item.checked}
+            onChange={() => handleCheckItem(item)}
+            className="w-5 h-5 rounded border-slate-300 cursor-pointer mt-0.5"
+          />
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-medium ${item.checked ? 'text-green-700 line-through' : 'text-slate-900'}`}>
+              {typeIcons[item.type]} {item.name}
+            </p>
+            {item.quantity && (
+              <p className={`text-xs mt-1 ${item.checked ? 'text-green-600' : 'text-slate-500'}`}>
+                {item.quantity} {item.unit}
+              </p>
+            )}
+            <div className="flex gap-1 mt-2">
+              <span className={`text-xs px-2 py-1 rounded ${statusColors[item.procurement_status]}`}>
+                {item.procurement_status}
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Get IP address info
 const getClientInfo = async () => {
   try {
