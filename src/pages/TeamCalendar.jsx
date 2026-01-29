@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, startOfWeek, endOfWeek } from 'date-fns';
 import { offlineStorage } from '@/components/offline/offlineStorage';
 
-export default function TeamCalendar() {
+export default function TeamCalendar({ onNavigate }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [workOrders, setWorkOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,16 +109,27 @@ export default function TeamCalendar() {
       {/* Header */}
       <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 text-white p-4 shadow-lg">
         <div className="flex items-center gap-3 mb-4">
-          <Button
-            asChild
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 hover:bg-white/20"
-          >
-            <Link to={createPageUrl('TeamMobileHome')}>
+{onNavigate ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onNavigate('home')}
+              className="h-9 w-9 hover:bg-white/20"
+            >
               <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
+            </Button>
+          ) : (
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 hover:bg-white/20"
+            >
+              <Link to={createPageUrl('TeamMobileHome')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+          )}
           <h1 className="text-xl font-bold">My Calendar</h1>
         </div>
 
@@ -194,21 +205,38 @@ export default function TeamCalendar() {
                   </div>
                   
                   <div className="flex-1 space-y-1">
-                    {dayWorkOrders.map((wo) => (
-                      <Link
-                        key={wo.id}
-                        to={createPageUrl('TeamWorkOrderDetail') + `?woId=${wo.id}`}
-                        className="block"
-                      >
-                        <div className="bg-blue-100 border border-blue-300 rounded px-1.5 py-1 text-xs">
-                          <p className="font-semibold text-blue-900 truncate">
-                            {wo.scheduled_start_time || '—'}
-                          </p>
-                          <p className="text-blue-700 truncate text-[10px] leading-tight">
-                            {getBoatName(wo) || wo.title}
-                          </p>
+{dayWorkOrders.map((wo) => (
+                      onNavigate ? (
+                        <div
+                          key={wo.id}
+                          onClick={() => onNavigate('workOrderDetail', { woId: wo.id })}
+                          className="block cursor-pointer"
+                        >
+                          <div className="bg-blue-100 border border-blue-300 rounded px-1.5 py-1 text-xs">
+                            <p className="font-semibold text-blue-900 truncate">
+                              {wo.scheduled_start_time || '—'}
+                            </p>
+                            <p className="text-blue-700 truncate text-[10px] leading-tight">
+                              {getBoatName(wo) || wo.title}
+                            </p>
+                          </div>
                         </div>
-                      </Link>
+                      ) : (
+                        <Link
+                          key={wo.id}
+                          to={createPageUrl('TeamWorkOrderDetail') + `?woId=${wo.id}`}
+                          className="block"
+                        >
+                          <div className="bg-blue-100 border border-blue-300 rounded px-1.5 py-1 text-xs">
+                            <p className="font-semibold text-blue-900 truncate">
+                              {wo.scheduled_start_time || '—'}
+                            </p>
+                            <p className="text-blue-700 truncate text-[10px] leading-tight">
+                              {getBoatName(wo) || wo.title}
+                            </p>
+                          </div>
+                        </Link>
+                      )
                     ))}
                   </div>
                 </div>

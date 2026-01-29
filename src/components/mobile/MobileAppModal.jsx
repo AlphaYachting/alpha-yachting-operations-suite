@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
 import TeamMobileHome from '@/pages/TeamMobileHome';
+import TeamCalendar from '@/pages/TeamCalendar';
+import TeamWorkOrderDetail from '@/pages/TeamWorkOrderDetail';
 
 export default function MobileAppModal({ open, onOpenChange }) {
+  const [currentView, setCurrentView] = useState('home');
+  const [viewParams, setViewParams] = useState({});
+
+  const navigateTo = (view, params = {}) => {
+    setCurrentView(view);
+    setViewParams(params);
+  };
+
+  const renderView = () => {
+    switch (currentView) {
+      case 'calendar':
+        return <TeamCalendar onNavigate={navigateTo} />;
+      case 'workOrderDetail':
+        return <TeamWorkOrderDetail woId={viewParams.woId} onNavigate={navigateTo} />;
+      default:
+        return <TeamMobileHome onNavigate={navigateTo} />;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[500px] h-[90vh] p-0 flex flex-col">
@@ -14,7 +33,7 @@ export default function MobileAppModal({ open, onOpenChange }) {
           </DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-auto">
-          <TeamMobileHome />
+          {renderView()}
         </div>
       </DialogContent>
     </Dialog>

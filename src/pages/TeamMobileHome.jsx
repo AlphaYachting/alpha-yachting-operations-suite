@@ -15,7 +15,7 @@ import { offlineStorage } from '@/components/offline/offlineStorage';
 import { connectionMonitor } from '@/components/offline/connectionMonitor';
 import { syncQueue } from '@/components/offline/syncQueue';
 
-export default function TeamMobileHome() {
+export default function TeamMobileHome({ onNavigate }) {
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
@@ -312,12 +312,22 @@ export default function TeamMobileHome() {
 
       {/* Quick Actions */}
       <div className="px-4 pt-4">
-        <Link to={createPageUrl('TeamCalendar')}>
-          <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white shadow-lg">
+        {onNavigate ? (
+          <Button 
+            onClick={() => onNavigate('calendar')}
+            className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white shadow-lg"
+          >
             <Calendar className="h-5 w-5 mr-2" />
             Calendar View
           </Button>
-        </Link>
+        ) : (
+          <Link to={createPageUrl('TeamCalendar')}>
+            <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white shadow-lg">
+              <Calendar className="h-5 w-5 mr-2" />
+              Calendar View
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Content */}
