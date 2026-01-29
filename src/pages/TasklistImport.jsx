@@ -208,7 +208,7 @@ export default function TasklistImport() {
     setError(null);
 
     try {
-      const results = await performImport(validationResults.jobGroups, columnMapping, config);
+      const results = await performImport(validationResults.serviceAreaGroups, columnMapping, config);
       setImportResults(results);
       setCurrentStep(7);
     } catch (error) {
