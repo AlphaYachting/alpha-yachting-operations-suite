@@ -594,6 +594,13 @@ export default function OfferDetail() {
               <OfferTaskEditor tasks={tasks} setTasks={setTasks} />
             </CardContent>
           </Card>
+
+          {/* Payment Terms & Legal Section */}
+          <PaymentTermsSection 
+            formData={formData} 
+            updateField={updateField}
+            totalAmount={formData.total_amount}
+          />
         </div>
 
         {/* Summary Sidebar */}
