@@ -1,6 +1,5 @@
 import React from 'react';
-import { format, parseISO } from 'date-fns';
-import { AlertCircle, CheckCircle2, Clock, User } from 'lucide-react';
+import { AlertCircle, Clock, User } from 'lucide-react';
 
 const statusColors = {
   Draft: 'bg-slate-700 border-slate-600',
