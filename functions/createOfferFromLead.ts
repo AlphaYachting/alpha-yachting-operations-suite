@@ -89,10 +89,10 @@ Deno.serve(async (req) => {
         offer_id: offer.id,
         title: task.title,
         description: task.description || '',
-        estimated_hours: 1,
-        hourly_rate: 80,
-        sequence_order: index + 1,
-        is_optional: false
+        unit_type: 'Hour',
+        quantity: 1,
+        unit_price: 80,
+        sequence_order: index + 1
       }));
 
       await base44.asServiceRole.entities.OfferTask.bulkCreate(offerTasks);
