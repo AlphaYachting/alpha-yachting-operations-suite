@@ -100,8 +100,8 @@ export default function WorkOrders() {
   const [currentUser, setCurrentUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  const [totalWorkOrders, setTotalWorkOrders] = useState(0);
+  const [pageSize] = useState(25);
+  const [allCachedWorkOrders, setAllCachedWorkOrders] = useState([]);
   const preselectedJobId = searchParams.get('job');
 
   useEffect(() => {
@@ -127,37 +127,36 @@ export default function WorkOrders() {
     }
   }, [searchParams]);
 
-  const loadData = async (page = 1) => {
+  const loadData = async (pageNum = 1, useCache = false) => {
     try {
+      // If we have cached data and just paginating, skip API calls
+      if (useCache && allCachedWorkOrders.length > 0) {
+        const offset = (pageNum - 1) * pageSize;
+        setWorkOrders(allCachedWorkOrders.slice(offset, offset + pageSize));
+        setCurrentPage(pageNum);
+        return;
+      }
+
       setLoading(true);
-      const offset = (page - 1) * pageSize;
       
-      // Load base lookup data once (not paginated)
-      const [jobsData, techData, custData, boatsData, locData, vehiclesData] = await Promise.all([
+      // Load all data once
+      const [woData, jobsData, techData, custData, boatsData, locData, timeEntries, photos, reservationsData, vehiclesData, tasksData] = await Promise.all([
+        base44.entities.WorkOrder.list('-scheduled_date'),
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
         base44.entities.Customer.list(),
         base44.entities.Boat.list(),
         base44.entities.Location.list(),
-        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
-      ]);
-
-      // Get paginated work orders directly (sorted by date)
-      let allWO = await base44.entities.WorkOrder.list('-scheduled_date');
-      setTotalWorkOrders(allWO.length);
-      const woData = allWO.slice(offset, offset + pageSize);
-      const woIds = woData.map(wo => wo.id);
-
-      // Only fetch aggregates for current page WOs (filtered by work_order_id)
-      const [timeEntries, photos, reservationsData, tasksData, allTeamOrders] = await Promise.all([
-        base44.entities.TimeEntry.filter({}),
-        base44.entities.WorkOrderPhoto.filter({}),
+        base44.entities.TimeEntry.list(),
+        base44.entities.WorkOrderPhoto.list(),
         base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-        base44.entities.Task.filter({}),
-        base44.entities.TeamOrder.list()
+        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' }),
+        base44.entities.Task.list()
       ]);
 
-      // Calculate aggregates only for current page
+      const allTeamOrders = await base44.entities.TeamOrder.list();
+
+      // Calculate aggregates for ALL work orders
       const woAggregates = {};
       woData.forEach(wo => {
         const woTimeEntries = timeEntries.filter(te => te.work_order_id === wo.id);
@@ -184,7 +183,13 @@ export default function WorkOrders() {
         };
       });
 
-      setWorkOrders(woData.map(wo => ({ ...wo, _aggregates: woAggregates[wo.id] })));
+      // Cache all work orders with aggregates
+      const allWithAggregates = woData.map(wo => ({ ...wo, _aggregates: woAggregates[wo.id] }));
+      setAllCachedWorkOrders(allWithAggregates);
+
+      // Set current page
+      const offset = (pageNum - 1) * pageSize;
+      setWorkOrders(allWithAggregates.slice(offset, offset + pageSize));
       setJobs(jobsData);
       setTechnicians(techData);
       setCustomers(custData);
@@ -193,7 +198,7 @@ export default function WorkOrders() {
       setReservations(reservationsData);
       setVehicles(vehiclesData);
       setTasks(tasksData);
-      setCurrentPage(page);
+      setCurrentPage(pageNum);
     } catch (error) {
       console.error('Error loading work orders:', error);
     } finally {
@@ -612,7 +617,7 @@ export default function WorkOrders() {
     return 0;
   });
 
-  const totalPages = Math.ceil(totalWorkOrders / pageSize);
+  const totalPages = Math.ceil(allCachedWorkOrders.length / pageSize);
   const hasNextPage = currentPage < totalPages;
   const hasPrevPage = currentPage > 1;
 
@@ -623,7 +628,7 @@ export default function WorkOrders() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Work Orders</h1>
           <p className="text-slate-500 mt-1">
-            Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, totalWorkOrders)} of {totalWorkOrders} work orders
+            Showing {(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, allCachedWorkOrders.length)} of {allCachedWorkOrders.length} work orders
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -718,13 +723,13 @@ export default function WorkOrders() {
             </div>
 
       {/* Work Orders List */}
-      {loading ? (
+      {loading && allCachedWorkOrders.length === 0 ? (
         <div className="grid gap-4">
           {[1,2,3].map(i => (
             <Skeleton key={i} className="h-28 w-full" />
           ))}
         </div>
-      ) : workOrders.length === 0 ? (
+      ) : workOrders.length === 0 && allCachedWorkOrders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <ClipboardList className="h-12 w-12 mx-auto text-slate-300 mb-4" />
@@ -992,16 +997,16 @@ export default function WorkOrders() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => loadData(currentPage - 1)}
-                disabled={!hasPrevPage || loading}
+                onClick={() => loadData(currentPage - 1, true)}
+                disabled={!hasPrevPage}
               >
                 Previous
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => loadData(currentPage + 1)}
-                disabled={!hasNextPage || loading}
+                onClick={() => loadData(currentPage + 1, true)}
+                disabled={!hasNextPage}
               >
                 Next
               </Button>
