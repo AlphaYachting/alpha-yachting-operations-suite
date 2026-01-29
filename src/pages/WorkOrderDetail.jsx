@@ -500,21 +500,32 @@ export default function WorkOrderDetail() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            asChild
-            variant="outline"
-            size="sm"
-          >
-            <Link to={createPageUrl('AccessLogs') + `?workOrderId=${workOrderId}`}>
-              <Eye className="h-4 w-4 mr-2" />
-              View Access Logs
-            </Link>
-          </Button>
-          <Button onClick={() => setShowEditWorkOrder(true)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Work Order
-          </Button>
-        </div>
+           <Button 
+             asChild
+             variant="outline"
+             size="sm"
+           >
+             <Link to={createPageUrl('AccessLogs') + `?workOrderId=${workOrderId}`}>
+               <Eye className="h-4 w-4 mr-2" />
+               View Access Logs
+             </Link>
+           </Button>
+           <Button onClick={() => setShowEditWorkOrder(true)}>
+             <Edit className="h-4 w-4 mr-2" />
+             Edit Work Order
+           </Button>
+           {isAdmin && (
+             <Button 
+               onClick={handleDeleteWorkOrder} 
+               disabled={deleting}
+               variant="destructive"
+               size="sm"
+             >
+               <Trash2 className="h-4 w-4 mr-2" />
+               {deleting ? 'Deleting...' : 'Delete'}
+             </Button>
+           )}
+         </div>
       </div>
 
       {/* Overview Grid */}
