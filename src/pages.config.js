@@ -85,11 +85,11 @@ import TeamTaskDetail from './pages/TeamTaskDetail';
 import TeamWorkOrderDetail from './pages/TeamWorkOrderDetail';
 import Technicians from './pages/Technicians';
 import TemplateDetail from './pages/TemplateDetail';
+import UnitSettingsPage from './pages/UnitSettingsPage';
 import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import UnitSettingsPage from './pages/UnitSettingsPage';
 import __Layout from './Layout.jsx';
 
 
@@ -132,11 +132,11 @@ export const PAGES = {
     "TeamWorkOrderDetail": TeamWorkOrderDetail,
     "Technicians": Technicians,
     "TemplateDetail": TemplateDetail,
+    "UnitSettingsPage": UnitSettingsPage,
     "VehicleDetail": VehicleDetail,
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "UnitSettingsPage": UnitSettingsPage,
 }
 
 export const pagesConfig = {

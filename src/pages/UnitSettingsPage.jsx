@@ -46,6 +46,18 @@ export default function UnitSettingsPage() {
     queryFn: () => base44.entities.UnitSettings.list('-created_date'),
   });
 
+  const { data: offers = [] } = useQuery({
+    queryKey: ['offers'],
+    queryFn: () => base44.entities.Offer.list(),
+  });
+
+  const { data: offerTasks = [] } = useQuery({
+    queryKey: ['offerTasks'],
+    queryFn: () => base44.entities.OfferTask.list(),
+  });
+
+  const usedUnits = new Set(offerTasks.map(t => t.unit_type).filter(Boolean));
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.UnitSettings.create(data),
     onSuccess: () => {
