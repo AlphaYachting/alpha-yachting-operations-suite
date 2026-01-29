@@ -34,6 +34,7 @@ export default function UnitSettingsPage() {
   const queryClient = useQueryClient();
   const [showDialog, setShowDialog] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
+  const [initLoading, setInitLoading] = useState(false);
   const [formData, setFormData] = useState({
     value: '',
     display: '',
