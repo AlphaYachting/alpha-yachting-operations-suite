@@ -142,25 +142,20 @@ export default function WorkOrders() {
         base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
       ]);
 
-      // Get total count of work orders
-      const allWO = await base44.entities.WorkOrder.list();
+      // Get paginated work orders directly (sorted by date)
+      let allWO = await base44.entities.WorkOrder.list('-scheduled_date');
       setTotalWorkOrders(allWO.length);
-
-      // Paginate work orders (get only current page)
-      const woData = allWO
-        .sort((a, b) => (b.scheduled_date || '').localeCompare(a.scheduled_date || ''))
-        .slice(offset, offset + pageSize);
-
-      // Lazy load aggregates only for current page work orders
+      const woData = allWO.slice(offset, offset + pageSize);
       const woIds = woData.map(wo => wo.id);
-      const [timeEntries, photos, reservationsData, tasksData] = await Promise.all([
+
+      // Only fetch aggregates for current page WOs (filtered by work_order_id)
+      const [timeEntries, photos, reservationsData, tasksData, allTeamOrders] = await Promise.all([
         base44.entities.TimeEntry.filter({}),
         base44.entities.WorkOrderPhoto.filter({}),
         base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-        base44.entities.Task.filter({})
+        base44.entities.Task.filter({}),
+        base44.entities.TeamOrder.list()
       ]);
-
-      const allTeamOrders = await base44.entities.TeamOrder.list();
 
       // Calculate aggregates only for current page
       const woAggregates = {};
