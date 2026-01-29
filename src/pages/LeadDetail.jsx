@@ -17,7 +17,8 @@ import {
   Edit,
   Trash2,
   Send,
-  MessageSquare
+  MessageSquare,
+  Sparkles
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,7 @@ export default function LeadDetail() {
   const [editingTask, setEditingTask] = useState(null);
   const [selectedTaskForComment, setSelectedTaskForComment] = useState(null);
   const [commentText, setCommentText] = useState('');
+  const [generatingTasks, setGeneratingTasks] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
@@ -186,6 +188,32 @@ export default function LeadDetail() {
       } catch (error) {
         console.error('Error deleting task:', error);
       }
+    }
+  };
+
+  const handleGenerateTasks = async () => {
+    if (!lead.description) {
+      alert('Lead must have a description to generate tasks');
+      return;
+    }
+
+    try {
+      setGeneratingTasks(true);
+      const result = await base44.functions.invoke('generateLeadTasks', {
+        lead_id: lead.id,
+        lead_description: lead.description
+      });
+
+      if (result.data.success) {
+        await loadLeadDetails();
+      } else {
+        alert('Failed to generate tasks: ' + result.data.error);
+      }
+    } catch (error) {
+      console.error('Error generating tasks:', error);
+      alert('Error generating tasks');
+    } finally {
+      setGeneratingTasks(false);
     }
   };
 
@@ -336,17 +364,30 @@ export default function LeadDetail() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg font-semibold">Tasks ({tasks.length})</CardTitle>
-          <Button
-            onClick={() => {
-              setEditingTask(null);
-              setShowTaskForm(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700"
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
-          </Button>
+          <div className="flex gap-2">
+            {lead.description && (
+              <Button
+                onClick={handleGenerateTasks}
+                disabled={generatingTasks}
+                className="bg-purple-600 hover:bg-purple-700"
+                size="sm"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {generatingTasks ? 'Generating...' : 'AI Generate'}
+              </Button>
+            )}
+            <Button
+              onClick={() => {
+                setEditingTask(null);
+                setShowTaskForm(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {tasks.length === 0 ? (
