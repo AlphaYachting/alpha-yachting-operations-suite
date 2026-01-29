@@ -111,6 +111,17 @@ export default function Customers() {
     return `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unnamed';
   };
 
+  const isDataComplete = (customer) => {
+    // Check if all required fields are filled
+    return customer.first_name && 
+           customer.last_name && 
+           customer.email && 
+           customer.phone && 
+           customer.billing_address && 
+           customer.billing_city &&
+           customer.billing_country;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
