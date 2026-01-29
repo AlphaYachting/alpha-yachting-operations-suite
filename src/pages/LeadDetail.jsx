@@ -18,7 +18,8 @@ import {
   Trash2,
   Send,
   MessageSquare,
-  Sparkles
+  Sparkles,
+  FileText
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,7 @@ export default function LeadDetail() {
   const [selectedTaskForComment, setSelectedTaskForComment] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [generatingTasks, setGeneratingTasks] = useState(false);
+  const [creatingOffer, setCreatingOffer] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
@@ -217,6 +219,26 @@ export default function LeadDetail() {
     }
   };
 
+  const handleCreateOffer = async () => {
+    try {
+      setCreatingOffer(true);
+      const result = await base44.functions.invoke('createOfferFromLead', {
+        lead_id: lead.id
+      });
+
+      if (result.data.success) {
+        window.location.href = createPageUrl('OfferDetail') + `?id=${result.data.offer_id}`;
+      } else {
+        alert('Failed to create offer: ' + result.data.error);
+      }
+    } catch (error) {
+      console.error('Error creating offer:', error);
+      alert('Error creating offer');
+    } finally {
+      setCreatingOffer(false);
+    }
+  };
+
   const completedTasks = tasks.filter(t => t.status === 'Completed').length;
   const totalTasks = tasks.length;
   const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -262,6 +284,14 @@ export default function LeadDetail() {
           </div>
           <p className="text-slate-500 mt-1">{lead.inquiry_type}</p>
         </div>
+        <Button
+          onClick={handleCreateOffer}
+          disabled={creatingOffer}
+          className="bg-emerald-600 hover:bg-emerald-700"
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          {creatingOffer ? 'Creating...' : 'Create Offer'}
+        </Button>
       </div>
 
       {/* Overview Grid */}
