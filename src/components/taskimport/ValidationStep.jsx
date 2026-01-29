@@ -98,23 +98,23 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
           </div>
         )}
 
-        {/* Job Groups Preview */}
+        {/* Service Area Groups Preview */}
         <div>
-          <h3 className="font-semibold text-sm text-gray-900 mb-3">Job Groups Preview</h3>
+          <h3 className="font-semibold text-sm text-gray-900 mb-3">Service Areas Preview</h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {Object.entries(results.jobGroups).slice(0, 5).map(([key, group], idx) => (
+            {Object.entries(results.serviceAreaGroups || {}).slice(0, 5).map(([serviceArea, group], idx) => (
               <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
                 <div className="font-medium text-gray-900">
-                  {group.projectName || 'Unnamed Project'} - {group.customerName}
+                  {serviceArea || 'Uncategorized'}
                 </div>
                 <div className="text-xs text-gray-600 mt-1">
-                  {group.boatModel} • {group.locationMarina} • {group.tasks.length} tasks
+                  {group.rows.length} tasks
                 </div>
               </div>
             ))}
-            {Object.keys(results.jobGroups).length > 5 && (
+            {Object.keys(results.serviceAreaGroups || {}).length > 5 && (
               <p className="text-xs text-gray-500 text-center">
-                ...and {Object.keys(results.jobGroups).length - 5} more job groups
+                ...and {Object.keys(results.serviceAreaGroups || {}).length - 5} more service areas
               </p>
             )}
           </div>
