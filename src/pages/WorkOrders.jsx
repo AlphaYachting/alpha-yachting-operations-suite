@@ -126,21 +126,25 @@ export default function WorkOrders() {
 
   const loadData = async () => {
     try {
-      const [woData, jobsData, techData, custData, boatsData, locData, timeEntries, photos, reservationsData, vehiclesData, tasksData] = await Promise.all([
+      const [woData, jobsData, techData, custData, boatsData, locData, reservationsData, vehiclesData] = await Promise.all([
         base44.entities.WorkOrder.list('scheduled_date'),
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
         base44.entities.Customer.list(),
         base44.entities.Boat.list(),
         base44.entities.Location.list(),
-        base44.entities.TimeEntry.list(),
-        base44.entities.WorkOrderPhoto.list(),
         base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' }),
-        base44.entities.Task.list()
+        base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
       ]);
 
-      const allTeamOrders = await base44.entities.TeamOrder.list();
+      // Only fetch related data for work orders being displayed
+      const woIds = woData.map(wo => wo.id);
+      const [timeEntries, photos, tasksData, allTeamOrders] = await Promise.all([
+        base44.entities.TimeEntry.filter({ work_order_id: { $in: woIds } }),
+        base44.entities.WorkOrderPhoto.filter({ work_order_id: { $in: woIds } }),
+        base44.entities.Task.filter({ work_order_id: { $in: woIds } }),
+        base44.entities.TeamOrder.filter({ work_order_id: { $in: woIds } })
+      ]);
 
       const woAggregates = {};
       woData.forEach(wo => {
