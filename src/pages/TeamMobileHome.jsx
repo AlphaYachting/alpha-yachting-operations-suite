@@ -23,9 +23,9 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const [boats, setBoats] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showPreviewMode, setShowPreviewMode] = useState(false);
   const [previewTechnicianName, setPreviewTechnicianName] = useState(null);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
     // Monitor connection status
