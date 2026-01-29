@@ -812,6 +812,23 @@ export default function WorkOrders() {
                         )}
                       </div>
 
+                      {/* Task Preview */}
+                      {agg.nextOpenTasks && agg.nextOpenTasks.length > 0 && (
+                        <div className="mt-3 p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                          <p className="text-xs font-medium text-slate-600 mb-1">
+                            Tasks: {agg.completedTasks}/{agg.totalTasks} done
+                          </p>
+                          <div className="space-y-1">
+                            {agg.nextOpenTasks.slice(0, 2).map((task) => (
+                              <div key={task.id} className="flex items-center gap-2 text-xs">
+                                <div className={`h-1.5 w-1.5 rounded-full ${task.status === 'In Progress' ? 'bg-blue-500' : 'bg-slate-400'}`} />
+                                <span className="text-slate-700 line-clamp-1">{task.title}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Details Chips */}
                       {(agg.timeEntryCount > 0 || agg.photoCount > 0 || agg.hasNotes || agg.hasTeamOrder || (agg.vehicleReservations && agg.vehicleReservations.length > 0)) && (
                         <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-100">
