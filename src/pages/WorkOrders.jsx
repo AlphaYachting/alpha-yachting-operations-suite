@@ -1097,12 +1097,31 @@ export default function WorkOrders() {
                                 )}
                                 
                                 <div className="flex items-center gap-1 text-slate-600">
-                                  <Users className="h-3.5 w-3.5" />
-                                  {techNames.length > 0 ? techNames.join(', ') : (
-                                    <span className="text-slate-400 italic">Unassigned</span>
-                                  )}
+                                   <Users className="h-3.5 w-3.5" />
+                                   {techNames.length > 0 ? techNames.join(', ') : (
+                                     <span className="text-slate-400 italic">Unassigned</span>
+                                   )}
+                                 </div>
+
+                                 <div className="flex items-center gap-1 text-slate-600">
+                                   <Timer className="h-3.5 w-3.5" />
+                                   <input
+                                     type="number"
+                                     min="0"
+                                     step="0.5"
+                                     placeholder="Est. hrs"
+                                     defaultValue={wo.estimated_duration_hours || ''}
+                                     onBlur={(e) => {
+                                       const value = e.target.value ? parseFloat(e.target.value) : null;
+                                       if (value !== wo.estimated_duration_hours) {
+                                         handleQuickUpdate(wo.id, 'estimated_duration_hours', value);
+                                       }
+                                     }}
+                                     className="w-12 px-1 py-0.5 border border-slate-300 rounded text-xs text-slate-700"
+                                   />
+                                   <span className="text-slate-500 text-xs">hrs</span>
+                                 </div>
                                 </div>
-                              </div>
 
                               {/* C) Resources Line - Third Priority */}
                               <div className="flex flex-wrap items-center gap-2 ml-7 mb-2">
