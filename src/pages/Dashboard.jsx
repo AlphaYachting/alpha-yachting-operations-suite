@@ -124,6 +124,7 @@ export default function Dashboard() {
   const [overviewStartDate, setOverviewStartDate] = useState(startOfDay(new Date()));
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [leads, setLeads] = useState([]);
+  const [offers, setOffers] = useState([]);
 
   useEffect(() => {
     const loadData = async () => {
