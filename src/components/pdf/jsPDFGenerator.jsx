@@ -468,6 +468,71 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     yPos += 5;
   }
 
+  // Payment Terms for Offers
+  if (!isInvoice && document.payment_terms_type) {
+    checkPageBreak(30);
+    
+    // Yellow payment terms box
+    doc.setFillColor(254, 243, 199); // fef3c7
+    doc.rect(margins.left, yPos - 3, contentWidth, 20, 'F');
+    doc.setDrawColor(252, 211, 77); // fcd34d
+    doc.setLineWidth(0.5);
+    doc.rect(margins.left, yPos - 3, contentWidth, 20);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(146, 64, 14); // 92400e
+    doc.setFont(fontFamily, 'bold');
+    doc.text('Payment Terms', margins.left + 3, yPos + 2);
+    
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(9);
+    let paymentY = yPos + 8;
+    
+    if (document.payment_terms_type === 'Downpayment') {
+      const dpAmount = document.downpayment_amount || 0;
+      const remaining = (document.total || 0) - dpAmount;
+      doc.text(`Downpayment: ${document.downpayment_percent || 0}% (${formatCurrency(dpAmount)})`, margins.left + 3, paymentY);
+      paymentY += 5;
+      doc.text(`Remaining: ${100 - (document.downpayment_percent || 0)}% (${formatCurrency(remaining)})`, margins.left + 3, paymentY);
+      if (document.payment_schedule) {
+        paymentY += 5;
+        doc.text(document.payment_schedule, margins.left + 3, paymentY);
+      }
+    } else if (document.payment_terms_type === 'Installments') {
+      doc.text(document.payment_schedule || 'Payment in installments as agreed', margins.left + 3, paymentY);
+    } else {
+      doc.text('Payment in full upon invoice', margins.left + 3, paymentY);
+    }
+    
+    yPos += 25;
+  }
+
+  // Retention of Title for Offers
+  if (!isInvoice && document.retention_of_title_enabled) {
+    checkPageBreak(25);
+    
+    // Red ownership notice box
+    doc.setFillColor(254, 226, 226); // fee2e2
+    doc.rect(margins.left, yPos - 3, contentWidth, 18, 'F');
+    doc.setDrawColor(220, 38, 38); // dc2626
+    doc.setLineWidth(1);
+    doc.line(margins.left, yPos - 3, margins.left, yPos + 15);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(127, 29, 29); // 7f1d1d
+    doc.setFont(fontFamily, 'bold');
+    doc.text('⚠️ Retention of Title / Eigentumsvorbehalt', margins.left + 3, yPos + 2);
+    
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    const ownershipText = document.retention_of_title_text || 'All delivered goods and services remain the property of Alpha Yachting until full payment has been received.';
+    const ownershipLines = doc.splitTextToSize(ownershipText, contentWidth - 6);
+    doc.text(ownershipLines, margins.left + 3, yPos + 8);
+    
+    yPos += 22;
+  }
+
   // Notes
   if (document.public_notes) {
     if (breakBeforeNotes) {
