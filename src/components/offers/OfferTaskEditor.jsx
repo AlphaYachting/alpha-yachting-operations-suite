@@ -147,14 +147,11 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Hour">hrs</SelectItem>
-                          <SelectItem value="Piece">pcs</SelectItem>
-                          <SelectItem value="Square Meter">m²</SelectItem>
-                          <SelectItem value="Linear Meter">m</SelectItem>
-                          <SelectItem value="Liter">L</SelectItem>
-                          <SelectItem value="Kilogram">kg</SelectItem>
-                          <SelectItem value="Set">set</SelectItem>
-                          <SelectItem value="Lump Sum">job</SelectItem>
+                          {UNIT_OPTIONS.map(unit => (
+                            <SelectItem key={unit.value} value={unit.value}>
+                              {unit.display}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
