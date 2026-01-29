@@ -61,6 +61,7 @@ import TemplateSelector from '@/components/templates/TemplateSelector';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import TeamOrderCard from '@/components/teamorder/TeamOrderCard';
 import { notifyTaskStatusChange } from '@/components/notifications/notificationUtils';
+import RequirementsSection from '@/components/requirements/RequirementsSection';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -588,6 +589,14 @@ export default function WorkOrderDetail() {
           </CardContent>
         </Card>
       )}
+
+      {/* Requirements / Shopping List Section */}
+      <RequirementsSection
+        workOrderId={workOrderId}
+        workOrder={workOrder}
+        currentUser={currentUser}
+        isAdmin={isAdmin}
+      />
 
       {/* Vehicle Reservation Section */}
       <VehicleReservation 
