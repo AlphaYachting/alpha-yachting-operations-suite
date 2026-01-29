@@ -161,49 +161,49 @@ export default function UnitSettingsPage() {
                   {categoryUnits.map((unit) => {
                     const isUsed = usedUnits.has(unit.value);
                     return (
-                    <Card key={unit.id} className={!unit.active ? 'opacity-50' : ''}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <div className="font-semibold text-slate-900">{unit.label}</div>
-                              {isUsed && (
-                                <Badge className="bg-green-100 text-green-800 flex items-center gap-1 text-xs">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  In Use
-                                </Badge>
+                      <Card key={unit.id} className={!unit.active ? 'opacity-50' : ''}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className="font-semibold text-slate-900">{unit.label}</div>
+                                {isUsed && (
+                                  <Badge className="bg-green-100 text-green-800 flex items-center gap-1 text-xs">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    In Use
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-sm text-slate-600 mt-1">
+                                Value: <code className="bg-slate-100 px-2 py-1 rounded">{unit.value}</code>
+                                {' '}Display: <code className="bg-slate-100 px-2 py-1 rounded">{unit.display}</code>
+                              </div>
+                              {!unit.active && (
+                                <div className="text-xs text-amber-600 mt-2">Inactive</div>
                               )}
                             </div>
-                            <div className="text-sm text-slate-600 mt-1">
-                              Value: <code className="bg-slate-100 px-2 py-1 rounded">{unit.value}</code>
-                              {' '}Display: <code className="bg-slate-100 px-2 py-1 rounded">{unit.display}</code>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(unit)}
+                              >
+                                <Edit className="h-4 w-4 text-slate-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(unit.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
                             </div>
-                            {!unit.active && (
-                              <div className="text-xs text-amber-600 mt-2">Inactive</div>
-                            )}
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(unit)}
-                            >
-                              <Edit className="h-4 w-4 text-slate-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(unit.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-                          </div>
-                          </CardContent>
-                          </Card>
-                          );
-                          })}
-                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
                           </div>
                           );
                           })}
