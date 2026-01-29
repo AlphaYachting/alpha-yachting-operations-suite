@@ -239,7 +239,15 @@ function formatDate(dateString) {
 }
 
 Deno.serve(async (req) => {
+  const { createClientFromRequest } = await import('npm:@base44/sdk@0.8.6');
+  const base44 = createClientFromRequest(req);
+  
   try {
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     const workOrderId = body.workOrderId;
     const teamOrderId = body.teamOrderId;
@@ -251,14 +259,6 @@ Deno.serve(async (req) => {
         error: 'Missing workOrderId or teamOrderId',
         received: body
       }, { status: 400 });
-    }
-
-    const { createClientFromRequest } = await import('npm:@base44/sdk@0.8.6');
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const [workOrders, teamOrders, jobs, customers, boats, locations, tasks, technicians] = await Promise.all([
@@ -273,7 +273,12 @@ Deno.serve(async (req) => {
     ]);
 
     if (workOrders.length === 0 || teamOrders.length === 0) {
-      return Response.json({ error: 'Work order or team order not found' }, { status: 404 });
+      return Response.json({ 
+        success: false,
+        error: 'Work order or team order not found',
+        workOrderFound: workOrders.length > 0,
+        teamOrderFound: teamOrders.length > 0
+      }, { status: 404 });
     }
 
     const workOrder = workOrders[0];
@@ -287,7 +292,10 @@ Deno.serve(async (req) => {
     let browser;
     
     try {
-      browser = await puppeteer.launch({ headless: 'new' });
+      browser = await puppeteer.launch({ 
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
       const page = await browser.newPage();
       
       const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, templateData);
@@ -309,17 +317,19 @@ Deno.serve(async (req) => {
         pdf: `data:application/pdf;base64,${base64PDF}`,
         fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
       });
-    } catch (error) {
+    } catch (puppeteerError) {
       if (browser) await browser.close();
       return Response.json({
         success: false,
-        error: error.message
+        error: `PDF generation failed: ${puppeteerError.message}`,
+        stack: puppeteerError.stack
       }, { status: 500 });
     }
   } catch (error) {
     return Response.json({
       success: false,
-      error: error.message
-    }, { status: 400 });
+      error: `Server error: ${error.message}`,
+      stack: error.stack
+    }, { status: 500 });
   }
 });
