@@ -112,8 +112,6 @@ export default function WorkOrderDetail() {
   const [commentText, setCommentText] = useState('');
   const [timeEntries, setTimeEntries] = useState([]);
   const [accessLogs, setAccessLogs] = useState([]);
-  const [showBriefPreview, setShowBriefPreview] = useState(false);
-  const [briefPdfUrl, setBriefPdfUrl] = useState(null);
   const [generatingBrief, setGeneratingBrief] = useState(false);
 
   useEffect(() => {
@@ -335,19 +333,18 @@ export default function WorkOrderDetail() {
         teamOrderId: teamOrder.id
       });
 
-      if (response.data.success && response.data.pdf) {
-        // Convert base64 to blob
-        const base64Data = response.data.pdf.split(',')[1];
-        const binaryData = atob(base64Data);
-        const arrayBuffer = new Uint8Array(binaryData.length);
-        for (let i = 0; i < binaryData.length; i++) {
-          arrayBuffer[i] = binaryData.charCodeAt(i);
+      if (response.data.success && response.data.html) {
+        // Open preview window with HTML for printing
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(response.data.html);
+          printWindow.document.close();
+          // Auto-trigger print dialog after page loads
+          printWindow.onload = () => {
+            printWindow.focus();
+            printWindow.print();
+          };
         }
-        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-        const url = URL.createObjectURL(blob);
-
-        setBriefPdfUrl(url);
-        setShowBriefPreview(true);
       } else {
         alert('Failed to generate partner brief: ' + (response.data.error || 'Unknown error'));
       }
@@ -359,24 +356,7 @@ export default function WorkOrderDetail() {
     }
   };
 
-  const handleCloseBriefPreview = () => {
-    setShowBriefPreview(false);
-    if (briefPdfUrl) {
-      URL.revokeObjectURL(briefPdfUrl);
-      setBriefPdfUrl(null);
-    }
-  };
 
-  const handleDownloadBrief = () => {
-    if (!briefPdfUrl) return;
-
-    const link = document.createElement('a');
-    link.href = briefPdfUrl;
-    link.download = `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   const isAdmin = currentUser?.role === 'admin';
   const canEditTasks = isAdmin;
@@ -1048,30 +1028,6 @@ export default function WorkOrderDetail() {
             </Button>
             <Button onClick={handleSaveAsTemplate} disabled={savingTemplate}>
               {savingTemplate ? 'Saving...' : 'Save Template'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Partner Brief Preview Dialog */}
-      <Dialog open={showBriefPreview} onOpenChange={handleCloseBriefPreview}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Partner Brief Preview</DialogTitle>
-          </DialogHeader>
-          {briefPdfUrl && (
-            <iframe 
-              src={briefPdfUrl}
-              className="w-full h-[600px] border-0"
-              title="Partner Brief Preview"
-            />
-          )}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={handleCloseBriefPreview}>
-              Close
-            </Button>
-            <Button onClick={handleDownloadBrief}>
-              Download PDF
             </Button>
           </div>
         </DialogContent>
