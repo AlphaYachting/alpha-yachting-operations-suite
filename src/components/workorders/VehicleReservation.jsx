@@ -25,9 +25,16 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
 
   const getPlannedWindow = () => {
     if (!hasSchedule) return null;
-    const startDatetime = `${workOrder.scheduled_date}T${workOrder.scheduled_start_time}:00`;
-    const endDatetime = `${workOrder.scheduled_date}T${workOrder.scheduled_end_time}:00`;
-    return { start: startDatetime, end: endDatetime };
+    try {
+      const startDatetime = `${workOrder.scheduled_date}T${workOrder.scheduled_start_time}:00`;
+      const endDatetime = `${workOrder.scheduled_date}T${workOrder.scheduled_end_time}:00`;
+      // Validate by attempting to parse
+      new Date(startDatetime);
+      new Date(endDatetime);
+      return { start: startDatetime, end: endDatetime };
+    } catch {
+      return null;
+    }
   };
 
   useEffect(() => {
