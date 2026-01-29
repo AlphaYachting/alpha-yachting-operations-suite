@@ -634,9 +634,9 @@ export default function TasklistImport() {
       newJobTitle: 'Winter Service',
       jobStatus: 'Imported – Review Required',
       taskStatus: 'Draft',
-      dueDateMode: 'single',
-      baseDueDate: null,
-      priorityOffsets: { High: 2, Medium: 5, Low: 10 },
+      workOrderDateMode: 'column',
+      workOrderBaseDate: null,
+      workOrderOffsets: { High: 2, Medium: 5, Low: 10 },
       dryRunOnly: false
     });
   };
