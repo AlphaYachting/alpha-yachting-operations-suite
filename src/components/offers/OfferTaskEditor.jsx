@@ -246,7 +246,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {UNIT_OPTIONS.map(unit => (
+                  {unitOptions.map(unit => (
                     <SelectItem key={unit.value} value={unit.value}>
                       {unit.display}
                     </SelectItem>
