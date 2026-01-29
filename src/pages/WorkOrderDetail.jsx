@@ -343,40 +343,7 @@ export default function WorkOrderDetail() {
 
   if (loading) {
     return (
-      <>
-      <style>{`
-        @media print {
-          @page { size: A4; }
-          body * { visibility: hidden; }
-          #partner-brief-print, #partner-brief-print * { visibility: visible; }
-          #partner-brief-print {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          .no-print { display: none !important; }
-        }
-      `}</style>
-
-      {/* Hidden Partner Brief Template for Print */}
-      {teamOrder && pdfTemplate && (
-        <div style={{ display: 'none' }}>
-          <PartnerBriefTemplate
-            workOrder={workOrder}
-            teamOrder={teamOrder}
-            job={job}
-            customer={customer}
-            boat={boat}
-            location={location}
-            tasks={tasks}
-            technicians={technicians}
-            template={pdfTemplate}
-          />
-        </div>
-      )}
-
-      <div className="space-y-6 no-print">
+      <div className="space-y-6">
         <Skeleton className="h-12 w-64" />
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-96 w-full" />
@@ -406,7 +373,40 @@ export default function WorkOrderDetail() {
   const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <>
+      <style>{`
+        @media print {
+          @page { size: A4; }
+          body * { visibility: hidden; }
+          #partner-brief-print, #partner-brief-print * { visibility: visible; }
+          #partner-brief-print {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+      
+      {/* Hidden Partner Brief Template for Print */}
+      {teamOrder && pdfTemplate && (
+        <div style={{ display: 'none' }}>
+          <PartnerBriefTemplate
+            workOrder={workOrder}
+            teamOrder={teamOrder}
+            job={job}
+            customer={customer}
+            boat={boat}
+            location={location}
+            tasks={tasks}
+            technicians={technicians}
+            template={pdfTemplate}
+          />
+        </div>
+      )}
+
+      <div className="space-y-6 no-print">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
@@ -1043,7 +1043,7 @@ export default function WorkOrderDetail() {
           </div>
         </DialogContent>
       </Dialog>
-      </div>
-      </>
-      );
-      }
+    </div>
+    </>
+  );
+}
