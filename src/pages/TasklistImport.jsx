@@ -122,8 +122,8 @@ export default function TasklistImport() {
   const validateImportData = async (data, mapping, cfg) => {
     const errors = [];
     const warnings = [];
-    const jobGroups = {};
-    
+    const serviceAreaGroups = {};
+
     // Load existing data for deduplication
     const [customers, boats, locations, technicians] = await Promise.all([
       base44.entities.Customer.list(),
@@ -134,50 +134,33 @@ export default function TasklistImport() {
 
     data.forEach((row, idx) => {
       const rowNum = idx + 2; // Excel row (1-indexed + header)
-      
+
       // Hard STOP validations
       const customerName = row[getHeaderByMapping(mapping, 'customerName')]?.trim();
       const taskTitle = row[getHeaderByMapping(mapping, 'taskTitle')]?.trim();
       const taskDesc = row[getHeaderByMapping(mapping, 'taskDescription')]?.trim();
-      
+
       if (!customerName) {
         errors.push({ row: rowNum, field: 'Customer Name', message: 'Required field is empty' });
       }
-      
+
       if (!taskTitle && !taskDesc) {
         errors.push({ row: rowNum, field: 'Task Title/Description', message: 'Both title and description are empty' });
       }
 
-      // Group jobs
-      const projectName = row[getHeaderByMapping(mapping, 'projectName')]?.trim() || '';
-      const boatModel = row[getHeaderByMapping(mapping, 'boatModel')]?.trim() || '';
-      const locationMarina = row[getHeaderByMapping(mapping, 'locationMarina')]?.trim() || '';
-      const serviceArea = row[getHeaderByMapping(mapping, 'serviceArea')]?.trim() || '';
-      const module = row[getHeaderByMapping(mapping, 'module')]?.trim() || '';
-      
-      const groupKey = `${projectName}|${customerName}|${boatModel}|${locationMarina}|${serviceArea}|${module}`;
-      
-      if (!jobGroups[groupKey]) {
-        jobGroups[groupKey] = {
-          projectName,
-          customerName,
-          customerType: row[getHeaderByMapping(mapping, 'customerType')]?.trim() || 'Private',
-          boatModel,
-          boatLength: row[getHeaderByMapping(mapping, 'boatLength')],
-          locationMarina,
+      // Group by Service Area
+      const serviceArea = row[getHeaderByMapping(mapping, 'serviceArea')]?.trim() || 'Uncategorized';
+
+      if (!serviceAreaGroups[serviceArea]) {
+        serviceAreaGroups[serviceArea] = {
           serviceArea,
-          module,
-          tasks: []
+          rows: []
         };
       }
-      
-      jobGroups[groupKey].tasks.push({ rowNum, data: row });
 
-      // Soft validations (warnings) - these don't block import
-      if (!locationMarina || locationMarina.toLowerCase() === 'unknown') {
-        warnings.push({ row: rowNum, field: 'Location', message: 'Location is empty or unknown - will be left blank' });
-      }
+      serviceAreaGroups[serviceArea].rows.push({ rowNum, data: row });
 
+      // Soft validations (warnings)
       const assignedPerson = row[getHeaderByMapping(mapping, 'assignedPerson')]?.trim();
       if (assignedPerson && !technicians.find(t => 
         `${t.first_name} ${t.last_name}`.toLowerCase() === assignedPerson.toLowerCase()
@@ -196,31 +179,13 @@ export default function TasklistImport() {
       }
     });
 
-    // Check for duplicate Task IDs within same job group
-    Object.values(jobGroups).forEach(group => {
-      const taskIds = {};
-      group.tasks.forEach(({ rowNum, data }) => {
-        const taskId = data[getHeaderByMapping(mapping, 'taskId')]?.trim();
-        if (taskId) {
-          if (taskIds[taskId]) {
-            errors.push({ 
-              row: rowNum, 
-              field: 'Task ID', 
-              message: `Duplicate Task ID "${taskId}" in same job group (also on row ${taskIds[taskId]})` 
-            });
-          }
-          taskIds[taskId] = rowNum;
-        }
-      });
-    });
-
     return {
       valid: errors.length === 0,
       errors,
       warnings,
-      jobCount: Object.keys(jobGroups).length,
+      workOrderCount: Object.keys(serviceAreaGroups).length,
       taskCount: data.length,
-      jobGroups
+      serviceAreaGroups
     };
   };
 
