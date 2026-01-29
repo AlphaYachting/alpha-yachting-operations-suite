@@ -19,13 +19,13 @@ import AITaskSuggestions from './AITaskSuggestions';
 
 export default function WorkOrderForm({ workOrder, jobs, technicians, customers, boats, preselectedJobId, onSave, onCancel }) {
   const [formData, setFormData] = useState({
-    job_id: workOrder?.job_id || preselectedJobId || '',
-    title: workOrder?.title || '',
-    description: workOrder?.description || '',
-    scheduled_date: workOrder?.scheduled_date || '',
-    scheduled_end_date: workOrder?.scheduled_end_date || '',
-    scheduled_start_time: workOrder?.scheduled_start_time || '',
-    scheduled_end_time: workOrder?.scheduled_end_time || '',
+     job_id: workOrder?.job_id || preselectedJobId || '',
+     title: workOrder?.title || '',
+     description: workOrder?.description || '',
+     scheduled_date: workOrder?.scheduled_date || '',
+     scheduled_end_date: workOrder?.scheduled_end_date || '',
+     scheduled_start_time: workOrder?.scheduled_start_time || '08:00',
+     scheduled_end_time: workOrder?.scheduled_end_time || '',
     estimated_duration_hours: workOrder?.estimated_duration_hours || '',
     assigned_technicians: workOrder?.assigned_technicians || [],
     lead_technician_id: workOrder?.lead_technician_id || '',

@@ -310,7 +310,8 @@ export default function TasklistImport() {
           description: `Service Area: ${serviceArea}`,
           status: cfg.taskStatus,
           estimated_duration_hours: null,
-          scheduled_date: cfg.workOrderScheduledDate
+          scheduled_date: cfg.workOrderScheduledDate,
+          scheduled_start_time: '08:00'
         });
         createdWorkOrders.push(workOrder);
 
@@ -509,7 +510,8 @@ export default function TasklistImport() {
           status: cfg.taskStatus,
           assigned_technicians: assignedTechId ? [assignedTechId] : [],
           estimated_duration_hours: estimatedHours,
-          scheduled_date: cfg.workOrderScheduledDate
+          scheduled_date: cfg.workOrderScheduledDate,
+          scheduled_start_time: '08:00'
         });
 
         const task = await base44.entities.Task.create({
