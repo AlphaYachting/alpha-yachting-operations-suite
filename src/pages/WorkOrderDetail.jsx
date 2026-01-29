@@ -338,7 +338,7 @@ export default function WorkOrderDetail() {
         return;
       }
 
-      const response = await base44.functions.invoke('generatePartnerBriefPDF', {
+      const response = await base44.functions.invoke('generatePartnerBrief', {
         workOrderId,
         teamOrderId: teamOrder.id,
         templateData: template
