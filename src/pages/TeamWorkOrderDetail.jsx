@@ -669,16 +669,18 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
                    <p className="text-slate-900 text-base font-semibold">{task.title}</p>
                  </div>
                  <div className="absolute top-4 right-4 flex items-center gap-2">
-                   <Button
-                  onClick={() => handleDeleteTask(task.id)}
-                  disabled={updatingTaskId === task.id}
-                  variant="ghost"
-                  size="icon"
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  title="Delete task"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                   </Button>
+                   {user?.role === 'admin' && (
+                     <Button
+                       onClick={() => handleDeleteTask(task.id)}
+                       disabled={updatingTaskId === task.id}
+                       variant="ghost"
+                       size="icon"
+                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                       title="Delete task"
+                     >
+                       <Trash2 className="h-4 w-4" />
+                     </Button>
+                   )}
                    <Button
                   onClick={() => handleIndividualTaskStatusToggle(task.id, task.status)}
                   disabled={updatingTaskId === task.id}
