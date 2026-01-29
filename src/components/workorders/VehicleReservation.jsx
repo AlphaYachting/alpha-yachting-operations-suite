@@ -21,14 +21,13 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [conflicts, setConflicts] = useState([]);
 
-  const hasSchedule = !!(workOrder.scheduled_date && workOrder.scheduled_start_time && workOrder.scheduled_end_time);
+  const hasSchedule = !!(workOrder?.scheduled_date && workOrder?.scheduled_start_time && workOrder?.scheduled_end_time);
 
   const getPlannedWindow = () => {
-    if (!hasSchedule || !workOrder.scheduled_date || !workOrder.scheduled_start_time || !workOrder.scheduled_end_time) return null;
+    if (!workOrder?.scheduled_date || !workOrder?.scheduled_start_time || !workOrder?.scheduled_end_time) return null;
     try {
       const startDatetime = `${workOrder.scheduled_date}T${workOrder.scheduled_start_time}:00`;
       const endDatetime = `${workOrder.scheduled_date}T${workOrder.scheduled_end_time}:00`;
-      // Validate by attempting to parse
       const startDate = new Date(startDatetime);
       const endDate = new Date(endDatetime);
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
