@@ -179,17 +179,23 @@ export default function Customers() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Link 
-                          to={createPageUrl('CustomerDetail') + `?id=${customer.id}`}
-                          className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
-                        >
-                          {getDisplayName(customer)}
-                        </Link>
-                        <Badge className={statusColors[customer.status]}>{customer.status}</Badge>
-                        {customer.customer_type && customer.customer_type !== 'Private' && (
-                          <Badge variant="outline">{customer.customer_type}</Badge>
-                        )}
-                      </div>
+                         <Link 
+                           to={createPageUrl('CustomerDetail') + `?id=${customer.id}`}
+                           className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                         >
+                           {getDisplayName(customer)}
+                         </Link>
+                         <Badge className={statusColors[customer.status]}>{customer.status}</Badge>
+                         {customer.customer_type && customer.customer_type !== 'Private' && (
+                           <Badge variant="outline">{customer.customer_type}</Badge>
+                         )}
+                         {!isDataComplete(customer) && (
+                           <Badge className="bg-amber-100 text-amber-700 flex items-center gap-1">
+                             <AlertCircle className="h-3 w-3" />
+                             Incomplete
+                           </Badge>
+                         )}
+                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-slate-500">
                         {customer.email && (
                           <a href={`mailto:${customer.email}`} className="flex items-center gap-1 hover:text-blue-600">
