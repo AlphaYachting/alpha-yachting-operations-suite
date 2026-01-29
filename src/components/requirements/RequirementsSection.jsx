@@ -170,10 +170,10 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
     }
   };
 
-  // Sort items: SparePart first, then by priority, then unchecked first
+  // Sort items: unchecked first, then SparePart first, then by priority
   const sortedItems = [...items].sort((a, b) => {
-    // Filter logic
-    if (filterUnchecked && a.checked !== b.checked) {
+    // Unchecked items always come first
+    if (a.checked !== b.checked) {
       return a.checked ? 1 : -1;
     }
 
@@ -190,7 +190,7 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
     return 0;
   });
 
-  const displayItems = filterUnchecked ? sortedItems.filter(i => !i.checked) : sortedItems;
+  const displayItems = sortedItems;
 
   const checkedCount = items.filter(i => i.checked).length;
   const totalCount = items.length;
