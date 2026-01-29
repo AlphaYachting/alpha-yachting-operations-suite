@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'npm:xlsx';
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -551,8 +551,10 @@ export default function ExcelImport() {
             <Button onClick={() => { setImportResult(null); setFile(null); }} variant="outline">
               Import Another File
             </Button>
-            <Button onClick={() => window.location.href = createPageUrl('Jobs')} className="bg-blue-600 hover:bg-blue-700">
-              View Imported Jobs
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link to={createPageUrl('Jobs')}>
+                View Imported Jobs
+              </Link>
             </Button>
           </div>
         </div>
