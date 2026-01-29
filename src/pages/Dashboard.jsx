@@ -128,66 +128,52 @@ export default function Dashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Auth check - critical security
         const user = await base44.auth.me();
         if (!user) {
           base44.auth.redirectToLogin();
           return;
         }
 
-        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData, locationsData, leadsData] = await Promise.all([
-          base44.entities.Job.list('-created_date', 500), // Limit to 500 most recent
-          base44.entities.WorkOrder.list('-scheduled_date', 200), // Already has limit
-          base44.entities.Task.filter({ status: { $ne: 'Completed' } }, '-created_date', 500), // Only unfinished tasks
-          base44.entities.Customer.list('-created_date', 200), // Limit customers
-          base44.entities.Boat.filter({ status: { $ne: 'Sold' } }, '-created_date', 200), // Only active boats
-          base44.entities.Technician.filter({ status: 'Active' }), // Only active technicians
+        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData, locationsData, leadsData, offersData] = await Promise.all([
+          base44.entities.Job.list('-created_date', 500),
+          base44.entities.WorkOrder.list('-scheduled_date', 200),
+          base44.entities.Task.filter({ status: { $ne: 'Completed' } }, '-created_date', 500),
+          base44.entities.Customer.list('-created_date', 200),
+          base44.entities.Boat.filter({ status: { $ne: 'Sold' } }, '-created_date', 200),
+          base44.entities.Technician.filter({ status: 'Active' }),
           base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
           base44.entities.InventoryItem.filter({ item_type: 'VEHICLE', status: { $ne: 'Retired' } }),
           base44.entities.Location.filter({ status: 'Active' }),
-          base44.entities.Lead.filter({ status: { $ne: 'Converted' } }) // Exclude converted leads
+          base44.entities.Lead.filter({ status: { $ne: 'Converted' } }),
+          base44.entities.Offer.filter({ status: { $in: ['Draft', 'Sent'] } })
         ]);
         
-        // Sort jobs: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
         const sortedJobs = jobsData.sort((a, b) => {
           const today = new Date();
           const aDate = a.requested_date ? parseISO(a.requested_date) : null;
           const bDate = b.requested_date ? parseISO(b.requested_date) : null;
-          
           const aOverdue = aDate && isPast(aDate) && !isToday(aDate);
           const bOverdue = bDate && isPast(bDate) && !isToday(bDate);
           const aDueToday = aDate && isToday(aDate);
           const bDueToday = bDate && isToday(bDate);
           const aDueSoon = aDate && differenceInDays(aDate, today) <= 7 && differenceInDays(aDate, today) > 0;
           const bDueSoon = bDate && differenceInDays(bDate, today) <= 7 && differenceInDays(bDate, today) > 0;
-          
-          // Overdue first
           if (aOverdue && !bOverdue) return -1;
           if (!aOverdue && bOverdue) return 1;
-          
-          // Due today second
           if (aDueToday && !bDueToday) return -1;
           if (!aDueToday && bDueToday) return 1;
-          
-          // Due soon third
           if (aDueSoon && !bDueSoon) return -1;
           if (!aDueSoon && bDueSoon) return 1;
-          
-          // Priority order
           const priorityOrder = { Express: 0, Urgent: 1, High: 2, Normal: 3, Low: 4 };
           const aPriority = priorityOrder[a.priority] ?? 5;
           const bPriority = priorityOrder[b.priority] ?? 5;
           if (aPriority !== bPriority) return aPriority - bPriority;
-          
-          // By due date
           if (aDate && bDate) {
             if (aDate < bDate) return -1;
             if (aDate > bDate) return 1;
           }
           if (aDate && !bDate) return -1;
           if (!aDate && bDate) return 1;
-          
-          // By created date (newest first)
           return new Date(b.created_date) - new Date(a.created_date);
         });
         
@@ -209,6 +195,8 @@ export default function Dashboard() {
       }
     };
     loadData();
+    const interval = setInterval(loadData, 3600000);
+    return () => clearInterval(interval);
   }, []);
 
   const today = startOfDay(new Date());
