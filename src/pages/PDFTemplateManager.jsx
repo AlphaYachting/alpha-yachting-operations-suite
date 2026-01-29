@@ -419,15 +419,15 @@ export default function PDFTemplateManager() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Template</DialogTitle>
-            <DialogDescription>Enter a name for your new PDF template</DialogDescription>
+            <DialogDescription>Enter a name and select a type for your new PDF template</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Template Name</Label>
+              <Label>Template Name *</Label>
               <Input
                 value={newTemplateName}
                 onChange={(e) => setNewTemplateName(e.target.value)}
-                placeholder="e.g., Standard Invoice, Premium Offer"
+                placeholder="e.g., Standard Invoice, Premium Offer, Partner Brief"
                 onKeyPress={(e) => e.key === 'Enter' && handleCreateTemplate()}
               />
             </div>
@@ -442,6 +442,39 @@ export default function PDFTemplateManager() {
               className="bg-blue-600 hover:bg-blue-700"
             >
               {saving ? 'Creating...' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Template Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Template</DialogTitle>
+            <DialogDescription>Enter a new name for this template</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Template Name *</Label>
+              <Input
+                value={editingTemplateName}
+                onChange={(e) => setEditingTemplateName(e.target.value)}
+                placeholder="e.g., Standard Invoice, Premium Offer"
+                onKeyPress={(e) => e.key === 'Enter' && handleRenameTemplate()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRenameTemplate}
+              disabled={saving || !editingTemplateName.trim()}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {saving ? 'Renaming...' : 'Rename'}
             </Button>
           </DialogFooter>
         </DialogContent>
