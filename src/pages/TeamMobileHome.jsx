@@ -261,23 +261,21 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
       </>
     );
 
-    if (onNavigate) {
-      return (
-        <div 
-          onClick={() => onNavigate('workOrderDetail', { woId: workOrder.id })} 
-          className="bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden"
-        >
-          {cardContent}
-        </div>
-      );
-    }
+    const handleClick = (e) => {
+      if (onNavigate) {
+        e.preventDefault();
+        e.stopPropagation();
+        onNavigate('workOrderDetail', { woId: workOrder.id });
+      }
+    };
 
     return (
-      <Link to={createPageUrl('TeamWorkOrderDetail') + `?woId=${workOrder.id}`}>
-        <div className="bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden">
-          {cardContent}
-        </div>
-      </Link>
+      <div 
+        onClick={handleClick}
+        className="bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden"
+      >
+        {cardContent}
+      </div>
     );
 
   };
