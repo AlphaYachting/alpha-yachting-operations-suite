@@ -198,14 +198,15 @@ export default function UnitSettingsPage() {
                               <Trash2 className="h-4 w-4 text-red-600" />
                             </Button>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+                          </div>
+                          </CardContent>
+                          </Card>
+                          );
+                          })}
+                          </div>
+                          </div>
+                          );
+                          })}
         </div>
       )}
 
