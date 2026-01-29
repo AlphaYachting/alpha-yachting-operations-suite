@@ -9,7 +9,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export default function ConfigStep({ config, onConfigChange, onNext, onBack, isProcessing }) {
   const [existingJobs, setExistingJobs] = React.useState([]);
-  
+
   React.useEffect(() => {
     const loadJobs = async () => {
       const { base44 } = await import('@/api/base44Client');
@@ -17,6 +17,17 @@ export default function ConfigStep({ config, onConfigChange, onNext, onBack, isP
       setExistingJobs(jobs);
     };
     loadJobs();
+  }, []);
+
+  // Add WorkOrder Date field if not in config
+  React.useEffect(() => {
+    if (!config.workOrderDateMode) {
+      onConfigChange({
+        ...config,
+        workOrderDateMode: 'column', // 'column', 'single', or 'priority-based'
+        workOrderBaseDate: null
+      });
+    }
   }, []);
 
   const updateConfig = (key, value) => {
