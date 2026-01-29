@@ -14,6 +14,11 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
   const fontSizeCompanyName = template?.font_size_company_name || 20;
   const lineSpacing = template?.line_spacing || 1.5;
   const paragraphSpacing = template?.paragraph_spacing || 15;
+  const primaryColor = template?.primary_color || '#2563eb';
+  const letterheadBg = template?.letterhead_enabled && template?.letterhead_url 
+    ? `url('${template.letterhead_url}')` 
+    : 'none';
+  
   const assignedTechs = technicians.filter(t => workOrder.assigned_technicians?.includes(t.id));
   const customerName = customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown';
   
@@ -30,22 +35,6 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
   if (teamOrder.travel_time_paid) {
     costPolicies.push(`<li>Travel Time: €${teamOrder.travel_time_rate_per_hour || 'TBD'}/hour</li>`);
   }
-
-  const margins = {
-    top: template?.margin_top_mm || 20,
-    right: template?.margin_right_mm || 20,
-    bottom: template?.margin_bottom_mm || 20,
-    left: template?.margin_left_mm || 20
-  };
-
-  const fontFamily = template?.font_family || 'Arial';
-  const fontSizeBody = template?.font_size_body || 11;
-  const fontSizeHeading = template?.font_size_heading || 18;
-  const fontSizeCompanyName = template?.font_size_company_name || 20;
-  const primaryColor = template?.primary_color || '#2563eb';
-  const letterheadBg = template?.letterhead_enabled && template?.letterhead_url 
-    ? `url('${template.letterhead_url}')` 
-    : 'none';
 
   const watermarkHTML = template?.watermark_enabled
     ? `<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(${template.watermark_angle ?? -45}deg); font-size: 72pt; font-weight: bold; color: rgba(0,0,0,${template.watermark_opacity ?? 0.1}); pointer-events: none; white-space: nowrap; z-index: 0;">${template.watermark_text || 'DRAFT'}</div>`
