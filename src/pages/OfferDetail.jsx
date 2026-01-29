@@ -606,7 +606,7 @@ export default function OfferDetail() {
               <div className="flex justify-between items-center py-4 bg-blue-50 px-4 rounded-lg">
                 <span className="text-lg font-semibold text-slate-900">Total Amount</span>
                 <span className="text-2xl font-bold text-blue-600">
-                  €{formData.total_amount.toFixed(2)}
+                  €{(formData.total_amount || 0).toFixed(2)}
                 </span>
               </div>
             </CardContent>
