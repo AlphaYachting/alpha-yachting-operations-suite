@@ -164,22 +164,17 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
     }
   };
 
-  // Sort items: unchecked first, then SparePart first, then by priority
+  // Sort items: ToOrder/NeedsClarification first, then packed/confirmed items last
   const sortedItems = [...items].sort((a, b) => {
-    // Unchecked items always come first
-    if (a.checked !== b.checked) {
-      return a.checked ? 1 : -1;
-    }
+    // Packed items go to bottom
+    if (a.checklist_state === 'Packed' && b.checklist_state !== 'Packed') return 1;
+    if (a.checklist_state !== 'Packed' && b.checklist_state === 'Packed') return -1;
 
-    // Type priority (SparePart first)
-    const typeOrder = { SparePart: 0, Material: 1, Tool: 2, Vehicle: 3, Other: 4 };
-    const typeCompare = (typeOrder[a.type] || 5) - (typeOrder[b.type] || 5);
-    if (typeCompare !== 0) return typeCompare;
-
-    // Priority
-    const priorityOrder = { High: 0, Medium: 1, Low: 2 };
-    const priorityCompare = (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3);
-    if (priorityCompare !== 0) return priorityCompare;
+    // Within non-packed items, prioritize ToOrder and NeedsClarification at top
+    const aIsHighPriority = a.procurement_status === 'ToOrder' || a.procurement_status === 'NeedsClarification';
+    const bIsHighPriority = b.procurement_status === 'ToOrder' || b.procurement_status === 'NeedsClarification';
+    if (aIsHighPriority && !bIsHighPriority) return -1;
+    if (!aIsHighPriority && bIsHighPriority) return 1;
 
     return 0;
   });
