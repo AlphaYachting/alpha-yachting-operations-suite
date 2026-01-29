@@ -256,102 +256,100 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
                 const TypeIcon = typeIcons[item.type] || AlertCircle;
                 return (
                   <div
-                    key={item.id}
-                    className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
-                      item.checked ? 'bg-green-50 border-green-200' : 'bg-white hover:bg-slate-50'
-                    }`}
-                  >
-                    <Checkbox
-                      checked={item.checked}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          handleCheckItem(item, 'have');
-                        } else {
-                          handleUncheck(item.id);
-                        }
-                      }}
-                      className="mt-1"
-                    />
+                     key={item.id}
+                     className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
+                       item.checklist_state === 'Packed' 
+                         ? 'bg-green-50 border-green-500 border-2' 
+                         : item.checklist_state === 'ConfirmedAvailable'
+                         ? 'bg-white border-green-300 border-2'
+                         : 'bg-white hover:bg-slate-50'
+                     }`}
+                   >
+                     <div className="flex-1 min-w-0">
+                       <div className="flex items-start gap-2 mb-2">
+                         <TypeIcon className="h-4 w-4 mt-0.5 text-slate-400 flex-shrink-0" />
+                         <div className="flex-1">
+                           <p className={`font-medium ${item.checklist_state === 'Packed' ? 'text-green-700 line-through' : 'text-slate-900'}`}>{item.name}</p>
+                           {item.notes && (
+                             <p className={`text-xs mt-1 ${item.checklist_state === 'Packed' ? 'text-green-600' : 'text-slate-500'}`}>{item.notes}</p>
+                           )}
+                         </div>
+                       </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2 mb-2">
-                        <TypeIcon className="h-4 w-4 mt-0.5 text-slate-400 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className={`font-medium ${item.checked ? 'text-green-700 line-through' : 'text-slate-900'}`}>{item.name}</p>
-                          {item.notes && (
-                            <p className={`text-xs mt-1 ${item.checked ? 'text-green-600' : 'text-slate-500'}`}>{item.notes}</p>
-                          )}
-                        </div>
-                      </div>
+                       <div className="flex flex-wrap gap-2">
+                         <Badge className={typeColors[item.type]}>{item.type}</Badge>
+                         <Badge className={priorityColors[item.priority]}>{item.priority}</Badge>
+                         <Badge className={statusColors[item.procurement_status]}>
+                           {item.procurement_status}
+                         </Badge>
+                         {item.quantity && (
+                           <Badge variant="outline">
+                             {item.quantity} {item.unit}
+                           </Badge>
+                         )}
+                         {item.origin === 'AI' && (
+                           <Badge variant="outline" className="bg-purple-50">
+                             <Sparkles className="h-3 w-3 mr-1" />
+                             AI
+                           </Badge>
+                         )}
+                       </div>
+                     </div>
 
-                      <div className="flex flex-wrap gap-2">
-                        <Badge className={typeColors[item.type]}>{item.type}</Badge>
-                        <Badge className={priorityColors[item.priority]}>{item.priority}</Badge>
-                        <Badge className={statusColors[item.procurement_status]}>
-                          {item.procurement_status}
-                        </Badge>
-                        {item.quantity && (
-                          <Badge variant="outline">
-                            {item.quantity} {item.unit}
-                          </Badge>
-                        )}
-                        {item.origin === 'AI' && (
-                          <Badge variant="outline" className="bg-purple-50">
-                            <Sparkles className="h-3 w-3 mr-1" />
-                            AI
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+                     <div className="flex gap-1 flex-shrink-0">
+                       {item.checklist_state !== 'Packed' && (
+                         <>
+                           {isAdmin && item.checklist_state !== 'ConfirmedAvailable' && (
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleHaveItem(item)}
+                               className="text-xs border-green-300 hover:bg-green-50"
+                             >
+                               Have it
+                             </Button>
+                           )}
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => handlePackItem(item)}
+                             className="text-xs border-blue-300 hover:bg-blue-50"
+                           >
+                             Packed
+                           </Button>
+                         </>
+                       )}
+                       {item.checklist_state !== 'Missing' && (
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => handleResetItem(item.id)}
+                           className="text-xs text-slate-500"
+                         >
+                           Reset
+                         </Button>
+                       )}
+                     </div>
 
-                    {!item.checked && (
-                      <div className="flex gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCheckItem(item, 'have')}
-                          className="text-xs"
-                        >
-                          Have it
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCheckItem(item, 'bought')}
-                          className="text-xs"
-                        >
-                          Bought
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCheckItem(item, 'packed')}
-                          className="text-xs"
-                        >
-                          Packed
-                        </Button>
-                      </div>
-                    )}
-
-                    {isAdmin && (
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditingItem(item)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteItem(item.id)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
+                     {isAdmin && (
+                       <div className="flex gap-1">
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           onClick={() => setEditingItem(item)}
+                         >
+                           <Edit className="h-4 w-4" />
+                         </Button>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           onClick={() => handleDeleteItem(item.id)}
+                           className="text-red-600"
+                         >
+                           <Trash2 className="h-4 w-4" />
+                         </Button>
+                       </div>
+                     )}
                   </div>
                 );
               })}
