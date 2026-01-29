@@ -268,13 +268,19 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm font-medium text-blue-900 mb-1">Scheduled Time Window</p>
-              <p className="text-sm text-blue-700">
-                {format(parseISO(`${workOrder.scheduled_date}T${workOrder.scheduled_start_time}:00`), 'MMM d, yyyy h:mm a')} - 
-                {format(parseISO(`${workOrder.scheduled_date}T${workOrder.scheduled_end_time}:00`), 'h:mm a')}
-              </p>
-            </div>
+            {(() => {
+              const plannedWindow = getPlannedWindow();
+              if (!plannedWindow) return <p className="text-sm text-red-600">Invalid time window</p>;
+              return (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm font-medium text-blue-900 mb-1">Scheduled Time Window</p>
+                  <p className="text-sm text-blue-700">
+                    {format(parseISO(plannedWindow.start), 'MMM d, yyyy h:mm a')} - 
+                    {format(parseISO(plannedWindow.end), 'h:mm a')}
+                  </p>
+                </div>
+              );
+            })()}
 
             {checkingAvailability ? (
               <div className="text-center py-8 text-slate-500">Checking availability...</div>
