@@ -199,14 +199,20 @@ export default function Boats() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <Link 
-                        to={createPageUrl('BoatDetail') + `?id=${boat.id}`}
-                        className="font-semibold text-slate-900 hover:text-blue-600 transition-colors truncate"
-                      >
-                        {boat.vessel_name}
-                      </Link>
-                      <Badge className={typeColors[boat.vessel_type]}>{boat.vessel_type}</Badge>
-                    </div>
+                       <Link 
+                         to={createPageUrl('BoatDetail') + `?id=${boat.id}`}
+                         className="font-semibold text-slate-900 hover:text-blue-600 transition-colors truncate"
+                       >
+                         {boat.vessel_name}
+                       </Link>
+                       <Badge className={typeColors[boat.vessel_type]}>{boat.vessel_type}</Badge>
+                       {!isDataComplete(boat) && (
+                         <Badge className="bg-amber-100 text-amber-700 flex items-center gap-1">
+                           <AlertCircle className="h-3 w-3" />
+                           Incomplete
+                         </Badge>
+                       )}
+                     </div>
                     
                     {(boat.manufacturer || boat.model) && (
                       <p className="text-sm text-slate-600 mt-1 truncate">
