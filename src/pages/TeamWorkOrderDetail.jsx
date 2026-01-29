@@ -101,13 +101,19 @@ function RequirementsModal({ workOrderId }) {
 
   const packedCount = items.filter(i => i.checklist_state === 'Packed').length;
   const availableCount = items.filter(i => i.checklist_state === 'ConfirmedAvailable').length;
+
+  const sortedItems = [...items].sort((a, b) => {
+    if (a.checklist_state === 'Packed' && b.checklist_state !== 'Packed') return 1;
+    if (a.checklist_state !== 'Packed' && b.checklist_state === 'Packed') return -1;
+    return 0;
+  });
   
   return (
     <div className="space-y-3">
       <div className="text-sm font-medium text-slate-600 mb-4">
         Packed: {packedCount}/{items.length}
       </div>
-      {items.map((item) => (
+      {sortedItems.map((item) => (
         <div
           key={item.id}
           className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
