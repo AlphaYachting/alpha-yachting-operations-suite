@@ -107,42 +107,36 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
     }
   };
 
-  const handleCheckItem = async (item, action) => {
+  const handleHaveItem = async (item) => {
     try {
-      const updates = {
-        checked: true,
-        checked_at: new Date().toISOString(),
-        checked_by_user_id: currentUser?.id
-      };
-
-      if (action === 'have') {
-        updates.checklist_state = 'ConfirmedAvailable';
-        updates.procurement_status = 'Available';
-      } else if (action === 'bought') {
-        updates.checklist_state = 'Purchased';
-        updates.procurement_status = 'Available';
-      } else if (action === 'packed') {
-        updates.checklist_state = 'Packed';
-        updates.procurement_status = 'Packed';
-      }
-
-      await base44.entities.WorkOrderRequirementItem.update(item.id, updates);
+      await base44.entities.WorkOrderRequirementItem.update(item.id, {
+        checklist_state: 'ConfirmedAvailable'
+      });
       await loadRequirements();
     } catch (error) {
       console.error('Error updating item:', error);
     }
   };
 
-  const handleUncheck = async (itemId) => {
+  const handlePackItem = async (item) => {
     try {
-      await base44.entities.WorkOrderRequirementItem.update(itemId, {
-        checked: false,
-        checked_at: null,
-        checked_by_user_id: null
+      await base44.entities.WorkOrderRequirementItem.update(item.id, {
+        checklist_state: 'Packed'
       });
       await loadRequirements();
     } catch (error) {
-      console.error('Error unchecking item:', error);
+      console.error('Error updating item:', error);
+    }
+  };
+
+  const handleResetItem = async (itemId) => {
+    try {
+      await base44.entities.WorkOrderRequirementItem.update(itemId, {
+        checklist_state: 'Missing'
+      });
+      await loadRequirements();
+    } catch (error) {
+      console.error('Error resetting item:', error);
     }
   };
 
