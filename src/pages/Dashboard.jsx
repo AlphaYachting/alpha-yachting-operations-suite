@@ -466,6 +466,63 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Bottlenecks Alert - Critical Issues First */}
+      {(overdueJobs.length > 0 || offers.filter(o => o.status === 'Draft').length > 0 || jobs.filter(j => j.status === 'Waiting for Parts').length > 0) && (
+        <Card className="border-red-200 bg-red-50/50">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-100">
+                <Zap className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold text-red-900">
+                  Critical Bottlenecks
+                </CardTitle>
+                <p className="text-sm text-red-700 mt-0.5">
+                  {overdueJobs.length > 0 && `${overdueJobs.length} overdue jobs • `}
+                  {offers.filter(o => o.status === 'Draft').length > 0 && `${offers.filter(o => o.status === 'Draft').length} quotes stuck • `}
+                  {jobs.filter(j => j.status === 'Waiting for Parts').length > 0 && `${jobs.filter(j => j.status === 'Waiting for Parts').length} waiting for parts`}
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {overdueJobs.slice(0, 3).map((job) => (
+                <Link
+                  key={job.id}
+                  to={createPageUrl('JobDetail') + `?id=${job.id}`}
+                  className="block p-3 rounded-lg border border-red-200 bg-white hover:bg-red-50 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-slate-900">{job.title}</p>
+                      <p className="text-sm text-slate-600 mt-0.5">{getCustomerName(job.customer_id)}</p>
+                    </div>
+                    <Badge className="bg-red-600 text-white">OVERDUE</Badge>
+                  </div>
+                </Link>
+              ))}
+              {offers.filter(o => o.status === 'Draft').slice(0, 2).map((offer) => (
+                <Link
+                  key={offer.id}
+                  to={createPageUrl('OfferDetail') + `?id=${offer.id}`}
+                  className="block p-3 rounded-lg border border-purple-200 bg-white hover:bg-purple-50 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-slate-900">{offer.title}</p>
+                      <p className="text-sm text-slate-600 mt-0.5">Stuck in Draft</p>
+                    </div>
+                    <Badge className="bg-purple-600 text-white">DRAFT QUOTE</Badge>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Unfinished Items Alert */}
       {allPendingWorkOrders.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/50">
