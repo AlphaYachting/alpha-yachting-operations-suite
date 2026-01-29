@@ -117,6 +117,18 @@ export default function UnitSettingsPage() {
     setShowDialog(true);
   };
 
+  const handleInitializeDefaults = async () => {
+    setInitLoading(true);
+    try {
+      await base44.functions.invoke('initializeDefaultUnits', {});
+      queryClient.invalidateQueries({ queryKey: ['unitSettings'] });
+    } catch (error) {
+      alert('Error initializing units: ' + error.message);
+    } finally {
+      setInitLoading(false);
+    }
+  };
+
   const categories = units.reduce((acc, unit) => {
     if (!acc.includes(unit.category)) {
       acc.push(unit.category);
