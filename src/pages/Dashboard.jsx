@@ -192,6 +192,7 @@ export default function Dashboard() {
         setLocations(locationsData);
         setInventoryReservations(reservationsData);
         setLeads(leadsData);
+        setOffers(offersData);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
