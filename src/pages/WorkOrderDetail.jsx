@@ -328,23 +328,46 @@ export default function WorkOrderDetail() {
 
     setGeneratingBrief(true);
     try {
-      const response = await base44.functions.invoke('generatePartnerBrief', {
+      // Fetch PDF template
+      const templates = await base44.entities.PDFTemplate.list();
+      const template = templates.find(t => t.is_default) || templates[0];
+
+      if (!template) {
+        alert('No PDF template found. Please create one in Settings.');
+        setGeneratingBrief(false);
+        return;
+      }
+
+      const response = await base44.functions.invoke('generatePartnerBriefPDF', {
         workOrderId,
-        teamOrderId: teamOrder.id
+        teamOrderId: teamOrder.id,
+        templateData: template
       });
 
-      if (response.data.success && response.data.html) {
-        // Open preview window with HTML for printing
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-          printWindow.document.write(response.data.html);
-          printWindow.document.close();
-          // Auto-trigger print dialog after page loads
-          printWindow.onload = () => {
-            printWindow.focus();
-            printWindow.print();
-          };
+      if (response.data.success && response.data.pdf) {
+        // Convert base64 to blob and download
+        const base64Data = response.data.pdf.split(',')[1];
+        const binaryData = atob(base64Data);
+        const arrayBuffer = new Uint8Array(binaryData.length);
+        for (let i = 0; i < binaryData.length; i++) {
+          arrayBuffer[i] = binaryData.charCodeAt(i);
         }
+        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+
+        // Open in new tab for preview
+        const newWindow = window.open(url, '_blank');
+        if (!newWindow) {
+          // Fallback: download if popup blocked
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = response.data.fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
         alert('Failed to generate partner brief: ' + (response.data.error || 'Unknown error'));
       }
