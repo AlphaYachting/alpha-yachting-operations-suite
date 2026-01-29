@@ -611,8 +611,8 @@ export default function TasklistImport() {
         <Card className="mb-6 bg-blue-50 border-blue-200">
           <CardContent className="pt-4">
             <p className="text-sm text-blue-900">
-              <strong>Structure:</strong> Each Excel row becomes a <strong>Work Order</strong> (under a Job). 
-              Tasks are created within each Work Order. This maps to: Job → Work Order → Task
+              <strong>Structure:</strong> One <strong>Work Order</strong> is created per unique Service Area. 
+              All rows with the same Service Area become Tasks within that Work Order. This maps to: Job → Work Order → Tasks
             </p>
           </CardContent>
         </Card>
