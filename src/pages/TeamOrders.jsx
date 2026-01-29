@@ -206,15 +206,6 @@ export default function TeamOrders() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <p className="text-xs text-slate-600 mb-1">Budget</p>
-                      <div className="flex items-center gap-1">
-                        <Euro className="h-3 w-3 text-green-600" />
-                        <span className="font-semibold text-green-600">
-                          €{(order.approved_budget_total || 0).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
                     {workOrder?.scheduled_date && (
                       <div>
                         <p className="text-xs text-slate-600 mb-1">Scheduled</p>
@@ -227,7 +218,7 @@ export default function TeamOrders() {
                       </div>
                     )}
                     <div>
-                      <p className="text-xs text-slate-600 mb-1">Cost Coverage</p>
+                      <p className="text-xs text-slate-600 mb-1">Team Order</p>
                       <div className="flex flex-wrap gap-1">
                         {order.accommodation_paid && (
                           <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
@@ -244,6 +235,15 @@ export default function TeamOrders() {
                             KM
                           </Badge>
                         )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-600 mb-1">Budget</p>
+                      <div className="flex items-center gap-1">
+                        <Euro className="h-3 w-3 text-green-600" />
+                        <span className="font-semibold text-green-600">
+                          €{(order.approved_budget_total || 0).toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   </div>
