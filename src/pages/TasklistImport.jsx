@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'npm:xlsx';
 import FileUploadStep from '../components/taskimport/FileUploadStep';
 import PreviewStep from '../components/taskimport/PreviewStep';
 import MappingStep from '../components/taskimport/MappingStep';
