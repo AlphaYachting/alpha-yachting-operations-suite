@@ -55,7 +55,17 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
       setPdfError(null);
       
       const templateData = await loadTemplate();
-      const pdfDoc = await generatePDFWithJsPDF(documentData, lineItems, templateData, payments);
+      // Ensure payment terms are included in the document data
+      const completeDocumentData = {
+        ...documentData,
+        payment_terms_type: documentData.payment_terms_type || 'Full',
+        downpayment_percent: documentData.downpayment_percent || 0,
+        downpayment_amount: documentData.downpayment_amount || 0,
+        payment_schedule: documentData.payment_schedule || '',
+        retention_of_title_enabled: documentData.retention_of_title_enabled !== false,
+        retention_of_title_text: documentData.retention_of_title_text || ''
+      };
+      const pdfDoc = await generatePDFWithJsPDF(completeDocumentData, lineItems, templateData, payments);
       
       // Download the PDF
       const fileName = `${documentData.document_number || 'document'}.pdf`;
