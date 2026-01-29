@@ -731,6 +731,15 @@ export default function WorkOrders() {
                           {wo.title}
                         </Link>
                         <Badge className={statusColors[wo.status]}>{wo.status}</Badge>
+                        {agg.hasTeamOrder && (
+                          <Badge 
+                            variant="outline" 
+                            className="bg-purple-50 text-purple-700 border-purple-200"
+                          >
+                            <Briefcase className="h-3 w-3 mr-1" />
+                            Team Order
+                          </Badge>
+                        )}
                       </div>
                       
                       <p className="text-sm text-slate-500 mt-1">
@@ -760,21 +769,6 @@ export default function WorkOrders() {
                             </PopoverContent>
                           </Popover>
                         </div>
-
-                        {agg.hasTeamOrder && (
-                          <Link 
-                            to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                            className="group"
-                          >
-                            <Badge 
-                              variant="outline" 
-                              className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 transition-colors cursor-pointer"
-                            >
-                              <Briefcase className="h-3 w-3 mr-1" />
-                              Team Order
-                            </Badge>
-                          </Link>
-                        )}
 
                         <div className="flex items-center gap-2">
                            <Select
