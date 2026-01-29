@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
   try {
     const { documentData, lineItems, templateData } = await req.json();
     
-    const puppeteer = (await import('npm:puppeteer')).default;
+    const puppeteer = (await import('npm:puppeteer@23.11.1')).default;
     let browser;
     
     try {

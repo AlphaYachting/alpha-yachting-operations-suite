@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
 
     const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template);
 
-    const puppeteer = (await import('npm:puppeteer')).default;
+    const puppeteer = (await import('npm:puppeteer@23.11.1')).default;
     let browser;
 
     try {
