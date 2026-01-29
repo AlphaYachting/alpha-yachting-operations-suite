@@ -47,6 +47,7 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
     email: technician?.email || '',
     phone: technician?.phone || '',
     role: technician?.role || 'Technician',
+    is_external: technician?.is_external || false,
     color: technician?.color || '#3b82f6',
     skills: technician?.skills || [],
     languages: technician?.languages || ['German'],
@@ -185,6 +186,19 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* External Technician */}
+      <div className="flex items-center gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50">
+        <Checkbox
+          id="is_external"
+          checked={formData.is_external}
+          onCheckedChange={(checked) => updateField('is_external', checked)}
+        />
+        <Label htmlFor="is_external" className="cursor-pointer flex-1 m-0">
+          <span className="font-medium">External Technician</span>
+          <p className="text-xs text-slate-500">Mark if this person is not part of your main team</p>
+        </Label>
       </div>
 
       {/* Schedule Color */}
