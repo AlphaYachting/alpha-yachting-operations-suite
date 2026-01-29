@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Edit, GripVertical } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { UNIT_OPTIONS, getUnitDisplay } from './unitMapping';
 
 export default function OfferTaskEditor({ tasks, setTasks }) {
   const [editingTask, setEditingTask] = useState(null);
