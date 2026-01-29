@@ -19,10 +19,21 @@ import { syncQueue } from '@/components/offline/syncQueue';
 function RequirementsModal({ workOrderId }) {
   const [items, setItems] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
+  const [user, setUser] = React.useState(null);
 
   React.useEffect(() => {
+    loadUser();
     loadRequirements();
   }, [workOrderId]);
+
+  const loadUser = async () => {
+    try {
+      const userData = await base44.auth.me();
+      setUser(userData);
+    } catch (error) {
+      console.error('Error loading user:', error);
+    }
+  };
 
   const loadRequirements = async () => {
     try {
@@ -36,16 +47,25 @@ function RequirementsModal({ workOrderId }) {
     }
   };
 
-  const handleCheckItem = async (item) => {
+  const handlePackItem = async (item) => {
     try {
-      const updates = {
-        checked: !item.checked,
-        checked_at: !item.checked ? new Date().toISOString() : null
-      };
-      await base44.entities.WorkOrderRequirementItem.update(item.id, updates);
+      await base44.entities.WorkOrderRequirementItem.update(item.id, {
+        checklist_state: 'Packed'
+      });
       await loadRequirements();
     } catch (error) {
       console.error('Error updating item:', error);
+    }
+  };
+
+  const handleResetItem = async (itemId) => {
+    try {
+      await base44.entities.WorkOrderRequirementItem.update(itemId, {
+        checklist_state: 'Missing'
+      });
+      await loadRequirements();
+    } catch (error) {
+      console.error('Error resetting item:', error);
     }
   };
 
@@ -79,32 +99,31 @@ function RequirementsModal({ workOrderId }) {
     );
   }
 
-  const checkedCount = items.filter(i => i.checked).length;
+  const packedCount = items.filter(i => i.checklist_state === 'Packed').length;
+  const availableCount = items.filter(i => i.checklist_state === 'ConfirmedAvailable').length;
   
   return (
     <div className="space-y-3">
       <div className="text-sm font-medium text-slate-600 mb-4">
-        Packed: {checkedCount}/{items.length}
+        Packed: {packedCount}/{items.length}
       </div>
       {items.map((item) => (
         <div
           key={item.id}
           className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
-            item.checked ? 'bg-green-50 border-green-200' : 'bg-white'
+            item.checklist_state === 'Packed'
+              ? 'bg-green-50 border-green-500 border-2'
+              : item.checklist_state === 'ConfirmedAvailable'
+              ? 'bg-white border-green-300 border-2'
+              : 'bg-white'
           }`}
         >
-          <input
-            type="checkbox"
-            checked={item.checked}
-            onChange={() => handleCheckItem(item)}
-            className="w-5 h-5 rounded border-slate-300 cursor-pointer mt-0.5"
-          />
           <div className="flex-1 min-w-0">
-            <p className={`text-sm font-medium ${item.checked ? 'text-green-700 line-through' : 'text-slate-900'}`}>
+            <p className={`text-sm font-medium ${item.checklist_state === 'Packed' ? 'text-green-700 line-through' : 'text-slate-900'}`}>
               {typeIcons[item.type]} {item.name}
             </p>
             {item.quantity && (
-              <p className={`text-xs mt-1 ${item.checked ? 'text-green-600' : 'text-slate-500'}`}>
+              <p className={`text-xs mt-1 ${item.checklist_state === 'Packed' ? 'text-green-600' : 'text-slate-500'}`}>
                 {item.quantity} {item.unit}
               </p>
             )}
@@ -113,6 +132,29 @@ function RequirementsModal({ workOrderId }) {
                 {item.procurement_status}
               </span>
             </div>
+          </div>
+
+          <div className="flex gap-1 flex-shrink-0">
+            {item.checklist_state !== 'Packed' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePackItem(item)}
+                className="text-xs border-blue-300 hover:bg-blue-50"
+              >
+                Packed
+              </Button>
+            )}
+            {item.checklist_state !== 'Missing' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleResetItem(item.id)}
+                className="text-xs text-slate-500"
+              >
+                Reset
+              </Button>
+            )}
           </div>
         </div>
       ))}
