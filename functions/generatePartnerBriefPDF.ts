@@ -240,12 +240,16 @@ function formatDate(dateString) {
 
 Deno.serve(async (req) => {
   try {
-    const { workOrderId, teamOrderId, templateData } = await req.json();
+    const body = await req.json();
+    const workOrderId = body.workOrderId;
+    const teamOrderId = body.teamOrderId;
+    const templateData = body.templateData;
     
     if (!workOrderId || !teamOrderId) {
       return Response.json({ 
         success: false, 
-        error: 'Missing workOrderId or teamOrderId' 
+        error: 'Missing workOrderId or teamOrderId',
+        received: body
       }, { status: 400 });
     }
 
