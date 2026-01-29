@@ -552,6 +552,29 @@ export default function WorkOrderDetail() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-100">
+                <Users className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Team Order</p>
+                {teamOrder ? (
+                  <p className="text-sm font-semibold text-slate-900">{teamOrder.status}</p>
+                ) : (
+                  <p className="text-sm font-semibold text-slate-900">Not assigned</p>
+                )}
+                {teamOrder && (
+                  <p className="text-xs text-slate-500">
+                    Budget: €{(teamOrder.approved_budget_total || 0).toFixed(0)}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-emerald-100">
                 <User className="h-5 w-5 text-emerald-600" />
               </div>
