@@ -24,6 +24,7 @@ import { UNIT_OPTIONS, getUnitOptions } from './unitMapping';
 export default function OfferTaskEditor({ tasks, setTasks }) {
   const [editingTask, setEditingTask] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
+  const [unitOptions, setUnitOptions] = useState(UNIT_OPTIONS);
 
   const [taskForm, setTaskForm] = useState({
     title: '',
@@ -32,6 +33,14 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
     quantity: 1,
     unit_price: 50,
   });
+
+  useEffect(() => {
+    const loadUnits = async () => {
+      const units = await getUnitOptions();
+      setUnitOptions(units);
+    };
+    loadUnits();
+  }, []);
 
   const openNewTask = () => {
     setTaskForm({
