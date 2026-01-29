@@ -58,18 +58,18 @@ export default function TeamMobileHome() {
         // Try to load from server - filter work orders by assigned technician
         const technicianId = previewUserId || currentUser?.id;
         [tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData] = await Promise.all([
-          base44.entities.Task.list(),
-          base44.entities.WorkOrder.filter({
-            $or: [
-              { assigned_technicians: { $in: [technicianId] } },
-              { lead_technician_id: technicianId }
-            ]
-          }),
-          base44.entities.Location.list(),
-          base44.entities.Technician.list(),
-          base44.entities.Boat.list(),
-          base44.entities.Job.list()
-        ]);
+        base44.entities.Task.list(),
+        base44.entities.WorkOrder.filter({
+          $or: [
+          { assigned_technicians: { $in: [technicianId] } },
+          { lead_technician_id: technicianId }]
+
+        }),
+        base44.entities.Location.list(),
+        base44.entities.Technician.list(),
+        base44.entities.Boat.list(),
+        base44.entities.Job.list()]
+        );
 
         // Cache all data for offline access
         if (workOrdersData) {
@@ -207,11 +207,11 @@ export default function TeamMobileHome() {
           {/* Top Section: Colored Box + Title + Status */}
           <div className="flex items-stretch">
             {/* Left: Cyan Gradient Time Box */}
-            <div className="bg-gradient-to-br text-white pt-3 pr-6 pb-5 pl-5 rounded-xl from-blue-400 to-blue-600 flex flex-col items-center justify-center min-w-fit shadow-md flex-shrink-0">
+            <div className="bg-[#21b9e8] text-white pt-3 pr-6 pb-5 pl-5 rounded-xl from-blue-400 to-blue-600 flex flex-col items-center justify-center min-w-fit shadow-md flex-shrink-0">
               <p className="text-xs font-bold uppercase tracking-wider">{dayName}</p>
               <p className="text-2xl font-bold leading-tight mt-1">{dateString}</p>
               <p className="text-xs opacity-90 mt-0.5">{monthString}</p>
-              {timeString !== '—' && <p className="text-xs mt-2 font-medium">{timeString}</p>}
+              {timeString !== '—' && <p className="mt-2 text-sm font-bold">{timeString}</p>}
             </div>
 
             {/* Center + Right: Title & Status */}
@@ -313,12 +313,12 @@ export default function TeamMobileHome() {
       {/* Content */}
             <div className="p-4 space-y-6">
               {/* Connection Status */}
-              {!isOnline && (
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-2">
+              {!isOnline &&
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-2">
                   <WifiOff className="h-5 w-5 text-orange-600 flex-shrink-0" />
                   <span className="text-sm font-medium text-orange-900">You're offline. Data is cached.</span>
                 </div>
-              )}
+        }
         {/* Today */}
         {sections.today.length > 0 &&
         <div>
