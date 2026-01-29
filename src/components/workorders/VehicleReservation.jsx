@@ -24,13 +24,14 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
   const hasSchedule = !!(workOrder.scheduled_date && workOrder.scheduled_start_time && workOrder.scheduled_end_time);
 
   const getPlannedWindow = () => {
-    if (!hasSchedule) return null;
+    if (!hasSchedule || !workOrder.scheduled_date || !workOrder.scheduled_start_time || !workOrder.scheduled_end_time) return null;
     try {
       const startDatetime = `${workOrder.scheduled_date}T${workOrder.scheduled_start_time}:00`;
       const endDatetime = `${workOrder.scheduled_date}T${workOrder.scheduled_end_time}:00`;
       // Validate by attempting to parse
-      new Date(startDatetime);
-      new Date(endDatetime);
+      const startDate = new Date(startDatetime);
+      const endDate = new Date(endDatetime);
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
       return { start: startDatetime, end: endDatetime };
     } catch {
       return null;
@@ -233,8 +234,8 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
                   <div className="flex items-center gap-2 text-xs text-slate-600">
                     <Clock className="h-3 w-3" />
                     <span>
-                      {format(parseISO(reservation.start_datetime), 'MMM d, yyyy h:mm a')} - 
-                      {format(parseISO(reservation.end_datetime), 'h:mm a')}
+                      {reservation?.start_datetime && format(parseISO(reservation.start_datetime), 'MMM d, yyyy h:mm a')} - 
+                      {reservation?.end_datetime && format(parseISO(reservation.end_datetime), 'h:mm a')}
                     </span>
                   </div>
                 </div>
@@ -269,8 +270,8 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm font-medium text-blue-900 mb-1">Scheduled Time Window</p>
               <p className="text-sm text-blue-700">
-                {format(parseISO(`${workOrder.scheduled_date}T${workOrder.scheduled_start_time}`), 'MMM d, yyyy h:mm a')} - 
-                {format(parseISO(`${workOrder.scheduled_date}T${workOrder.scheduled_end_time}`), 'h:mm a')}
+                {format(parseISO(`${workOrder.scheduled_date}T${workOrder.scheduled_start_time}:00`), 'MMM d, yyyy h:mm a')} - 
+                {format(parseISO(`${workOrder.scheduled_date}T${workOrder.scheduled_end_time}:00`), 'h:mm a')}
               </p>
             </div>
 
