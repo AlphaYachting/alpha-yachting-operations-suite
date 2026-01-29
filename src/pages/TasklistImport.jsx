@@ -34,9 +34,7 @@ export default function TasklistImport() {
     newJobTitle: 'Winter Service',
     jobStatus: 'Imported – Review Required',
     taskStatus: 'Draft',
-    workOrderDateMode: 'column', // 'single', 'priority-based', 'column' - for scheduled_date
-    workOrderBaseDate: null,
-    workOrderOffsets: { High: 2, Medium: 5, Low: 10 },
+    workOrderScheduledDate: null, // Manual date for all work orders
     dryRunOnly: false
   });
   const [validationResults, setValidationResults] = useState(null);
