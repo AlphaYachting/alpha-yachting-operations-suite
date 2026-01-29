@@ -908,12 +908,16 @@ export default function WorkOrders() {
                           <DropdownMenuItem onClick={() => { setEditingWorkOrder(wo); setShowForm(true); }}>
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(wo.id)}
-                            className="text-red-600"
-                          >
-                            Delete
-                          </DropdownMenuItem>
+                          {currentUser?.role === 'admin' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(wo.id)}
+                              disabled={deleting}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {deleting ? 'Deleting...' : 'Delete All'}
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
