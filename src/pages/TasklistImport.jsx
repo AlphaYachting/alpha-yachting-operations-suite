@@ -542,18 +542,18 @@ export default function TasklistImport() {
         const estimatedHours = parseFloat(data[getHeaderByMapping(mapping, 'estimatedHours')]) || null;
         const assignedPerson = data[getHeaderByMapping(mapping, 'assignedPerson')]?.trim();
 
-        // Calculate due date
-        let dueDate = null;
-        if (cfg.dueDateMode === 'column') {
-          const dueDateStr = data[getHeaderByMapping(mapping, 'dueDate')];
-          if (dueDateStr) dueDate = new Date(dueDateStr).toISOString().split('T')[0];
-        } else if (cfg.dueDateMode === 'single' && cfg.baseDueDate) {
-          dueDate = cfg.baseDueDate;
-        } else if (cfg.dueDateMode === 'priority-based' && cfg.baseDueDate) {
-          const baseDate = new Date(cfg.baseDueDate);
-          const offset = cfg.priorityOffsets[priority] || 5;
+        // Calculate work order scheduled date
+        let scheduledDate = null;
+        if (cfg.workOrderDateMode === 'column') {
+          const dateStr = data[getHeaderByMapping(mapping, 'dueDate')];
+          if (dateStr) scheduledDate = new Date(dateStr).toISOString().split('T')[0];
+        } else if (cfg.workOrderDateMode === 'single' && cfg.workOrderBaseDate) {
+          scheduledDate = cfg.workOrderBaseDate;
+        } else if (cfg.workOrderDateMode === 'priority-based' && cfg.workOrderBaseDate) {
+          const baseDate = new Date(cfg.workOrderBaseDate);
+          const offset = cfg.workOrderOffsets[priority] || 5;
           baseDate.setDate(baseDate.getDate() + offset);
-          dueDate = baseDate.toISOString().split('T')[0];
+          scheduledDate = baseDate.toISOString().split('T')[0];
         }
 
         // Find assigned technician
@@ -574,7 +574,7 @@ export default function TasklistImport() {
           }
         }
 
-        // Create work order first (required for Task)
+        // Create work order with scheduled_date
         const workOrder = await base44.entities.WorkOrder.create({
           job_id: job.id,
           title: taskTitle || taskDesc || `Task from row ${rowNum}`,
@@ -582,7 +582,7 @@ export default function TasklistImport() {
           status: cfg.taskStatus,
           assigned_technicians: assignedTechId ? [assignedTechId] : [],
           estimated_duration_hours: estimatedHours,
-          scheduled_date: dueDate
+          scheduled_date: scheduledDate
         });
 
         const task = await base44.entities.Task.create({
