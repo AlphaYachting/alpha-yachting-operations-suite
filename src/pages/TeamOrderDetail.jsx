@@ -38,6 +38,21 @@ export default function TeamOrderDetail() {
     loadData();
   }, [teamOrderId, workOrderId]);
 
+  useEffect(() => {
+    const loadTemplate = async () => {
+      try {
+        const templates = await base44.entities.PDFTemplate.list();
+        const teamOrderTemplate = templates.find(t => t.template_name === 'Alpha Yachting - Team Order Template' || t.template_type === 'TeamOrder');
+        if (teamOrderTemplate) {
+          setPdfTemplate(teamOrderTemplate);
+        }
+      } catch (err) {
+        console.error('Error loading PDF template:', err);
+      }
+    };
+    loadTemplate();
+  }, []);
+
   const loadData = async () => {
     try {
       setLoading(true);
