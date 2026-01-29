@@ -247,7 +247,7 @@ export default function Offers() {
                           {offer.description && ` • ${offer.description}`}
                         </CardDescription>
                       </div>
-                      {offer.total_amount !== undefined && (
+                      {offer.total_amount !== undefined && offer.total_amount !== null && (
                         <div className="text-right">
                           <p className="text-2xl font-bold text-slate-900">
                             €{offer.total_amount.toFixed(2)}
