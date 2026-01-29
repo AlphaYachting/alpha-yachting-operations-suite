@@ -114,6 +114,7 @@ export default function WorkOrderDetail() {
   const [timeEntries, setTimeEntries] = useState([]);
   const [accessLogs, setAccessLogs] = useState([]);
   const [generatingBrief, setGeneratingBrief] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
