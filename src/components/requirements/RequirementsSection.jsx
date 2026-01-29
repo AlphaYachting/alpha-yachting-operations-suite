@@ -60,7 +60,7 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
   const [generating, setGenerating] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [filterUnchecked, setFilterUnchecked] = useState(true);
+  const [showAll, setShowAll] = useState(true);
 
   useEffect(() => {
     loadRequirements();
