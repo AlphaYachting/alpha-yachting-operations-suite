@@ -255,17 +255,7 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
           </div>
         ) : (
           <>
-            {totalCount > 0 && (
-              <div className="mb-4 flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-                  <Checkbox 
-                    checked={filterUnchecked} 
-                    onCheckedChange={setFilterUnchecked}
-                  />
-                  Show only unchecked items
-                </label>
-              </div>
-            )}
+
 
             <div className="space-y-2">
               {displayItems.map((item) => {
