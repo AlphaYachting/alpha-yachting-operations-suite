@@ -59,6 +59,7 @@ import InvoiceDetail from './pages/InvoiceDetail';
 import Invoices from './pages/Invoices';
 import JobDetail from './pages/JobDetail';
 import Jobs from './pages/Jobs';
+import LeadDetail from './pages/LeadDetail';
 import Leads from './pages/Leads';
 import Locations from './pages/Locations';
 import MobileHeaderEditor from './pages/MobileHeaderEditor';
@@ -76,6 +77,7 @@ import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import TaskTemplates from './pages/TaskTemplates';
 import TasklistImport from './pages/TasklistImport';
+import TeamCalendar from './pages/TeamCalendar';
 import TeamMobileHome from './pages/TeamMobileHome';
 import TeamOrderDetail from './pages/TeamOrderDetail';
 import TeamOrders from './pages/TeamOrders';
@@ -87,8 +89,6 @@ import VehicleDetail from './pages/VehicleDetail';
 import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
-import TeamCalendar from './pages/TeamCalendar';
-import LeadDetail from './pages/LeadDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -105,6 +105,7 @@ export const PAGES = {
     "Invoices": Invoices,
     "JobDetail": JobDetail,
     "Jobs": Jobs,
+    "LeadDetail": LeadDetail,
     "Leads": Leads,
     "Locations": Locations,
     "MobileHeaderEditor": MobileHeaderEditor,
@@ -122,6 +123,7 @@ export const PAGES = {
     "Settings": Settings,
     "TaskTemplates": TaskTemplates,
     "TasklistImport": TasklistImport,
+    "TeamCalendar": TeamCalendar,
     "TeamMobileHome": TeamMobileHome,
     "TeamOrderDetail": TeamOrderDetail,
     "TeamOrders": TeamOrders,
@@ -133,8 +135,6 @@ export const PAGES = {
     "Vehicles": Vehicles,
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
-    "TeamCalendar": TeamCalendar,
-    "LeadDetail": LeadDetail,
 }
 
 export const pagesConfig = {

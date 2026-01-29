@@ -200,7 +200,73 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
     'bg-slate-100 text-slate-800';
 
-    return (
+    const handleClick = () => {
+      if (onNavigate) {
+        onNavigate('workOrderDetail', { woId: workOrder.id });
+      }
+    };
+
+    return onNavigate ? (
+      <div onClick={handleClick} className="bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden">
+          {/* Top Section: Colored Box + Title + Status */}
+          <div className="flex items-stretch">
+            {/* Left: Cyan Gradient Time Box */}
+            <div className="bg-[#21b9e8] text-white pt-1 pr-6 pb-3 pl-5 rounded-lg from-blue-400 to-blue-600 flex flex-col items-center justify-center min-w-fit shadow-md flex-shrink-0">
+              <p className="text-xs font-bold uppercase tracking-wider">{dayName}</p>
+              <p className="text-2xl font-bold leading-tight mt-1">{dateString}</p>
+              <p className="text-xs opacity-90 mt-0.5">{monthString}</p>
+              {timeString !== '—' && <p className="mt-2 text-sm font-bold">{timeString}</p>}
+            </div>
+
+            {/* Center + Right: Title & Status */}
+            <div className="flex-1 p-4 flex flex-col justify-between">
+              <div>
+                <p className="text-base font-bold text-slate-900 leading-tight">{workOrder.title}</p>
+                {boat?.vessel_name &&
+                <p className="text-sm text-slate-600 mt-1">{boat.vessel_name}</p>
+                }
+              </div>
+            </div>
+
+            {/* Right: Status Badge */}
+            <div className="p-4 flex items-start">
+              <Badge className={`text-xs whitespace-nowrap ${statusBadgeColor}`}>
+                {workOrder.status}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Location Section */}
+          {location &&
+          <div className="px-4 py-3 border-t border-slate-200">
+              <div className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                <p className="text-sm font-medium text-slate-700">{location}</p>
+              </div>
+            </div>
+          }
+
+          {/* Bottom Section: Task Count & Additional Info */}
+          <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+            {/* Task Count */}
+            <div className="flex items-center gap-2 text-slate-700">
+              <CheckCircle2 className="h-5 w-5 text-slate-400" />
+              <span className="text-sm font-medium">{taskCount} {taskCount === 1 ? 'task' : 'tasks'}</span>
+            </div>
+
+            {/* Additional Info Badges */}
+            <div className="flex items-center gap-2">
+              {workOrder.internal_notes &&
+              <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                  <span>📝</span>
+                  <span>Notes</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : (
       <Link to={createPageUrl('TeamWorkOrderDetail') + `?woId=${workOrder.id}`}>
         <div className="bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden">
           {/* Top Section: Colored Box + Title + Status */}
@@ -260,7 +326,8 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
             </div>
           </div>
         </div>
-      </Link>);
+      </Link>
+    );
 
   };
 
