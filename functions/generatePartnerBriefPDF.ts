@@ -312,9 +312,9 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
       <div>${template.company_name || 'Alpha Yachting'} | This briefing is confidential and intended for the assigned partner.</div>
       ${template.footer_text ? `<div style="margin-top: 8px;">${template.footer_text}</div>` : ''}
     </div>
-  </div>
-</body>
+  </body>
 </html>`;
+}
 }
 
 Deno.serve(async (req) => {
