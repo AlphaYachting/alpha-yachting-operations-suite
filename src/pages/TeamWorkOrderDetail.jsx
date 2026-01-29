@@ -596,20 +596,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         <Button variant="ghost" size="icon" onClick={handleBack}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowRequirements(!showRequirements)}
-            className="hover:bg-blue-50"
-            title="View requirements & shopping list"
-          >
-            <ShoppingCart className="h-5 w-5 text-blue-600" />
-          </Button>
-          <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
-          {!isOnline && <WifiOff className="h-4 w-4 text-orange-600" />}
-          {pendingChanges.length > 0 && <Badge className="bg-orange-100 text-orange-800 text-xs">{pendingChanges.length} pending</Badge>}
-        </div>
+        <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
         <Button
           onClick={handleTimerToggle}
           className={`text-base font-semibold px-4 py-1.5 rounded-lg text-white ${
@@ -623,6 +610,17 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
             <span>{timerRunning ? 'Stop Timer' : 'Start Timer'}</span>
             {timerRunning && <span className="font-mono text-sm">{formatTime(elapsedSeconds)}</span>}
           </div>
+        </Button>
+      </div>
+
+      {/* Requirements Button */}
+      <div className="px-4 pt-4">
+        <Button
+          onClick={() => setShowRequirements(!showRequirements)}
+          className="w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white shadow-lg"
+        >
+          <ShoppingCart className="h-5 w-5 mr-2" />
+          Requirements & Shopping List
         </Button>
       </div>
 
