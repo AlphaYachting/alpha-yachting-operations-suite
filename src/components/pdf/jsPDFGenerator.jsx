@@ -472,40 +472,32 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   if (!isInvoice && document.payment_terms_type) {
     checkPageBreak(30);
     
-    // Yellow payment terms box
-    doc.setFillColor(254, 243, 199); // fef3c7
-    doc.rect(margins.left, yPos - 3, contentWidth, 20, 'F');
-    doc.setDrawColor(252, 211, 77); // fcd34d
-    doc.setLineWidth(0.5);
-    doc.rect(margins.left, yPos - 3, contentWidth, 20);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(146, 64, 14); // 92400e
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
     doc.setFont(fontFamily, 'bold');
-    doc.text('Payment Terms', margins.left + 3, yPos + 2);
+    doc.text('Payment Terms', margins.left, yPos);
     
     doc.setFont(fontFamily, 'normal');
-    doc.setTextColor(0, 0, 0);
     doc.setFontSize(9);
-    let paymentY = yPos + 8;
+    let paymentY = yPos + 6;
     
     if (document.payment_terms_type === 'Downpayment') {
       const dpAmount = document.downpayment_amount || 0;
       const remaining = (document.total || 0) - dpAmount;
-      doc.text(`Downpayment: ${document.downpayment_percent || 0}% (${formatCurrency(dpAmount)})`, margins.left + 3, paymentY);
+      doc.text(`Downpayment: ${document.downpayment_percent || 0}% (${formatCurrency(dpAmount)})`, margins.left, paymentY);
       paymentY += 5;
-      doc.text(`Remaining: ${100 - (document.downpayment_percent || 0)}% (${formatCurrency(remaining)})`, margins.left + 3, paymentY);
+      doc.text(`Remaining: ${100 - (document.downpayment_percent || 0)}% (${formatCurrency(remaining)})`, margins.left, paymentY);
       if (document.payment_schedule) {
         paymentY += 5;
-        doc.text(document.payment_schedule, margins.left + 3, paymentY);
+        doc.text(document.payment_schedule, margins.left, paymentY);
       }
     } else if (document.payment_terms_type === 'Installments') {
-      doc.text(document.payment_schedule || 'Payment in installments as agreed', margins.left + 3, paymentY);
+      doc.text(document.payment_schedule || 'Payment in installments as agreed', margins.left, paymentY);
     } else {
-      doc.text('Payment in full upon invoice', margins.left + 3, paymentY);
+      doc.text('Payment in full upon invoice', margins.left, paymentY);
     }
     
-    yPos += 25;
+    yPos = paymentY + 8;
   }
 
   // Retention of Title for Offers
