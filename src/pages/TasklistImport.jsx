@@ -544,7 +544,7 @@ export default function TasklistImport() {
           }
         }
 
-        // Create work order with scheduled_date
+        // Create work order
         const workOrder = await base44.entities.WorkOrder.create({
           job_id: job.id,
           title: taskTitle || taskDesc || `Task from row ${rowNum}`,
@@ -552,7 +552,7 @@ export default function TasklistImport() {
           status: cfg.taskStatus,
           assigned_technicians: assignedTechId ? [assignedTechId] : [],
           estimated_duration_hours: estimatedHours,
-          scheduled_date: scheduledDate
+          scheduled_date: cfg.workOrderScheduledDate
         });
 
         const task = await base44.entities.Task.create({
