@@ -335,8 +335,44 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     const descLines = descText ? doc.splitTextToSize(descText, colWidths[1] - 4) : [];
     const requiredHeight = (titleLines.length * 4) + (descLines.length > 0 ? 1.5 : 0) + (descLines.length * 3.8) + 10;
 
-    // Always check for page breaks to prevent overflow
-    checkPageBreak(requiredHeight);
+    // Check for page break with better spacing
+    if (yPos + requiredHeight > pageHeight - margins.bottom - 30) {
+      // Add separator line before break
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(margins.left, yPos + 2, margins.left + contentWidth, yPos + 2);
+      
+      doc.addPage();
+      addLetterhead();
+      yPos = margins.top;
+      
+      // Redraw table header on new page
+      doc.setFontSize(9);
+      doc.setTextColor(51, 51, 51);
+      doc.setFont(fontFamily, 'bold');
+      xPos = margins.left;
+      headers.forEach((header, i) => {
+        const align = i === 0 ? colAlign.index :
+                      i === 1 ? colAlign.description :
+                      i === 2 ? colAlign.quantity :
+                      i === 3 ? colAlign.unit :
+                      i === 4 ? colAlign.unit_price :
+                      template.show_vat_column && i === 5 ? colAlign.vat :
+                      colAlign.total;
+        
+        if (align === 'center') {
+          doc.text(header, xPos + colWidths[i] / 2, yPos, { align: 'center' });
+        } else if (align === 'right') {
+          doc.text(header, xPos + colWidths[i] - 2, yPos, { align: 'right' });
+        } else {
+          doc.text(header, xPos + 2, yPos);
+        }
+        xPos += colWidths[i];
+      });
+      yPos += 6;
+      doc.setFont(fontFamily, 'normal');
+      doc.setTextColor(0, 0, 0);
+    }
 
     xPos = margins.left;
     const rowY = yPos;
