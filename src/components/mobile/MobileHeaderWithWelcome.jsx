@@ -110,7 +110,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
   const orderedElements = layout.elementsOrder.map((key) => elements[key]);
 
   return (
-    <div className={`bg-gradient-to-br ${config?.styling?.backgroundColor || 'from-blue-600 via-blue-500 to-cyan-500'} text-white sticky top-0 z-10 shadow-xl`}>
+    <div className={`bg-gradient-to-br ${config?.styling?.backgroundColor || 'from-blue-600 via-blue-500 to-cyan-500'} text-white shadow-xl`}>
       {/* Header Top Row - Logo, Time, Tasks Count */}
       <div
         className="relative"
