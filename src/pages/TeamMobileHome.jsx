@@ -207,7 +207,7 @@ export default function TeamMobileHome() {
           {/* Top Section: Colored Box + Title + Status */}
           <div className="flex items-stretch">
             {/* Left: Cyan Gradient Time Box */}
-            <div className="bg-[#21b9e8] text-white pt-3 pr-6 pb-5 pl-5 rounded-xl from-blue-400 to-blue-600 flex flex-col items-center justify-center min-w-fit shadow-md flex-shrink-0">
+            <div className="bg-[#21b9e8] text-white pt-1 pr-6 pb-3 pl-5 rounded-lg from-blue-400 to-blue-600 flex flex-col items-center justify-center min-w-fit shadow-md flex-shrink-0">
               <p className="text-xs font-bold uppercase tracking-wider">{dayName}</p>
               <p className="text-2xl font-bold leading-tight mt-1">{dateString}</p>
               <p className="text-xs opacity-90 mt-0.5">{monthString}</p>
