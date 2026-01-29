@@ -655,6 +655,12 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         </Button>
       </div>
 
+      {/* Work Order Info */}
+      <div className="px-4 pt-4">
+        <p className="text-xs text-slate-500 font-medium">Work Order ID</p>
+        <p className="text-sm font-bold text-slate-900">#{workOrder.work_order_number || workOrder.id}</p>
+      </div>
+
       {/* Requirements Button */}
       <div className="px-4 pt-4">
         <Button
