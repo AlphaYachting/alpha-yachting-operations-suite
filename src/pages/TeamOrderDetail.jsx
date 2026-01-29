@@ -32,6 +32,7 @@ export default function TeamOrderDetail() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pdfTemplate, setPdfTemplate] = useState(null);
 
   useEffect(() => {
     loadData();
