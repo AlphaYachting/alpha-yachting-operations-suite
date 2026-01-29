@@ -504,25 +504,18 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   if (!isInvoice && document.retention_of_title_enabled) {
     checkPageBreak(25);
     
-    // Red ownership notice box
-    doc.setFillColor(254, 226, 226); // fee2e2
-    doc.rect(margins.left, yPos - 3, contentWidth, 18, 'F');
-    doc.setDrawColor(220, 38, 38); // dc2626
-    doc.setLineWidth(1);
-    doc.line(margins.left, yPos - 3, margins.left, yPos + 15);
-    
-    doc.setFontSize(9);
-    doc.setTextColor(127, 29, 29); // 7f1d1d
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
     doc.setFont(fontFamily, 'bold');
-    doc.text('⚠️ Retention of Title / Eigentumsvorbehalt', margins.left + 3, yPos + 2);
+    doc.text('⚠️ Retention of Title / Eigentumsvorbehalt', margins.left, yPos);
     
     doc.setFont(fontFamily, 'normal');
     doc.setFontSize(9);
     const ownershipText = document.retention_of_title_text || 'All delivered goods and services remain the property of Alpha Yachting until full payment has been received.';
-    const ownershipLines = doc.splitTextToSize(ownershipText, contentWidth - 6);
-    doc.text(ownershipLines, margins.left + 3, yPos + 8);
+    const ownershipLines = doc.splitTextToSize(ownershipText, contentWidth);
+    doc.text(ownershipLines, margins.left, yPos + 6);
     
-    yPos += 22;
+    yPos += 8 + (ownershipLines.length * 4);
   }
 
   // Notes
