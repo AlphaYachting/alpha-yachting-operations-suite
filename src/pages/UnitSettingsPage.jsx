@@ -159,8 +159,15 @@ export default function UnitSettingsPage() {
 
       {categories.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="py-12 text-center space-y-4">
             <p className="text-slate-600">No units defined yet</p>
+            <Button 
+              onClick={handleInitializeDefaults}
+              disabled={initLoading}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {initLoading ? 'Initializing...' : 'Initialize Default Units'}
+            </Button>
           </CardContent>
         </Card>
       ) : (
