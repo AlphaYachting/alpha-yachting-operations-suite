@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Loader2, AlertCircle, FileText, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertCircle, FileText, RefreshCw, Download } from 'lucide-react';
 import TeamOrderForm from '@/components/teamorder/TeamOrderForm';
+import { jsPDF } from 'jspdf';
 
 export default function TeamOrderDetail() {
   const navigate = useNavigate();
