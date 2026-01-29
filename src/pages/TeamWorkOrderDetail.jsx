@@ -107,11 +107,11 @@ function RequirementsModal({ workOrderId }) {
     if (a.checklist_state === 'Packed' && b.checklist_state !== 'Packed') return 1;
     if (a.checklist_state !== 'Packed' && b.checklist_state === 'Packed') return -1;
     
-    // Within unpacked items, prioritize those not in stock or needing order
-    const aNotInStock = a.procurement_status !== 'InStock' && a.procurement_status !== 'ConfirmedAvailable';
-    const bNotInStock = b.procurement_status !== 'InStock' && b.procurement_status !== 'ConfirmedAvailable';
-    if (aNotInStock && !bNotInStock) return -1;
-    if (!aNotInStock && bNotInStock) return 1;
+    // Within unpacked items, prioritize ToOrder and NeedsClarification at top
+    const aIsHighPriority = a.procurement_status === 'ToOrder' || a.procurement_status === 'NeedsClarification';
+    const bIsHighPriority = b.procurement_status === 'ToOrder' || b.procurement_status === 'NeedsClarification';
+    if (aIsHighPriority && !bIsHighPriority) return -1;
+    if (!aIsHighPriority && bIsHighPriority) return 1;
     
     return 0;
   });
