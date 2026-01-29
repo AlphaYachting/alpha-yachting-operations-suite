@@ -967,7 +967,7 @@ export default function WorkOrders() {
         /* By Boat View */
           <div className="space-y-4">
             <div className="space-y-4">
-              {Object.entries(groupedByBoat()).map(([boatId, boatWorkOrders]) => {
+              {Object.entries(groupedByBoat).map(([boatId, boatWorkOrders]) => {
             const boatInfo = getBoatInfo(boatId);
             const isExpanded = expandedBoats[boatId] !== false; // Default expanded
             
