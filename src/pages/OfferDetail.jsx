@@ -46,6 +46,7 @@ import OfferTaskEditor from '@/components/offers/OfferTaskEditor';
 import AIOfferGenerator from '@/components/offers/AIOfferGenerator';
 import PDFExportButton from '@/components/pdf/PDFExportButton';
 import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
+import { getUnitDisplay } from '@/components/offers/unitMapping';
 
 export default function OfferDetail() {
   const navigate = useNavigate();
