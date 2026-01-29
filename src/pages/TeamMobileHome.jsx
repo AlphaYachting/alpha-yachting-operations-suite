@@ -23,7 +23,6 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const [boats, setBoats] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [previewUserId, setPreviewUserId] = useState(null);
   const [showPreviewMode, setShowPreviewMode] = useState(false);
   const [previewTechnicianName, setPreviewTechnicianName] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -288,7 +287,9 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           variant="ghost"
           size="icon"
           onClick={() => {
-            setPreviewUserId(null);
+            if (onPreviewUserChange) {
+              onPreviewUserChange(null);
+            }
             setPreviewTechnicianName(null);
           }}
           className="h-8 w-8 hover:bg-orange-100">
@@ -302,7 +303,9 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
       {showPreviewMode && user?.role === 'admin' &&
       <TeamPreviewMode
         onUserSelect={(techId, techName) => {
-          setPreviewUserId(techId);
+          if (onPreviewUserChange) {
+            onPreviewUserChange(techId);
+          }
           setPreviewTechnicianName(techName);
           setShowPreviewMode(false);
         }}
