@@ -301,25 +301,26 @@ export default function TasklistImport() {
         createdJobs.push(parentJob);
       }
 
-      // Import all rows as tasks under this parent job
-      for (const [groupKey, group] of Object.entries(jobGroups)) {
-        for (const { rowNum, data } of group.tasks) {
+      // Import: One WorkOrder per Service Area, with all rows as Tasks
+      for (const [serviceArea, group] of Object.entries(serviceAreaGroups)) {
+        // Create one WorkOrder per Service Area
+        const workOrder = await base44.entities.WorkOrder.create({
+          job_id: parentJob.id,
+          title: serviceArea || 'Uncategorized Service',
+          description: `Service Area: ${serviceArea}`,
+          status: cfg.taskStatus,
+          estimated_duration_hours: null,
+          scheduled_date: cfg.workOrderScheduledDate
+        });
+        createdWorkOrders.push(workOrder);
+
+        // Add all rows in this Service Area as Tasks
+        for (const { rowNum, data } of group.rows) {
           const taskTitle = data[getHeaderByMapping(mapping, 'taskTitle')]?.trim();
           const taskDesc = data[getHeaderByMapping(mapping, 'taskDescription')]?.trim();
           const taskId = data[getHeaderByMapping(mapping, 'taskId')]?.trim();
-          const priority = data[getHeaderByMapping(mapping, 'priority')]?.trim() || 'Medium';
           const estimatedHours = parseFloat(data[getHeaderByMapping(mapping, 'estimatedHours')]) || null;
           const assignedPerson = data[getHeaderByMapping(mapping, 'assignedPerson')]?.trim();
-
-          // Build context information
-          const contextInfo = [
-            group.customerName ? `Customer: ${group.customerName}` : '',
-            group.boatModel ? `Boat: ${group.boatModel}` : '',
-            group.locationMarina ? `Location: ${group.locationMarina}` : '',
-            group.serviceArea ? `Service Area: ${group.serviceArea}` : '',
-            group.module ? `Module: ${group.module}` : '',
-            taskId ? `Task ID: ${taskId}` : ''
-          ].filter(Boolean).join(' | ');
 
           // Find assigned technician
           let assignedTechId = null;
@@ -332,6 +333,7 @@ export default function TasklistImport() {
             } else {
               reviewList.push({
                 jobId: parentJob.id,
+                workOrderId: workOrder.id,
                 taskTitle: taskTitle || taskDesc,
                 issue: `Assigned person "${assignedPerson}" not found`,
                 rowNum
@@ -341,10 +343,9 @@ export default function TasklistImport() {
 
           // Build full description with context
           const fullDescription = [
-            `[${contextInfo}]`,
-            '',
             taskDesc || '',
             '',
+            taskId ? `Task ID: ${taskId}` : '',
             data[getHeaderByMapping(mapping, 'category')] ? `Category: ${data[getHeaderByMapping(mapping, 'category')]}` : '',
             data[getHeaderByMapping(mapping, 'requiredQualification')] ? `Qualification: ${data[getHeaderByMapping(mapping, 'requiredQualification')]}` : '',
             data[getHeaderByMapping(mapping, 'materialRequired')] ? `Materials: ${data[getHeaderByMapping(mapping, 'materialRequired')]}` : '',
@@ -355,17 +356,6 @@ export default function TasklistImport() {
             data[getHeaderByMapping(mapping, 'billingType')] ? `Billing: ${data[getHeaderByMapping(mapping, 'billingType')]}` : '',
             data[getHeaderByMapping(mapping, 'assumptionUncertainty')] ? `Assumptions: ${data[getHeaderByMapping(mapping, 'assumptionUncertainty')]}` : ''
           ].filter(Boolean).join('\n');
-
-          // Create work order
-          const workOrder = await base44.entities.WorkOrder.create({
-            job_id: parentJob.id,
-            title: taskTitle || taskDesc || `Task from row ${rowNum}`,
-            description: fullDescription,
-            status: cfg.taskStatus,
-            assigned_technicians: assignedTechId ? [assignedTechId] : [],
-            estimated_duration_hours: estimatedHours,
-            scheduled_date: cfg.workOrderScheduledDate
-          });
 
           const task = await base44.entities.Task.create({
             work_order_id: workOrder.id,
