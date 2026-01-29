@@ -283,9 +283,9 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
                       <div className="flex items-start gap-2 mb-2">
                         <TypeIcon className="h-4 w-4 mt-0.5 text-slate-400 flex-shrink-0" />
                         <div className="flex-1">
-                          <p className="font-medium text-slate-900">{item.name}</p>
+                          <p className={`font-medium ${item.checked ? 'text-green-700 line-through' : 'text-slate-900'}`}>{item.name}</p>
                           {item.notes && (
-                            <p className="text-xs text-slate-500 mt-1">{item.notes}</p>
+                            <p className={`text-xs mt-1 ${item.checked ? 'text-green-600' : 'text-slate-500'}`}>{item.notes}</p>
                           )}
                         </div>
                       </div>
