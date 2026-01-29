@@ -268,14 +268,9 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
 </html>`;
 }
 
-function formatDate(dateString) {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' });
-}
-
 Deno.serve(async (req) => {
   const { createClientFromRequest } = await import('npm:@base44/sdk@0.8.6');
+  const { generatePDFWithJsPDF } = await import('./jsPDFGenerator.js');
   const base44 = createClientFromRequest(req);
   
   try {
@@ -324,11 +319,18 @@ Deno.serve(async (req) => {
     const boat = boats.find(b => b.id === job?.boat_id);
     const location = locations.find(l => l.id === job?.location_id);
 
-    const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, templateData);
+    // Build document and line items for jsPDF
+    const document = buildPartnerBriefDocument(workOrder, teamOrder, job, customer, boat, location, tasks, technicians);
+    const lineItems = buildPartnerBriefLineItems(tasks, teamOrder);
+    
+    // Generate PDF using jsPDF
+    const doc = await generatePDFWithJsPDF(document, lineItems, templateData);
+    const pdfBuffer = doc.output('arraybuffer');
+    const base64Pdf = Buffer.from(pdfBuffer).toString('base64');
     
     return Response.json({
       success: true,
-      html: html,
+      pdf: base64Pdf,
       fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
     });
   } catch (error) {
