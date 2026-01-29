@@ -126,6 +126,106 @@ export default function TeamOrderDetail() {
     }
   };
 
+  const handlePrintPDF = async () => {
+    if (!pdfTemplate || !teamOrder) return;
+
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
+
+      // Add letterhead background if available
+      if (pdfTemplate.letterhead_enabled && pdfTemplate.letterhead_url) {
+        const img = new Image();
+        img.onload = () => {
+          doc.addImage(img, 'PNG', 0, 0, pageWidth, pageHeight);
+        };
+        img.src = pdfTemplate.letterhead_url;
+      }
+
+      // Header
+      if (pdfTemplate.logo_url) {
+        doc.addImage(pdfTemplate.logo_url, 'PNG', margin, yPos, pdfTemplate.logo_height_mm || 20, pdfTemplate.logo_height_mm || 20);
+      }
+
+      yPos += 35;
+      doc.setFontSize(pdfTemplate.font_size_heading || 18);
+      doc.text('TEAM ORDER', margin, yPos);
+      yPos += 15;
+
+      // Order Info
+      doc.setFontSize(pdfTemplate.font_size_body || 11);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, yPos);
+      yPos += 7;
+      doc.text(`Order ID: ${teamOrderId || 'Draft'}`, margin, yPos);
+      yPos += 12;
+
+      // Partner Information
+      doc.setFontSize(12);
+      doc.text('Partner Information', margin, yPos);
+      yPos += 8;
+      doc.setFontSize(pdfTemplate.font_size_body || 11);
+      doc.text(`Status: ${teamOrder.status}`, margin, yPos);
+      yPos += 7;
+      if (teamOrder.partner_name) {
+        doc.text(`Partner: ${teamOrder.partner_name}`, margin, yPos);
+        yPos += 7;
+      }
+      if (teamOrder.partner_contact) {
+        doc.text(`Contact: ${teamOrder.partner_contact}`, margin, yPos);
+        yPos += 7;
+      }
+      yPos += 5;
+
+      // Budget Information
+      doc.setFontSize(12);
+      doc.text('Budget Summary', margin, yPos);
+      yPos += 8;
+      doc.setFontSize(pdfTemplate.font_size_body || 11);
+      doc.text(`Approved Budget: €${teamOrder.approved_budget_total?.toFixed(2) || '0.00'}`, margin, yPos);
+      yPos += 7;
+
+      if (teamOrder.labor_budget) {
+        doc.text(`Labor Budget: €${teamOrder.labor_budget.toFixed(2)}`, margin, yPos);
+        yPos += 7;
+      }
+      if (teamOrder.travel_budget) {
+        doc.text(`Travel Budget: €${teamOrder.travel_budget.toFixed(2)}`, margin, yPos);
+        yPos += 7;
+      }
+      if (teamOrder.accommodation_budget) {
+        doc.text(`Accommodation Budget: €${teamOrder.accommodation_budget.toFixed(2)}`, margin, yPos);
+        yPos += 7;
+      }
+      if (teamOrder.per_diem_budget) {
+        doc.text(`Per Diem Budget: €${teamOrder.per_diem_budget.toFixed(2)}`, margin, yPos);
+        yPos += 7;
+      }
+      yPos += 10;
+
+      // Terms
+      if (teamOrder.mileage_paid) {
+        doc.setFontSize(10);
+        doc.text(`Mileage Rate: €${teamOrder.mileage_rate_per_km || '0.35'}/km`, margin, yPos);
+        yPos += 6;
+      }
+
+      // Footer
+      if (pdfTemplate.footer_text) {
+        doc.setFontSize(8);
+        doc.text(pdfTemplate.footer_text, margin, pageHeight - 15);
+      }
+
+      // Download
+      doc.save(`Team-Order-${teamOrderId || 'Draft'}.pdf`);
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      setError('Failed to generate PDF');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
