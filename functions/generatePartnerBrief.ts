@@ -218,68 +218,55 @@ Deno.serve(async (req) => {
   try {
     const { workOrderId, teamOrderId } = await req.json();
     
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const [workOrders, teamOrders, jobs, customers, boats, locations, tasks, technicians, templates] = await Promise.all([
-      base44.entities.WorkOrder.filter({ id: workOrderId }),
-      base44.entities.TeamOrder.filter({ id: teamOrderId }),
-      base44.entities.Job.list(),
-      base44.entities.Customer.list(),
-      base44.entities.Boat.list(),
-      base44.entities.Location.list(),
-      base44.entities.Task.filter({ work_order_id: workOrderId }),
-      base44.entities.Technician.list(),
-      base44.entities.PDFTemplate.list()
-    ]);
-
-    if (workOrders.length === 0 || teamOrders.length === 0) {
-      return Response.json({ error: 'Not found' }, { status: 404 });
-    }
-
-    const workOrder = workOrders[0];
-    const teamOrder = teamOrders[0];
-    const job = jobs.find(j => j.id === workOrder.job_id);
-    const customer = customers.find(c => c.id === job?.customer_id);
-    const boat = boats.find(b => b.id === job?.boat_id);
-    const location = locations.find(l => l.id === job?.location_id);
-    const template = templates.find(t => t.is_default) || templates[0];
-
-    const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template);
-
-    console.log('[DEBUG] Starting Puppeteer import...');
     const puppeteer = (await import('npm:puppeteer@23.11.1')).default;
-    console.log('[DEBUG] Puppeteer imported:', typeof puppeteer);
-    
     let browser;
-
+    
     try {
-      console.log('[DEBUG] Attempting to launch browser with config:', { headless: 'new' });
-      console.log('[DEBUG] Deno.env.get("DENO_DEPLOYMENT_ID"):', Deno.env.get('DENO_DEPLOYMENT_ID'));
-      console.log('[DEBUG] Deno.build:', Deno.build);
-      
+      const base44 = createClientFromRequest(req);
+      const user = await base44.auth.me();
+
+      if (!user) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const [workOrders, teamOrders, jobs, customers, boats, locations, tasks, technicians, templates] = await Promise.all([
+        base44.entities.WorkOrder.filter({ id: workOrderId }),
+        base44.entities.TeamOrder.filter({ id: teamOrderId }),
+        base44.entities.Job.list(),
+        base44.entities.Customer.list(),
+        base44.entities.Boat.list(),
+        base44.entities.Location.list(),
+        base44.entities.Task.filter({ work_order_id: workOrderId }),
+        base44.entities.Technician.list(),
+        base44.entities.PDFTemplate.list()
+      ]);
+
+      if (workOrders.length === 0 || teamOrders.length === 0) {
+        return Response.json({ error: 'Not found' }, { status: 404 });
+      }
+
+      const workOrder = workOrders[0];
+      const teamOrder = teamOrders[0];
+      const job = jobs.find(j => j.id === workOrder.job_id);
+      const customer = customers.find(c => c.id === job?.customer_id);
+      const boat = boats.find(b => b.id === job?.boat_id);
+      const location = locations.find(l => l.id === job?.location_id);
+      const template = templates.find(t => t.is_default) || templates[0];
+
+      const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template);
+
       browser = await puppeteer.launch({ headless: 'new' });
-      console.log('[DEBUG] Browser launched successfully');
-      
       const page = await browser.newPage();
-      console.log('[DEBUG] New page created');
       
       await page.setContent(html, { waitUntil: 'networkidle2' });
-      console.log('[DEBUG] HTML content set');
       
       const pdfBuffer = await page.pdf({
         format: 'A4',
         printBackground: true,
         displayHeaderFooter: false
       });
-      console.log('[DEBUG] PDF generated, buffer length:', pdfBuffer.length);
       
       await browser.close();
-      console.log('[DEBUG] Browser closed');
       
       const base64PDF = pdfBuffer.toString('base64');
 
@@ -289,19 +276,16 @@ Deno.serve(async (req) => {
         fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
       });
     } catch (error) {
-      console.error('[ERROR] Puppeteer error:', error);
-      console.error('[ERROR] Error stack:', error.stack);
       if (browser) await browser.close();
       return Response.json({
         success: false,
-        error: error.message,
-        stack: error.stack
+        error: error.message
       }, { status: 500 });
     }
   } catch (error) {
-    return Response.json({ 
+    return Response.json({
       success: false,
-      error: error.message 
+      error: error.message
     }, { status: 400 });
   }
 });
