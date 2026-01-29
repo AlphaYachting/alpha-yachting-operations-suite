@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FileText, Users, Euro, CheckCircle2, Clock, XCircle, Loader2 } from 'lucide-react';
 
-export default function TeamOrderCard({ teamOrder, workOrder, onEdit, onGenerateBrief }) {
+export default function TeamOrderCard({ teamOrder, workOrder, onEdit, onGenerateBrief, isGenerating = false }) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleGenerateBrief = async () => {

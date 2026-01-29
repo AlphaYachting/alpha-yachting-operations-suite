@@ -60,7 +60,6 @@ import QuickTaskUpdate from '@/components/tasks/QuickTaskUpdate';
 import TemplateSelector from '@/components/templates/TemplateSelector';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import TeamOrderCard from '@/components/teamorder/TeamOrderCard';
-import PartnerBriefTemplate from '@/components/pdf/PartnerBriefTemplate';
 import { notifyTaskStatusChange } from '@/components/notifications/notificationUtils';
 
 const statusColors = {
@@ -113,25 +112,16 @@ export default function WorkOrderDetail() {
   const [commentText, setCommentText] = useState('');
   const [timeEntries, setTimeEntries] = useState([]);
   const [accessLogs, setAccessLogs] = useState([]);
-  const [pdfTemplate, setPdfTemplate] = useState(null);
+  const [showBriefPreview, setShowBriefPreview] = useState(false);
+  const [briefPdfUrl, setBriefPdfUrl] = useState(null);
+  const [generatingBrief, setGeneratingBrief] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
     if (workOrderId) {
       loadWorkOrderDetails();
     }
-    loadPDFTemplate();
   }, [workOrderId]);
-
-  const loadPDFTemplate = async () => {
-    try {
-      const templates = await base44.entities.PDFTemplate.list();
-      const defaultTemplate = templates.find(t => t.is_default) || templates[0];
-      setPdfTemplate(defaultTemplate);
-    } catch (error) {
-      console.error('Error loading PDF template:', error);
-    }
-  };
 
   const loadCurrentUser = async () => {
     try {
@@ -335,6 +325,59 @@ export default function WorkOrderDetail() {
     }
   };
 
+  const handleGenerateBrief = async () => {
+    if (!teamOrder) return;
+
+    setGeneratingBrief(true);
+    try {
+      const response = await base44.functions.invoke('generatePartnerBrief', {
+        workOrderId,
+        teamOrderId: teamOrder.id
+      });
+
+      if (response.data.success && response.data.pdf) {
+        // Convert base64 to blob
+        const base64Data = response.data.pdf.split(',')[1];
+        const binaryData = atob(base64Data);
+        const arrayBuffer = new Uint8Array(binaryData.length);
+        for (let i = 0; i < binaryData.length; i++) {
+          arrayBuffer[i] = binaryData.charCodeAt(i);
+        }
+        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+
+        setBriefPdfUrl(url);
+        setShowBriefPreview(true);
+      } else {
+        alert('Failed to generate partner brief: ' + (response.data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error generating partner brief:', error);
+      alert('Error generating partner brief: ' + error.message);
+    } finally {
+      setGeneratingBrief(false);
+    }
+  };
+
+  const handleCloseBriefPreview = () => {
+    setShowBriefPreview(false);
+    if (briefPdfUrl) {
+      URL.revokeObjectURL(briefPdfUrl);
+      setBriefPdfUrl(null);
+    }
+  };
+
+  const handleDownloadBrief = () => {
+    if (!briefPdfUrl) return;
+
+    const link = document.createElement('a');
+    link.href = briefPdfUrl;
+    link.download = `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const isAdmin = currentUser?.role === 'admin';
   const canEditTasks = isAdmin;
 
@@ -373,40 +416,7 @@ export default function WorkOrderDetail() {
   const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   return (
-    <>
-      <style>{`
-        @media print {
-          @page { size: A4; }
-          body * { visibility: hidden; }
-          #partner-brief-print, #partner-brief-print * { visibility: visible; }
-          #partner-brief-print {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          .no-print { display: none !important; }
-        }
-      `}</style>
-      
-      {/* Hidden Partner Brief Template for Print */}
-      {teamOrder && pdfTemplate && (
-        <div style={{ display: 'none' }}>
-          <PartnerBriefTemplate
-            workOrder={workOrder}
-            teamOrder={teamOrder}
-            job={job}
-            customer={customer}
-            boat={boat}
-            location={location}
-            tasks={tasks}
-            technicians={technicians}
-            template={pdfTemplate}
-          />
-        </div>
-      )}
-
-      <div className="space-y-6 no-print">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
@@ -573,9 +583,8 @@ export default function WorkOrderDetail() {
             teamOrder={teamOrder}
             workOrder={workOrder}
             onEdit={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
-            onGenerateBrief={() => {
-              window.print();
-            }}
+            onGenerateBrief={handleGenerateBrief}
+            isGenerating={generatingBrief}
           />
         </>
       )}
@@ -1043,7 +1052,30 @@ export default function WorkOrderDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Partner Brief Preview Dialog */}
+      <Dialog open={showBriefPreview} onOpenChange={handleCloseBriefPreview}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Partner Brief Preview</DialogTitle>
+          </DialogHeader>
+          {briefPdfUrl && (
+            <iframe 
+              src={briefPdfUrl}
+              className="w-full h-[600px] border-0"
+              title="Partner Brief Preview"
+            />
+          )}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={handleCloseBriefPreview}>
+              Close
+            </Button>
+            <Button onClick={handleDownloadBrief}>
+              Download PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
-    </>
   );
 }
