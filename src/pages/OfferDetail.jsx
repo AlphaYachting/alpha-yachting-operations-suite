@@ -302,7 +302,7 @@ export default function OfferDetail() {
       title: task.title,
       description: task.description,
       quantity: task.quantity || 0,
-      unit: task.unit_type || 'Hour',
+      unit: getUnitDisplay(task.unit_type || 'Hour'),
       unit_price: task.unit_price || 0,
       tax_rate: 0,
       total_net: task.total_amount || 0,
