@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users, WifiOff, Wifi } from 'lucide-react';
+import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users, WifiOff, Wifi, Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -309,6 +309,19 @@ export default function TeamMobileHome() {
         currentUserId={previewUserId} />
 
       }
+
+      {/* Quick Actions */}
+      <div className="px-4 pt-4">
+        <Button
+          asChild
+          className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white shadow-lg"
+        >
+          <Link to={createPageUrl('TeamCalendar')}>
+            <Calendar className="h-5 w-5 mr-2" />
+            Calendar View
+          </Link>
+        </Button>
+      </div>
 
       {/* Content */}
             <div className="p-4 space-y-6">
