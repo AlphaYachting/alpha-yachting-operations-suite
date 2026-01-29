@@ -264,7 +264,7 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
                   <div
                     key={item.id}
                     className={`flex items-start gap-3 p-3 border rounded-lg transition-colors ${
-                      item.checked ? 'bg-slate-50 opacity-60' : 'bg-white hover:bg-slate-50'
+                      item.checked ? 'bg-green-50 border-green-200' : 'bg-white hover:bg-slate-50'
                     }`}
                   >
                     <Checkbox
