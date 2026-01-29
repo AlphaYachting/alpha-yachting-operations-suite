@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2 } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
@@ -236,9 +238,12 @@ export default function Leads() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setSelectedLeadDetail(lead)}
+                      asChild
                     >
-                      Tasks & Notes
+                      <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </Link>
                     </Button>
                     {lead.status === 'Pending' && (
                       <Button
