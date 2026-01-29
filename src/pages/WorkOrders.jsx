@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link, useSearchParams } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -410,35 +410,48 @@ export default function WorkOrders() {
   const handleQuickUpdate = async (woId, field, value) => {
     try {
       await base44.entities.WorkOrder.update(woId, { [field]: value });
-      await loadData();
+      // Optimistic update - only refresh affected work order
+      setWorkOrders(prev => prev.map(wo => wo.id === woId ? { ...wo, [field]: value } : wo));
     } catch (error) {
       console.error('Error updating work order:', error);
     }
   };
 
-  const getProjectInfo = (projectId) => {
-    const project = jobs.find(j => j.id === projectId);
-    if (!project) return { title: 'Unknown', customer: '', boat: '', location: '' };
+  // Memoized lookup maps for O(1) access
+  const jobMap = useMemo(() => Object.fromEntries(jobs.map(j => [j.id, j])), [jobs]);
+  const customerMap = useMemo(() => Object.fromEntries(customers.map(c => [c.id, c])), [customers]);
+  const boatMap = useMemo(() => Object.fromEntries(boats.map(b => [b.id, b])), [boats]);
+  const locationMap = useMemo(() => Object.fromEntries(locations.map(l => [l.id, l])), [locations]);
+  const techMap = useMemo(() => Object.fromEntries(technicians.map(t => [t.id, t])), [technicians]);
+  const vehicleMap = useMemo(() => Object.fromEntries(vehicles.map(v => [v.id, v])), [vehicles]);
 
-    const customer = customers.find(c => c.id === project.customer_id);
-    const boat = boats.find(b => b.id === project.boat_id);
-    const location = locations.find(l => l.id === project.location_id);
+  const getProjectInfo = useMemo(() => {
+    return (projectId) => {
+      const project = jobMap[projectId];
+      if (!project) return { title: 'Unknown', customer: '', boat: '', location: '' };
 
-    return {
-      title: project.title,
-      customer: customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown',
-      boat: boat?.vessel_name || 'Unknown',
-      location: location?.name || ''
+      const customer = customerMap[project.customer_id];
+      const boat = boatMap[project.boat_id];
+      const location = locationMap[project.location_id];
+
+      return {
+        title: project.title,
+        customer: customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown',
+        boat: boat?.vessel_name || 'Unknown',
+        location: location?.name || ''
+      };
     };
-  };
+  }, [jobMap, customerMap, boatMap, locationMap]);
 
-  const getTechnicianNames = (techIds) => {
-    if (!techIds || techIds.length === 0) return [];
-    return techIds.map(id => {
-      const tech = technicians.find(t => t.id === id);
-      return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
-    });
-  };
+  const getTechnicianNames = useMemo(() => {
+    return (techIds) => {
+      if (!techIds || techIds.length === 0) return [];
+      return techIds.map(id => {
+        const tech = techMap[id];
+        return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
+      });
+    };
+  }, [techMap]);
 
   const getDateLabel = (dateStr) => {
     if (!dateStr) return '';
@@ -448,29 +461,31 @@ export default function WorkOrders() {
     return format(date, 'MMM d, yyyy');
   };
 
-  const getVehicleDisplay = (woReservations) => {
-    if (!woReservations || woReservations.length === 0) return null;
+  const getVehicleDisplay = useMemo(() => {
+    return (woReservations) => {
+      if (!woReservations || woReservations.length === 0) return null;
 
-    const uniqueVehicleIds = [...new Set(woReservations.map(r => r.inventory_item_id))];
+      const uniqueVehicleIds = [...new Set(woReservations.map(r => r.inventory_item_id))];
 
-    if (uniqueVehicleIds.length === 1) {
-      const vehicle = vehicles.find(v => v.id === uniqueVehicleIds[0]);
-      if (!vehicle) return null;
-      return {
-        display: vehicle.license_plate || `${vehicle.make || ''} ${vehicle.model || ''}`.trim() || vehicle.name,
-        count: 1,
-        vehicleId: vehicle.id,
-        reservation: woReservations[0]
-      };
-    } else {
-      return {
-        display: 'Multiple',
-        count: uniqueVehicleIds.length,
-        vehicleId: null,
-        reservations: woReservations
-      };
-    }
-  };
+      if (uniqueVehicleIds.length === 1) {
+        const vehicle = vehicleMap[uniqueVehicleIds[0]];
+        if (!vehicle) return null;
+        return {
+          display: vehicle.license_plate || `${vehicle.make || ''} ${vehicle.model || ''}`.trim() || vehicle.name,
+          count: 1,
+          vehicleId: vehicle.id,
+          reservation: woReservations[0]
+        };
+      } else {
+        return {
+          display: 'Multiple',
+          count: uniqueVehicleIds.length,
+          vehicleId: null,
+          reservations: woReservations
+        };
+      }
+    };
+  }, [vehicleMap]);
 
   const getTeamOrderInfo = async (woId) => {
     try {
@@ -495,47 +510,49 @@ export default function WorkOrders() {
     setExpandedWorkOrders(prev => ({ ...prev, [woId]: !prev[woId] }));
   };
 
-  const getBoatInfo = (boatId) => {
-    const boat = boats.find(b => b.id === boatId);
-    if (!boat) return null;
-    
-    const boatWorkOrders = filteredWorkOrders.filter(wo => {
-      const job = jobs.find(j => j.id === wo.job_id);
-      return job?.boat_id === boatId;
-    });
-    
-    const nextScheduledWO = boatWorkOrders
-      .filter(wo => wo.scheduled_date && wo.status !== 'Completed' && wo.status !== 'Cancelled')
-      .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))[0];
-    
-    const totalOpenTasks = boatWorkOrders.reduce((sum, wo) => sum + (wo._aggregates?.openTasks || 0), 0);
-    const totalBlocked = boatWorkOrders.reduce((sum, wo) => sum + (wo._aggregates?.blockedTasks || 0), 0);
-    const unassignedCount = boatWorkOrders.filter(wo => !wo.assigned_technicians || wo.assigned_technicians.length === 0).length;
-    
-    // Get customer via first work order's job
-    const firstJob = boatWorkOrders.length > 0 ? jobs.find(j => j.id === boatWorkOrders[0].job_id) : null;
-    const customer = firstJob ? customers.find(c => c.id === firstJob.customer_id) : null;
-    const location = firstJob ? locations.find(l => l.id === firstJob.location_id) : null;
-    
-    const openWOCount = boatWorkOrders.filter(wo => wo.status !== 'Completed' && wo.status !== 'Cancelled').length;
-    
-    return {
-      boat,
-      customer,
-      location,
-      workOrderCount: boatWorkOrders.length,
-      openWOCount,
-      nextScheduledDate: nextScheduledWO?.scheduled_date,
-      totalOpenTasks,
-      attentionCount: totalBlocked + unassignedCount
+  const getBoatInfo = useMemo(() => {
+    return (boatId) => {
+      const boat = boatMap[boatId];
+      if (!boat) return null;
+      
+      const boatWorkOrders = filteredWorkOrders.filter(wo => {
+        const job = jobMap[wo.job_id];
+        return job?.boat_id === boatId;
+      });
+      
+      const nextScheduledWO = boatWorkOrders
+        .filter(wo => wo.scheduled_date && wo.status !== 'Completed' && wo.status !== 'Cancelled')
+        .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))[0];
+      
+      const totalOpenTasks = boatWorkOrders.reduce((sum, wo) => sum + (wo._aggregates?.openTasks || 0), 0);
+      const totalBlocked = boatWorkOrders.reduce((sum, wo) => sum + (wo._aggregates?.blockedTasks || 0), 0);
+      const unassignedCount = boatWorkOrders.filter(wo => !wo.assigned_technicians || wo.assigned_technicians.length === 0).length;
+      
+      // Get customer via first work order's job
+      const firstJob = boatWorkOrders.length > 0 ? jobMap[boatWorkOrders[0].job_id] : null;
+      const customer = firstJob ? customerMap[firstJob.customer_id] : null;
+      const location = firstJob ? locationMap[firstJob.location_id] : null;
+      
+      const openWOCount = boatWorkOrders.filter(wo => wo.status !== 'Completed' && wo.status !== 'Cancelled').length;
+      
+      return {
+        boat,
+        customer,
+        location,
+        workOrderCount: boatWorkOrders.length,
+        openWOCount,
+        nextScheduledDate: nextScheduledWO?.scheduled_date,
+        totalOpenTasks,
+        attentionCount: totalBlocked + unassignedCount
+      };
     };
-  };
+  }, [boatMap, jobMap, customerMap, locationMap, filteredWorkOrders]);
 
-  const groupedByBoat = () => {
+  const groupedByBoat = useMemo(() => {
     const groups = {};
     
     filteredWorkOrders.forEach(wo => {
-      const job = jobs.find(j => j.id === wo.job_id);
+      const job = jobMap[wo.job_id];
       const boatId = job?.boat_id || 'unknown';
       
       if (!groups[boatId]) {
@@ -551,53 +568,55 @@ export default function WorkOrders() {
         if (dateCompare !== 0) return dateCompare;
         
         const priorityOrder = { 'Urgent': 0, 'Express': 1, 'High': 2, 'Normal': 3, 'Low': 4 };
-        const jobA = jobs.find(j => j.id === a.job_id);
-        const jobB = jobs.find(j => j.id === b.job_id);
+        const jobA = jobMap[a.job_id];
+        const jobB = jobMap[b.job_id];
         return (priorityOrder[jobA?.priority] || 99) - (priorityOrder[jobB?.priority] || 99);
       });
     });
     
     return groups;
-  };
+  }, [filteredWorkOrders, jobMap]);
 
-  const filteredWorkOrders = workOrders.filter(wo => {
-    const projectInfo = getProjectInfo(wo.job_id);
-    const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = wo.title?.toLowerCase().includes(searchLower) ||
-      wo.work_order_number?.toLowerCase().includes(searchLower) ||
-      projectInfo.customer.toLowerCase().includes(searchLower) ||
-      projectInfo.boat.toLowerCase().includes(searchLower);
+  const filteredWorkOrders = useMemo(() => {
+    return workOrders.filter(wo => {
+      const projectInfo = getProjectInfo(wo.job_id);
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = wo.title?.toLowerCase().includes(searchLower) ||
+        wo.work_order_number?.toLowerCase().includes(searchLower) ||
+        projectInfo.customer.toLowerCase().includes(searchLower) ||
+        projectInfo.boat.toLowerCase().includes(searchLower);
 
-    const filterParam = searchParams.get('filter');
-    let matchesFilter = true;
+      const filterParam = searchParams.get('filter');
+      let matchesFilter = true;
 
-    if (filterParam === 'today') {
-      const today = new Date();
-      matchesFilter = wo.scheduled_date && isToday(parseISO(wo.scheduled_date)) && wo.status !== 'Completed' && wo.status !== 'Cancelled';
-    } else if (filterParam === 'pending') {
-      matchesFilter = wo.status === 'Draft';
-    }
+      if (filterParam === 'today') {
+        const today = new Date();
+        matchesFilter = wo.scheduled_date && isToday(parseISO(wo.scheduled_date)) && wo.status !== 'Completed' && wo.status !== 'Cancelled';
+      } else if (filterParam === 'pending') {
+        matchesFilter = wo.status === 'Draft';
+      }
 
-    const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
+      const matchesStatus = statusFilter === 'all' || wo.status === statusFilter;
 
-    const job = jobs.find(j => j.id === wo.job_id);
-    const matchesBoat = boatFilter === 'all' || job?.boat_id === boatFilter;
+      const job = jobMap[wo.job_id];
+      const matchesBoat = boatFilter === 'all' || job?.boat_id === boatFilter;
 
-    const agg = wo._aggregates || {};
-    const matchesDetails = detailsFilter === 'all' ||
-      (detailsFilter === 'time' && agg.timeEntryCount > 0) ||
-      (detailsFilter === 'photos' && agg.photoCount > 0) ||
-      (detailsFilter === 'notes' && agg.hasNotes);
+      const agg = wo._aggregates || {};
+      const matchesDetails = detailsFilter === 'all' ||
+        (detailsFilter === 'time' && agg.timeEntryCount > 0) ||
+        (detailsFilter === 'photos' && agg.photoCount > 0) ||
+        (detailsFilter === 'notes' && agg.hasNotes);
 
-    return matchesSearch && matchesStatus && matchesBoat && matchesDetails && matchesFilter;
-  }).sort((a, b) => {
-    if (sortBy === 'date-asc') {
-      return (a.scheduled_date || '').localeCompare(b.scheduled_date || '');
-    } else if (sortBy === 'date-desc') {
-      return (b.scheduled_date || '').localeCompare(a.scheduled_date || '');
-    }
-    return 0;
-  });
+      return matchesSearch && matchesStatus && matchesBoat && matchesDetails && matchesFilter;
+    }).sort((a, b) => {
+      if (sortBy === 'date-asc') {
+        return (a.scheduled_date || '').localeCompare(b.scheduled_date || '');
+      } else if (sortBy === 'date-desc') {
+        return (b.scheduled_date || '').localeCompare(a.scheduled_date || '');
+      }
+      return 0;
+    });
+  }, [workOrders, searchTerm, statusFilter, boatFilter, sortBy, detailsFilter, searchParams, getProjectInfo, jobMap]);
 
   return (
     <div className="space-y-6">
