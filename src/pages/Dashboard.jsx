@@ -390,47 +390,64 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Priority Stats - Top Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard 
-           title="Active Jobs" 
-           value={activeJobs.length} 
-           icon={Briefcase}
-           color="bg-blue-500"
-           loading={loading}
-           onClick={() => navigate(createPageUrl('Jobs') + '?filter=active')}
-         />
-         <StatCard 
-           title="Today's Work Orders" 
-           value={todayWorkOrders.length} 
-           icon={ClipboardList}
-           color="bg-cyan-500"
-           loading={loading}
-           onClick={() => navigate(createPageUrl('WorkOrders') + '?filter=today')}
-         />
-         <StatCard 
-           title="Overdue Jobs" 
+           title="🔴 Overdue Jobs" 
            value={overdueJobs.length} 
-           icon={Flag}
+           icon={AlertTriangle}
            color="bg-red-500"
            loading={loading}
            onClick={() => navigate(createPageUrl('Jobs') + '?filter=overdue')}
          />
          <StatCard 
-            title="Open Leads" 
-            value={leads.filter(l => !['Lost', 'Converted'].includes(l.status)).length} 
-            icon={Phone}
-            color="bg-amber-500"
-            loading={loading}
-            onClick={() => navigate(createPageUrl('Leads'))}
-          />
+           title="📋 Today's Work" 
+           value={todayWorkOrders.length} 
+           icon={ClipboardList}
+           color="bg-amber-500"
+           loading={loading}
+           onClick={() => navigate(createPageUrl('WorkOrders') + '?filter=today')}
+         />
+        <StatCard 
+          title="⏳ Stuck in Quote" 
+          value={offers.filter(o => o.status === 'Draft').length} 
+          icon={FileText}
+          color="bg-purple-500"
+          loading={loading}
+          onClick={() => navigate(createPageUrl('Offers'))}
+        />
+        <StatCard 
+          title="⚙️ No Parts" 
+          value={jobs.filter(j => j.status === 'Waiting for Parts' && !['Completed', 'Invoiced'].includes(j.status)).length} 
+          icon={Package}
+          color="bg-orange-500"
+          loading={loading}
+          onClick={() => navigate(createPageUrl('Jobs'))}
+        />
+        <StatCard 
+           title="📞 New Leads" 
+           value={leads.filter(l => l.status === 'Pending').length} 
+           icon={Phone}
+           color="bg-blue-500"
+           loading={loading}
+           onClick={() => navigate(createPageUrl('Leads'))}
+         />
       </div>
 
       {/* Secondary Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard 
-          title="Pending Work Orders" 
+          title="Active Jobs" 
+          value={activeJobs.length} 
+          icon={Briefcase}
+          color="bg-blue-600"
+          loading={loading}
+          onClick={() => navigate(createPageUrl('Jobs') + '?filter=active')}
+        />
+        <StatCard 
+          title="Unscheduled WO" 
           value={draftWorkOrders.length} 
-          icon={ClipboardList}
+          icon={Clock}
           color="bg-slate-500"
           loading={loading}
           onClick={() => navigate(createPageUrl('WorkOrders') + '?filter=pending')}
