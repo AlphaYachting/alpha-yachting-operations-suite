@@ -213,9 +213,10 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           </div>
 
           {/* Center + Right: Title & Status */}
-          <div className="flex-1 p-4 flex flex-col justify-between">
-            <div>
-              <p className="text-base font-bold text-slate-900 leading-tight">{workOrder.title}</p>
+           <div className="flex-1 p-4 flex flex-col justify-between">
+             <div>
+               <p className="text-xs text-slate-500 font-medium mb-1">#{workOrder.work_order_number || workOrder.id}</p>
+               <p className="text-base font-bold text-slate-900 leading-tight">{workOrder.title}</p>
               {boat?.vessel_name &&
               <p className="text-sm text-slate-600 mt-1">{boat.vessel_name}</p>
               }
