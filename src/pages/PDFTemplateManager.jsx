@@ -332,48 +332,70 @@ export default function PDFTemplateManager() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-3 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedTemplate(template);
-                      setShowPreviewDialog(true);
-                    }}
-                    className="flex-1"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(createPageUrl('PDFTemplateSettings'), { state: { templateId: template.id } })}
-                    className="flex-1"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDuplicateTemplate(template)}
-                    disabled={saving}
-                    className="flex-1"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedTemplate(template);
-                      setShowDeleteDialog(true);
-                    }}
-                    disabled={saving}
-                    className="flex-1 text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+                 <div className="flex flex-col gap-2 pt-3 border-t">
+                   <div className="flex gap-2">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => {
+                         setSelectedTemplate(template);
+                         setShowPreviewDialog(true);
+                       }}
+                       className="flex-1"
+                       title="Preview"
+                     >
+                       <Eye className="h-3.5 w-3.5" />
+                     </Button>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => navigate(createPageUrl('PDFTemplateSettings'), { state: { templateId: template.id } })}
+                       className="flex-1"
+                       title="Edit Settings"
+                     >
+                       <Edit className="h-3.5 w-3.5" />
+                     </Button>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => {
+                         setSelectedTemplate(template);
+                         setEditingTemplateName(template.template_name || template.company_name);
+                         setShowRenameDialog(true);
+                       }}
+                       disabled={saving}
+                       className="flex-1"
+                       title="Rename"
+                     >
+                       ✏️
+                     </Button>
+                   </div>
+                   <div className="flex gap-2">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => handleDuplicateTemplate(template)}
+                       disabled={saving}
+                       className="flex-1"
+                       title="Duplicate"
+                     >
+                       <Copy className="h-3.5 w-3.5" />
+                     </Button>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => {
+                         setSelectedTemplate(template);
+                         setShowDeleteDialog(true);
+                       }}
+                       disabled={saving}
+                       className="flex-1 text-red-600 hover:text-red-700"
+                       title="Delete"
+                     >
+                       <Trash2 className="h-3.5 w-3.5" />
+                     </Button>
+                   </div>
+                 </div>
 
                 {/* Set Default Button */}
                 {!template.is_default && (
