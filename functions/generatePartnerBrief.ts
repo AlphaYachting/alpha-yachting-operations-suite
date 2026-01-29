@@ -275,7 +275,8 @@ Deno.serve(async (req) => {
           '--disable-gpu',
           '--no-first-run',
           '--no-zygote',
-          '--single-process'
+          '--single-process',
+          '--user-data-dir=/tmp'
         ]
       });
       const page = await browser.newPage();
