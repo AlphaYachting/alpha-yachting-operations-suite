@@ -32,7 +32,7 @@ const getClientInfo = async () => {
   }
 };
 
-export default function TeamWorkOrderDetail() {
+export default function TeamWorkOrderDetail({ woId, onNavigate }) {
   const navigate = useNavigate();
   const [workOrder, setWorkOrder] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -192,10 +192,15 @@ export default function TeamWorkOrderDetail() {
   const loadData = async () => {
     try {
       const params = new URLSearchParams(window.location.search);
-      const woId = params.get('woId');
+      const paramWoId = params.get('woId');
+      const effectiveWoId = woId || paramWoId;
 
-      if (!woId) {
-        navigate(createPageUrl('TeamMobileHome'));
+      if (!effectiveWoId) {
+        if (onNavigate) {
+          onNavigate('home');
+        } else {
+          navigate(createPageUrl('TeamMobileHome'));
+        }
         return;
       }
 
@@ -204,10 +209,10 @@ export default function TeamWorkOrderDetail() {
       try {
         // Try to load from server
         [woData, jobData, tasksData, photosData] = await Promise.all([
-          base44.entities.WorkOrder.filter({ id: woId }),
-          base44.entities.Job.filter({ id: await offlineStorage.getData(offlineStorage.STORES.workOrders, woId).then(wo => wo?.job_id) }),
-          base44.entities.Task.filter({ work_order_id: woId }),
-          base44.entities.WorkOrderPhoto.filter({ work_order_id: woId })
+          base44.entities.WorkOrder.filter({ id: effectiveWoId }),
+          base44.entities.Job.filter({ id: await offlineStorage.getData(offlineStorage.STORES.workOrders, effectiveWoId).then(wo => wo?.job_id) }),
+          base44.entities.Task.filter({ work_order_id: effectiveWoId }),
+          base44.entities.WorkOrderPhoto.filter({ work_order_id: effectiveWoId })
         ]);
 
         // Cache data for offline access
@@ -225,19 +230,27 @@ export default function TeamWorkOrderDetail() {
         }
       } catch (error) {
         // Fall back to offline data
-        const cachedWo = await offlineStorage.getData(offlineStorage.STORES.workOrders, woId);
+        const cachedWo = await offlineStorage.getData(offlineStorage.STORES.workOrders, effectiveWoId);
         if (!cachedWo) {
-          navigate(createPageUrl('TeamMobileHome'));
+          if (onNavigate) {
+            onNavigate('home');
+          } else {
+            navigate(createPageUrl('TeamMobileHome'));
+          }
           return;
         }
         woData = [cachedWo];
         jobData = [await offlineStorage.getData(offlineStorage.STORES.jobs, cachedWo.job_id)];
-        tasksData = await offlineStorage.getByIndex(offlineStorage.STORES.tasks, 'work_order_id', woId) || [];
-        photosData = await offlineStorage.getByIndex(offlineStorage.STORES.photos, 'work_order_id', woId) || [];
+        tasksData = await offlineStorage.getByIndex(offlineStorage.STORES.tasks, 'work_order_id', effectiveWoId) || [];
+        photosData = await offlineStorage.getByIndex(offlineStorage.STORES.photos, 'work_order_id', effectiveWoId) || [];
       }
 
       if (!woData || woData.length === 0) {
-        navigate(createPageUrl('TeamMobileHome'));
+        if (onNavigate) {
+          onNavigate('home');
+        } else {
+          navigate(createPageUrl('TeamMobileHome'));
+        }
         return;
       }
 
@@ -269,10 +282,10 @@ export default function TeamWorkOrderDetail() {
       // Load comments
       let commentsData = [];
       try {
-        commentsData = await base44.entities.WorkOrderComment.filter({ work_order_id: woId });
+        commentsData = await base44.entities.WorkOrderComment.filter({ work_order_id: effectiveWoId });
         await offlineStorage.saveMultiple(offlineStorage.STORES.comments, commentsData);
       } catch (error) {
-        commentsData = await offlineStorage.getByIndex(offlineStorage.STORES.comments, 'work_order_id', woId) || [];
+        commentsData = await offlineStorage.getByIndex(offlineStorage.STORES.comments, 'work_order_id', effectiveWoId) || [];
       }
       setComments(commentsData);
     } catch (error) {
@@ -282,11 +295,19 @@ export default function TeamWorkOrderDetail() {
     }
   };
 
+  const handleBack = () => {
+    if (onNavigate) {
+      onNavigate('home');
+    } else {
+      navigate(createPageUrl('TeamMobileHome'));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50">
         <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl('TeamMobileHome'))}>
+          <Button variant="ghost" size="icon" onClick={handleBack}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
         </div>
@@ -301,7 +322,7 @@ export default function TeamWorkOrderDetail() {
     return (
       <div className="min-h-screen bg-slate-50">
         <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl('TeamMobileHome'))}>
+          <Button variant="ghost" size="icon" onClick={handleBack}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
         </div>
@@ -466,7 +487,7 @@ export default function TeamWorkOrderDetail() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <Button variant="ghost" size="icon" onClick={() => navigate(createPageUrl('TeamMobileHome'))}>
+        <Button variant="ghost" size="icon" onClick={handleBack}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
