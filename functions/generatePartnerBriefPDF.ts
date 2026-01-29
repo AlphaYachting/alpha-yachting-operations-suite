@@ -1,80 +1,116 @@
 // PDF Template generation for Partner Brief
-// Mirrors the same logic as generateOfferPDF.js but adapted for Partner Brief data
+// Uses generatePDFWithJsPDF for consistent PDF styling with letterhead support
 
-function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template) {
-  const margins = {
-    top: template.margin_top_mm || 20,
-    right: template.margin_right_mm || 20,
-    bottom: template.margin_bottom_mm || 20,
-    left: template.margin_left_mm || 20
-  };
+import { generatePDFWithJsPDF } from './jsPDFGeneratorWrapper.js';
 
-  const fontFamily = template.font_family || 'Arial';
-  const fontSizeBody = template.font_size_body || 11;
-  const fontSizeHeading = template.font_size_heading || 18;
-  const fontSizeCompanyName = template.font_size_company_name || 20;
-  const lineSpacing = template.line_spacing || 1.5;
-  const paragraphSpacing = template.paragraph_spacing || 15;
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
 
+function buildPartnerBriefDocument(workOrder, teamOrder, job, customer, boat, location, tasks, technicians) {
   const assignedTechs = technicians.filter(t => workOrder.assigned_technicians?.includes(t.id));
   const customerName = customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown';
   
   const costPolicies = [];
   if (teamOrder.accommodation_paid) {
-    costPolicies.push(`<li>Accommodation: up to €${teamOrder.accommodation_max_per_night || 'TBD'}/night</li>`);
+    costPolicies.push(`Accommodation: up to €${teamOrder.accommodation_max_per_night || 'TBD'}/night`);
   }
   if (teamOrder.meals_per_diem_paid) {
-    costPolicies.push(`<li>Per Diem: €${teamOrder.per_diem_rate_per_day || 'TBD'}/day</li>`);
+    costPolicies.push(`Per Diem: €${teamOrder.per_diem_rate_per_day || 'TBD'}/day`);
   }
   if (teamOrder.mileage_paid) {
-    costPolicies.push(`<li>Mileage: €${teamOrder.mileage_rate_per_km || '0.35'}/km (cap: €${teamOrder.mileage_cap_total || 'TBD'})</li>`);
+    costPolicies.push(`Mileage: €${teamOrder.mileage_rate_per_km || '0.35'}/km (cap: €${teamOrder.mileage_cap_total || 'TBD'})`);
   }
   if (teamOrder.travel_time_paid) {
-    costPolicies.push(`<li>Travel Time: €${teamOrder.travel_time_rate_per_hour || 'TBD'}/hour</li>`);
+    costPolicies.push(`Travel Time: €${teamOrder.travel_time_rate_per_hour || 'TBD'}/hour`);
   }
 
-  const watermarkHTML = template.watermark_enabled
-    ? `<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(${template.watermark_angle ?? -45}deg); font-size: 72pt; font-weight: bold; color: #ccc; opacity: ${template.watermark_opacity ?? 0.1}; pointer-events: none; white-space: nowrap; z-index: 0;">${template.watermark_text || 'DRAFT'}</div>`
-    : '';
+  return {
+    document_type: 'PartnerBrief',
+    document_number: workOrder.work_order_number || `BRIEF-${workOrder.id.slice(-6)}`,
+    status: workOrder.status,
+    customer_name: customerName,
+    boat_name: boat?.vessel_name,
+    location_name: location?.name,
+    issue_date: new Date().toISOString().split('T')[0],
+    
+    // Partner brief specific fields
+    work_order_id: workOrder.id,
+    work_order_title: workOrder.title,
+    work_order_description: workOrder.description,
+    work_order_status: workOrder.status,
+    scheduled_date: workOrder.scheduled_date,
+    estimated_duration: workOrder.estimated_duration_hours,
+    
+    // Vessel details
+    boat_type: boat?.vessel_type,
+    boat_length: boat?.length_m,
+    
+    // Location details
+    location_address: location?.address,
+    location_access_notes: location?.access_notes,
+    
+    // Team order / budget
+    approved_budget: teamOrder.approved_budget_total || 0,
+    labor_budget: teamOrder.labor_budget || 0,
+    travel_budget: teamOrder.travel_budget || 0,
+    accommodation_budget: teamOrder.accommodation_budget || 0,
+    per_diem_budget: teamOrder.per_diem_budget || 0,
+    cost_policies: costPolicies,
+    requires_preapproval: teamOrder.requires_preapproval_over,
+    budget_exceed_requires_approval: teamOrder.budget_exceed_requires_approval,
+    partner_notes: teamOrder.partner_notes,
+    safety_notes: workOrder.safety_notes,
+    
+    // Additional fields
+    tasks_count: tasks.length,
+    assigned_techs_count: assignedTechs.length
+  };
+}
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Partner Brief - ${workOrder.work_order_number || workOrder.id}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    html, body { width: 100%; height: 100%; background: white; font-family: ${fontFamily}, sans-serif; font-size: ${fontSizeBody}pt; line-height: ${lineSpacing}; color: #333; }
-    @page { size: A4; margin: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm; }
-    .document { width: 100%; background: white; }
-    .header { margin-bottom: ${paragraphSpacing}pt; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
-    .logo img { height: ${template.logo_height_mm || 20}mm; object-fit: contain; }
-    .company-name { font-size: ${fontSizeCompanyName}pt; font-weight: bold; color: ${template.primary_color || '#2563eb'}; margin-bottom: 5px; }
-    .company-details { font-size: ${fontSizeBody - 2}pt; color: #555; }
-    .doc-type { font-size: ${fontSizeHeading}pt; color: ${template.primary_color || '#2563eb'}; text-transform: uppercase; font-weight: bold; margin-bottom: 8px; }
-    .meta-info { color: #999; font-size: ${fontSizeBody - 3}pt; margin-bottom: ${paragraphSpacing}pt; }
-    .section-title { font-size: ${fontSizeBody + 2}pt; color: ${template.primary_color || '#2563eb'}; font-weight: bold; margin: ${paragraphSpacing}pt 0 ${paragraphSpacing / 2}pt 0; border-bottom: 2px solid ${template.primary_color || '#2563eb'}; padding-bottom: 6px; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: ${paragraphSpacing}pt; }
-    .info-field { margin-bottom: 10px; }
-    .info-label { font-size: ${fontSizeBody - 2}pt; color: #666; font-weight: bold; margin-bottom: 3px; }
-    .info-value { font-size: ${fontSizeBody}pt; color: #333; }
-    .section-content { margin-bottom: ${paragraphSpacing}pt; white-space: pre-wrap; }
-    table { width: 100%; border-collapse: collapse; margin: ${paragraphSpacing / 2}pt 0; font-size: ${fontSizeBody - 1}pt; }
-    thead { background-color: ${template.primary_color || '#2563eb'}; color: white; }
-    th, td { padding: 8px 6px; border: 1px solid #ddd; text-align: left; }
-    th { font-weight: bold; }
-    tbody tr:nth-child(even) { background-color: #f9f9f9; }
-    ul { margin-left: 20px; margin-top: 8px; }
-    ul li { margin-bottom: 6px; }
-    .notes-box { padding: 12px; background-color: #f5f5f5; border-left: 3px solid ${template.primary_color || '#2563eb'}; margin-bottom: ${paragraphSpacing}pt; white-space: pre-wrap; }
-    .footer { margin-top: ${paragraphSpacing * 2}pt; padding-top: 15px; border-top: 1px solid ${template.primary_color || '#2563eb'}; font-size: ${fontSizeBody - 3}pt; color: #666; text-align: center; }
-    .footer-graphic { max-width: 100%; height: ${template.footer_graphic_height_mm || 25}mm; margin-bottom: 12px; }
-  </style>
-</head>
-<body>
-  ${watermarkHTML}
-  <div class="document">
+function buildPartnerBriefLineItems(tasks, teamOrder) {
+  // Build line items for the partner brief
+  const items = [];
+  
+  // Add tasks as line items
+  tasks.forEach((task, idx) => {
+    items.push({
+      sort_order: idx,
+      title: task.title,
+      description: task.description || '',
+      quantity: 1,
+      unit: 'item',
+      unit_price: 0,
+      tax_rate: 0,
+      total_net: 0,
+      total_tax: 0,
+      total_gross: 0,
+      is_task: true,
+      estimated_time: task.estimated_minutes ? Math.round(task.estimated_minutes / 60) + 'h' : '-'
+    });
+  });
+  
+  // Add budget breakdown as line items
+  items.push({
+    sort_order: tasks.length,
+    title: 'Total Approved Budget',
+    description: '',
+    quantity: 1,
+    unit: 'EUR',
+    unit_price: teamOrder.approved_budget_total || 0,
+    tax_rate: 0,
+    total_net: teamOrder.approved_budget_total || 0,
+    total_tax: 0,
+    total_gross: teamOrder.approved_budget_total || 0,
+    is_budget: true
+  });
+  
+  return items;
+}
+
+function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template) {
     <div class="header">
       <div class="logo">${template.logo_url ? `<img src="${template.logo_url}" alt="Logo">` : ''}</div>
       <div class="company-info">
