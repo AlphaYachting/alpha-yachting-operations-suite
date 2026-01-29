@@ -37,8 +37,10 @@ export default function PDFTemplateManager() {
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [editingTemplateName, setEditingTemplateName] = useState('');
 
   useEffect(() => {
     loadTemplates();
