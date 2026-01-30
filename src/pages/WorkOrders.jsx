@@ -85,7 +85,7 @@ export default function WorkOrders() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('Draft');
   const [boatFilter, setBoatFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date-asc');
   const [detailsFilter, setDetailsFilter] = useState('all');
@@ -126,8 +126,9 @@ export default function WorkOrders() {
 
   const loadData = async () => {
     try {
+      // Performance optimization: Load only Draft work orders by default
       const [woData, jobsData, techData, custData, boatsData, locData, reservationsData, vehiclesData] = await Promise.all([
-        base44.entities.WorkOrder.list('scheduled_date'),
+        base44.entities.WorkOrder.filter({ status: 'Draft' }),
         base44.entities.Job.list(),
         base44.entities.Technician.list(),
         base44.entities.Customer.list(),
@@ -510,6 +511,18 @@ export default function WorkOrders() {
     setExpandedWorkOrders(prev => ({ ...prev, [woId]: !prev[woId] }));
   };
 
+  // Get boats that have work orders for the dropdown
+  const boatsWithWorkOrders = useMemo(() => {
+    const boatIds = new Set();
+    workOrders.forEach(wo => {
+      const job = jobMap[wo.job_id];
+      if (job?.boat_id) {
+        boatIds.add(job.boat_id);
+      }
+    });
+    return boats.filter(boat => boatIds.has(boat.id));
+  }, [workOrders, boats, jobMap]);
+
   const filteredWorkOrders = useMemo(() => {
     return workOrders.filter(wo => {
       const projectInfo = getProjectInfo(wo.job_id);
@@ -541,13 +554,6 @@ export default function WorkOrders() {
         (detailsFilter === 'notes' && agg.hasNotes);
 
       return matchesSearch && matchesStatus && matchesBoat && matchesDetails && matchesFilter;
-    }).sort((a, b) => {
-      if (sortBy === 'date-asc') {
-        return (a.scheduled_date || '').localeCompare(b.scheduled_date || '');
-      } else if (sortBy === 'date-desc') {
-        return (b.scheduled_date || '').localeCompare(a.scheduled_date || '');
-      }
-      return 0;
     });
   }, [workOrders, searchTerm, statusFilter, boatFilter, sortBy, detailsFilter, searchParams, getProjectInfo, jobMap]);
 
@@ -606,7 +612,7 @@ export default function WorkOrders() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Work Orders</h1>
-          <p className="text-slate-500 mt-1">{workOrders.length} total work orders</p>
+          <p className="text-slate-500 mt-1">{workOrders.length} work orders</p>
         </div>
         <div className="flex items-center gap-3">
           {/* View Toggle */}
@@ -639,6 +645,18 @@ export default function WorkOrders() {
           </Button>
         </div>
       </div>
+
+      {/* Performance Info Banner */}
+      {statusFilter === 'Draft' && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-2 text-sm text-blue-900">
+              <AlertCircle className="h-4 w-4" />
+              <span>Showing only <strong>Draft</strong> work orders for better performance. Change status filter to see all work orders.</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -680,8 +698,8 @@ export default function WorkOrders() {
             <SelectValue placeholder="All Boats" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Boats</SelectItem>
-            {boats.map(boat => (
+            <SelectItem value="all">All Boats ({boatsWithWorkOrders.length})</SelectItem>
+            {boatsWithWorkOrders.map(boat => (
               <SelectItem key={boat.id} value={boat.id}>
                 {boat.vessel_name}
               </SelectItem>
@@ -693,6 +711,7 @@ export default function WorkOrders() {
             <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
+            <SelectItem value="unsorted">Unsorted (Fastest)</SelectItem>
             <SelectItem value="date-asc">Date: Earliest First</SelectItem>
             <SelectItem value="date-desc">Date: Latest First</SelectItem>
             </SelectContent>
