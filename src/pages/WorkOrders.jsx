@@ -668,6 +668,19 @@ export default function WorkOrders() {
             className="pl-10"
           />
         </div>
+        <Select value={boatFilter} onValueChange={setBoatFilter}>
+          <SelectTrigger className="w-full sm:w-44">
+            <SelectValue placeholder="All Boats" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Boats ({boatsWithWorkOrders.length})</SelectItem>
+            {boatsWithWorkOrders.map(boat => (
+              <SelectItem key={boat.id} value={boat.id}>
+                {boat.vessel_name}
+              </SelectItem>
+            ))}
+            </SelectContent>
+            </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="Status" />
@@ -692,19 +705,6 @@ export default function WorkOrders() {
             <SelectItem value="notes">Has Notes</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={boatFilter} onValueChange={setBoatFilter}>
-          <SelectTrigger className="w-full sm:w-44">
-            <SelectValue placeholder="All Boats" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Boats ({boatsWithWorkOrders.length})</SelectItem>
-            {boatsWithWorkOrders.map(boat => (
-              <SelectItem key={boat.id} value={boat.id}>
-                {boat.vessel_name}
-              </SelectItem>
-            ))}
-            </SelectContent>
-            </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="Sort by" />
