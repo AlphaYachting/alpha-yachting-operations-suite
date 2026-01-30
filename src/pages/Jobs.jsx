@@ -106,17 +106,23 @@ export default function Projects() {
    const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    console.log('[Jobs] Component mounted, starting data load');
     loadData().then(() => {
-      // Load task stats after projects are loaded
+      // Load task stats and form data after projects are loaded
+      console.log('[Jobs] Initial load complete, loading task stats');
       loadTaskStats();
+      // Also load locations for display
+      loadFormData();
     });
   }, []);
 
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('[Jobs] Starting data load...');
       // Load ONLY projects - no related data on initial load
       const projectsData = await base44.entities.Job.list('-created_date', 30);
+      console.log('[Jobs] Loaded projects:', projectsData.length);
 
       // Sort projects: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
       const sortedProjects = projectsData.sort((a, b) => {
@@ -162,8 +168,10 @@ export default function Projects() {
       });
 
       setProjects(sortedProjects);
+      console.log('[Jobs] Projects loaded successfully');
     } catch (error) {
-      console.error('Error loading projects:', error);
+      console.error('[Jobs] CRITICAL ERROR loading projects:', error);
+      console.error('[Jobs] Error details:', { message: error.message, stack: error.stack });
     } finally {
       setLoading(false);
     }
@@ -172,22 +180,29 @@ export default function Projects() {
   // Load minimal task stats data separately after projects load
   const loadTaskStats = async () => {
     try {
+      console.log('[Jobs] Loading task stats...');
       const [workOrdersData, tasksData] = await Promise.all([
         base44.entities.WorkOrder.list('-created_date', 30),
         base44.entities.Task.list('-created_date', 50)
       ]);
       setWorkOrders(workOrdersData);
       setTasks(tasksData);
+      console.log('[Jobs] Task stats loaded:', { workOrders: workOrdersData.length, tasks: tasksData.length });
     } catch (error) {
-      console.error('Error loading task stats:', error);
+      console.error('[Jobs] ERROR loading task stats:', error);
+      console.error('[Jobs] Error details:', { message: error.message, stack: error.stack });
     }
   };
 
   // Load form data only when dialog opens - minimal limits to prevent timeout
   const loadFormData = async () => {
-    if (customers.length > 0) return; // Already loaded
+    if (customers.length > 0) {
+      console.log('[Jobs] Form data already loaded, skipping');
+      return;
+    }
     
     setFormDataLoading(true);
+    console.log('[Jobs] Loading form data...');
     try {
       const [customersData, boatsData, locationsData] = await Promise.all([
         base44.entities.Customer.list('-created_date', 20),
@@ -198,8 +213,14 @@ export default function Projects() {
       setCustomers(customersData);
       setBoats(boatsData);
       setLocations(locationsData);
+      console.log('[Jobs] Form data loaded:', { 
+        customers: customersData.length, 
+        boats: boatsData.length, 
+        locations: locationsData.length 
+      });
     } catch (error) {
-      console.error('Error loading form data:', error);
+      console.error('[Jobs] CRITICAL ERROR loading form data:', error);
+      console.error('[Jobs] Error details:', { message: error.message, stack: error.stack });
     } finally {
       setFormDataLoading(false);
     }
@@ -207,13 +228,19 @@ export default function Projects() {
 
   const handleSave = async (projectData) => {
     try {
+      console.log('[Jobs] Saving project...', { editing: !!editingProject, data: projectData });
+      
       if (editingProject) {
+        console.log('[Jobs] Updating project:', editingProject.id);
         const updated = await base44.entities.Job.update(editingProject.id, projectData);
+        console.log('[Jobs] Project updated successfully');
         // Update only the changed project instead of reloading everything
         setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
       } else {
         const projectNumber = `P${Date.now().toString().slice(-6)}`;
+        console.log('[Jobs] Creating new project with number:', projectNumber);
         const created = await base44.entities.Job.create({ ...projectData, job_number: projectNumber, intake_date: new Date().toISOString() });
+        console.log('[Jobs] Project created successfully:', created.id);
         // Add new project to list instead of reloading
         setProjects(prev => [created, ...prev]);
       }
@@ -221,7 +248,12 @@ export default function Projects() {
       setEditingProject(null);
       setSearchParams({});
     } catch (error) {
-      console.error('Error saving project:', error);
+      console.error('[Jobs] CRITICAL ERROR saving project:', error);
+      console.error('[Jobs] Error details:', { 
+        message: error.message, 
+        stack: error.stack,
+        projectData 
+      });
       throw error;
     }
   };
@@ -235,30 +267,48 @@ export default function Projects() {
     if (!deletingProject || isDeleting) return;
 
     setIsDeleting(true);
+    console.log('[Jobs] Starting delete for project:', deletingProject.id);
+    
     try {
       if (deleteRelated) {
+        console.log('[Jobs] Deleting related data...');
         // Find all work orders for this project
         const projectWorkOrders = workOrders.filter(wo => wo.job_id === deletingProject.id);
         const workOrderIds = projectWorkOrders.map(wo => wo.id);
+        console.log('[Jobs] Found work orders to delete:', projectWorkOrders.length);
 
         // Delete all tasks associated with these work orders
         const projectTasks = tasks.filter(task => workOrderIds.includes(task.work_order_id));
+        console.log('[Jobs] Found tasks to delete:', projectTasks.length);
+        
         for (const task of projectTasks) {
+          console.log('[Jobs] Deleting task:', task.id);
           await base44.entities.Task.delete(task.id);
         }
 
         // Delete all work orders
         for (const wo of projectWorkOrders) {
+          console.log('[Jobs] Deleting work order:', wo.id);
           await base44.entities.WorkOrder.delete(wo.id);
         }
       }
 
       // Delete the project
+      console.log('[Jobs] Deleting project:', deletingProject.id);
       await base44.entities.Job.delete(deletingProject.id);
-      await loadData();
+      console.log('[Jobs] Project deleted successfully');
+      
+      // Remove from local state instead of reloading
+      setProjects(prev => prev.filter(p => p.id !== deletingProject.id));
       setDeletingProject(null);
     } catch (error) {
-      console.error('Error deleting project:', error);
+      console.error('[Jobs] CRITICAL ERROR deleting project:', error);
+      console.error('[Jobs] Error details:', { 
+        message: error.message, 
+        stack: error.stack,
+        projectId: deletingProject.id 
+      });
+      alert('Failed to delete project: ' + error.message);
     } finally {
       setIsDeleting(false);
     }
@@ -279,8 +329,10 @@ export default function Projects() {
   };
 
   const getLocationName = (locationId) => {
+    if (!locationId) return '';
+    if (locations.length === 0) return '—';
     const location = locations.find(l => l.id === locationId);
-    return location?.name || '';
+    return location?.name || 'Unknown';
   };
 
   // Remove automatic loading - only load when dialog opens
