@@ -232,23 +232,34 @@ export default function Projects() {
     try {
       console.log('[Jobs] Starting save operation...', { editing: !!editingProject });
 
+      // Add timeout protection
+      const savePromise = editingProject
+        ? base44.entities.Job.update(editingProject.id, projectData)
+        : base44.entities.Job.create({ 
+            ...projectData, 
+            job_number: `P${Date.now().toString().slice(-6)}`, 
+            intake_date: new Date().toISOString() 
+          });
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Save operation timed out after 15 seconds')), 15000)
+      );
+
+      const result = await Promise.race([savePromise, timeoutPromise]);
+      console.log('[Jobs] Save completed in', Date.now() - startTime, 'ms');
+
       if (editingProject) {
-        console.log('[Jobs] Updating project:', editingProject.id);
-        const updated = await base44.entities.Job.update(editingProject.id, projectData);
-        console.log('[Jobs] Project updated in', Date.now() - startTime, 'ms');
-        setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+        setProjects(prev => prev.map(p => p.id === result.id ? result : p));
       } else {
-        const projectNumber = `P${Date.now().toString().slice(-6)}`;
-        console.log('[Jobs] Creating new project:', projectNumber);
-        const created = await base44.entities.Job.create({ ...projectData, job_number: projectNumber, intake_date: new Date().toISOString() });
-        console.log('[Jobs] Project created in', Date.now() - startTime, 'ms');
-        setProjects(prev => [created, ...prev]);
+        setProjects(prev => [result, ...prev]);
       }
+
       setShowForm(false);
       setEditingProject(null);
       setSearchParams({});
     } catch (error) {
       console.error('[Jobs] Save failed after', Date.now() - startTime, 'ms:', error);
+      alert(`Failed to save project: ${error.message}`);
       throw error;
     }
   };
