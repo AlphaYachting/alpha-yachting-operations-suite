@@ -107,6 +107,24 @@ export default function Projects() {
   useEffect(() => {
     loadData();
   }, []);
+  
+  // Set shorter timeout for edit operations
+  const loadDataForEdit = async () => {
+    try {
+      const [jobsData, customersData, boatsData] = await Promise.all([
+        base44.entities.Job.list('-created_date', 100),
+        base44.entities.Customer.list('-created_date', 100), 
+        base44.entities.Boat.list('-created_date', 100)
+      ]);
+      
+      setJobs(jobsData);
+      setCustomers(customersData);
+      setBoats(boatsData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('Failed to load data');
+    }
+  };
 
   const loadData = async () => {
     try {
