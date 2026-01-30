@@ -138,12 +138,13 @@ export default function Dashboard() {
           return;
         }
 
+        // CRITICAL: Reduced limits to prevent database overload and rate limiting
         const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData, locationsData, leadsData, offersData] = await Promise.all([
-          base44.entities.Job.list('-created_date', 500),
-          base44.entities.WorkOrder.list('-scheduled_date', 200),
-          base44.entities.Task.filter({ status: { $ne: 'Completed' } }, '-created_date', 500),
-          base44.entities.Customer.list('-created_date', 200),
-          base44.entities.Boat.filter({ status: { $ne: 'Sold' } }, '-created_date', 200),
+          base44.entities.Job.list('-created_date', 50),
+          base44.entities.WorkOrder.list('-scheduled_date', 50),
+          base44.entities.Task.filter({ status: { $ne: 'Completed' } }, '-created_date', 100),
+          base44.entities.Customer.list('-created_date', 50),
+          base44.entities.Boat.filter({ status: { $ne: 'Sold' } }, '-created_date', 50),
           base44.entities.Technician.filter({ status: 'Active' }),
           base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
           base44.entities.InventoryItem.filter({ item_type: 'VEHICLE', status: { $ne: 'Retired' } }),
