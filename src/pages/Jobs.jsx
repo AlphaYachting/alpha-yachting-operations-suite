@@ -200,16 +200,19 @@ export default function Projects() {
       console.log('[Jobs] Form data already loaded, skipping');
       return;
     }
-    
+
     setFormDataLoading(true);
     console.log('[Jobs] Loading form data...');
     try {
-      const [customersData, boatsData, locationsData] = await Promise.all([
-        base44.entities.Customer.list('-created_date', 20),
-        base44.entities.Boat.list('-created_date', 20),
-        base44.entities.Location.list('-created_date', 15)
-      ]);
-      
+      // CRITICAL: Stagger requests to avoid rate limiting
+      const customersData = await base44.entities.Customer.list('-created_date', 20);
+      await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+
+      const boatsData = await base44.entities.Boat.list('-created_date', 20);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const locationsData = await base44.entities.Location.list('-created_date', 15);
+
       setCustomers(customersData);
       setBoats(boatsData);
       setLocations(locationsData);
@@ -227,33 +230,27 @@ export default function Projects() {
   };
 
   const handleSave = async (projectData) => {
+    const startTime = Date.now();
     try {
-      console.log('[Jobs] Saving project...', { editing: !!editingProject, data: projectData });
-      
+      console.log('[Jobs] Starting save operation...', { editing: !!editingProject });
+
       if (editingProject) {
         console.log('[Jobs] Updating project:', editingProject.id);
         const updated = await base44.entities.Job.update(editingProject.id, projectData);
-        console.log('[Jobs] Project updated successfully');
-        // Update only the changed project instead of reloading everything
+        console.log('[Jobs] Project updated in', Date.now() - startTime, 'ms');
         setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
       } else {
         const projectNumber = `P${Date.now().toString().slice(-6)}`;
-        console.log('[Jobs] Creating new project with number:', projectNumber);
+        console.log('[Jobs] Creating new project:', projectNumber);
         const created = await base44.entities.Job.create({ ...projectData, job_number: projectNumber, intake_date: new Date().toISOString() });
-        console.log('[Jobs] Project created successfully:', created.id);
-        // Add new project to list instead of reloading
+        console.log('[Jobs] Project created in', Date.now() - startTime, 'ms');
         setProjects(prev => [created, ...prev]);
       }
       setShowForm(false);
       setEditingProject(null);
       setSearchParams({});
     } catch (error) {
-      console.error('[Jobs] CRITICAL ERROR saving project:', error);
-      console.error('[Jobs] Error details:', { 
-        message: error.message, 
-        stack: error.stack,
-        projectData 
-      });
+      console.error('[Jobs] Save failed after', Date.now() - startTime, 'ms:', error);
       throw error;
     }
   };
