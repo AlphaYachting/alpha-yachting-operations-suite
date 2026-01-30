@@ -107,35 +107,17 @@ export default function Projects() {
   useEffect(() => {
     loadData();
   }, []);
-  
-  // Set shorter timeout for edit operations
-  const loadDataForEdit = async () => {
-    try {
-      const [jobsData, customersData, boatsData] = await Promise.all([
-        base44.entities.Job.list('-created_date', 100),
-        base44.entities.Customer.list('-created_date', 100), 
-        base44.entities.Boat.list('-created_date', 100)
-      ]);
-      
-      setJobs(jobsData);
-      setCustomers(customersData);
-      setBoats(boatsData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Failed to load data');
-    }
-  };
 
   const loadData = async () => {
     try {
-      // Reduced limits to prevent timeout
+      // Aggressive limits to prevent MongoDB timeout
       const [projectsData, customersData, boatsData, locationsData, workOrdersData, tasksData] = await Promise.all([
-        base44.entities.Job.list('-created_date', 100),
-        base44.entities.Customer.list('-created_date', 100),
-        base44.entities.Boat.list('-created_date', 100),
-        base44.entities.Location.list('-created_date', 50),
-        base44.entities.WorkOrder.list('-created_date', 100),
-        base44.entities.Task.list('-created_date', 200)
+        base44.entities.Job.list('-created_date', 50),
+        base44.entities.Customer.list('-created_date', 50),
+        base44.entities.Boat.list('-created_date', 50),
+        base44.entities.Location.list('-created_date', 30),
+        base44.entities.WorkOrder.list('-created_date', 50),
+        base44.entities.Task.list('-created_date', 100)
       ]);
 
       // Sort projects: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
@@ -195,16 +177,24 @@ export default function Projects() {
   };
 
   const handleSave = async (projectData) => {
-    if (editingProject) {
-      await base44.entities.Job.update(editingProject.id, projectData);
-    } else {
-      const projectNumber = `P${Date.now().toString().slice(-6)}`;
-      await base44.entities.Job.create({ ...projectData, job_number: projectNumber, intake_date: new Date().toISOString() });
+    try {
+      if (editingProject) {
+        const updated = await base44.entities.Job.update(editingProject.id, projectData);
+        // Update only the changed project instead of reloading everything
+        setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+      } else {
+        const projectNumber = `P${Date.now().toString().slice(-6)}`;
+        const created = await base44.entities.Job.create({ ...projectData, job_number: projectNumber, intake_date: new Date().toISOString() });
+        // Add new project to list instead of reloading
+        setProjects(prev => [created, ...prev]);
+      }
+      setShowForm(false);
+      setEditingProject(null);
+      setSearchParams({});
+    } catch (error) {
+      console.error('Error saving project:', error);
+      throw error;
     }
-    await loadData();
-    setShowForm(false);
-    setEditingProject(null);
-    setSearchParams({});
   };
 
   const handleDelete = async (project) => {
