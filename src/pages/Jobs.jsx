@@ -83,6 +83,7 @@ export default function Projects() {
    const [workOrders, setWorkOrders] = useState([]);
    const [tasks, setTasks] = useState([]);
    const [loading, setLoading] = useState(true);
+   const [formDataLoading, setFormDataLoading] = useState(false);
    const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [priorityFilter, setPriorityFilter] = useState('all');
@@ -110,12 +111,9 @@ export default function Projects() {
 
   const loadData = async () => {
     try {
-      // Aggressive limits to prevent MongoDB timeout
-      const [projectsData, customersData, boatsData, locationsData, workOrdersData, tasksData] = await Promise.all([
+      // Load only projects + task stats data initially
+      const [projectsData, workOrdersData, tasksData] = await Promise.all([
         base44.entities.Job.list('-created_date', 50),
-        base44.entities.Customer.list('-created_date', 50),
-        base44.entities.Boat.list('-created_date', 50),
-        base44.entities.Location.list('-created_date', 30),
         base44.entities.WorkOrder.list('-created_date', 50),
         base44.entities.Task.list('-created_date', 100)
       ]);
@@ -164,15 +162,34 @@ export default function Projects() {
       });
 
       setProjects(sortedProjects);
-      setCustomers(customersData);
-      setBoats(boatsData);
-      setLocations(locationsData);
       setWorkOrders(workOrdersData);
       setTasks(tasksData);
-      } catch (error) {
+    } catch (error) {
       console.error('Error loading projects:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Load form data only when dialog opens
+  const loadFormData = async () => {
+    if (customers.length > 0) return; // Already loaded
+    
+    setFormDataLoading(true);
+    try {
+      const [customersData, boatsData, locationsData] = await Promise.all([
+        base44.entities.Customer.list('-created_date', 100),
+        base44.entities.Boat.list('-created_date', 100),
+        base44.entities.Location.list('-created_date', 50)
+      ]);
+      
+      setCustomers(customersData);
+      setBoats(boatsData);
+      setLocations(locationsData);
+    } catch (error) {
+      console.error('Error loading form data:', error);
+    } finally {
+      setFormDataLoading(false);
     }
   };
 
@@ -237,19 +254,26 @@ export default function Projects() {
 
   const getCustomerName = (customerId) => {
     const customer = customers.find(c => c.id === customerId);
-    if (!customer) return 'Unknown';
+    if (!customer) return 'Loading...';
     return customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
   };
 
   const getBoatName = (boatId) => {
     const boat = boats.find(b => b.id === boatId);
-    return boat?.vessel_name || 'Unknown';
+    return boat?.vessel_name || 'Loading...';
   };
 
   const getLocationName = (locationId) => {
     const location = locations.find(l => l.id === locationId);
     return location?.name || '';
   };
+
+  // Lazy load customer/boat data when first needed
+  useEffect(() => {
+    if (projects.length > 0 && customers.length === 0) {
+      loadFormData();
+    }
+  }, [projects]);
 
   const getProjectTaskStats = (projectId) => {
     const projectWorkOrders = workOrders.filter(wo => wo.job_id === projectId);
@@ -505,19 +529,33 @@ export default function Projects() {
       )}
 
       {/* Project Form Dialog */}
-      <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) { setEditingProject(null); setSearchParams({}); }}}>
+      <Dialog 
+        open={showForm} 
+        onOpenChange={(open) => { 
+          if (open) loadFormData(); // Load form data when opening
+          setShowForm(open); 
+          if (!open) { 
+            setEditingProject(null); 
+            setSearchParams({}); 
+          }
+        }}
+      >
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingProject ? 'Edit Project' : 'Create New Project'}</DialogTitle>
           </DialogHeader>
-          <JobForm
-            job={editingProject}
-            customers={customers}
-            boats={boats}
-            locations={locations}
-            onSave={handleSave}
-            onCancel={() => { setShowForm(false); setEditingProject(null); setSearchParams({}); }}
-          />
+          {formDataLoading ? (
+            <div className="py-8 text-center text-slate-500">Loading form data...</div>
+          ) : (
+            <JobForm
+              job={editingProject}
+              customers={customers}
+              boats={boats}
+              locations={locations}
+              onSave={handleSave}
+              onCancel={() => { setShowForm(false); setEditingProject(null); setSearchParams({}); }}
+            />
+          )}
         </DialogContent>
       </Dialog>
 
