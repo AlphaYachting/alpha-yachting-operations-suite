@@ -111,11 +111,11 @@ export default function Projects() {
 
   const loadData = async () => {
     try {
-      // Load only projects + task stats data initially
+      // Minimal data load to prevent timeout
       const [projectsData, workOrdersData, tasksData] = await Promise.all([
-        base44.entities.Job.list('-created_date', 50),
-        base44.entities.WorkOrder.list('-created_date', 50),
-        base44.entities.Task.list('-created_date', 100)
+        base44.entities.Job.list('-created_date', 30),
+        base44.entities.WorkOrder.list('-created_date', 30),
+        base44.entities.Task.list('-created_date', 50)
       ]);
 
       // Sort projects: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
@@ -171,16 +171,16 @@ export default function Projects() {
     }
   };
 
-  // Load form data only when dialog opens
+  // Load form data only when dialog opens - minimal limits to prevent timeout
   const loadFormData = async () => {
     if (customers.length > 0) return; // Already loaded
     
     setFormDataLoading(true);
     try {
       const [customersData, boatsData, locationsData] = await Promise.all([
-        base44.entities.Customer.list('-created_date', 100),
-        base44.entities.Boat.list('-created_date', 100),
-        base44.entities.Location.list('-created_date', 50)
+        base44.entities.Customer.list('-created_date', 20),
+        base44.entities.Boat.list('-created_date', 20),
+        base44.entities.Location.list('-created_date', 15)
       ]);
       
       setCustomers(customersData);
