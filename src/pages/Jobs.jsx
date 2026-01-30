@@ -194,7 +194,7 @@ export default function Projects() {
     }
   };
 
-  // Load form data only when dialog opens - minimal limits to prevent timeout
+  // Load form data only when dialog opens - load in parallel for speed
   const loadFormData = async () => {
     if (customers.length > 0) {
       console.log('[Jobs] Form data already loaded, skipping');
@@ -204,14 +204,12 @@ export default function Projects() {
     setFormDataLoading(true);
     console.log('[Jobs] Loading form data...');
     try {
-      // CRITICAL: Stagger requests to avoid rate limiting
-      const customersData = await base44.entities.Customer.list('-created_date', 20);
-      await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
-
-      const boatsData = await base44.entities.Boat.list('-created_date', 20);
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const locationsData = await base44.entities.Location.list('-created_date', 15);
+      // Load all in parallel - no delays needed, we have reasonable limits
+      const [customersData, boatsData, locationsData] = await Promise.all([
+        base44.entities.Customer.list('-created_date', 50),
+        base44.entities.Boat.list('-created_date', 50),
+        base44.entities.Location.list()
+      ]);
 
       setCustomers(customersData);
       setBoats(boatsData);
