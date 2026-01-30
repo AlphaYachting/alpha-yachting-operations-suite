@@ -106,17 +106,17 @@ export default function Projects() {
    const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadData().then(() => {
+      // Load task stats after projects are loaded
+      loadTaskStats();
+    });
   }, []);
 
   const loadData = async () => {
     try {
-      // Minimal data load to prevent timeout
-      const [projectsData, workOrdersData, tasksData] = await Promise.all([
-        base44.entities.Job.list('-created_date', 30),
-        base44.entities.WorkOrder.list('-created_date', 30),
-        base44.entities.Task.list('-created_date', 50)
-      ]);
+      setLoading(true);
+      // Load ONLY projects - no related data on initial load
+      const projectsData = await base44.entities.Job.list('-created_date', 30);
 
       // Sort projects: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
       const sortedProjects = projectsData.sort((a, b) => {
@@ -162,12 +162,24 @@ export default function Projects() {
       });
 
       setProjects(sortedProjects);
-      setWorkOrders(workOrdersData);
-      setTasks(tasksData);
     } catch (error) {
       console.error('Error loading projects:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Load minimal task stats data separately after projects load
+  const loadTaskStats = async () => {
+    try {
+      const [workOrdersData, tasksData] = await Promise.all([
+        base44.entities.WorkOrder.list('-created_date', 30),
+        base44.entities.Task.list('-created_date', 50)
+      ]);
+      setWorkOrders(workOrdersData);
+      setTasks(tasksData);
+    } catch (error) {
+      console.error('Error loading task stats:', error);
     }
   };
 
@@ -253,14 +265,17 @@ export default function Projects() {
   };
 
   const getCustomerName = (customerId) => {
+    // Don't try to fetch if not loaded - just show placeholder
+    if (customers.length === 0) return '—';
     const customer = customers.find(c => c.id === customerId);
-    if (!customer) return 'Loading...';
+    if (!customer) return 'Unknown';
     return customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
   };
 
   const getBoatName = (boatId) => {
+    if (boats.length === 0) return '—';
     const boat = boats.find(b => b.id === boatId);
-    return boat?.vessel_name || 'Loading...';
+    return boat?.vessel_name || 'Unknown';
   };
 
   const getLocationName = (locationId) => {
@@ -268,12 +283,7 @@ export default function Projects() {
     return location?.name || '';
   };
 
-  // Lazy load customer/boat data when first needed
-  useEffect(() => {
-    if (projects.length > 0 && customers.length === 0) {
-      loadFormData();
-    }
-  }, [projects]);
+  // Remove automatic loading - only load when dialog opens
 
   const getProjectTaskStats = (projectId) => {
     const projectWorkOrders = workOrders.filter(wo => wo.job_id === projectId);
