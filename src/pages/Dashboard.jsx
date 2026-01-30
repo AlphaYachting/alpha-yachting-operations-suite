@@ -128,9 +128,16 @@ export default function Dashboard() {
   const [showLeadForm, setShowLeadForm] = useState(false);
   const [leads, setLeads] = useState([]);
   const [offers, setOffers] = useState([]);
+  const [lastLoadTime, setLastLoadTime] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
+      // Check if data was loaded in the last hour
+      const now = Date.now();
+      if (lastLoadTime && (now - lastLoadTime) < 3600000) {
+        console.log('Dashboard: Using cached data (last load was', Math.round((now - lastLoadTime) / 60000), 'minutes ago)');
+        return;
+      }
       try {
         const user = await base44.auth.me();
         if (!user) {
@@ -194,6 +201,8 @@ export default function Dashboard() {
         setInventoryReservations(reservationsData);
         setLeads(leadsData);
         setOffers(offersData);
+        setLastLoadTime(Date.now());
+        console.log('Dashboard: Data loaded successfully');
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
