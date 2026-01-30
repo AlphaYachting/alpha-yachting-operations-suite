@@ -126,14 +126,14 @@ export default function WorkOrders() {
 
   const loadData = async () => {
     try {
-      // CRITICAL: Minimal data loading to prevent database overload
+      // Load all work orders with reasonable limits
       const [woData, jobsData, techData, custData, boatsData, locData, reservationsData, vehiclesData] = await Promise.all([
-        base44.entities.WorkOrder.filter({ status: 'Draft' }),
-        base44.entities.Job.list('-created_date', 30),
-        base44.entities.Technician.list('-created_date', 20),
-        base44.entities.Customer.list('-created_date', 30),
-        base44.entities.Boat.list('-created_date', 30),
-        base44.entities.Location.list('-created_date', 15),
+        base44.entities.WorkOrder.list('-scheduled_date', 100),
+        base44.entities.Job.list('-created_date', 50),
+        base44.entities.Technician.list(),
+        base44.entities.Customer.list('-created_date', 50),
+        base44.entities.Boat.list('-created_date', 50),
+        base44.entities.Location.list(),
         base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
         base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
       ]);
