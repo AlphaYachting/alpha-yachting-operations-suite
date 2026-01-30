@@ -128,13 +128,14 @@ export default function Projects() {
 
   const loadData = async () => {
     try {
+      // Reduced limits to prevent timeout
       const [projectsData, customersData, boatsData, locationsData, workOrdersData, tasksData] = await Promise.all([
-        base44.entities.Job.list(),
-        base44.entities.Customer.list(),
-        base44.entities.Boat.list(),
-        base44.entities.Location.list(),
-        base44.entities.WorkOrder.list(),
-        base44.entities.Task.list()
+        base44.entities.Job.list('-created_date', 100),
+        base44.entities.Customer.list('-created_date', 100),
+        base44.entities.Boat.list('-created_date', 100),
+        base44.entities.Location.list('-created_date', 50),
+        base44.entities.WorkOrder.list('-created_date', 100),
+        base44.entities.Task.list('-created_date', 200)
       ]);
 
       // Sort projects: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
