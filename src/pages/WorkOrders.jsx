@@ -573,6 +573,17 @@ export default function WorkOrders() {
     };
   }, [boatMap, jobMap, customerMap, locationMap, filteredWorkOrders]);
 
+  // Filter boats to only show those with work orders (client-side, no DB calls)
+  const boatsWithWorkOrders = useMemo(() => {
+    const boatIds = new Set(
+      workOrders.map(wo => {
+        const job = jobMap[wo.job_id];
+        return job?.boat_id;
+      }).filter(Boolean)
+    );
+    return boats.filter(boat => boatIds.has(boat.id));
+  }, [boats, workOrders, jobMap]);
+
   const groupedByBoat = useMemo(() => {
     const groups = {};
     filteredWorkOrders.forEach(wo => {
@@ -686,8 +697,8 @@ export default function WorkOrders() {
             <SelectValue placeholder="All Boats" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Boats</SelectItem>
-            {boats.map(boat => (
+            <SelectItem value="all">All Boats ({boatsWithWorkOrders.length})</SelectItem>
+            {boatsWithWorkOrders.map(boat => (
               <SelectItem key={boat.id} value={boat.id}>
                 {boat.vessel_name}
               </SelectItem>
