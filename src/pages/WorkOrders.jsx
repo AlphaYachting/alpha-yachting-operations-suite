@@ -511,18 +511,6 @@ export default function WorkOrders() {
     setExpandedWorkOrders(prev => ({ ...prev, [woId]: !prev[woId] }));
   };
 
-  // Get boats that have work orders for the dropdown
-  const boatsWithWorkOrders = useMemo(() => {
-    const boatIds = new Set();
-    workOrders.forEach(wo => {
-      const job = jobMap[wo.job_id];
-      if (job?.boat_id) {
-        boatIds.add(job.boat_id);
-      }
-    });
-    return boats.filter(boat => boatIds.has(boat.id));
-  }, [workOrders, boats, jobMap]);
-
   const filteredWorkOrders = useMemo(() => {
     return workOrders.filter(wo => {
       const projectInfo = getProjectInfo(wo.job_id);
@@ -698,8 +686,8 @@ export default function WorkOrders() {
             <SelectValue placeholder="All Boats" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Boats ({boatsWithWorkOrders.length})</SelectItem>
-            {boatsWithWorkOrders.map(boat => (
+            <SelectItem value="all">All Boats</SelectItem>
+            {boats.map(boat => (
               <SelectItem key={boat.id} value={boat.id}>
                 {boat.vessel_name}
               </SelectItem>
