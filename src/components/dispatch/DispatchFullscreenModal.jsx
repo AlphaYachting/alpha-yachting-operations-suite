@@ -82,9 +82,9 @@ export default function DispatchFullscreenModal({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900 z-50 overflow-auto">
+    <div className="fixed inset-0 bg-slate-900 z-50 flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between flex-shrink-0 z-10">
         <div className="flex items-center gap-4">
           {mode === 'day' && (
             <Button
@@ -147,8 +147,8 @@ export default function DispatchFullscreenModal({ open, onClose }) {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-6">
+      {/* Content - SINGLE SCROLL CONTAINER for @hello-pangea/dnd */}
+      <div className="flex-1 overflow-auto p-6" id="dispatchScroll">
         {loading ? (
           <div className="flex items-center justify-center h-96">
             <div className="text-slate-500">Loading...</div>
