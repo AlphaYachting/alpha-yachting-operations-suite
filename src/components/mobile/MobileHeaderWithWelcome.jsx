@@ -100,7 +100,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
       </div>,
 
     tasks:
-    <div key="tasks" className="bg-white/20 rounded-full px-3 py-1">
+    <div key="tasks" className="bg-white/20 px-4 py-1 rounded-full">
         <p className="text-white px-1 text-2xl font-bold md:text-3xl">{taskCount}</p>
         <p className="text-xs text-blue-100">tasks</p>
       </div>
