@@ -74,6 +74,7 @@ import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import TaskTemplates from './pages/TaskTemplates';
+import TasklistImport from './pages/TasklistImport';
 import TeamCalendar from './pages/TeamCalendar';
 import TeamMobileHome from './pages/TeamMobileHome';
 import TeamOrderDetail from './pages/TeamOrderDetail';
@@ -88,7 +89,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import TasklistImport from './pages/TasklistImport';
 import __Layout from './Layout.jsx';
 
 
@@ -120,6 +120,7 @@ export const PAGES = {
     "Schedule": Schedule,
     "Settings": Settings,
     "TaskTemplates": TaskTemplates,
+    "TasklistImport": TasklistImport,
     "TeamCalendar": TeamCalendar,
     "TeamMobileHome": TeamMobileHome,
     "TeamOrderDetail": TeamOrderDetail,
@@ -134,7 +135,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "TasklistImport": TasklistImport,
 }
 
 export const pagesConfig = {
