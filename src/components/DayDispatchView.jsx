@@ -117,7 +117,7 @@ export default function DayDispatchView({
     });
   }, [technicians, dayWorkOrders]);
   
-  // Drag end handler
+  // Drag end handler - updates technician assignment
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
     
@@ -126,52 +126,56 @@ export default function DayDispatchView({
     const sourceTechId = source.droppableId;
     const destTechId = destination.droppableId;
     
+    // No change if dropped on same technician
+    if (sourceTechId === destTechId) return;
+    
     // Find work order
     const wo = dayWorkOrders.find(w => w.id === woId);
-    if (!wo) return;
-    
-    // Calculate time change (if dropped at different position)
-    const sourceRow = technicianRows.find(r => r.technician.id === sourceTechId);
-    const sourceIndex = source.index;
-    
-    // For simplicity, we'll just change technician, not time on drag
-    // (Time change happens via resize handle)
+    if (!wo) {
+      console.warn('Work order not found:', woId);
+      return;
+    }
     
     try {
       setError(null);
       
-      const updates = {};
-      
-      // Change technician if moved to different row
-      if (sourceTechId !== destTechId) {
-        // Update assigned_technicians array
-        const newAssigned = wo.assigned_technicians?.filter(id => id !== sourceTechId) || [];
-        if (!newAssigned.includes(destTechId)) {
-          newAssigned.push(destTechId);
-        }
-        updates.assigned_technicians = newAssigned;
-        updates.lead_technician_id = destTechId;
+      // Update assigned_technicians array
+      const newAssigned = wo.assigned_technicians?.filter(id => id !== sourceTechId) || [];
+      if (!newAssigned.includes(destTechId)) {
+        newAssigned.push(destTechId);
       }
       
-      if (Object.keys(updates).length > 0) {
-        await onWorkOrderUpdate(woId, updates);
-      }
+      const updates = {
+        assigned_technicians: newAssigned,
+        lead_technician_id: destTechId
+      };
+      
+      await onWorkOrderUpdate(woId, updates);
     } catch (err) {
-      console.error('Failed to update work order:', err);
-      setError('Failed to update work order');
+      console.warn('Failed to update technician assignment:', err);
+      setError('Failed to update technician assignment. Please try again.');
     }
   };
   
-  // Resize handler (mouse events)
+  // Resize handler - updates work order duration (scheduled_end_time)
+  // CRITICAL: This resize handle is positioned as a separate flex item (w-4, flex-shrink-0)
+  // to avoid pointer-event conflicts with the drag handle (flex-1).
+  // Do NOT change to absolute positioning or it will break drag interaction.
   const handleResizeStart = (e, wo) => {
     e.preventDefault();
     e.stopPropagation();
     
+    const originalStartMinutes = parseTime(wo.scheduled_start_time);
+    const originalEndMinutes = parseTime(wo.scheduled_end_time || wo.scheduled_start_time) || originalStartMinutes + 60;
+    
+    // Minimum duration enforcement (30 minutes)
+    const MIN_DURATION_MINUTES = 30;
+    
     setResizing({
       woId: wo.id,
       startX: e.clientX,
-      originalStart: parseTime(wo.scheduled_start_time),
-      originalEnd: parseTime(wo.scheduled_end_time || wo.scheduled_start_time) || parseTime(wo.scheduled_start_time) + 60
+      originalStart: originalStartMinutes,
+      originalEnd: originalEndMinutes
     });
     
     const handleMouseMove = (moveEvent) => {
@@ -188,13 +192,16 @@ export default function DayDispatchView({
       let newEnd = resizing.originalEnd + deltaMinutes;
       newEnd = snapToGrid(newEnd, gridMinutes);
       
-      // Enforce minimum duration (30 min)
-      if (newEnd - resizing.originalStart < 30) {
-        newEnd = resizing.originalStart + 30;
+      // Enforce minimum duration
+      if (newEnd - resizing.originalStart < MIN_DURATION_MINUTES) {
+        newEnd = resizing.originalStart + MIN_DURATION_MINUTES;
       }
       
-      // Clamp to day bounds
-      if (newEnd > endHour * 60) newEnd = endHour * 60;
+      // Clamp to visible day bounds (06:00-18:00)
+      const maxEndMinutes = endHour * 60;
+      if (newEnd > maxEndMinutes) {
+        newEnd = maxEndMinutes;
+      }
       
       setResizing(prev => ({ ...prev, newEnd }));
     };
@@ -207,14 +214,25 @@ export default function DayDispatchView({
         return;
       }
       
+      // Validate final time
+      if (resizing.newEnd <= resizing.originalStart) {
+        console.warn('Invalid resize: end time before or equal to start time');
+        setError('Invalid duration: end time must be after start time');
+        setResizing(null);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        return;
+      }
+      
       try {
+        setError(null);
         const newEndTime = formatTime(resizing.newEnd);
         await onWorkOrderUpdate(resizing.woId, {
           scheduled_end_time: newEndTime
         });
       } catch (err) {
-        console.error('Failed to resize:', err);
-        setError('Failed to update duration');
+        console.warn('Failed to update duration:', err);
+        setError('Failed to update duration. Please try again.');
       }
       
       setResizing(null);
@@ -346,6 +364,7 @@ export default function DayDispatchView({
                               }}
                             >
                               <div className="h-full flex items-start">
+                                {/* DRAG HANDLE AREA: flex-1 (most of card width), receives dragHandleProps */}
                                 <div
                                   {...provided.dragHandleProps}
                                   className="flex items-center gap-1 cursor-move flex-1 min-w-0 px-2 py-1"
@@ -356,16 +375,16 @@ export default function DayDispatchView({
                                       {wo.title}
                                     </p>
                                     <div className="flex items-center gap-1 mt-0.5">
-                                      <Clock className="h-3 w-3 text-slate-500" />
-                                      <span className="text-[10px] text-slate-600">
-                                        {wo.scheduled_start_time}
-                                        {wo.scheduled_end_time && ` - ${wo.scheduled_end_time}`}
+                                      <span className="text-[10px] font-medium text-slate-700">
+                                        {wo.scheduled_start_time}–{wo.scheduled_end_time || '?'}
                                       </span>
                                     </div>
                                   </div>
                                 </div>
                                 
-                                {/* Resize handle - separated from drag handle */}
+                                {/* RESIZE HANDLE AREA: fixed 4px strip on right edge, separate from drag handle.
+                                    CRITICAL: Do NOT use position:absolute or it will block drag handle.
+                                    Keep as flex item (w-4, flex-shrink-0) to prevent pointer overlap. */}
                                 <div
                                   onMouseDown={(e) => handleResizeStart(e, wo)}
                                   className="w-4 cursor-ew-resize hover:bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 border-l-2"
