@@ -184,7 +184,7 @@ export default function DispatchFullscreenModal({ open, onClose }) {
             statusFilter="all"
             technicianFilter={[]}
             searchTerm=""
-            onWorkOrderClick={() => {}} // No click action in fullscreen
+            onWorkOrderClick={() => {}}
             onWorkOrderUpdate={handleWorkOrderUpdate}
           />
         )}
