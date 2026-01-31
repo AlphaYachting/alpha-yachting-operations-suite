@@ -51,6 +51,7 @@ export default function DragDropCalendar({
   inventoryReservations,
   onWorkOrderUpdate,
   onWorkOrderEdit,
+  onDayClick,
   loading,
   viewType = 'month' // 'week' or 'month'
 }) {
@@ -355,7 +356,8 @@ export default function DragDropCalendar({
                 <div 
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`min-h-[120px] border rounded-lg transition-all ${
+                  onClick={() => onDayClick && onDayClick(day)}
+                  className={`min-h-[120px] border rounded-lg transition-all ${onDayClick ? 'cursor-pointer' : ''} ${
                     isToday ? 'ring-2 ring-blue-500 bg-blue-50' : 'bg-white'
                   } ${
                     !isCurrentMonth ? 'opacity-40' : ''
