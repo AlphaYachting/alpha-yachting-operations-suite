@@ -20,8 +20,7 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2,
-  ChevronLeft
+  BarChart2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,15 +44,12 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays, startOfWeek } from 'date-fns';
+import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays } from 'date-fns';
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
-import DragDropCalendar from '@/components/schedule/DragDropCalendar';
-import DispatchTimeline from '@/components/schedule/DispatchTimeline';
-import DayDispatchView from '@/components/DayDispatchView';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -72,21 +68,12 @@ export default function Dashboard() {
   const [leads, setLeads] = useState([]);
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
-  const [technicians, setTechnicians] = useState([]);
   const [kpis, setKpis] = useState(null);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
-  const [showDispatchModal, setShowDispatchModal] = useState(false);
-  
-  // Dispatch modal state
-  const [dispatchMode, setDispatchMode] = useState('calendar');
-  const [dispatchWeekStart, setDispatchWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [dispatchSelectedDate, setDispatchSelectedDate] = useState(null);
-  const [dispatchGridSize, setDispatchGridSize] = useState('1h');
-  const [dispatchInventoryReservations, setDispatchInventoryReservations] = useState([]);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -98,16 +85,10 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
 
-  useEffect(() => {
-    if (showDispatchModal) {
-      loadDispatchData();
-    }
-  }, [showDispatchModal]);
-
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData, techData] = await Promise.all([
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
@@ -115,8 +96,7 @@ export default function Dashboard() {
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
-        base44.entities.Note.list('-created_date', 50),
-        base44.entities.Technician.list()
+        base44.entities.Note.list('-created_date', 50)
       ]);
 
       setWorkOrders(woData);
@@ -127,7 +107,6 @@ export default function Dashboard() {
       setLeads(leadsData);
       setOffers(offersData);
       setNotes(notesData);
-      setTechnicians(techData);
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
@@ -135,15 +114,6 @@ export default function Dashboard() {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadDispatchData = async () => {
-    try {
-      const invResData = await base44.entities.InventoryReservation.list();
-      setDispatchInventoryReservations(invResData);
-    } catch (error) {
-      console.error('Error loading dispatch data:', error);
     }
   };
 
@@ -437,14 +407,6 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            size="sm" 
-            onClick={() => setShowDispatchModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Calendar className="h-4 w-4 mr-1" />
-            Dispatch
-          </Button>
           <Button 
             size="sm" 
             onClick={() => setShowProjectDialog(true)}
@@ -1151,148 +1113,6 @@ export default function Dashboard() {
         open={showCapacityModal} 
         onOpenChange={setShowCapacityModal} 
       />
-
-      {/* Dispatch Fullscreen Modal (Inline - Reuses Existing Components) */}
-      {showDispatchModal && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center overflow-auto">
-          <div className="w-full min-h-screen bg-slate-50">
-          {/* Header */}
-          <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
-            <div className="flex items-center gap-4">
-              {dispatchMode === 'day' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDispatchMode('calendar')}
-                  className="flex items-center gap-2"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Back to Calendar
-                </Button>
-              )}
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  {dispatchMode === 'calendar' ? 'Calendar Dispatch' : 'Day Dispatch'}
-                </h2>
-                <p className="text-sm text-slate-500">
-                  {dispatchMode === 'calendar' 
-                    ? format(dispatchWeekStart, 'MMMM yyyy')
-                    : format(dispatchSelectedDate || new Date(), 'EEEE, MMMM d, yyyy')}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              {dispatchMode === 'calendar' && (
-                <>
-                  <Button variant="outline" size="sm" onClick={() => setDispatchWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
-                    Today
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={() => setDispatchWeekStart(addDays(dispatchWeekStart, -7))}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={() => setDispatchWeekStart(addDays(dispatchWeekStart, 7))}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-              
-              {dispatchMode === 'day' && (
-                <Select value={dispatchGridSize} onValueChange={setDispatchGridSize}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="30m">30 minutes</SelectItem>
-                    <SelectItem value="1h">1 hour</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setShowDispatchModal(false);
-                  setDispatchMode('calendar');
-                  setDispatchSelectedDate(null);
-                }}
-                className="ml-4"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Content - Reuses existing Schedule components */}
-          <div className="p-6 bg-slate-50" style={{ minHeight: 'calc(100vh - 72px)' }}>
-            {dispatchMode === 'calendar' ? (
-              <DragDropCalendar
-                currentWeekStart={dispatchWeekStart}
-                workOrders={workOrders}
-                jobs={jobs}
-                technicians={technicians}
-                customers={customers}
-                boats={boats}
-                locations={locations}
-                inventoryReservations={dispatchInventoryReservations}
-                onWorkOrderUpdate={async (woId, updates) => {
-                  try {
-                    // Optimistic update
-                    setWorkOrders(prevWOs => prevWOs.map(wo => 
-                      wo.id === woId ? { ...wo, ...updates } : wo
-                    ));
-                    await base44.entities.WorkOrder.update(woId, updates);
-                  } catch (error) {
-                    console.error('Error updating work order:', error);
-                    alert('Failed to update work order. Please try again.');
-                    await loadDashboardData();
-                  }
-                }}
-                onWorkOrderEdit={() => {}}
-                onDayClick={(date) => {
-                  setDispatchSelectedDate(date);
-                  setDispatchMode('day');
-                }}
-                loading={loading}
-                viewType="week"
-              />
-            ) : (
-              <div className="h-full">
-                {technicians.length === 0 ? (
-                  <div className="flex items-center justify-center h-64 bg-white rounded-lg border border-slate-200">
-                    <p className="text-slate-500">Loading technicians...</p>
-                  </div>
-                ) : (
-                  <DayDispatchView
-                    technicians={technicians}
-                    workOrders={workOrders}
-                    jobs={jobs}
-                    customers={customers}
-                    boats={boats}
-                    locations={locations}
-                    selectedDate={dispatchSelectedDate || new Date()}
-                    gridSize={dispatchGridSize}
-                    onWorkOrderUpdate={async (woId, updates) => {
-                      try {
-                        setWorkOrders(prevWOs => prevWOs.map(wo => 
-                          wo.id === woId ? { ...wo, ...updates } : wo
-                        ));
-                        await base44.entities.WorkOrder.update(woId, updates);
-                      } catch (error) {
-                        console.error('Error updating work order:', error);
-                        alert('Failed to update work order.');
-                        await loadDashboardData();
-                      }
-                    }}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-          </div>
-        </div>
-      )}
 
       {/* Note Dialog */}
       <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
