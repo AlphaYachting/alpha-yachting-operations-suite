@@ -333,7 +333,7 @@ export default function DayDispatchView({
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className="absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all overflow-hidden border cursor-move group"
+                              className="absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all overflow-hidden border group"
                               style={{
                                 ...provided.draggableProps.style,
                                 left: `${position.left}%`,
@@ -345,10 +345,10 @@ export default function DayDispatchView({
                                 borderLeftColor: technician.color || '#3b82f6'
                               }}
                             >
-                              <div className="h-full px-2 py-1 flex items-start justify-between">
+                              <div className="h-full flex items-start">
                                 <div
                                   {...provided.dragHandleProps}
-                                  className="flex items-center gap-1"
+                                  className="flex items-center gap-1 cursor-move flex-1 min-w-0 px-2 py-1"
                                 >
                                   <GripVertical className="h-3 w-3 text-slate-400 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
@@ -365,11 +365,11 @@ export default function DayDispatchView({
                                   </div>
                                 </div>
                                 
-                                {/* Resize handle */}
+                                {/* Resize handle - separated from drag handle */}
                                 <div
                                   onMouseDown={(e) => handleResizeStart(e, wo)}
-                                  className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  style={{ borderRight: '2px solid currentColor', color: technician.color || '#3b82f6' }}
+                                  className="w-4 cursor-ew-resize hover:bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 border-l-2"
+                                  style={{ borderLeftColor: technician.color || '#3b82f6' }}
                                 />
                               </div>
                             </div>
