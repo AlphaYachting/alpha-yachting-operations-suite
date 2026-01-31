@@ -14,7 +14,8 @@ import {
   Clock,
   ChevronRight,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -84,6 +85,8 @@ export default function Projects() {
    const [tasks, setTasks] = useState([]);
    const [loading, setLoading] = useState(true);
    const [formDataLoading, setFormDataLoading] = useState(false);
+   const [saving, setSaving] = useState(false);
+   const [loadError, setLoadError] = useState(null);
    const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [priorityFilter, setPriorityFilter] = useState('all');
@@ -119,6 +122,7 @@ export default function Projects() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       console.log('[Jobs] Starting data load...');
       // Load ONLY projects - no related data on initial load
       const projectsData = await base44.entities.Job.list('-created_date', 30);
@@ -172,6 +176,7 @@ export default function Projects() {
     } catch (error) {
       console.error('[Jobs] CRITICAL ERROR loading projects:', error);
       console.error('[Jobs] Error details:', { message: error.message, stack: error.stack });
+      setLoadError('Failed to load projects. Please refresh the page or contact support if this persists.');
     } finally {
       setLoading(false);
     }
@@ -229,6 +234,7 @@ export default function Projects() {
 
   const handleSave = async (projectData) => {
     const startTime = Date.now();
+    setSaving(true);
     try {
       console.log('[Jobs] Starting save operation...', { editing: !!editingProject });
 
@@ -242,7 +248,7 @@ export default function Projects() {
           });
 
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Save operation timed out after 15 seconds')), 15000)
+        setTimeout(() => reject(new Error('Operation took too long. Please retry. If it persists, reduce filters or reload.')), 20000)
       );
 
       const result = await Promise.race([savePromise, timeoutPromise]);
@@ -259,8 +265,15 @@ export default function Projects() {
       setSearchParams({});
     } catch (error) {
       console.error('[Jobs] Save failed after', Date.now() - startTime, 'ms:', error);
-      alert(`Failed to save project: ${error.message}`);
+      const userMessage = error.message.includes('took too long') 
+        ? error.message 
+        : `Failed to save project. ${error.message.includes('timeout') || error.message.includes('timed out') 
+            ? 'Operation took too long. Please retry. If it persists, reduce filters or reload.' 
+            : 'Please try again.'}`;
+      alert(userMessage);
       throw error;
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -397,6 +410,25 @@ export default function Projects() {
           Create Project
         </Button>
       </div>
+
+      {/* Error Alert */}
+      {loadError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <h3 className="text-sm font-medium text-red-800">Error Loading Data</h3>
+            <p className="text-sm text-red-700 mt-1">{loadError}</p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => { setLoadError(null); loadData(); }}
+            className="border-red-300 text-red-700 hover:bg-red-100"
+          >
+            Retry
+          </Button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -622,6 +654,7 @@ export default function Projects() {
               locations={locations}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingProject(null); setSearchParams({}); }}
+              saving={saving}
             />
           )}
         </DialogContent>
