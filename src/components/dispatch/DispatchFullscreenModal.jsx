@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DragDropCalendar from '@/components/schedule/DragDropCalendar';
 import DayDispatchView from '@/components/DayDispatchView';
+import ScheduleItemEditModal from '@/components/ScheduleItemEditModal';
 
 export default function DispatchFullscreenModal({ open, onClose }) {
   const [mode, setMode] = useState('calendar'); // 'calendar' or 'day'
@@ -22,6 +23,8 @@ export default function DispatchFullscreenModal({ open, onClose }) {
   const [locations, setLocations] = useState([]);
   const [inventoryReservations, setInventoryReservations] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingWorkOrder, setEditingWorkOrder] = useState(null);
 
   useEffect(() => {
     if (open) {
@@ -73,6 +76,15 @@ export default function DispatchFullscreenModal({ open, onClose }) {
   const handleBackToCalendar = () => {
     setMode('calendar');
     setSelectedDate(null);
+  };
+
+  const handleWorkOrderEdit = (wo) => {
+    setEditingWorkOrder(wo);
+    setEditModalOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    await loadData();
   };
 
   const prevWeek = () => setCurrentWeekStart(addDays(currentWeekStart, -7));
@@ -164,7 +176,7 @@ export default function DispatchFullscreenModal({ open, onClose }) {
             locations={locations}
             inventoryReservations={inventoryReservations}
             onWorkOrderUpdate={handleWorkOrderUpdate}
-            onWorkOrderEdit={() => {}} // No edit in fullscreen
+            onWorkOrderEdit={handleWorkOrderEdit}
             onDayClick={handleDayClick}
             loading={loading}
             viewType="week"
@@ -180,9 +192,18 @@ export default function DispatchFullscreenModal({ open, onClose }) {
             selectedDate={selectedDate || new Date()}
             gridSize={gridSize}
             onWorkOrderUpdate={handleWorkOrderUpdate}
+            onWorkOrderEdit={handleWorkOrderEdit}
           />
         )}
       </div>
+
+      <ScheduleItemEditModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        workOrder={editingWorkOrder}
+        technicians={technicians}
+        onSave={handleEditSave}
+      />
     </div>
   );
 }

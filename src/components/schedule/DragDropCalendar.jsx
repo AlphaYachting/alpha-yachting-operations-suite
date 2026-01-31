@@ -316,7 +316,8 @@ export default function DragDropCalendar({
     return job?.priority || 'Normal';
   };
   
-  const handleWorkOrderClick = (e, wo) => {
+  const handleWorkOrderClick = (e, wo, isDragging) => {
+    if (isDragging) return; // Ignore clicks during drag
     e.preventDefault();
     e.stopPropagation();
     if (onWorkOrderEdit) {
@@ -417,7 +418,7 @@ export default function DragDropCalendar({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div
-                                   onClick={(e) => handleWorkOrderClick(e, wo)}
+                                   onClick={(e) => handleWorkOrderClick(e, wo, false)}
                                    className={`relative overflow-hidden text-[10px] cursor-pointer hover:shadow-lg transition-all select-none ${
                                      isEnd ? 'rounded-r-md border-r-4' : 'border-r border-white/30'
                                    } ${
@@ -538,13 +539,14 @@ export default function DragDropCalendar({
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
                                 >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div
-                                       onClick={(e) => !dragSnapshot.isDragging && handleWorkOrderClick(e, wo)}
-                                       className={`relative overflow-hidden border-l-4 text-[10px] cursor-move hover:shadow-lg transition-all ${
+                                       onClick={(e) => handleWorkOrderClick(e, wo, dragSnapshot.isDragging)}
+                                       className={`relative overflow-hidden border-l-4 text-[10px] hover:shadow-lg transition-all ${
+                                         dragSnapshot.isDragging ? 'cursor-grabbing' : 'cursor-pointer'
+                                       } ${
                                          dragSnapshot.isDragging ? 'opacity-60 shadow-xl scale-110 rotate-3 cursor-grabbing' : 'hover:scale-105'
                                        } ${
                                          hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
@@ -579,7 +581,13 @@ export default function DragDropCalendar({
                                             </div>
                                           )}
                                           <div className="flex items-center gap-1">
-                                            <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
+                                            <div 
+                                              {...provided.dragHandleProps}
+                                              className="cursor-move p-0.5 hover:bg-white/20 rounded"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
+                                            </div>
                                             <p className="font-semibold truncate leading-tight flex-1">{wo.title}</p>
                                           </div>
                                           {wo.scheduled_start_time && (

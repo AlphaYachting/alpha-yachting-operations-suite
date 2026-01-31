@@ -81,7 +81,8 @@ export default function DayDispatchView({
   locations,
   selectedDate,
   gridSize = '30m',
-  onWorkOrderUpdate
+  onWorkOrderUpdate,
+  onWorkOrderEdit
 }) {
   const [resizing, setResizing] = useState(null);
   const [error, setError] = useState(null);
@@ -463,20 +464,32 @@ export default function DayDispatchView({
                                         borderLeftColor: technician.color || '#3b82f6',
                                         pointerEvents: 'auto'
                                       };
+
+                                      const handleCardClick = (e) => {
+                                        if (isDragging) return;
+                                        e.stopPropagation();
+                                        if (onWorkOrderEdit) {
+                                          onWorkOrderEdit(wo);
+                                        }
+                                      };
                                       
                                       return (
                                         <div
                                           ref={provided.innerRef}
                                           {...provided.draggableProps}
-                                          className="rounded-md shadow-sm hover:shadow-md transition-all overflow-hidden border group"
+                                          onClick={handleCardClick}
+                                          className="rounded-md shadow-sm hover:shadow-md transition-all overflow-hidden border group cursor-pointer"
                                           style={cardStyle}
                                         >
                                           <div className="h-full flex items-start">
                                             <div
                                               {...provided.dragHandleProps}
-                                              className="flex items-center gap-1 cursor-move flex-1 min-w-0 px-2 py-1"
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="flex items-center gap-1 cursor-move px-2 py-1 hover:bg-black/5"
                                             >
                                               <GripVertical className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                                            </div>
+                                            <div className="flex items-center gap-1 flex-1 min-w-0 px-2 py-1">
                                               <div className="flex-1 min-w-0">
                                                 <p className="text-xs font-medium truncate text-slate-900">
                                                   {wo.title}
@@ -488,9 +501,11 @@ export default function DayDispatchView({
                                                 </div>
                                               </div>
                                             </div>
+                                            </div>
 
                                             <div
                                               onMouseDown={(e) => handleResizeStart(e, wo)}
+                                              onClick={(e) => e.stopPropagation()}
                                               className="w-4 cursor-ew-resize hover:bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 border-l-2"
                                               style={{ borderLeftColor: technician.color || '#3b82f6' }}
                                             />
