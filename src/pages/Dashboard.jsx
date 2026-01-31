@@ -138,6 +138,15 @@ export default function Dashboard() {
     }
   };
 
+  const loadDispatchData = async () => {
+    try {
+      const invResData = await base44.entities.InventoryReservation.list();
+      setDispatchInventoryReservations(invResData);
+    } catch (error) {
+      console.error('Error loading dispatch data:', error);
+    }
+  };
+
   const loadKPIs = async () => {
     try {
       const now = new Date();
