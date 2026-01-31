@@ -117,18 +117,23 @@ export default function DayDispatchView({
     });
   }, [technicians, dayWorkOrders]);
   
-  // Drag end handler - updates technician assignment
+  // Drag end handler - updates technician assignment AND time
   const handleDragEnd = async (result) => {
     console.log('[DnD] onDragEnd:', { draggableId: result.draggableId, source: result.source?.droppableId, destination: result.destination?.droppableId });
     if (!result.destination) return;
     
     const { draggableId, source, destination } = result;
     const woId = draggableId;
-    const sourceTechId = source.droppableId;
-    const destTechId = destination.droppableId;
     
-    // No change if dropped on same technician
-    if (sourceTechId === destTechId) return;
+    // Parse destination droppableId: "tech:<id>|date:<YYYY-MM-DD>|t:<HH:MM>"
+    const destParts = destination.droppableId.split('|');
+    if (destParts.length !== 3) {
+      console.warn('Invalid droppableId format:', destination.droppableId);
+      return;
+    }
+    
+    const destTechId = destParts[0].replace('tech:', '');
+    const destTime = destParts[2].replace('t:', '');
     
     // Find work order
     const wo = dayWorkOrders.find(w => w.id === woId);
@@ -137,10 +142,28 @@ export default function DayDispatchView({
       return;
     }
     
+    // Calculate duration to preserve
+    const currentStart = parseTime(wo.scheduled_start_time || '09:00');
+    const currentEnd = parseTime(wo.scheduled_end_time || wo.scheduled_start_time) || currentStart + 60;
+    const duration = currentEnd - currentStart;
+    
+    // New times
+    const newStartMinutes = parseTime(destTime);
+    const newEndMinutes = newStartMinutes + duration;
+    
+    // Validate bounds
+    if (newEndMinutes > endHour * 60) {
+      setError('Work order would extend past 18:00. Please choose an earlier time slot.');
+      return;
+    }
+    
     try {
       setError(null);
       
       // Update assigned_technicians array
+      const sourceParts = source.droppableId.split('|');
+      const sourceTechId = sourceParts[0].replace('tech:', '');
+      
       const newAssigned = wo.assigned_technicians?.filter(id => id !== sourceTechId) || [];
       if (!newAssigned.includes(destTechId)) {
         newAssigned.push(destTechId);
@@ -148,13 +171,15 @@ export default function DayDispatchView({
       
       const updates = {
         assigned_technicians: newAssigned,
-        lead_technician_id: destTechId
+        lead_technician_id: destTechId,
+        scheduled_start_time: formatTime(newStartMinutes),
+        scheduled_end_time: formatTime(newEndMinutes)
       };
       
       await onWorkOrderUpdate(woId, updates);
     } catch (err) {
-      console.warn('Failed to update technician assignment:', err);
-      setError('Failed to update technician assignment. Please try again.');
+      console.warn('Failed to update work order:', err);
+      setError('Failed to update work order. Please try again.');
     }
   };
   
@@ -317,31 +342,41 @@ export default function DayDispatchView({
               ))}
             </div>
             
-            {/* Technician rows with droppable zones */}
+            {/* Technician rows with timeslot droppables */}
             {technicianRows.map(({ technician, workOrders: techWOs }) => (
-              <Droppable key={technician.id} droppableId={technician.id} direction="horizontal">
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="h-24 border-b relative"
-                    style={{
-                      backgroundColor: snapshot.isDraggingOver ? '#f1f5f920' : 'transparent'
-                    }}
-                  >
-                    {/* Grid lines */}
-                    <div className="absolute inset-0 flex pointer-events-none">
-                      {timeSlots.map((hour) => (
-                        <div
-                          key={hour}
-                          className="flex-1 border-l first:border-l-0"
-                          style={{ minWidth: `${100 / timeSlots.length}%` }}
-                        />
-                      ))}
-                    </div>
+              <div key={technician.id} className="h-24 border-b relative">
+                {/* Time slot grid with droppables */}
+                <div className="absolute inset-0 flex">
+                  {timeSlots.map((hour) => {
+                    const slotTime = formatTime(hour * 60);
+                    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+                    const droppableId = `tech:${technician.id}|date:${dateStr}|t:${slotTime}`;
                     
-                    {/* Work order blocks */}
-                    {techWOs.map((wo, index) => {
+                    return (
+                      <Droppable key={slotTime} droppableId={droppableId} direction="horizontal">
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className="flex-1 border-l first:border-l-0 transition-colors"
+                            style={{
+                              minWidth: `${100 / timeSlots.length}%`,
+                              backgroundColor: snapshot.isDraggingOver ? '#3b82f620' : 'transparent',
+                              borderColor: snapshot.isDraggingOver ? '#3b82f6' : 'transparent',
+                              borderWidth: snapshot.isDraggingOver ? '2px' : '0'
+                            }}
+                          >
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    );
+                  })}
+                </div>
+                    
+                {/* Work order blocks - positioned absolutely above droppable slots */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {techWOs.map((wo, index) => {
                       const position = calculatePosition(
                         wo.scheduled_start_time,
                         wo.scheduled_end_time,
@@ -356,7 +391,7 @@ export default function DayDispatchView({
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className="absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all overflow-hidden border group"
+                              className="absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all overflow-hidden border group pointer-events-auto"
                               style={{
                                 ...provided.draggableProps.style,
                                 left: `${position.left}%`,
@@ -401,10 +436,8 @@ export default function DayDispatchView({
                         </Draggable>
                       );
                     })}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
+                </div>
+              </div>
             ))}
           </div>
         </div>
