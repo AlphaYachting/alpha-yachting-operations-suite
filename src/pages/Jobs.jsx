@@ -15,7 +15,9 @@ import {
   ChevronRight,
   CheckCircle2,
   AlertTriangle,
-  AlertCircle
+  AlertCircle,
+  TrendingUp,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -87,6 +89,8 @@ export default function Projects() {
    const [formDataLoading, setFormDataLoading] = useState(false);
    const [saving, setSaving] = useState(false);
    const [loadError, setLoadError] = useState(null);
+   const [progressByJobId, setProgressByJobId] = useState({});
+   const [loadingProgressFor, setLoadingProgressFor] = useState(null);
    const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [priorityFilter, setPriorityFilter] = useState('all');
@@ -111,10 +115,8 @@ export default function Projects() {
   useEffect(() => {
     console.log('[Jobs] Component mounted, starting data load');
     loadData().then(() => {
-      // Load task stats and form data after projects are loaded
-      console.log('[Jobs] Initial load complete, loading task stats');
-      loadTaskStats();
-      // Also load locations for display
+      // Load form data for dropdowns
+      console.log('[Jobs] Initial load complete, loading form data');
       loadFormData();
     });
   }, []);
@@ -182,20 +184,42 @@ export default function Projects() {
     }
   };
   
-  // Load minimal task stats data separately after projects load
-  const loadTaskStats = async () => {
+  // Load progress for a specific job on demand
+  const loadProgressForJob = async (jobId) => {
+    if (progressByJobId[jobId] || loadingProgressFor === jobId) {
+      return; // Already loaded or loading
+    }
+
+    setLoadingProgressFor(jobId);
     try {
-      console.log('[Jobs] Loading task stats...');
-      const [workOrdersData, tasksData] = await Promise.all([
-        base44.entities.WorkOrder.list('-created_date', 30),
-        base44.entities.Task.list('-created_date', 50)
-      ]);
-      setWorkOrders(workOrdersData);
-      setTasks(tasksData);
-      console.log('[Jobs] Task stats loaded:', { workOrders: workOrdersData.length, tasks: tasksData.length });
+      console.log('[Jobs] Loading progress for job:', jobId);
+      
+      // Fetch only workorders and tasks for this specific job
+      const jobWorkOrders = await base44.entities.WorkOrder.filter({ job_id: jobId });
+      const workOrderIds = jobWorkOrders.map(wo => wo.id);
+      
+      let jobTasks = [];
+      if (workOrderIds.length > 0) {
+        // Fetch tasks for these work orders
+        const allTasks = await base44.entities.Task.list('-created_date', 200);
+        jobTasks = allTasks.filter(task => workOrderIds.includes(task.work_order_id));
+      }
+
+      const totalTasks = jobTasks.length;
+      const completedTasks = jobTasks.filter(task => task.status === 'Completed').length;
+      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      setProgressByJobId(prev => ({
+        ...prev,
+        [jobId]: { totalTasks, completedTasks, progress }
+      }));
+
+      console.log('[Jobs] Progress loaded for job:', jobId, { totalTasks, completedTasks, progress });
     } catch (error) {
-      console.error('[Jobs] ERROR loading task stats:', error);
-      console.error('[Jobs] Error details:', { message: error.message, stack: error.stack });
+      console.error('[Jobs] ERROR loading progress for job:', jobId, error);
+      setLoadError(`Failed to load progress. ${error.message}`);
+    } finally {
+      setLoadingProgressFor(null);
     }
   };
 
@@ -354,18 +378,9 @@ export default function Projects() {
     return location?.name || 'Unknown';
   };
 
-  // Remove automatic loading - only load when dialog opens
-
+  // Get cached progress for a job
   const getProjectTaskStats = (projectId) => {
-    const projectWorkOrders = workOrders.filter(wo => wo.job_id === projectId);
-    const workOrderIds = projectWorkOrders.map(wo => wo.id);
-    const projectTasks = tasks.filter(task => workOrderIds.includes(task.work_order_id));
-
-    const totalTasks = projectTasks.length;
-    const completedTasks = projectTasks.filter(task => task.status === 'Completed').length;
-    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-    return { totalTasks, completedTasks, progress };
+    return progressByJobId[projectId] || null;
   };
 
   const filteredProjects = projects.filter(project => {
@@ -571,21 +586,48 @@ export default function Projects() {
                       )}
                     </div>
 
-                    {taskStats.totalTasks > 0 && (
-                      <div className="mt-3 space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>{taskStats.completedTasks} of {taskStats.totalTasks} tasks completed</span>
+                    {taskStats ? (
+                      taskStats.totalTasks > 0 && (
+                        <div className="mt-3 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5 text-slate-600">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              <span>{taskStats.completedTasks} of {taskStats.totalTasks} tasks completed</span>
+                            </div>
+                            <span className="font-medium text-slate-700">{taskStats.progress}%</span>
                           </div>
-                          <span className="font-medium text-slate-700">{taskStats.progress}%</span>
+                          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-600 transition-all rounded-full"
+                              style={{ width: `${taskStats.progress}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-blue-600 transition-all rounded-full"
-                            style={{ width: `${taskStats.progress}%` }}
-                          />
-                        </div>
+                      )
+                    ) : (
+                      <div className="mt-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            loadProgressForJob(project.id);
+                          }}
+                          disabled={loadingProgressFor === project.id}
+                          className="text-xs h-7"
+                        >
+                          {loadingProgressFor === project.id ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              Load Progress
+                            </>
+                          )}
+                        </Button>
                       </div>
                     )}
                   </div>
