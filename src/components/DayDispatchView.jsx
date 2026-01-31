@@ -501,7 +501,6 @@ export default function DayDispatchView({
                                                 </div>
                                               </div>
                                             </div>
-                                            </div>
 
                                             <div
                                               onMouseDown={(e) => handleResizeStart(e, wo)}
