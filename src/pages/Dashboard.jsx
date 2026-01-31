@@ -20,7 +20,8 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2
+  BarChart2,
+  ChevronLeft
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,7 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays } from 'date-fns';
+import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays, startOfWeek } from 'date-fns';
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
@@ -52,8 +53,6 @@ import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DragDropCalendar from '@/components/schedule/DragDropCalendar';
 import DispatchTimeline from '@/components/schedule/DispatchTimeline';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { addDays, startOfWeek, format as formatDate } from 'date-fns';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -1172,8 +1171,8 @@ export default function Dashboard() {
                 </h2>
                 <p className="text-sm text-slate-500">
                   {dispatchMode === 'calendar' 
-                    ? formatDate(dispatchWeekStart, 'MMMM yyyy')
-                    : formatDate(dispatchSelectedDate || new Date(), 'EEEE, MMMM d, yyyy')}
+                    ? format(dispatchWeekStart, 'MMMM yyyy')
+                    : format(dispatchSelectedDate || new Date(), 'EEEE, MMMM d, yyyy')}
                 </p>
               </div>
             </div>
