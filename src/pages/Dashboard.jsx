@@ -71,6 +71,7 @@ export default function Dashboard() {
   const [leads, setLeads] = useState([]);
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
   const [kpis, setKpis] = useState(null);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
@@ -105,7 +106,7 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData, techData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
@@ -113,7 +114,8 @@ export default function Dashboard() {
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
-        base44.entities.Note.list('-created_date', 50)
+        base44.entities.Note.list('-created_date', 50),
+        base44.entities.Technician.list()
       ]);
 
       setWorkOrders(woData);
@@ -124,6 +126,7 @@ export default function Dashboard() {
       setLeads(leadsData);
       setOffers(offersData);
       setNotes(notesData);
+      setTechnicians(techData);
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
@@ -1150,7 +1153,8 @@ export default function Dashboard() {
 
       {/* Dispatch Fullscreen Modal (Inline - Reuses Existing Components) */}
       {showDispatchModal && (
-        <div className="fixed inset-0 bg-slate-900 z-50 overflow-auto">
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center overflow-auto">
+          <div className="w-full min-h-screen bg-slate-50">
           {/* Header */}
           <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
             <div className="flex items-center gap-4">
@@ -1220,24 +1224,28 @@ export default function Dashboard() {
           </div>
 
           {/* Content - Reuses existing Schedule components */}
-          <div className="p-6">
+          <div className="p-6 bg-slate-50" style={{ minHeight: 'calc(100vh - 72px)' }}>
             {dispatchMode === 'calendar' ? (
               <DragDropCalendar
                 currentWeekStart={dispatchWeekStart}
                 workOrders={workOrders}
                 jobs={jobs}
-                technicians={[]}
+                technicians={technicians}
                 customers={customers}
                 boats={boats}
                 locations={locations}
                 inventoryReservations={dispatchInventoryReservations}
                 onWorkOrderUpdate={async (woId, updates) => {
                   try {
+                    // Optimistic update
+                    setWorkOrders(prevWOs => prevWOs.map(wo => 
+                      wo.id === woId ? { ...wo, ...updates } : wo
+                    ));
                     await base44.entities.WorkOrder.update(woId, updates);
-                    await loadDashboardData();
                   } catch (error) {
                     console.error('Error updating work order:', error);
                     alert('Failed to update work order. Please try again.');
+                    await loadDashboardData();
                   }
                 }}
                 onWorkOrderEdit={() => {}}
@@ -1249,32 +1257,44 @@ export default function Dashboard() {
                 viewType="week"
               />
             ) : (
-              <DispatchTimeline
-                technicians={[]}
-                workOrders={workOrders}
-                jobs={jobs}
-                customers={customers}
-                boats={boats}
-                locations={locations}
-                selectedDate={dispatchSelectedDate || new Date()}
-                viewMode="day"
-                gridSize={dispatchGridSize}
-                locationFilter="all"
-                statusFilter="all"
-                technicianFilter={[]}
-                searchTerm=""
-                onWorkOrderClick={() => {}}
-                onWorkOrderUpdate={async (woId, updates) => {
-                  try {
-                    await base44.entities.WorkOrder.update(woId, updates);
-                    await loadDashboardData();
-                  } catch (error) {
-                    console.error('Error updating work order:', error);
-                    alert('Failed to update work order.');
-                  }
-                }}
-              />
+              <div className="h-full">
+                {technicians.length === 0 ? (
+                  <div className="flex items-center justify-center h-64 bg-white rounded-lg border border-slate-200">
+                    <p className="text-slate-500">Loading technicians...</p>
+                  </div>
+                ) : (
+                  <DispatchTimeline
+                    technicians={technicians}
+                    workOrders={workOrders}
+                    jobs={jobs}
+                    customers={customers}
+                    boats={boats}
+                    locations={locations}
+                    selectedDate={dispatchSelectedDate || new Date()}
+                    viewMode="day"
+                    gridSize={dispatchGridSize}
+                    locationFilter="all"
+                    statusFilter="all"
+                    technicianFilter={[]}
+                    searchTerm=""
+                    onWorkOrderClick={() => {}}
+                    onWorkOrderUpdate={async (woId, updates) => {
+                      try {
+                        setWorkOrders(prevWOs => prevWOs.map(wo => 
+                          wo.id === woId ? { ...wo, ...updates } : wo
+                        ));
+                        await base44.entities.WorkOrder.update(woId, updates);
+                      } catch (error) {
+                        console.error('Error updating work order:', error);
+                        alert('Failed to update work order.');
+                        await loadDashboardData();
+                      }
+                    }}
+                  />
+                )}
+              </div>
             )}
+          </div>
           </div>
         </div>
       )}
