@@ -16,13 +16,35 @@ import {
   FileText,
   Briefcase,
   TrendingUp,
-  Activity
+  Activity,
+  Plus,
+  StickyNote,
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays } from 'date-fns';
+import { toast } from 'sonner';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -40,6 +62,14 @@ export default function Dashboard() {
   const [locations, setLocations] = useState([]);
   const [leads, setLeads] = useState([]);
   const [offers, setOffers] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [noteForm, setNoteForm] = useState({
+    text: '',
+    reference_type: 'None',
+    reference_id: '',
+    due_date: null
+  });
 
   useEffect(() => {
     loadDashboardData();
@@ -48,14 +78,15 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData] = await Promise.all([
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
         base44.entities.Boat.list('-created_date', 50),
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
-        base44.entities.Offer.list('-created_date', 30)
+        base44.entities.Offer.list('-created_date', 30),
+        base44.entities.Note.list('-created_date', 50)
       ]);
 
       setWorkOrders(woData);
@@ -65,6 +96,7 @@ export default function Dashboard() {
       setLocations(locData);
       setLeads(leadsData);
       setOffers(offersData);
+      setNotes(notesData);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -218,9 +250,42 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Operational overview</p>
+      {/* Header with Quick Actions */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-500 mt-1">Operational overview</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to={createPageUrl('Jobs') + '?new=true'}>
+              <Plus className="h-4 w-4 mr-1" />
+              Project
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={createPageUrl('WorkOrders') + '?new=true'}>
+              <Plus className="h-4 w-4 mr-1" />
+              Work Order
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={createPageUrl('Leads') + '?new=true'}>
+              <Plus className="h-4 w-4 mr-1" />
+              Lead
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={createPageUrl('Offers') + '?new=true'}>
+              <Plus className="h-4 w-4 mr-1" />
+              Offer
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowNoteDialog(true)}>
+            <StickyNote className="h-4 w-4 mr-1" />
+            Note
+          </Button>
+        </div>
       </div>
 
       {/* 1) ACTION REQUIRED */}
@@ -571,6 +636,68 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      {/* Notes Section */}
+      {activeNotes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StickyNote className="h-5 w-5 text-yellow-600" />
+              Notes & Reminders ({activeNotes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {activeNotes.slice(0, 5).map(note => (
+                <div 
+                  key={note.id}
+                  className="p-3 bg-yellow-50 rounded-lg border border-yellow-200"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-900">{note.text}</p>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {getReferenceName(note) && (
+                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">
+                            {note.reference_type}: {getReferenceName(note)}
+                          </Badge>
+                        )}
+                        {note.due_date && (
+                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {format(parseISO(note.due_date), 'MMM d')}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-slate-500">
+                          {getAge(note.created_date)} ago
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleToggleNoteComplete(note)}
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleDeleteNote(note.id)}
+                      >
+                        <X className="h-4 w-4 text-slate-400" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 4) SALES & ORGANISATION */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
@@ -667,6 +794,106 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Note Dialog */}
+      <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Note</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="note-text">Note Text *</Label>
+              <Textarea
+                id="note-text"
+                placeholder="Enter note (max 300 characters)..."
+                value={noteForm.text}
+                onChange={(e) => setNoteForm({ ...noteForm, text: e.target.value })}
+                maxLength={300}
+                rows={4}
+                className="mt-1"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                {noteForm.text.length}/300 characters
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="reference-type">Link to (Optional)</Label>
+              <Select
+                value={noteForm.reference_type}
+                onValueChange={(value) => setNoteForm({ ...noteForm, reference_type: value, reference_id: '' })}
+              >
+                <SelectTrigger id="reference-type" className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="None">None</SelectItem>
+                  <SelectItem value="Job">Project</SelectItem>
+                  <SelectItem value="WorkOrder">Work Order</SelectItem>
+                  <SelectItem value="Customer">Customer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {noteForm.reference_type !== 'None' && (
+              <div>
+                <Label htmlFor="reference-id">Select {noteForm.reference_type}</Label>
+                <Select
+                  value={noteForm.reference_id}
+                  onValueChange={(value) => setNoteForm({ ...noteForm, reference_id: value })}
+                >
+                  <SelectTrigger id="reference-id" className="mt-1">
+                    <SelectValue placeholder={`Select ${noteForm.reference_type}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {noteForm.reference_type === 'Job' && jobs.map(job => (
+                      <SelectItem key={job.id} value={job.id}>{job.title}</SelectItem>
+                    ))}
+                    {noteForm.reference_type === 'WorkOrder' && workOrders.map(wo => (
+                      <SelectItem key={wo.id} value={wo.id}>{wo.title}</SelectItem>
+                    ))}
+                    {noteForm.reference_type === 'Customer' && customers.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.company_name || `${c.first_name} ${c.last_name}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div>
+              <Label>Due Date (Optional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left mt-1">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    {noteForm.due_date ? format(noteForm.due_date, 'PPP') : 'Select date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={noteForm.due_date}
+                    onSelect={(date) => setNoteForm({ ...noteForm, due_date: date })}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setShowNoteDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveNote}>
+                Save Note
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
