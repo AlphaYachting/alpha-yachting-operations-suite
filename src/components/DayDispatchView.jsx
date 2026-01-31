@@ -298,7 +298,7 @@ export default function DayDispatchView({
           </div>
           
           {/* Right area - Timeline with drag-drop */}
-          <div className="flex-1 overflow-x-auto">
+          <div className="flex-1">
             {/* Time header */}
             <div className="h-12 border-b flex bg-slate-50">
               {timeSlots.map((hour) => (
