@@ -124,11 +124,22 @@ export default function WorkOrders() {
     }
   }, [searchParams]);
 
+  // Reload data when status filter changes
+  useEffect(() => {
+    if (!loading) {
+      loadData();
+    }
+  }, [statusFilter]);
+
   const loadData = async () => {
     try {
-      // Load all work orders with reasonable limits
+      // Optimize: Only load work orders matching the current status filter
+      const woQuery = statusFilter === 'all' 
+        ? base44.entities.WorkOrder.list('-scheduled_date', 100)
+        : base44.entities.WorkOrder.filter({ status: statusFilter }, '-scheduled_date', 100);
+
       const [woData, jobsData, techData, custData, boatsData, locData, reservationsData, vehiclesData] = await Promise.all([
-        base44.entities.WorkOrder.list('-scheduled_date', 100),
+        woQuery,
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Technician.list(),
         base44.entities.Customer.list('-created_date', 50),
