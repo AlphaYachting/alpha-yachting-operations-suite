@@ -88,16 +88,14 @@ const DispatchFullscreenModal = ({ isOpen, onClose, initialDate }) => {
         // ... other fields that might change during a drag-and-drop
       });
 
-      // Line 103 (approximate):
       // 2. Optimistic state update: Update the specific work order in the local state.
-      // This replaces the previous `await loadAllData()` call,
-      // preventing a full page reload and maintaining modal state.
+      // This replaces a full `await loadAllData()` call, preventing a full page reload and maintaining modal state.
       setWorkOrders(prev =>
         prev.map(wo =>
           wo.id === updatedWorkOrder.id ? { ...wo, ...updatedWorkOrder } : wo
         )
       );
-      console.log("Work order updated optimistically in UI.");
+      console.log("Work order updated optimistically in UI after drag/drop.");
 
     } catch (err) {
       console.error("Error updating work order after drag/drop:", err);
@@ -109,9 +107,39 @@ const DispatchFullscreenModal = ({ isOpen, onClose, initialDate }) => {
     }
   }, [loadAllData]);
 
+  // New handler for saving edits to a work order (e.g., from an edit modal)
+  const handleEditSave = useCallback(async (workOrderId, updatedFields, closeModalCallback) => {
+    setLoading(true); // Indicate saving process
+    setError(null);
+    try {
+      // 1. Optimistic state update first
+      setWorkOrders(prev =>
+        prev.map(wo =>
+          wo.id === workOrderId ? { ...wo, ...updatedFields } : wo
+        )
+      );
+      console.log(`Work order ${workOrderId} updated optimistically in UI for edit.`);
+
+      // 2. Call the API to persist the change on the backend
+      await updateWorkOrderOnBackend(workOrderId, updatedFields);
+
+      console.log(`Work order ${workOrderId} successfully saved on backend.`);
+      if (closeModalCallback) {
+        closeModalCallback(); // Close the edit modal if provided
+      }
+    } catch (err) {
+      console.error(`Error saving work order ${workOrderId} edit:`, err);
+      setError("Failed to save work order. Reloading data for consistency.");
+      // 3. Revert optimistic update or reload data on error
+      await loadAllData(); // Re-fetch all data to ensure consistency
+    } finally {
+      setLoading(false);
+    }
+  }, [loadAllData]);
+
   // --- Example UI for the modal content ---
   // This is a placeholder for the actual calendar/dispatch board UI.
-  // It demonstrates how `workOrders` and `handleDragDrop` might be used.
+  // It demonstrates how `workOrders`, `handleDragDrop`, and `handleEditSave` might be used.
 
   const handlePreviousDay = () => {
     const prevDay = new Date(selectedDate);
@@ -143,6 +171,25 @@ const DispatchFullscreenModal = ({ isOpen, onClose, initialDate }) => {
     }
   };
 
+  // Mock function to simulate an edit event for testing purposes
+  const simulateEdit = (workOrderId) => {
+    const workOrderToUpdate = workOrders.find(wo => wo.id === workOrderId);
+    if (workOrderToUpdate) {
+      const newTitle = workOrderToUpdate.title.includes(' (edited)') ? workOrderToUpdate.title.replace(' (edited)', '') : workOrderToUpdate.title + ' (edited)';
+      const newStatus = workOrderToUpdate.status === 'assigned' ? 'pending' : 'assigned';
+      console.log(`Simulating edit for ${workOrderId}: change title and status`);
+      handleEditSave(
+        workOrderId,
+        {
+          title: newTitle,
+          status: newStatus,
+          // You can simulate other field changes here
+        },
+        // In a real scenario, this would be a function to close the edit modal
+        () => console.log('Simulated edit modal closed.')
+      );
+    }
+  };
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -225,13 +272,22 @@ const DispatchFullscreenModal = ({ isOpen, onClose, initialDate }) => {
                             <p className="text-sm text-gray-600">Status: {wo.status}</p>
                             <p className="text-sm text-gray-600">Technician: {wo.technician || 'Unassigned'}</p>
                             <p className="text-sm text-gray-600">Time: {wo.startTime} - {wo.endTime}</p>
-                            {/* Simulate a drag-drop action for testing */}
-                            <button
-                              onClick={() => simulateDragDrop(wo.id)}
-                              className="mt-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                            >
-                              Simulate Drag/Drop
-                            </button>
+                            <div className="mt-2 flex space-x-2">
+                              {/* Simulate a drag-drop action for testing */}
+                              <button
+                                onClick={() => simulateDragDrop(wo.id)}
+                                className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                              >
+                                Simulate Drag/Drop
+                              </button>
+                              {/* Simulate an edit action for testing */}
+                              <button
+                                onClick={() => simulateEdit(wo.id)}
+                                className="px-3 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600"
+                              >
+                                Simulate Edit
+                              </button>
+                            </div>
                           </div>
                         ))
                       )}

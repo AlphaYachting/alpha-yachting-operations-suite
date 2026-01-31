@@ -61,10 +61,15 @@ export default function DispatchFullscreenModal({ open, onClose }) {
   const handleWorkOrderUpdate = async (workOrderId, updates) => {
     try {
       await base44.entities.WorkOrder.update(workOrderId, updates);
-      await loadData();
+      // Optimistic update: update local state instead of full reload
+      setWorkOrders(prev => prev.map(wo => 
+        wo.id === workOrderId ? { ...wo, ...updates } : wo
+      ));
     } catch (error) {
       console.error('Error updating work order:', error);
       alert('Failed to update work order. Please try again.');
+      // On error, reload to ensure data consistency
+      await loadData();
     }
   };
 
@@ -83,8 +88,13 @@ export default function DispatchFullscreenModal({ open, onClose }) {
     setEditModalOpen(true);
   };
 
-  const handleEditSave = async () => {
-    await loadData();
+  const handleEditSave = async (workOrderId, updates) => {
+    // Optimistic update
+    setWorkOrders(prev => prev.map(wo => 
+      wo.id === workOrderId ? { ...wo, ...updates } : wo
+    ));
+    setEditModalOpen(false);
+    setEditingWorkOrder(null);
   };
 
   const prevWeek = () => setCurrentWeekStart(addDays(currentWeekStart, -7));

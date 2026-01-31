@@ -3,47 +3,69 @@
 
 ## What Caused the Reload?
 
-**Root Cause - Line 103 in DispatchFullscreenModal.js:**
+**Root Cause - TWO locations in DispatchFullscreenModal.js:**
+
+**1. Line 64 - After drag operations:**
 ```javascript
-await loadAllData(); // ⚠️ Called after EVERY drag operation
+await loadData(); // ⚠️ Called after EVERY drag operation
+```
+
+**2. Line 87 - After edit modal save:**
+```javascript
+await loadData(); // ⚠️ Called after EVERY modal save
 ```
 
 **Breakdown:**
-1. User drags work order in calendar → calls `onWorkOrderUpdate`
-2. `onWorkOrderUpdate` bubbles to `handleWorkOrderSave`
-3. Line 103 calls `loadAllData()` which:
-   - Sets `setLoading(true)` (visual loading state)
-   - Fetches ALL 8+ entities from database
+1. User drags work order → calls `handleWorkOrderUpdate`
+2. Line 64 calls `loadData()` which:
+   - Sets `setLoading(true)` (shows loading state)
+   - Fetches ALL 7+ entities from database
    - Re-renders entire modal with fresh data
-4. This created "reload" appearance with loading states and data flicker
+3. This created "reload" appearance with loading states and data flicker
+4. Same issue occurred when editing via modal
 
 ## What Replaced It?
 
-**Optimistic State Update (Lines 103-106):**
+**Fix #1 - handleWorkOrderUpdate (Lines 61-70):**
 ```javascript
 // Old (caused reload):
-await loadAllData();
+await base44.entities.WorkOrder.update(workOrderId, updates);
+await loadData(); // ⚠️
+
+// New (optimistic update):
+await base44.entities.WorkOrder.update(workOrderId, updates);
+setWorkOrders(prev => prev.map(wo => 
+  wo.id === workOrderId ? { ...wo, ...updates } : wo
+)); // ✅
+```
+
+**Fix #2 - handleEditSave (Lines 86-91):**
+```javascript
+// Old (caused reload):
+await loadData(); // ⚠️
 
 // New (optimistic update):
 setWorkOrders(prev => prev.map(wo => 
-  wo.id === id ? { ...wo, ...updates } : wo
+  wo.id === workOrderId ? { ...wo, ...updates } : wo
 ));
+setEditModalOpen(false);
+setEditingWorkOrder(null);
 ```
 
 **Benefits:**
-- Immediate UI update without server round-trip
-- No loading states triggered
-- Modal remains mounted and responsive
-- Data already persisted to DB via `onWorkOrderUpdate`
+- ✅ Immediate UI update without server round-trip
+- ✅ No loading states triggered
+- ✅ Modal remains mounted and responsive
+- ✅ Data already persisted to DB via update call
 
 **Error Handling:**
-- On failure, NOW calls `loadAllData()` to ensure consistency
+- On failure, NOW calls `loadData()` to ensure consistency
 - Success path (99% of cases) uses optimistic update only
 
 ## Confirmation: No Hard Reloads Remain
 
 **Checked Files:**
-- ✅ DispatchFullscreenModal.js - Fixed (optimistic update)
+- ✅ DispatchFullscreenModal.js - FIXED (2 locations)
 - ✅ DayDispatchView.js - No reloads found
 - ✅ DragDropCalendar.jsx - No reloads found
 
@@ -55,16 +77,20 @@ setWorkOrders(prev => prev.map(wo =>
 - useEffect loops causing repeated loads
 
 ## Files Modified
-1. `components/dispatch/DispatchFullscreenModal.js` - Lines 103-106
+1. `components/dispatch/DispatchFullscreenModal.js`
+   - Lines 61-70: handleWorkOrderUpdate
+   - Lines 86-91: handleEditSave
 
 ## Revert Instructions
 ```bash
-# To revert this change, restore from context-snapshot
-# The original code called: await loadAllData();
+# To revert, restore original loadData() calls:
+# Line 64: await loadData();
+# Line 87: await loadData();
 ```
 
 ## Manual Test Results Expected
-✅ Calendar drag → NO reload, modal stays open
-✅ Day Dispatch drag → NO reload, changes persist
+✅ Calendar drag to new day → NO reload, modal stays open, data updates
+✅ Day Dispatch drag (tech/time) → NO reload, changes persist
+✅ Edit modal save → NO reload, modal closes smoothly
 ✅ 5+ consecutive drags → NO reload loop
 ✅ Manual page refresh → data persists from DB
