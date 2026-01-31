@@ -1,279 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { 
-  Briefcase, 
-  ClipboardList, 
-  Users, 
-  Ship,
-  AlertTriangle,
+  AlertTriangle, 
+  Calendar, 
   Clock,
-  CheckCircle2,
-  ArrowRight,
-  TrendingUp,
-  Package,
+  Ship,
   MapPin,
-  Calendar,
-  User,
-  Pencil,
-  Truck,
-  Flag,
+  Users,
   ChevronRight,
-  Search,
-  FileText,
   AlertCircle,
-  Zap
+  CheckCircle2,
+  Phone,
+  FileText,
+  Briefcase,
+  TrendingUp,
+  Activity
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { format, isToday, isTomorrow, parseISO, addDays, isWithinInterval, startOfDay, endOfDay, isPast, differenceInDays, startOfWeek, addMonths, startOfMonth } from 'date-fns';
-import WorkOrderForm from '@/components/workorders/WorkOrderForm';
-import DragDropCalendar from '@/components/schedule/DragDropCalendar';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import DispatchTimeline from '@/components/schedule/DispatchTimeline';
-import FutureOverview from '@/components/schedule/FutureOverview';
-import LeadsWidget from '@/components/dashboard/LeadsWidget';
-import LeadForm from '@/components/leads/LeadForm';
-import { Phone } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
-const StatCard = ({ title, value, icon: Icon, trend, color, loading, onClick }) => (
-  <Card className="relative overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={onClick}>
-    <div className={`absolute top-0 right-0 w-24 h-24 rounded-full -mr-8 -mt-8 opacity-10 ${color}`} />
-    <CardContent className="p-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{title}</p>
-          {loading ? (
-            <Skeleton className="h-8 w-16 mt-1" />
-          ) : (
-            <p className="text-2xl font-bold text-slate-900 mt-1">{value}</p>
-          )}
-          {trend && (
-            <div className="flex items-center gap-1 mt-2">
-              <TrendingUp className="h-3 w-3 text-emerald-500" />
-              <span className="text-xs text-emerald-600 font-medium">{trend}</span>
-            </div>
-          )}
-        </div>
-        <div className={`p-3 rounded-xl ${color} bg-opacity-10`}>
-          <Icon className={`h-5 w-5 ${color.replace('bg-', 'text-')}`} />
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const priorityColors = {
-  Low: 'bg-slate-100 text-slate-700',
-  Normal: 'bg-blue-100 text-blue-700',
-  High: 'bg-amber-100 text-amber-700',
-  Urgent: 'bg-red-100 text-red-700',
-  Express: 'bg-purple-100 text-purple-700'
-};
+import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays } from 'date-fns';
 
 const statusColors = {
-  New: 'bg-blue-100 text-blue-700',
-  Scheduled: 'bg-cyan-100 text-cyan-700',
+  Draft: 'bg-slate-100 text-slate-700',
+  Scheduled: 'bg-blue-100 text-blue-700',
   'In Progress': 'bg-amber-100 text-amber-700',
-  'Waiting for Parts': 'bg-orange-100 text-orange-700',
-  Completed: 'bg-emerald-100 text-emerald-700',
-  Dispatched: 'bg-violet-100 text-violet-700',
-  'In Transit': 'bg-indigo-100 text-indigo-700'
+  Completed: 'bg-emerald-100 text-emerald-700'
 };
 
 export default function Dashboard() {
-   const navigate = useNavigate();
-   const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [workOrders, setWorkOrders] = useState([]);
-  const [tasks, setTasks] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [boats, setBoats] = useState([]);
-  const [technicians, setTechnicians] = useState([]);
-  const [reservations, setReservations] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [editingWorkOrder, setEditingWorkOrder] = useState(null);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [locations, setLocations] = useState([]);
-  const [inventoryReservations, setInventoryReservations] = useState([]);
-  
-  // Schedule state
-  const [currentWeekStart, setCurrentWeekStart] = useState(addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -7));
-  const [calendarViewType, setCalendarViewType] = useState('week');
-  const [viewMode, setViewMode] = useState('calendar');
-  const [dispatchViewMode, setDispatchViewMode] = useState('day');
-  const [dispatchDate, setDispatchDate] = useState(new Date());
-  const [gridSize, setGridSize] = useState('1h');
-  const [locationFilter, setLocationFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [technicianFilter, setTechnicianFilter] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [rangeWeeks, setRangeWeeks] = useState(8);
-  const [showBlockedOnly, setShowBlockedOnly] = useState(false);
-  const [focusBlockedDays, setFocusBlockedDays] = useState(false);
-  const [overviewStartDate, setOverviewStartDate] = useState(startOfDay(new Date()));
-  const [showLeadForm, setShowLeadForm] = useState(false);
   const [leads, setLeads] = useState([]);
   const [offers, setOffers] = useState([]);
-  const [lastLoadTime, setLastLoadTime] = useState(null);
 
   useEffect(() => {
-    const loadData = async () => {
-      // Check if data was loaded in the last hour
-      const now = Date.now();
-      if (lastLoadTime && (now - lastLoadTime) < 3600000) {
-        console.log('Dashboard: Using cached data (last load was', Math.round((now - lastLoadTime) / 60000), 'minutes ago)');
-        return;
-      }
-      try {
-        const user = await base44.auth.me();
-        if (!user) {
-          base44.auth.redirectToLogin();
-          return;
-        }
-
-        // CRITICAL: Reduced limits to prevent database overload and rate limiting
-        const [jobsData, workOrdersData, tasksData, customersData, boatsData, techniciansData, reservationsData, vehiclesData, locationsData, leadsData, offersData] = await Promise.all([
-          base44.entities.Job.list('-created_date', 50),
-          base44.entities.WorkOrder.list('-scheduled_date', 50),
-          base44.entities.Task.filter({ status: { $ne: 'Completed' } }, '-created_date', 100),
-          base44.entities.Customer.list('-created_date', 50),
-          base44.entities.Boat.filter({ status: { $ne: 'Sold' } }, '-created_date', 50),
-          base44.entities.Technician.filter({ status: 'Active' }),
-          base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
-          base44.entities.InventoryItem.filter({ item_type: 'VEHICLE', status: { $ne: 'Retired' } }),
-          base44.entities.Location.filter({ status: 'Active' }),
-          base44.entities.Lead.filter({ status: { $ne: 'Converted' } }),
-          base44.entities.Offer.filter({ status: { $in: ['Draft', 'Sent'] } })
-        ]);
-        
-        const sortedJobs = jobsData.sort((a, b) => {
-          const today = new Date();
-          const aDate = a.requested_date ? parseISO(a.requested_date) : null;
-          const bDate = b.requested_date ? parseISO(b.requested_date) : null;
-          const aOverdue = aDate && isPast(aDate) && !isToday(aDate);
-          const bOverdue = bDate && isPast(bDate) && !isToday(bDate);
-          const aDueToday = aDate && isToday(aDate);
-          const bDueToday = bDate && isToday(bDate);
-          const aDueSoon = aDate && differenceInDays(aDate, today) <= 7 && differenceInDays(aDate, today) > 0;
-          const bDueSoon = bDate && differenceInDays(bDate, today) <= 7 && differenceInDays(bDate, today) > 0;
-          if (aOverdue && !bOverdue) return -1;
-          if (!aOverdue && bOverdue) return 1;
-          if (aDueToday && !bDueToday) return -1;
-          if (!aDueToday && bDueToday) return 1;
-          if (aDueSoon && !bDueSoon) return -1;
-          if (!aDueSoon && bDueSoon) return 1;
-          const priorityOrder = { Express: 0, Urgent: 1, High: 2, Normal: 3, Low: 4 };
-          const aPriority = priorityOrder[a.priority] ?? 5;
-          const bPriority = priorityOrder[b.priority] ?? 5;
-          if (aPriority !== bPriority) return aPriority - bPriority;
-          if (aDate && bDate) {
-            if (aDate < bDate) return -1;
-            if (aDate > bDate) return 1;
-          }
-          if (aDate && !bDate) return -1;
-          if (!aDate && bDate) return 1;
-          return new Date(b.created_date) - new Date(a.created_date);
-        });
-        
-        setJobs(sortedJobs);
-        setWorkOrders(workOrdersData);
-        setTasks(tasksData);
-        setCustomers(customersData);
-        setBoats(boatsData);
-        setTechnicians(techniciansData);
-        setReservations(reservationsData);
-        setVehicles(vehiclesData);
-        setLocations(locationsData);
-        setInventoryReservations(reservationsData);
-        setLeads(leadsData);
-        setOffers(offersData);
-        setLastLoadTime(Date.now());
-        console.log('Dashboard: Data loaded successfully');
-      } catch (error) {
-        console.error('Error loading dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-    const interval = setInterval(loadData, 3600000);
-    return () => clearInterval(interval);
+    loadDashboardData();
   }, []);
 
-  const today = startOfDay(new Date());
-  const threeDaysFromNow = endOfDay(addDays(today, 3));
-  
-  const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
-  const urgentJobs = jobs.filter(j => ['Urgent', 'Express'].includes(j.priority) && !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
-  const todayWorkOrders = workOrders.filter(wo => wo.scheduled_date && isToday(parseISO(wo.scheduled_date)));
-  
-  // Overdue jobs based on due date
-  const overdueJobs = jobs.filter(j => {
-    if (!j.requested_date || ['Completed', 'Invoiced', 'Cancelled'].includes(j.status)) return false;
-    return isPast(parseISO(j.requested_date)) && !isToday(parseISO(j.requested_date));
-  });
-  
-  // Draft work orders (unplanned)
-  const draftWorkOrders = workOrders.filter(wo => wo.status === 'Draft');
-  
-  // Active work orders (not draft, not completed/cancelled, with scheduled dates)
-  // Sort: overdue first, then by scheduled date
-  const upcomingWorkOrders = workOrders.filter(wo => {
-    if (!wo.scheduled_date) return false;
-    return wo.status !== 'Draft' && !['Completed', 'Cancelled'].includes(wo.status);
-  }).sort((a, b) => {
-    const aDate = parseISO(a.scheduled_date);
-    const bDate = parseISO(b.scheduled_date);
-    const aOverdue = aDate < today;
-    const bOverdue = bDate < today;
-    
-    // Overdue items first
-    if (aOverdue && !bOverdue) return -1;
-    if (!aOverdue && bOverdue) return 1;
-    
-    // Then sort by date
-    return aDate - bDate;
-  }).slice(0, 10);
-  
-  const overdueWorkOrders = workOrders.filter(wo => {
-    if (!wo.scheduled_date) return false;
-    const date = parseISO(wo.scheduled_date);
-    return date < today && wo.status !== 'Draft' && !['Completed', 'Cancelled'].includes(wo.status);
-  });
-  
-  const upcomingUnfinishedWorkOrders = workOrders.filter(wo => {
-    if (!wo.scheduled_date) return false;
-    const date = parseISO(wo.scheduled_date);
-    const isInRange = isWithinInterval(date, { start: today, end: threeDaysFromNow });
-    const isUnfinished = wo.status !== 'Draft' && !['Completed', 'Cancelled'].includes(wo.status);
-    return isInRange && isUnfinished;
-  });
-  
-  const allPendingWorkOrders = [...overdueWorkOrders, ...upcomingUnfinishedWorkOrders];
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData] = await Promise.all([
+        base44.entities.WorkOrder.list('-scheduled_date', 100),
+        base44.entities.Job.list('-created_date', 50),
+        base44.entities.Customer.list('-created_date', 50),
+        base44.entities.Boat.list('-created_date', 50),
+        base44.entities.Location.list(),
+        base44.entities.Lead.list('-created_date', 30),
+        base44.entities.Offer.list('-created_date', 30)
+      ]);
 
-  const unfinishedTasksCount = tasks.filter(task => {
-    const wo = workOrders.find(w => w.id === task.work_order_id);
-    if (!wo?.scheduled_date) return false;
-    const date = parseISO(wo.scheduled_date);
-    const isInRange = isWithinInterval(date, { start: today, end: threeDaysFromNow });
-    const isUnfinished = !['Completed', 'Skipped'].includes(task.status);
-    return isInRange && isUnfinished;
-  }).length;
+      setWorkOrders(woData);
+      setJobs(jobsData);
+      setCustomers(custData);
+      setBoats(boatsData);
+      setLocations(locData);
+      setLeads(leadsData);
+      setOffers(offersData);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Helper functions
   const getCustomerName = (customerId) => {
     const customer = customers.find(c => c.id === customerId);
     if (!customer) return 'Unknown';
@@ -285,648 +84,589 @@ export default function Dashboard() {
     return boat?.vessel_name || 'Unknown';
   };
 
-  const getTechnicianName = (technicianId) => {
-    const tech = technicians.find(t => t.id === technicianId);
-    if (!tech) return null;
-    return `${tech.first_name || ''} ${tech.last_name || ''}`.trim();
+  const getLocationName = (locationId) => {
+    if (!locationId) return '';
+    const location = locations.find(l => l.id === locationId);
+    return location?.name || '';
   };
 
-  const getVehicleDisplay = (workOrderId) => {
-    const woReservations = reservations.filter(r => r.work_order_id === workOrderId);
-    if (woReservations.length === 0) return null;
+  const getJobInfo = (jobId) => {
+    const job = jobs.find(j => j.id === jobId);
+    if (!job) return null;
+    return {
+      job,
+      customer: getCustomerName(job.customer_id),
+      boat: getBoatName(job.boat_id),
+      location: getLocationName(job.location_id)
+    };
+  };
+
+  // ACTION REQUIRED: Overdue WorkOrders
+  const overdueWorkOrders = workOrders.filter(wo => {
+    if (['Completed', 'Cancelled'].includes(wo.status)) return false;
+    if (!wo.scheduled_date) return false;
+    const schedDate = parseISO(wo.scheduled_date);
+    return isPast(schedDate) && !isToday(schedDate);
+  });
+
+  // ACTION REQUIRED: WorkOrders without date or technician
+  const unplannedWorkOrders = workOrders.filter(wo => {
+    if (['Completed', 'Cancelled'].includes(wo.status)) return false;
+    return !wo.scheduled_date || !wo.assigned_technicians || wo.assigned_technicians.length === 0;
+  });
+
+  // ACTION REQUIRED: Open Offers
+  const openOffers = offers.filter(o => !['Approved', 'Rejected', 'Expired', 'Converted'].includes(o.status));
+
+  // ACTION REQUIRED: Open Leads without recent activity
+  const today = new Date();
+  const sevenDaysAgo = addDays(today, -7);
+  const staleLeads = leads.filter(l => {
+    if (['Converted', 'Rejected', 'Lost'].includes(l.status)) return false;
+    if (!l.last_contacted_at) return true;
+    return isPast(parseISO(l.last_contacted_at)) && differenceInDays(today, parseISO(l.last_contacted_at)) > 7;
+  });
+
+  // TODAY: WorkOrders scheduled for today
+  const todayWorkOrders = workOrders.filter(wo => {
+    if (['Completed', 'Cancelled'].includes(wo.status)) return false;
+    if (!wo.scheduled_date) return false;
+    return isToday(parseISO(wo.scheduled_date));
+  });
+
+  // THIS WEEK: WorkOrders in next 7 days
+  const thisWeekWorkOrders = workOrders.filter(wo => {
+    if (['Completed', 'Cancelled'].includes(wo.status)) return false;
+    if (!wo.scheduled_date) return false;
+    const schedDate = parseISO(wo.scheduled_date);
+    const daysAway = differenceInDays(schedDate, today);
+    return daysAway > 0 && daysAway <= 7;
+  });
+
+  // PROJECT HEALTH
+  const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
+  
+  const getProjectHealth = (job) => {
+    const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
+    const activeWOs = jobWorkOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status));
     
-    const uniqueVehicleIds = [...new Set(woReservations.map(r => r.inventory_item_id))];
+    // Red: overdue WO OR no active WO OR missing planning
+    const hasOverdueWO = activeWOs.some(wo => {
+      if (!wo.scheduled_date) return false;
+      const schedDate = parseISO(wo.scheduled_date);
+      return isPast(schedDate) && !isToday(schedDate);
+    });
     
-    if (uniqueVehicleIds.length === 1) {
-      const vehicle = vehicles.find(v => v.id === uniqueVehicleIds[0]);
-      if (!vehicle) return null;
-      return vehicle.license_plate || `${vehicle.make || ''} ${vehicle.model || ''}`.trim() || vehicle.name;
-    } else {
-      return `Multiple (+${uniqueVehicleIds.length})`;
+    if (hasOverdueWO || activeWOs.length === 0) {
+      return { status: 'red', label: 'Critical', step: hasOverdueWO ? 'Overdue work order' : 'No active work orders' };
     }
+    
+    const hasUnplannedWO = activeWOs.some(wo => !wo.scheduled_date || !wo.assigned_technicians || wo.assigned_technicians.length === 0);
+    if (hasUnplannedWO) {
+      return { status: 'red', label: 'Critical', step: 'Missing planning' };
+    }
+    
+    // Yellow: WO due soon
+    const hasDueSoonWO = activeWOs.some(wo => {
+      if (!wo.scheduled_date) return false;
+      const schedDate = parseISO(wo.scheduled_date);
+      const daysAway = differenceInDays(schedDate, today);
+      return daysAway > 0 && daysAway <= 7;
+    });
+    
+    if (hasDueSoonWO) {
+      return { status: 'yellow', label: 'Attention', step: 'Work order due soon' };
+    }
+    
+    // Green: all good
+    return { status: 'green', label: 'Healthy', step: 'On track' };
+  };
+  
+  const getProjectProgress = (job) => {
+    const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
+    if (jobWorkOrders.length === 0) return 0;
+    const completedWOs = jobWorkOrders.filter(wo => wo.status === 'Completed').length;
+    return Math.round((completedWOs / jobWorkOrders.length) * 100);
   };
 
-  const handleEditWorkOrder = (wo, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setEditingWorkOrder(wo);
-    setShowEditDialog(true);
+  // SALES & ORGANISATION
+  const allOpenLeads = leads.filter(l => !['Converted', 'Rejected', 'Lost'].includes(l.status));
+  const allOpenOffers = offers.filter(o => !['Approved', 'Rejected', 'Expired', 'Converted'].includes(o.status));
+
+  const getAge = (dateStr) => {
+    if (!dateStr) return 'Unknown';
+    const days = differenceInDays(today, parseISO(dateStr));
+    if (days === 0) return 'Today';
+    if (days === 1) return '1 day';
+    return `${days} days`;
   };
 
-  const handleSaveWorkOrder = async (workOrderData) => {
-    try {
-      await base44.entities.WorkOrder.update(editingWorkOrder.id, workOrderData);
-      const [workOrdersData] = await Promise.all([
-        base44.entities.WorkOrder.list('-scheduled_date', 100)
-      ]);
-      setWorkOrders(workOrdersData);
-      setShowEditDialog(false);
-      setEditingWorkOrder(null);
-    } catch (error) {
-      console.error('Error updating work order:', error);
-    }
-  };
+  const hasActionItems = overdueWorkOrders.length > 0 || unplannedWorkOrders.length > 0 || openOffers.length > 0 || staleLeads.length > 0;
 
-  const handleSaveLead = async (leadData) => {
-    try {
-      await base44.entities.Lead.create(leadData);
-      setShowLeadForm(false);
-    } catch (error) {
-      console.error('Error creating lead:', error);
-    }
-  };
-  
-  // Schedule navigation functions
-  const prevWeek = () => setCurrentWeekStart(calendarViewType === 'month' ? addMonths(currentWeekStart, -1) : addDays(currentWeekStart, -7));
-  const nextWeek = () => setCurrentWeekStart(calendarViewType === 'month' ? addMonths(currentWeekStart, 1) : addDays(currentWeekStart, 7));
-  const goToToday = () => setCurrentWeekStart(calendarViewType === 'month' ? startOfMonth(new Date()) : addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -7));
-  const prevDay = () => setDispatchDate(addDays(dispatchDate, -1));
-  const nextDay = () => setDispatchDate(addDays(dispatchDate, 1));
-  const goToDispatchToday = () => setDispatchDate(new Date());
-  const prevRange = () => setOverviewStartDate(addDays(overviewStartDate, -rangeWeeks * 7));
-  const nextRange = () => setOverviewStartDate(addDays(overviewStartDate, rangeWeeks * 7));
-  const goToOverviewToday = () => setOverviewStartDate(startOfDay(new Date()));
-  
-  const handleOverviewDateClick = (date, technicianId) => {
-    setDispatchDate(date);
-    setDispatchViewMode('day');
-  };
-  
-  const handleWorkOrderClick = (workOrderId) => {
-    const wo = workOrders.find(w => w.id === workOrderId);
-    if (wo) {
-      setEditingWorkOrder(wo);
-      setShowEditDialog(true);
-    }
-  };
-  
-  const handleWorkOrderUpdate = async (workOrderId, updates) => {
-    try {
-      await base44.entities.WorkOrder.update(workOrderId, updates);
-      const [workOrdersData] = await Promise.all([
-        base44.entities.WorkOrder.list('-scheduled_date', 100)
-      ]);
-      setWorkOrders(workOrdersData);
-    } catch (error) {
-      console.error('Error updating work order:', error);
-    }
-  };
-  
-  const handleWorkOrderEditFromCalendar = (workOrder) => {
-    setEditingWorkOrder(workOrder);
-    setShowEditDialog(true);
-  };
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid gap-6">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Welcome back! Here's what's happening today.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setShowScheduleDialog(true)}>
-            <Calendar className="h-4 w-4 mr-2" />
-            Schedule
-          </Button>
-          <Button onClick={() => setShowLeadForm(true)} className="bg-amber-600 hover:bg-amber-700">
-            <Phone className="h-4 w-4 mr-2" />
-            New Lead
-          </Button>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700">
-            <Link to={createPageUrl('Jobs') + '?new=true'}>
-              <Briefcase className="h-4 w-4 mr-2" />
-              New Job
-            </Link>
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+        <p className="text-slate-500 mt-1">Operational overview</p>
       </div>
 
-      {/* Stats Grid */}
-      {/* Priority Stats - Top Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard 
-           title="Overdue Jobs" 
-           value={overdueJobs.length} 
-           icon={AlertTriangle}
-           color="bg-red-500"
-           loading={loading}
-           onClick={() => navigate(createPageUrl('Jobs') + '?filter=overdue')}
-         />
-         <StatCard 
-           title="Today's Work" 
-           value={todayWorkOrders.length} 
-           icon={ClipboardList}
-           color="bg-amber-500"
-           loading={loading}
-           onClick={() => navigate(createPageUrl('WorkOrders') + '?filter=today')}
-         />
-        <StatCard 
-          title="Stuck in Quote" 
-          value={offers.filter(o => o.status === 'Draft').length} 
-          icon={FileText}
-          color="bg-purple-500"
-          loading={loading}
-          onClick={() => navigate(createPageUrl('Offers'))}
-        />
-        <StatCard 
-          title="Waiting for Parts" 
-          value={jobs.filter(j => j.status === 'Waiting for Parts' && !['Completed', 'Invoiced'].includes(j.status)).length} 
-          icon={Package}
-          color="bg-orange-500"
-          loading={loading}
-          onClick={() => navigate(createPageUrl('Jobs'))}
-        />
-        <StatCard 
-           title="New Leads" 
-           value={leads.filter(l => l.status === 'Pending').length} 
-           icon={Phone}
-           color="bg-blue-500"
-           loading={loading}
-           onClick={() => navigate(createPageUrl('Leads'))}
-         />
-      </div>
-
-      {/* Secondary Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard 
-          title="Active Jobs" 
-          value={activeJobs.length} 
-          icon={Briefcase}
-          color="bg-blue-600"
-          loading={loading}
-          onClick={() => navigate(createPageUrl('Jobs') + '?filter=active')}
-        />
-        <StatCard 
-          title="Unscheduled WO" 
-          value={draftWorkOrders.length} 
-          icon={Clock}
-          color="bg-slate-500"
-          loading={loading}
-          onClick={() => navigate(createPageUrl('WorkOrders') + '?filter=pending')}
-        />
-        <StatCard 
-          title="Total Customers" 
-          value={customers.length} 
-          icon={Users}
-          color="bg-emerald-500"
-          loading={loading}
-          onClick={() => navigate(createPageUrl('Customers'))}
-        />
-      </div>
-
-      {/* Bottlenecks Alert - Critical Issues First */}
-      {(overdueJobs.length > 0 || offers.filter(o => o.status === 'Draft').length > 0 || jobs.filter(j => j.status === 'Waiting for Parts').length > 0) && (
-        <Card className="border-red-200 bg-red-50/50">
+      {/* 1) ACTION REQUIRED */}
+      {hasActionItems && (
+        <Card className="border-red-200 bg-red-50/30">
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-100">
-                <Zap className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-semibold text-red-900">
-                  Critical Bottlenecks
-                </CardTitle>
-                <p className="text-sm text-red-700 mt-0.5">
-                  {overdueJobs.length > 0 && `${overdueJobs.length} overdue jobs • `}
-                  {offers.filter(o => o.status === 'Draft').length > 0 && `${offers.filter(o => o.status === 'Draft').length} quotes stuck • `}
-                  {jobs.filter(j => j.status === 'Waiting for Parts').length > 0 && `${jobs.filter(j => j.status === 'Waiting for Parts').length} waiting for parts`}
-                </p>
-              </div>
-            </div>
+            <CardTitle className="flex items-center gap-2 text-red-900">
+              <AlertTriangle className="h-5 w-5" />
+              Action Required
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {overdueJobs.slice(0, 3).map((job) => (
-                <Link
-                  key={job.id}
-                  to={createPageUrl('JobDetail') + `?id=${job.id}`}
-                  className="block p-3 rounded-lg border border-red-200 bg-white hover:bg-red-50 transition-all"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-medium text-slate-900">{job.title}</p>
-                      <p className="text-sm text-slate-600 mt-0.5">{getCustomerName(job.customer_id)}</p>
-                    </div>
-                    <Badge className="bg-red-600 text-white">OVERDUE</Badge>
-                  </div>
-                </Link>
-              ))}
-              {offers.filter(o => o.status === 'Draft').slice(0, 2).map((offer) => (
-                <Link
-                  key={offer.id}
-                  to={createPageUrl('OfferDetail') + `?id=${offer.id}`}
-                  className="block p-3 rounded-lg border border-purple-200 bg-white hover:bg-purple-50 transition-all"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="font-medium text-slate-900">{offer.title}</p>
-                      <p className="text-sm text-slate-600 mt-0.5">Stuck in Draft</p>
-                    </div>
-                    <Badge className="bg-purple-600 text-white">DRAFT QUOTE</Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
+          <CardContent className="space-y-4">
+            {overdueWorkOrders.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">Overdue Work Orders ({overdueWorkOrders.length})</h3>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={createPageUrl('WorkOrders') + '?filter=overdue'}>View All</Link>
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {overdueWorkOrders.slice(0, 3).map(wo => {
+                    const jobInfo = getJobInfo(wo.job_id);
+                    return (
+                      <Link 
+                        key={wo.id} 
+                        to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                        className="block p-3 bg-white rounded-lg border border-red-200 hover:border-red-300 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{wo.title}</p>
+                            <p className="text-sm text-slate-600 mt-1">
+                              {jobInfo?.boat} • {jobInfo?.customer}
+                            </p>
+                            <div className="flex items-center gap-2 mt-2 text-xs text-red-700">
+                              <Calendar className="h-3 w-3" />
+                              Due: {format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
+                            </div>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-400" />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {unplannedWorkOrders.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">Unplanned Work Orders ({unplannedWorkOrders.length})</h3>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={createPageUrl('WorkOrders') + '?filter=pending'}>View All</Link>
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {unplannedWorkOrders.slice(0, 3).map(wo => {
+                    const jobInfo = getJobInfo(wo.job_id);
+                    return (
+                      <Link 
+                        key={wo.id} 
+                        to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                        className="block p-3 bg-white rounded-lg border border-amber-200 hover:border-amber-300 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{wo.title}</p>
+                            <p className="text-sm text-slate-600 mt-1">
+                              {jobInfo?.boat} • {jobInfo?.customer}
+                            </p>
+                            <div className="flex items-center gap-2 mt-2">
+                              {!wo.scheduled_date && (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                  No date
+                                </Badge>
+                              )}
+                              {(!wo.assigned_technicians || wo.assigned_technicians.length === 0) && (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                  No technician
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-400" />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {openOffers.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">Open Offers ({openOffers.length})</h3>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={createPageUrl('Offers')}>View All</Link>
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {openOffers.slice(0, 3).map(offer => (
+                    <Link 
+                      key={offer.id} 
+                      to={createPageUrl('OfferDetail') + `?id=${offer.id}`}
+                      className="block p-3 bg-white rounded-lg border border-blue-200 hover:border-blue-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{offer.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {getCustomerName(offer.customer_id)}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {offer.status}
+                            </Badge>
+                            <span className="text-xs text-slate-500">
+                              {getAge(offer.created_date)} old
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-400" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {staleLeads.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">Stale Leads ({staleLeads.length})</h3>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={createPageUrl('Leads')}>View All</Link>
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {staleLeads.slice(0, 3).map(lead => (
+                    <Link 
+                      key={lead.id} 
+                      to={createPageUrl('LeadDetail') + `?id=${lead.id}`}
+                      className="block p-3 bg-white rounded-lg border border-orange-200 hover:border-orange-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{lead.name}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {lead.boat_name || 'No boat specified'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                              {lead.status}
+                            </Badge>
+                            <span className="text-xs text-slate-500">
+                              No contact for {lead.last_contacted_at ? getAge(lead.last_contacted_at) : 'unknown time'}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-400" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Unfinished Items Alert */}
-      {allPendingWorkOrders.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/50">
+      {/* 2) TODAY / THIS WEEK */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-100">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <CardTitle className="text-lg font-semibold text-amber-900">
-                  {overdueWorkOrders.length > 0 ? 'Overdue & ' : ''}Unfinished Work
-                </CardTitle>
-                <p className="text-sm text-amber-700 mt-0.5">
-                  {overdueWorkOrders.length > 0 && `${overdueWorkOrders.length} overdue • `}
-                  {upcomingUnfinishedWorkOrders.length} upcoming • {unfinishedTasksCount} task{unfinishedTasksCount !== 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Today
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {allPendingWorkOrders.slice(0, 5).map((wo) => {
-                const job = jobs.find(j => j.id === wo.job_id);
-                const woTasks = tasks.filter(t => t.work_order_id === wo.id && !['Completed', 'Skipped'].includes(t.status));
-                const isOverdue = wo.scheduled_date && parseISO(wo.scheduled_date) < today;
+            {todayWorkOrders.length === 0 ? (
+              <p className="text-sm text-slate-500">No work orders scheduled for today</p>
+            ) : (
+              <div className="space-y-2">
+                {todayWorkOrders.map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  return (
+                    <Link 
+                      key={wo.id} 
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{wo.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {jobInfo?.boat} • {jobInfo?.location}
+                          </p>
+                          {wo.scheduled_start_time && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              {wo.scheduled_start_time}
+                            </p>
+                          )}
+                        </div>
+                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                          {wo.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+              This Week
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {thisWeekWorkOrders.length === 0 ? (
+              <p className="text-sm text-slate-500">No work orders scheduled this week</p>
+            ) : (
+              <div className="space-y-2">
+                {thisWeekWorkOrders.slice(0, 5).map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  return (
+                    <Link 
+                      key={wo.id} 
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{wo.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {jobInfo?.boat} • {jobInfo?.location}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {format(parseISO(wo.scheduled_date), 'EEE, MMM d')}
+                          </p>
+                        </div>
+                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                          {wo.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+                {thisWeekWorkOrders.length > 5 && (
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <Link to={createPageUrl('WorkOrders')}>View All ({thisWeekWorkOrders.length})</Link>
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 3) PROJECT HEALTH */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-emerald-600" />
+            Project Health
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activeJobs.length === 0 ? (
+            <p className="text-sm text-slate-500">No active projects</p>
+          ) : (
+            <div className="space-y-3">
+              {activeJobs.map(job => {
+                const health = getProjectHealth(job);
+                const progress = getProjectProgress(job);
+                const boat = boats.find(b => b.id === job.boat_id);
+                const location = locations.find(l => l.id === job.location_id);
                 
                 return (
-                  <Link
-                    key={wo.id}
-                    to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                    className={`block p-3 rounded-lg border ${isOverdue ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-white'} hover:border-amber-300 hover:bg-amber-50 transition-all`}
+                  <Link 
+                    key={job.id} 
+                    to={createPageUrl('JobDetail') + `?id=${job.id}`}
+                    className="block p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 truncate">{wo.title}</p>
-                        <p className="text-sm text-slate-600 mt-0.5">
-                          {job ? getBoatName(job.boat_id) : 'Unknown boat'}
-                        </p>
-                        <div className="flex items-center gap-3 mt-2 flex-wrap">
-                          <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
-                            {wo.status}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className={`h-3 w-3 rounded-full ${
+                            health.status === 'red' ? 'bg-red-500' : 
+                            health.status === 'yellow' ? 'bg-yellow-500' : 
+                            'bg-green-500'
+                          }`} />
+                          <p className="font-medium text-slate-900">{job.title}</p>
+                          <Badge variant="outline" className={
+                            health.status === 'red' ? 'bg-red-50 text-red-700 border-red-200' :
+                            health.status === 'yellow' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            'bg-green-50 text-green-700 border-green-200'
+                          }>
+                            {health.label}
                           </Badge>
-                          {wo.scheduled_date && (
-                            <div className={`flex items-center gap-1 text-xs ${isOverdue ? 'text-red-700 font-medium' : 'text-slate-600'}`}>
-                              <Calendar className="h-3 w-3" />
-                              {isOverdue && 'OVERDUE: '}
-                              {isToday(parseISO(wo.scheduled_date)) ? 'Today' : 
-                               isTomorrow(parseISO(wo.scheduled_date)) ? 'Tomorrow' :
-                               format(parseISO(wo.scheduled_date), 'MMM d')}
-                            </div>
-                          )}
-                          {woTasks.length > 0 && (
-                            <div className="flex items-center gap-1 text-xs text-amber-700">
-                              <CheckCircle2 className="h-3 w-3" />
-                              {woTasks.length} task{woTasks.length !== 1 ? 's' : ''} pending
+                        </div>
+                        
+                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
+                          <div className="flex items-center gap-1">
+                            <Ship className="h-3.5 w-3.5" />
+                            {boat?.vessel_name || 'Unknown'}
+                          </div>
+                          {location && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3.5 w-3.5" />
+                              {location.name}
                             </div>
                           )}
                         </div>
+
+                        <div className="mt-3 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600">Progress: {progress}%</span>
+                            <span className="text-slate-500 italic">{health.step}</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all rounded-full ${
+                                health.status === 'red' ? 'bg-red-500' :
+                                health.status === 'yellow' ? 'bg-yellow-500' :
+                                'bg-green-500'
+                              }`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
                       </div>
+                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
                     </div>
                   </Link>
                 );
               })}
-              {allPendingWorkOrders.length > 5 && (
-                <Button asChild variant="outline" size="sm" className="w-full mt-2">
-                  <Link to={createPageUrl('WorkOrders')}>
-                    View all {allPendingWorkOrders.length} work orders
-                  </Link>
-                </Button>
-              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Leads Widget */}
-      <LeadsWidget />
-
-      {/* Removed scheduled job listing to improve performance - showing only critical information */}
-
-      {/* Unplanned Work Orders - Full Width */}
-      {draftWorkOrders.length > 0 && (
-        <Button asChild variant="outline" className="w-full bg-slate-50 hover:bg-slate-100 h-12">
-          <Link to={createPageUrl('WorkOrders')} className="flex items-center justify-center gap-2">
-            <ClipboardList className="h-5 w-5" />
-            <span className="text-lg">Unplanned Work Orders: <span className="font-bold text-amber-600">{draftWorkOrders.length}</span></span>
-          </Link>
-        </Button>
-      )}
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Link
-              to={createPageUrl('Jobs') + '?new=true'}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-blue-200 hover:bg-blue-50/50 transition-all"
-            >
-              <div className="p-3 rounded-xl bg-blue-100">
-                <Briefcase className="h-5 w-5 text-blue-600" />
-              </div>
-              <span className="text-sm font-medium text-slate-700">New Job</span>
-            </Link>
-            <Link
-              to={createPageUrl('Customers') + '?new=true'}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all"
-            >
-              <div className="p-3 rounded-xl bg-emerald-100">
-                <Users className="h-5 w-5 text-emerald-600" />
-              </div>
-              <span className="text-sm font-medium text-slate-700">Add Customer</span>
-            </Link>
-            <Link
-              to={createPageUrl('Boats') + '?new=true'}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-cyan-200 hover:bg-cyan-50/50 transition-all"
-            >
-              <div className="p-3 rounded-xl bg-cyan-100">
-                <Ship className="h-5 w-5 text-cyan-600" />
-              </div>
-              <span className="text-sm font-medium text-slate-700">Add Boat</span>
-            </Link>
-            <Link
-              to={createPageUrl('Inventory')}
-              className="flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-200 hover:border-amber-200 hover:bg-amber-50/50 transition-all"
-            >
-              <div className="p-3 rounded-xl bg-amber-100">
-                <Package className="h-5 w-5 text-amber-600" />
-              </div>
-              <span className="text-sm font-medium text-slate-700">Inventory</span>
-            </Link>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* New Lead Dialog */}
-      <Dialog open={showLeadForm} onOpenChange={setShowLeadForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>New Lead</DialogTitle>
-          </DialogHeader>
-          <LeadForm
-            locations={locations}
-            onSave={handleSaveLead}
-            onCancel={() => setShowLeadForm(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Work Order Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Work Order</DialogTitle>
-          </DialogHeader>
-          <WorkOrderForm
-            workOrder={editingWorkOrder}
-            jobs={jobs}
-            technicians={technicians}
-            customers={customers}
-            boats={boats}
-            onSave={handleSaveWorkOrder}
-            onCancel={() => setShowEditDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Schedule Full Screen Dialog */}
-      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-        <DialogContent className="max-w-[98vw] max-h-[98vh] w-full h-full p-6">
-          <DialogHeader className="mb-4">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-2xl">Schedule</DialogTitle>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    if (viewMode === 'calendar') goToToday();
-                    else if (dispatchViewMode === 'day') goToDispatchToday();
-                    else goToOverviewToday();
-                  }}
-                >
-                  Today
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => {
-                    if (viewMode === 'calendar') prevWeek();
-                    else if (dispatchViewMode === 'day') prevDay();
-                    else prevRange();
-                  }}
-                >
-                  <ChevronRight className="h-4 w-4 rotate-180" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  onClick={() => {
-                    if (viewMode === 'calendar') nextWeek();
-                    else if (dispatchViewMode === 'day') nextDay();
-                    else nextRange();
-                  }}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+      {/* 4) SALES & ORGANISATION */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5 text-purple-600" />
+              Open Leads ({allOpenLeads.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {allOpenLeads.length === 0 ? (
+              <p className="text-sm text-slate-500">No open leads</p>
+            ) : (
+              <div className="space-y-2">
+                {allOpenLeads.slice(0, 5).map(lead => (
+                  <Link 
+                    key={lead.id} 
+                    to={createPageUrl('LeadDetail') + `?id=${lead.id}`}
+                    className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-900">{lead.name}</p>
+                        <p className="text-sm text-slate-600 mt-1">
+                          {lead.boat_name || 'No boat specified'}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                            {lead.status}
+                          </Badge>
+                          <span className="text-xs text-slate-500">
+                            {getAge(lead.created_date)} old
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-slate-400" />
+                    </div>
+                  </Link>
+                ))}
+                {allOpenLeads.length > 5 && (
+                  <Button variant="outline" size="sm" asChild className="w-full mt-2">
+                    <Link to={createPageUrl('Leads')}>View All ({allOpenLeads.length})</Link>
+                  </Button>
+                )}
               </div>
-            </div>
-          </DialogHeader>
-          
-          <div className="overflow-y-auto h-[calc(100%-80px)]">
-            <Tabs value={viewMode} onValueChange={setViewMode} className="w-full">
-              <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
-                <TabsTrigger value="calendar" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Calendar
-                </TabsTrigger>
-                <TabsTrigger value="dispatch" className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Dispatch
-                </TabsTrigger>
-              </TabsList>
+            )}
+          </CardContent>
+        </Card>
 
-              <TabsContent value="calendar" className="space-y-4">
-                {loading ? (
-                  <div className="grid grid-cols-7 gap-4">
-                    {[1,2,3,4,5,6,7].map(i => (
-                      <Skeleton key={i} className="h-64" />
-                    ))}
-                  </div>
-                ) : (
-                  <DragDropCalendar
-                    currentWeekStart={currentWeekStart}
-                    workOrders={workOrders}
-                    jobs={jobs}
-                    technicians={technicians}
-                    customers={customers}
-                    boats={boats}
-                    locations={locations}
-                    inventoryReservations={inventoryReservations}
-                    onWorkOrderUpdate={handleWorkOrderUpdate}
-                    onWorkOrderEdit={handleWorkOrderEditFromCalendar}
-                    loading={loading}
-                    viewType={calendarViewType}
-                  />
-                )}
-              </TabsContent>
-
-              <TabsContent value="dispatch" className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Tabs value={dispatchViewMode} onValueChange={setDispatchViewMode} className="w-full max-w-md">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="day">Day Timeline</TabsTrigger>
-                      <TabsTrigger value="future">Future Overview</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </div>
-
-                {dispatchViewMode === 'day' && (
-                  <>
-                    <div className="flex flex-col lg:flex-row gap-4">
-                      <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input
-                          placeholder="Search by job, boat, or customer..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                        />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-cyan-600" />
+              Open Offers ({allOpenOffers.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {allOpenOffers.length === 0 ? (
+              <p className="text-sm text-slate-500">No open offers</p>
+            ) : (
+              <div className="space-y-2">
+                {allOpenOffers.slice(0, 5).map(offer => (
+                  <Link 
+                    key={offer.id} 
+                    to={createPageUrl('OfferDetail') + `?id=${offer.id}`}
+                    className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-900">{offer.title}</p>
+                        <p className="text-sm text-slate-600 mt-1">
+                          {getCustomerName(offer.customer_id)}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
+                            {offer.status}
+                          </Badge>
+                          <span className="text-xs text-slate-500">
+                            {getAge(offer.created_date)} old
+                          </span>
+                        </div>
                       </div>
-                      
-                      <div className="flex gap-2 flex-wrap">
-                        <Select value={gridSize} onValueChange={setGridSize}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue placeholder="Grid size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="30m">30 minutes</SelectItem>
-                            <SelectItem value="1h">1 hour</SelectItem>
-                            <SelectItem value="2h">2 hours</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <Select value={locationFilter} onValueChange={setLocationFilter}>
-                          <SelectTrigger className="w-44">
-                            <SelectValue placeholder="All Locations" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Locations</SelectItem>
-                            {locations.map(loc => (
-                              <SelectItem key={loc.id} value={loc.id}>
-                                {loc.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <ChevronRight className="h-5 w-5 text-slate-400" />
                     </div>
-
-                    {loading ? (
-                      <Skeleton className="h-96" />
-                    ) : (
-                      <DispatchTimeline
-                        technicians={technicians}
-                        workOrders={workOrders}
-                        jobs={jobs}
-                        customers={customers}
-                        boats={boats}
-                        locations={locations}
-                        selectedDate={dispatchDate}
-                        viewMode={dispatchViewMode}
-                        gridSize={gridSize}
-                        locationFilter={locationFilter}
-                        statusFilter={statusFilter}
-                        technicianFilter={technicianFilter}
-                        searchTerm={searchTerm}
-                        onWorkOrderClick={handleWorkOrderClick}
-                      />
-                    )}
-                  </>
+                  </Link>
+                ))}
+                {allOpenOffers.length > 5 && (
+                  <Button variant="outline" size="sm" asChild className="w-full mt-2">
+                    <Link to={createPageUrl('Offers')}>View All ({allOpenOffers.length})</Link>
+                  </Button>
                 )}
-
-                {dispatchViewMode === 'future' && (
-                  <>
-                    <div className="flex flex-col lg:flex-row gap-4">
-                      <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input
-                          placeholder="Search by job, boat, or customer..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                      
-                      <div className="flex gap-2 flex-wrap">
-                        <Select value={rangeWeeks.toString()} onValueChange={(val) => setRangeWeeks(Number(val))}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue placeholder="Range" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="4">4 weeks</SelectItem>
-                            <SelectItem value="8">8 weeks</SelectItem>
-                            <SelectItem value="12">12 weeks</SelectItem>
-                            <SelectItem value="26">6 months</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <Select value={locationFilter} onValueChange={setLocationFilter}>
-                          <SelectTrigger className="w-44">
-                            <SelectValue placeholder="All Locations" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Locations</SelectItem>
-                            {locations.map(loc => (
-                              <SelectItem key={loc.id} value={loc.id}>
-                                {loc.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {loading ? (
-                      <Skeleton className="h-96" />
-                    ) : (
-                      <FutureOverview
-                        technicians={technicians}
-                        workOrders={workOrders}
-                        jobs={jobs}
-                        customers={customers}
-                        boats={boats}
-                        locations={locations}
-                        startDate={overviewStartDate}
-                        rangeWeeks={rangeWeeks}
-                        locationFilter={locationFilter}
-                        statusFilter={statusFilter}
-                        technicianFilter={technicianFilter}
-                        searchTerm={searchTerm}
-                        showBlockedOnly={showBlockedOnly}
-                        focusBlockedDays={focusBlockedDays}
-                        onDateClick={handleOverviewDateClick}
-                      />
-                    )}
-                  </>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        </DialogContent>
-      </Dialog>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
