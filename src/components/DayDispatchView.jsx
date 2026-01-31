@@ -119,6 +119,7 @@ export default function DayDispatchView({
   
   // Drag end handler - updates technician assignment
   const handleDragEnd = async (result) => {
+    console.log('[DnD] onDragEnd:', { draggableId: result.draggableId, source: result.source?.droppableId, destination: result.destination?.droppableId });
     if (!result.destination) return;
     
     const { draggableId, source, destination } = result;
@@ -252,8 +253,12 @@ export default function DayDispatchView({
     );
   }
   
+  const handleDragStart = (result) => {
+    console.log('[DnD] onDragStart:', result.draggableId);
+  };
+
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
+    <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
       <div className="border rounded-lg bg-white overflow-hidden">
         {error && (
           <div className="bg-red-50 border-b border-red-200 px-4 py-2 text-sm text-red-700">

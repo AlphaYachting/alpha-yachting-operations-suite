@@ -5,7 +5,7 @@ import { format, addDays, startOfWeek, addMonths, startOfMonth, startOfDay } fro
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DragDropCalendar from '@/components/schedule/DragDropCalendar';
-import DispatchTimeline from '@/components/schedule/DispatchTimeline';
+import DayDispatchView from '@/components/DayDispatchView';
 
 export default function DispatchFullscreenModal({ open, onClose }) {
   const [mode, setMode] = useState('calendar'); // 'calendar' or 'day'
@@ -170,7 +170,7 @@ export default function DispatchFullscreenModal({ open, onClose }) {
             viewType="week"
           />
         ) : (
-          <DispatchTimeline
+          <DayDispatchView
             technicians={technicians}
             workOrders={workOrders}
             jobs={jobs}
@@ -178,13 +178,7 @@ export default function DispatchFullscreenModal({ open, onClose }) {
             boats={boats}
             locations={locations}
             selectedDate={selectedDate || new Date()}
-            viewMode="day"
             gridSize={gridSize}
-            locationFilter="all"
-            statusFilter="all"
-            technicianFilter={[]}
-            searchTerm=""
-            onWorkOrderClick={() => {}}
             onWorkOrderUpdate={handleWorkOrderUpdate}
           />
         )}
