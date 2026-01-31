@@ -539,13 +539,14 @@ export default function DragDropCalendar({
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
                                 >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div
                                        onClick={(e) => handleWorkOrderClick(e, wo, dragSnapshot.isDragging)}
                                        className={`relative overflow-hidden border-l-4 text-[10px] hover:shadow-lg transition-all ${
-                                         dragSnapshot.isDragging ? 'cursor-grabbing' : 'cursor-pointer'
+                                         dragSnapshot.isDragging ? 'cursor-grabbing' : 'cursor-move'
                                        } ${
                                          dragSnapshot.isDragging ? 'opacity-60 shadow-xl scale-110 rotate-3 cursor-grabbing' : 'hover:scale-105'
                                        } ${
@@ -581,13 +582,7 @@ export default function DragDropCalendar({
                                             </div>
                                           )}
                                           <div className="flex items-center gap-1">
-                                            <div 
-                                              {...provided.dragHandleProps}
-                                              className="cursor-move p-0.5 hover:bg-white/20 rounded"
-                                              onClick={(e) => e.stopPropagation()}
-                                            >
-                                              <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
-                                            </div>
+                                            <PriorityIcon className="h-2.5 w-2.5 flex-shrink-0" />
                                             <p className="font-semibold truncate leading-tight flex-1">{wo.title}</p>
                                           </div>
                                           {wo.scheduled_start_time && (
