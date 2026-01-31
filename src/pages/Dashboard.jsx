@@ -49,6 +49,7 @@ import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
+import CapacityModal from '@/components/dashboard/CapacityModal';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -72,6 +73,7 @@ export default function Dashboard() {
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
   const [showLeadDialog, setShowLeadDialog] = useState(false);
+  const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -509,8 +511,8 @@ export default function Dashboard() {
             </Card>
           </Link>
 
-          <Link to={createPageUrl('Technicians')} className="block">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <div onClick={() => setShowCapacityModal(true)} className="cursor-pointer">
+            <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -521,7 +523,7 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-          </Link>
+          </div>
         </div>
       )}
 
@@ -1105,6 +1107,12 @@ export default function Dashboard() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Capacity Modal */}
+      <CapacityModal 
+        open={showCapacityModal} 
+        onOpenChange={setShowCapacityModal} 
+      />
 
       {/* Note Dialog */}
       <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
