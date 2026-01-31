@@ -351,14 +351,20 @@ export default function DayDispatchView({
                     const slotTime = formatTime(hour * 60);
                     const dateStr = format(selectedDate, 'yyyy-MM-dd');
                     const droppableId = `tech:${technician.id}|date:${dateStr}|t:${slotTime}`;
-                    
+
+                    // Find work orders that start in this slot
+                    const slotWOs = techWOs.filter(wo => {
+                      const woStart = wo.scheduled_start_time || '09:00';
+                      return woStart === slotTime;
+                    });
+
                     return (
                       <Droppable key={slotTime} droppableId={droppableId} direction="horizontal">
                         {(provided, snapshot) => (
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className="flex-1 border-l first:border-l-0 transition-colors"
+                            className="flex-1 border-l first:border-l-0 transition-colors relative"
                             style={{
                               minWidth: `${100 / timeSlots.length}%`,
                               backgroundColor: snapshot.isDraggingOver ? '#3b82f620' : 'transparent',
@@ -366,76 +372,69 @@ export default function DayDispatchView({
                               borderWidth: snapshot.isDraggingOver ? '2px' : '0'
                             }}
                           >
+                            {/* Work orders starting in this slot */}
+                            {slotWOs.map((wo, index) => {
+                              const position = calculatePosition(
+                                wo.scheduled_start_time,
+                                wo.scheduled_end_time,
+                                startHour,
+                                endHour
+                              );
+                              const jobInfo = getJobInfo(wo.job_id);
+
+                              return (
+                                <Draggable key={wo.id} draggableId={wo.id} index={index}>
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      className="absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all overflow-hidden border group"
+                                      style={{
+                                        ...provided.draggableProps.style,
+                                        left: 0,
+                                        right: 0,
+                                        zIndex: snapshot.isDragging ? 1000 : 10,
+                                        backgroundColor: (technician.color || '#3b82f6') + '20',
+                                        borderColor: technician.color || '#3b82f6',
+                                        borderLeftWidth: '4px',
+                                        borderLeftColor: technician.color || '#3b82f6'
+                                      }}
+                                    >
+                                      <div className="h-full flex items-start">
+                                        <div
+                                          {...provided.dragHandleProps}
+                                          className="flex items-center gap-1 cursor-move flex-1 min-w-0 px-2 py-1"
+                                        >
+                                          <GripVertical className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-medium truncate text-slate-900">
+                                              {wo.title}
+                                            </p>
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                              <span className="text-[10px] font-medium text-slate-700">
+                                                {wo.scheduled_start_time}–{wo.scheduled_end_time || '?'}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div
+                                          onMouseDown={(e) => handleResizeStart(e, wo)}
+                                          className="w-4 cursor-ew-resize hover:bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 border-l-2"
+                                          style={{ borderLeftColor: technician.color || '#3b82f6' }}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                </Draggable>
+                              );
+                            })}
                             {provided.placeholder}
                           </div>
                         )}
                       </Droppable>
                     );
                   })}
-                </div>
-                    
-                {/* Work order blocks - positioned absolutely above droppable slots */}
-                <div className="absolute inset-0 pointer-events-none">
-                  {techWOs.map((wo, index) => {
-                      const position = calculatePosition(
-                        wo.scheduled_start_time,
-                        wo.scheduled_end_time,
-                        startHour,
-                        endHour
-                      );
-                      const jobInfo = getJobInfo(wo.job_id);
-                      
-                      return (
-                        <Draggable key={wo.id} draggableId={wo.id} index={index}>
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              className="absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all overflow-hidden border group pointer-events-auto"
-                              style={{
-                                ...provided.draggableProps.style,
-                                left: `${position.left}%`,
-                                width: `${position.width}%`,
-                                zIndex: snapshot.isDragging ? 1000 : 10,
-                                backgroundColor: (technician.color || '#3b82f6') + '20',
-                                borderColor: technician.color || '#3b82f6',
-                                borderLeftWidth: '4px',
-                                borderLeftColor: technician.color || '#3b82f6'
-                              }}
-                            >
-                              <div className="h-full flex items-start">
-                                {/* DRAG HANDLE AREA: flex-1 (most of card width), receives dragHandleProps */}
-                                <div
-                                  {...provided.dragHandleProps}
-                                  className="flex items-center gap-1 cursor-move flex-1 min-w-0 px-2 py-1"
-                                >
-                                  <GripVertical className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium truncate text-slate-900">
-                                      {wo.title}
-                                    </p>
-                                    <div className="flex items-center gap-1 mt-0.5">
-                                      <span className="text-[10px] font-medium text-slate-700">
-                                        {wo.scheduled_start_time}–{wo.scheduled_end_time || '?'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                {/* RESIZE HANDLE AREA: fixed 4px strip on right edge, separate from drag handle.
-                                    CRITICAL: Do NOT use position:absolute or it will block drag handle.
-                                    Keep as flex item (w-4, flex-shrink-0) to prevent pointer overlap. */}
-                                <div
-                                  onMouseDown={(e) => handleResizeStart(e, wo)}
-                                  className="w-4 cursor-ew-resize hover:bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 border-l-2"
-                                  style={{ borderLeftColor: technician.color || '#3b82f6' }}
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      );
-                    })}
                 </div>
               </div>
             ))}
