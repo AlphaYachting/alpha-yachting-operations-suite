@@ -235,6 +235,73 @@ export default function Dashboard() {
 
   const hasActionItems = overdueWorkOrders.length > 0 || unplannedWorkOrders.length > 0 || openOffers.length > 0 || staleLeads.length > 0;
 
+  // Notes functions
+  const handleSaveNote = async () => {
+    if (!noteForm.text.trim()) {
+      toast.error('Note text is required');
+      return;
+    }
+    if (noteForm.text.length > 300) {
+      toast.error('Note must be 300 characters or less');
+      return;
+    }
+
+    try {
+      const noteData = {
+        text: noteForm.text.trim(),
+        reference_type: noteForm.reference_type,
+        reference_id: noteForm.reference_type !== 'None' ? noteForm.reference_id : null,
+        due_date: noteForm.due_date ? format(noteForm.due_date, 'yyyy-MM-dd') : null,
+        completed: false
+      };
+
+      const newNote = await base44.entities.Note.create(noteData);
+      setNotes([newNote, ...notes]);
+      setShowNoteDialog(false);
+      setNoteForm({ text: '', reference_type: 'None', reference_id: '', due_date: null });
+      toast.success('Note created');
+    } catch (error) {
+      console.error('Error creating note:', error);
+      toast.error('Failed to create note');
+    }
+  };
+
+  const handleToggleNoteComplete = async (note) => {
+    try {
+      await base44.entities.Note.update(note.id, { completed: !note.completed });
+      setNotes(notes.map(n => n.id === note.id ? { ...n, completed: !n.completed } : n));
+    } catch (error) {
+      console.error('Error updating note:', error);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      await base44.entities.Note.delete(noteId);
+      setNotes(notes.filter(n => n.id !== noteId));
+      toast.success('Note deleted');
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      toast.error('Failed to delete note');
+    }
+  };
+
+  const activeNotes = notes.filter(n => !n.completed);
+  const getReferenceName = (note) => {
+    if (note.reference_type === 'Job') {
+      const job = jobs.find(j => j.id === note.reference_id);
+      return job?.title || 'Unknown Project';
+    }
+    if (note.reference_type === 'WorkOrder') {
+      const wo = workOrders.find(w => w.id === note.reference_id);
+      return wo?.title || 'Unknown Work Order';
+    }
+    if (note.reference_type === 'Customer') {
+      return getCustomerName(note.reference_id);
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
