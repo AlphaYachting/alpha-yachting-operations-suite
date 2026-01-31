@@ -19,7 +19,8 @@ import {
   Activity,
   Plus,
   StickyNote,
-  X
+  X,
+  BarChart2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,7 @@ export default function Dashboard() {
   const [leads, setLeads] = useState([]);
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [kpis, setKpis] = useState(null);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
@@ -103,10 +105,92 @@ export default function Dashboard() {
       setLeads(leadsData);
       setOffers(offersData);
       setNotes(notesData);
+
+      // Load or calculate KPIs (max 2x per day)
+      await loadKPIs();
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadKPIs = async () => {
+    try {
+      const now = new Date();
+      const todayDate = format(now, 'yyyy-MM-dd');
+      const currentPeriod = now.getHours() < 12 ? 'morning' : 'afternoon';
+      const cacheKey = `kpi_${todayDate}_${currentPeriod}`;
+
+      // Check if cache exists for current period
+      const existingCache = await base44.entities.KPICache.filter({ cache_key: cacheKey });
+
+      if (existingCache.length > 0) {
+        // Use cached values
+        setKpis(existingCache[0]);
+        return;
+      }
+
+      // Calculate KPIs (simple count queries only)
+      const [allJobs, allWorkOrders, allOffers, allLeads, allTechnicians] = await Promise.all([
+        base44.entities.Job.list('-created_date', 200),
+        base44.entities.WorkOrder.list('-scheduled_date', 200),
+        base44.entities.Offer.list('-created_date', 100),
+        base44.entities.Lead.list('-created_date', 100),
+        base44.entities.Technician.list()
+      ]);
+
+      // Count active projects
+      const activeProjects = allJobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status)).length;
+
+      // Count open work orders
+      const openWorkOrders = allWorkOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status)).length;
+
+      // Count overdue work orders
+      const overdueWorkOrders = allWorkOrders.filter(wo => {
+        if (['Completed', 'Cancelled'].includes(wo.status)) return false;
+        if (!wo.scheduled_date) return false;
+        const schedDate = parseISO(wo.scheduled_date);
+        return isPast(schedDate) && !isToday(schedDate);
+      }).length;
+
+      // Count open offers
+      const openOffers = allOffers.filter(o => !['Approved', 'Rejected', 'Expired', 'Converted'].includes(o.status)).length;
+
+      // Count active leads
+      const activeLeads = allLeads.filter(l => !['Converted', 'Rejected', 'Lost'].includes(l.status)).length;
+
+      // Calculate capacity today (assigned techs / total techs)
+      const todayWOs = allWorkOrders.filter(wo => {
+        if (!wo.scheduled_date) return false;
+        return isToday(parseISO(wo.scheduled_date));
+      });
+      const assignedTechIds = new Set();
+      todayWOs.forEach(wo => {
+        if (wo.assigned_technicians) {
+          wo.assigned_technicians.forEach(id => assignedTechIds.add(id));
+        }
+      });
+      const activeTechs = allTechnicians.filter(t => t.status === 'Active').length;
+      const capacityToday = activeTechs > 0 ? Math.round((assignedTechIds.size / activeTechs) * 100) : 0;
+
+      // Store in cache
+      const kpiData = {
+        cache_key: cacheKey,
+        date: todayDate,
+        period: currentPeriod,
+        active_projects: activeProjects,
+        open_work_orders: openWorkOrders,
+        overdue_work_orders: overdueWorkOrders,
+        open_offers: openOffers,
+        active_leads: activeLeads,
+        capacity_today: capacityToday
+      };
+
+      const newCache = await base44.entities.KPICache.create(kpiData);
+      setKpis(newCache);
+    } catch (error) {
+      console.error('Error loading KPIs:', error);
     }
   };
 
@@ -374,6 +458,95 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* KPI Block */}
+      {kpis && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Link to={createPageUrl('Jobs')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Active Projects</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.active_projects}</p>
+                  </div>
+                  <Briefcase className="h-8 w-8 text-blue-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to={createPageUrl('WorkOrders')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Open Work Orders</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.open_work_orders}</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-indigo-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to={createPageUrl('WorkOrders') + '?filter=overdue'} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer border-red-200">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Overdue WOs</p>
+                    <p className="text-2xl font-bold text-red-600 mt-1">{kpis.overdue_work_orders}</p>
+                  </div>
+                  <AlertCircle className="h-8 w-8 text-red-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to={createPageUrl('Offers')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Open Offers</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.open_offers}</p>
+                  </div>
+                  <FileText className="h-8 w-8 text-cyan-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to={createPageUrl('Leads')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Active Leads</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.active_leads}</p>
+                  </div>
+                  <Phone className="h-8 w-8 text-purple-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to={createPageUrl('Technicians')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Capacity Today</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.capacity_today}%</p>
+                  </div>
+                  <Users className="h-8 w-8 text-emerald-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      )}
 
       {/* 1) ACTION REQUIRED */}
       {hasActionItems && (
