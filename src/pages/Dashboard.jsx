@@ -146,14 +146,6 @@ export default function Dashboard() {
       // Count open work orders
       const openWorkOrders = allWorkOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status)).length;
 
-      // Count overdue work orders
-      const overdueWorkOrders = allWorkOrders.filter(wo => {
-        if (['Completed', 'Cancelled'].includes(wo.status)) return false;
-        if (!wo.scheduled_date) return false;
-        const schedDate = parseISO(wo.scheduled_date);
-        return isPast(schedDate) && !isToday(schedDate);
-      }).length;
-
       // Count open offers
       const openOffers = allOffers.filter(o => !['Approved', 'Rejected', 'Expired', 'Converted'].includes(o.status)).length;
 
@@ -181,7 +173,6 @@ export default function Dashboard() {
         period: currentPeriod,
         active_projects: activeProjects,
         open_work_orders: openWorkOrders,
-        overdue_work_orders: overdueWorkOrders,
         open_offers: openOffers,
         active_leads: activeLeads,
         capacity_today: capacityToday
@@ -461,7 +452,7 @@ export default function Dashboard() {
 
       {/* KPI Block */}
       {kpis && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Link to={createPageUrl('Jobs')} className="block">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4">
@@ -485,20 +476,6 @@ export default function Dashboard() {
                     <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.open_work_orders}</p>
                   </div>
                   <Clock className="h-8 w-8 text-indigo-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl('WorkOrders') + '?filter=overdue'} className="block">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer border-red-200">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Overdue WOs</p>
-                    <p className="text-2xl font-bold text-red-600 mt-1">{kpis.overdue_work_orders}</p>
-                  </div>
-                  <AlertCircle className="h-8 w-8 text-red-500 opacity-50" />
                 </div>
               </CardContent>
             </Card>
