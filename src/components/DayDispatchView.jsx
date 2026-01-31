@@ -35,6 +35,26 @@ function snapToGrid(minutes, gridSize = 30) {
   return Math.round(minutes / gridSize) * gridSize;
 }
 
+// Compute end time with field priority: scheduled_end_time > estimated_duration_hours > default 60min
+function computeEndTime(wo) {
+  const start = parseTime(wo.scheduled_start_time || '09:00');
+  
+  // Priority 1: scheduled_end_time
+  if (wo.scheduled_end_time) {
+    const end = parseTime(wo.scheduled_end_time);
+    if (end > start) return formatTime(end);
+  }
+  
+  // Priority 2: estimated_duration_hours
+  if (wo.estimated_duration_hours && wo.estimated_duration_hours > 0) {
+    const durationMinutes = wo.estimated_duration_hours * 60;
+    return formatTime(start + durationMinutes);
+  }
+  
+  // Default: 60 minutes
+  return formatTime(start + 60);
+}
+
 // Calculate position for timeline block
 function calculatePosition(startTime, endTime, startHour, endHour) {
   const start = parseTime(startTime);
@@ -117,7 +137,7 @@ export default function DayDispatchView({
     });
   }, [technicians, dayWorkOrders]);
   
-  // Drag end handler - updates technician assignment AND time
+  // Drag end handler - updates technician assignment AND time (preserves duration)
   const handleDragEnd = async (result) => {
     console.log('[DnD] onDragEnd:', { draggableId: result.draggableId, source: result.source?.droppableId, destination: result.destination?.droppableId });
     if (!result.destination) return;
@@ -142,10 +162,18 @@ export default function DayDispatchView({
       return;
     }
     
-    // Calculate duration to preserve
+    // Calculate duration to preserve (field priority: scheduled_end_time > estimated_duration_hours > default)
     const currentStart = parseTime(wo.scheduled_start_time || '09:00');
-    const currentEnd = parseTime(wo.scheduled_end_time || wo.scheduled_start_time) || currentStart + 60;
-    const duration = currentEnd - currentStart;
+    let duration = 60; // default
+    
+    if (wo.scheduled_end_time) {
+      const currentEnd = parseTime(wo.scheduled_end_time);
+      if (currentEnd > currentStart) {
+        duration = currentEnd - currentStart;
+      }
+    } else if (wo.estimated_duration_hours && wo.estimated_duration_hours > 0) {
+      duration = wo.estimated_duration_hours * 60;
+    }
     
     // New times
     const newStartMinutes = parseTime(destTime);
@@ -172,9 +200,15 @@ export default function DayDispatchView({
       const updates = {
         assigned_technicians: newAssigned,
         lead_technician_id: destTechId,
-        scheduled_start_time: formatTime(newStartMinutes),
-        scheduled_end_time: formatTime(newEndMinutes)
+        scheduled_start_time: formatTime(newStartMinutes)
       };
+      
+      // Update scheduled_end_time if it exists (priority field)
+      if (wo.scheduled_end_time) {
+        updates.scheduled_end_time = formatTime(newEndMinutes);
+      } else if (wo.estimated_duration_hours !== undefined) {
+        // Keep estimated_duration_hours unchanged (duration preserved via start time shift)
+      }
       
       await onWorkOrderUpdate(woId, updates);
     } catch (err) {
@@ -183,25 +217,24 @@ export default function DayDispatchView({
     }
   };
   
-  // Resize handler - updates work order duration (scheduled_end_time)
-  // CRITICAL: This resize handle is positioned as a separate flex item (w-4, flex-shrink-0)
-  // to avoid pointer-event conflicts with the drag handle (flex-1).
-  // Do NOT change to absolute positioning or it will break drag interaction.
+  // Resize handler - updates duration (field priority: scheduled_end_time > estimated_duration_hours)
   const handleResizeStart = (e, wo) => {
     e.preventDefault();
     e.stopPropagation();
     
-    const originalStartMinutes = parseTime(wo.scheduled_start_time);
-    const originalEndMinutes = parseTime(wo.scheduled_end_time || wo.scheduled_start_time) || originalStartMinutes + 60;
+    const originalStartMinutes = parseTime(wo.scheduled_start_time || '09:00');
+    const computedEnd = computeEndTime(wo);
+    const originalEndMinutes = parseTime(computedEnd);
     
-    // Minimum duration enforcement (30 minutes)
-    const MIN_DURATION_MINUTES = 30;
+    // Store original values for revert on error
+    const originalWO = { ...wo };
     
     setResizing({
       woId: wo.id,
       startX: e.clientX,
       originalStart: originalStartMinutes,
-      originalEnd: originalEndMinutes
+      originalEnd: originalEndMinutes,
+      originalWO
     });
     
     const handleMouseMove = (moveEvent) => {
@@ -218,12 +251,12 @@ export default function DayDispatchView({
       let newEnd = resizing.originalEnd + deltaMinutes;
       newEnd = snapToGrid(newEnd, gridMinutes);
       
-      // Enforce minimum duration
-      if (newEnd - resizing.originalStart < MIN_DURATION_MINUTES) {
-        newEnd = resizing.originalStart + MIN_DURATION_MINUTES;
+      // Enforce minimum duration (one grid step)
+      if (newEnd - resizing.originalStart < gridMinutes) {
+        newEnd = resizing.originalStart + gridMinutes;
       }
       
-      // Clamp to visible day bounds (06:00-18:00)
+      // Clamp to visible day bounds
       const maxEndMinutes = endHour * 60;
       if (newEnd > maxEndMinutes) {
         newEnd = maxEndMinutes;
@@ -242,7 +275,6 @@ export default function DayDispatchView({
       
       // Validate final time
       if (resizing.newEnd <= resizing.originalStart) {
-        console.warn('Invalid resize: end time before or equal to start time');
         setError('Invalid duration: end time must be after start time');
         setResizing(null);
         document.removeEventListener('mousemove', handleMouseMove);
@@ -253,12 +285,28 @@ export default function DayDispatchView({
       try {
         setError(null);
         const newEndTime = formatTime(resizing.newEnd);
-        await onWorkOrderUpdate(resizing.woId, {
-          scheduled_end_time: newEndTime
-        });
+        const newDurationMinutes = resizing.newEnd - resizing.originalStart;
+        const newDurationHours = newDurationMinutes / 60;
+        
+        const updates = {};
+        
+        // Field priority: scheduled_end_time > estimated_duration_hours
+        if (wo.scheduled_end_time !== undefined) {
+          // Priority 1: Update scheduled_end_time
+          updates.scheduled_end_time = newEndTime;
+        } else if (wo.estimated_duration_hours !== undefined) {
+          // Priority 2: Update estimated_duration_hours
+          updates.estimated_duration_hours = newDurationHours;
+        } else {
+          // No duration field exists - create scheduled_end_time
+          updates.scheduled_end_time = newEndTime;
+        }
+        
+        await onWorkOrderUpdate(resizing.woId, updates);
       } catch (err) {
         console.warn('Failed to update duration:', err);
-        setError('Failed to update duration. Please try again.');
+        setError('Save failed, reverted.');
+        // Revert will happen automatically on data reload
       }
       
       setResizing(null);
@@ -374,12 +422,16 @@ export default function DayDispatchView({
                           >
                             {/* Work orders starting in this slot */}
                             {slotWOs.map((wo, index) => {
-                              const position = calculatePosition(
-                                wo.scheduled_start_time,
-                                wo.scheduled_end_time,
-                                startHour,
-                                endHour
-                              );
+                              // Compute end time using field priority
+                              const computedEnd = computeEndTime(wo);
+                              const woStartMinutes = parseTime(wo.scheduled_start_time || '09:00');
+                              const woEndMinutes = parseTime(computedEnd);
+                              
+                              // Calculate how many slots this WO spans
+                              const duration = woEndMinutes - woStartMinutes;
+                              const slotWidthMinutes = gridMinutes;
+                              const slotsSpanned = Math.ceil(duration / slotWidthMinutes);
+                              
                               const jobInfo = getJobInfo(wo.job_id);
 
                               return (
@@ -392,12 +444,13 @@ export default function DayDispatchView({
                                       style={{
                                         ...provided.draggableProps.style,
                                         left: 0,
-                                        right: 0,
+                                        width: `calc(${slotsSpanned * 100}% - 4px)`,
                                         zIndex: snapshot.isDragging ? 1000 : 10,
                                         backgroundColor: (technician.color || '#3b82f6') + '20',
                                         borderColor: technician.color || '#3b82f6',
                                         borderLeftWidth: '4px',
-                                        borderLeftColor: technician.color || '#3b82f6'
+                                        borderLeftColor: technician.color || '#3b82f6',
+                                        pointerEvents: 'auto'
                                       }}
                                     >
                                       <div className="h-full flex items-start">
@@ -412,7 +465,7 @@ export default function DayDispatchView({
                                             </p>
                                             <div className="flex items-center gap-1 mt-0.5">
                                               <span className="text-[10px] font-medium text-slate-700">
-                                                {wo.scheduled_start_time}–{wo.scheduled_end_time || '?'}
+                                                {wo.scheduled_start_time || '09:00'}–{computedEnd}
                                               </span>
                                             </div>
                                           </div>
