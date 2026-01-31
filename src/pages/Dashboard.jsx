@@ -53,6 +53,7 @@ import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DragDropCalendar from '@/components/schedule/DragDropCalendar';
 import DispatchTimeline from '@/components/schedule/DispatchTimeline';
+import DayDispatchView from '@/components/DayDispatchView';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -1263,7 +1264,7 @@ export default function Dashboard() {
                     <p className="text-slate-500">Loading technicians...</p>
                   </div>
                 ) : (
-                  <DispatchTimeline
+                  <DayDispatchView
                     technicians={technicians}
                     workOrders={workOrders}
                     jobs={jobs}
@@ -1271,13 +1272,7 @@ export default function Dashboard() {
                     boats={boats}
                     locations={locations}
                     selectedDate={dispatchSelectedDate || new Date()}
-                    viewMode="day"
                     gridSize={dispatchGridSize}
-                    locationFilter="all"
-                    statusFilter="all"
-                    technicianFilter={[]}
-                    searchTerm=""
-                    onWorkOrderClick={() => {}}
                     onWorkOrderUpdate={async (woId, updates) => {
                       try {
                         setWorkOrders(prevWOs => prevWOs.map(wo => 
