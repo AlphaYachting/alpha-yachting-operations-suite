@@ -48,7 +48,6 @@ import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
-import OfferForm from '@/components/offers/OfferForm';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -71,7 +70,6 @@ export default function Dashboard() {
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
   const [showLeadDialog, setShowLeadDialog] = useState(false);
-  const [showOfferDialog, setShowOfferDialog] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -358,11 +356,13 @@ export default function Dashboard() {
           </Button>
           <Button 
             size="sm" 
-            onClick={() => setShowOfferDialog(true)}
+            asChild
             className="bg-cyan-600 hover:bg-cyan-700 text-white"
           >
-            <Plus className="h-4 w-4 mr-1" />
-            Offer
+            <Link to={createPageUrl('Offers') + '?new=true'}>
+              <Plus className="h-4 w-4 mr-1" />
+              Offer
+            </Link>
           </Button>
           <Button 
             size="sm" 
@@ -952,32 +952,6 @@ export default function Dashboard() {
               await loadDashboardData();
             }}
             onCancel={() => setShowLeadDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Offer Dialog */}
-      <Dialog open={showOfferDialog} onOpenChange={setShowOfferDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Offer</DialogTitle>
-          </DialogHeader>
-          <OfferForm
-            customers={customers}
-            boats={boats}
-            jobs={jobs}
-            onSave={async (offerData) => {
-              const offerNumber = `OFF${Date.now().toString().slice(-6)}`;
-              const newOffer = await base44.entities.Offer.create({ 
-                ...offerData, 
-                offer_number: offerNumber 
-              });
-              setOffers([newOffer, ...offers]);
-              setShowOfferDialog(false);
-              toast.success('Offer created');
-              await loadDashboardData();
-            }}
-            onCancel={() => setShowOfferDialog(false)}
           />
         </DialogContent>
       </Dialog>
