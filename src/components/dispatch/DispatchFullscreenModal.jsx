@@ -94,7 +94,7 @@ export default function DispatchFullscreenModal({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900 z-50 flex flex-col">
+    <div className="fixed inset-0 bg-slate-50 z-50 flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 p-4 flex items-center justify-between flex-shrink-0 z-10">
         <div className="flex items-center gap-4">
