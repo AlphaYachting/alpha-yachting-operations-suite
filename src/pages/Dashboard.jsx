@@ -45,6 +45,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays } from 'date-fns';
 import { toast } from 'sonner';
+import JobForm from '@/components/jobs/JobForm';
+import WorkOrderForm from '@/components/workorders/WorkOrderForm';
+import LeadForm from '@/components/leads/LeadForm';
+import OfferForm from '@/components/offers/OfferForm';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -64,6 +68,10 @@ export default function Dashboard() {
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
+  const [showLeadDialog, setShowLeadDialog] = useState(false);
+  const [showOfferDialog, setShowOfferDialog] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -324,31 +332,43 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link to={createPageUrl('Jobs') + '?new=true'}>
-              <Plus className="h-4 w-4 mr-1" />
-              Project
-            </Link>
+          <Button 
+            size="sm" 
+            onClick={() => setShowProjectDialog(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Project
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to={createPageUrl('WorkOrders') + '?new=true'}>
-              <Plus className="h-4 w-4 mr-1" />
-              Work Order
-            </Link>
+          <Button 
+            size="sm" 
+            onClick={() => setShowWorkOrderDialog(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Work Order
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to={createPageUrl('Leads') + '?new=true'}>
-              <Plus className="h-4 w-4 mr-1" />
-              Lead
-            </Link>
+          <Button 
+            size="sm" 
+            onClick={() => setShowLeadDialog(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Lead
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link to={createPageUrl('Offers') + '?new=true'}>
-              <Plus className="h-4 w-4 mr-1" />
-              Offer
-            </Link>
+          <Button 
+            size="sm" 
+            onClick={() => setShowOfferDialog(true)}
+            className="bg-cyan-600 hover:bg-cyan-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Offer
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowNoteDialog(true)}>
+          <Button 
+            size="sm" 
+            onClick={() => setShowNoteDialog(true)}
+            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+          >
             <StickyNote className="h-4 w-4 mr-1" />
             Note
           </Button>
@@ -861,6 +881,106 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Project Dialog */}
+      <Dialog open={showProjectDialog} onOpenChange={setShowProjectDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Project</DialogTitle>
+          </DialogHeader>
+          <JobForm
+            customers={customers}
+            boats={boats}
+            locations={locations}
+            onSave={async (projectData) => {
+              const woNumber = `P${Date.now().toString().slice(-6)}`;
+              const newJob = await base44.entities.Job.create({ 
+                ...projectData, 
+                job_number: woNumber, 
+                intake_date: new Date().toISOString() 
+              });
+              setJobs([newJob, ...jobs]);
+              setShowProjectDialog(false);
+              toast.success('Project created');
+              await loadDashboardData();
+            }}
+            onCancel={() => setShowProjectDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Work Order Dialog */}
+      <Dialog open={showWorkOrderDialog} onOpenChange={setShowWorkOrderDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Work Order</DialogTitle>
+          </DialogHeader>
+          <WorkOrderForm
+            jobs={jobs}
+            technicians={[]}
+            customers={customers}
+            boats={boats}
+            onSave={async (workOrderData) => {
+              const woNumber = `WO${Date.now().toString().slice(-6)}`;
+              const newWo = await base44.entities.WorkOrder.create({ 
+                ...workOrderData, 
+                work_order_number: woNumber 
+              });
+              setWorkOrders([newWo, ...workOrders]);
+              setShowWorkOrderDialog(false);
+              toast.success('Work order created');
+              await loadDashboardData();
+            }}
+            onCancel={() => setShowWorkOrderDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Lead Dialog */}
+      <Dialog open={showLeadDialog} onOpenChange={setShowLeadDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Lead</DialogTitle>
+          </DialogHeader>
+          <LeadForm
+            locations={locations}
+            onSave={async (leadData) => {
+              const newLead = await base44.entities.Lead.create(leadData);
+              setLeads([newLead, ...leads]);
+              setShowLeadDialog(false);
+              toast.success('Lead created');
+              await loadDashboardData();
+            }}
+            onCancel={() => setShowLeadDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Offer Dialog */}
+      <Dialog open={showOfferDialog} onOpenChange={setShowOfferDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Offer</DialogTitle>
+          </DialogHeader>
+          <OfferForm
+            customers={customers}
+            boats={boats}
+            jobs={jobs}
+            onSave={async (offerData) => {
+              const offerNumber = `OFF${Date.now().toString().slice(-6)}`;
+              const newOffer = await base44.entities.Offer.create({ 
+                ...offerData, 
+                offer_number: offerNumber 
+              });
+              setOffers([newOffer, ...offers]);
+              setShowOfferDialog(false);
+              toast.success('Offer created');
+              await loadDashboardData();
+            }}
+            onCancel={() => setShowOfferDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Note Dialog */}
       <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
