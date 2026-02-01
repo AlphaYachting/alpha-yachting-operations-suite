@@ -88,8 +88,9 @@ const StatCard = ({ title, value, subtitle, icon: Icon, color, loading }) => (
 
 export default function Reports() {
   const [jobs, setJobs] = useState([]);
-  const [workOrders, setWorkOrders] = useState([]);
-  const [tasks, setTasks] = useState([]);
+   const [jobsMap, setJobsMap] = useState({});
+   const [workOrders, setWorkOrders] = useState([]);
+   const [tasks, setTasks] = useState([]);
   const [timeEntries, setTimeEntries] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [reservations, setReservations] = useState([]);
@@ -129,12 +130,13 @@ export default function Reports() {
       ]);
 
       setJobs(jobsData);
-      setWorkOrders(workOrdersData);
-      setTasks(tasksData);
-      setTimeEntries(timeEntriesData);
-      setTechnicians(techniciansData);
-      setReservations(reservationsData);
-      setVehicles(vehiclesData);
+       setJobsMap(Object.fromEntries(jobsData.map(j => [j.id, j])));
+       setWorkOrders(workOrdersData);
+       setTasks(tasksData);
+       setTimeEntries(timeEntriesData);
+       setTechnicians(techniciansData);
+       setReservations(reservationsData);
+       setVehicles(vehiclesData);
     } catch (error) {
       console.error('Error loading reports data:', error);
     } finally {
@@ -698,9 +700,12 @@ export default function Reports() {
               <Button 
                 onClick={() => {
                   const serviceAreaData = filteredWorkOrders
-                    .filter(wo => wo.service_category)
+                    .map(wo => {
+                      const job = jobsMap[wo.job_id];
+                      return { ...wo, service_category: job?.service_category || 'Uncategorized' };
+                    })
                     .reduce((acc, wo) => {
-                      const category = wo.service_category || 'Uncategorized';
+                      const category = wo.service_category;
                       const existing = acc.find(item => item.service_area === category);
                       if (existing) {
                         existing.estimated_hours += wo.estimated_duration_hours || 0;
@@ -725,15 +730,18 @@ export default function Reports() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {filteredWorkOrders.some(wo => wo.service_category) ? (
+                {filteredWorkOrders.length > 0 ? (
                   <>
                     <div>
-                      <h3 className="text-sm font-medium text-slate-700 mb-4">Estimated Hours Distribution</h3>
+                      <h3 className="text-sm font-medium text-slate-700 mb-4">Estimated Hours Distribution by Service Category</h3>
                       <div className="space-y-4">
                         {filteredWorkOrders
-                          .filter(wo => wo.service_category)
+                          .map(wo => {
+                            const job = jobsMap[wo.job_id];
+                            return { ...wo, service_category: job?.service_category || 'Uncategorized' };
+                          })
                           .reduce((acc, wo) => {
-                            const category = wo.service_category || 'Uncategorized';
+                            const category = wo.service_category;
                             const existing = acc.find(item => item.service_area === category);
                             if (existing) {
                               existing.estimated_hours += wo.estimated_duration_hours || 0;
@@ -750,7 +758,10 @@ export default function Reports() {
                           .sort((a, b) => b.estimated_hours - a.estimated_hours)
                           .map((item) => {
                             const totalHours = filteredWorkOrders
-                              .filter(wo => wo.service_category)
+                              .map(wo => {
+                                const job = jobsMap[wo.job_id];
+                                return { ...wo, service_category: job?.service_category || 'Uncategorized' };
+                              })
                               .reduce((sum, wo) => sum + (wo.estimated_duration_hours || 0), 0);
                             const percentage = totalHours > 0 ? (item.estimated_hours / totalHours) * 100 : 0;
 
@@ -802,42 +813,31 @@ export default function Reports() {
                       <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
                         <div className="flex items-center gap-3 mb-2">
                           <Target className="h-5 w-5 text-cyan-600" />
-                          <p className="text-sm font-medium text-cyan-900">Total Service Areas</p>
+                          <p className="text-sm font-medium text-cyan-900">Service Categories</p>
                         </div>
                         <p className="text-2xl font-bold text-cyan-700">
-                          {filteredWorkOrders.filter(wo => wo.service_category).reduce((acc, wo) => {
-                            return acc.has(wo.service_category) ? acc : acc.add(wo.service_category);
-                          }, new Set()).size}
+                          {new Set(filteredWorkOrders.map(wo => jobsMap[wo.job_id]?.service_category || 'Uncategorized')).size}
                         </p>
                       </div>
 
                       <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
                         <div className="flex items-center gap-3 mb-2">
                           <Clock className="h-5 w-5 text-emerald-600" />
-                          <p className="text-sm font-medium text-emerald-900">Total Estimated Hours</p>
+                          <p className="text-sm font-medium text-emerald-900">Total Planned Hours</p>
                         </div>
                         <p className="text-2xl font-bold text-emerald-700">
-                          {Math.round(filteredWorkOrders
-                            .filter(wo => wo.service_category)
-                            .reduce((sum, wo) => sum + (wo.estimated_duration_hours || 0), 0) * 10) / 10}h
+                          {Math.round(filteredWorkOrders.reduce((sum, wo) => sum + (wo.estimated_duration_hours || 0), 0) * 10) / 10}h
                         </p>
                       </div>
 
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <div className="flex items-center gap-3 mb-2">
                           <Activity className="h-5 w-5 text-blue-600" />
-                          <p className="text-sm font-medium text-blue-900">Avg Hours per Service Area</p>
+                          <p className="text-sm font-medium text-blue-900">Avg Hours per Category</p>
                         </div>
                         <p className="text-2xl font-bold text-blue-700">
-                          {filteredWorkOrders.filter(wo => wo.service_category).reduce((acc, wo) => {
-                            return acc.has(wo.service_category) ? acc : acc.add(wo.service_category);
-                          }, new Set()).size > 0
-                            ? Math.round((filteredWorkOrders
-                                .filter(wo => wo.service_category)
-                                .reduce((sum, wo) => sum + (wo.estimated_duration_hours || 0), 0) / 
-                                filteredWorkOrders.filter(wo => wo.service_category).reduce((acc, wo) => {
-                                  return acc.has(wo.service_category) ? acc : acc.add(wo.service_category);
-                                }, new Set()).size) * 10) / 10
+                          {new Set(filteredWorkOrders.map(wo => jobsMap[wo.job_id]?.service_category || 'Uncategorized')).size > 0
+                            ? Math.round((filteredWorkOrders.reduce((sum, wo) => sum + (wo.estimated_duration_hours || 0), 0) / new Set(filteredWorkOrders.map(wo => jobsMap[wo.job_id]?.service_category || 'Uncategorized')).size) * 10) / 10
                             : 0}h
                         </p>
                       </div>
@@ -846,8 +846,8 @@ export default function Reports() {
                 ) : (
                   <div className="text-center py-12 text-slate-500">
                     <Target className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-                    <p>No service area data available</p>
-                    <p className="text-sm mt-1">Service categories need to be assigned to work orders</p>
+                    <p>No work orders in this date range</p>
+                    <p className="text-sm mt-1">Select a different date range to see service area breakdown</p>
                   </div>
                 )}
               </div>
