@@ -185,6 +185,7 @@ Deno.serve(async (req) => {
             }
           }
           jobId = jobsByCustomer[customerName];
+          console.log(`[IMPORT_TASKS] Service area mode - jobId set to: ${jobId} for customer: ${customerName}`);
         } else {
           // Original behavior: one job per customer
           if (!jobsByCustomer[customerName]) {
