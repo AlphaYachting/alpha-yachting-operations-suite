@@ -82,7 +82,7 @@ export default function MappingStep({ headers = [], mapping = {}, onMappingChang
             </div>
           </div>
         )}
-      </CardContent>
+
         <div className="space-y-3 max-h-96 overflow-y-auto">
            {(headers || []).map((header, idx) => (
             <div key={idx} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
