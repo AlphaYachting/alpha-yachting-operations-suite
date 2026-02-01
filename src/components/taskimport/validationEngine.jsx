@@ -72,6 +72,9 @@ export function validateImportData(parsedData, fieldMapping, config) {
         count: 0
       };
     }
+    if (!serviceAreaGroups[serviceArea].rows) {
+      serviceAreaGroups[serviceArea].rows = [];
+    }
     serviceAreaGroups[serviceArea].rows.push(rowNum);
     serviceAreaGroups[serviceArea].count++;
 
