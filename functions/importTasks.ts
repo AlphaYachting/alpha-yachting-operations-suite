@@ -101,6 +101,7 @@ Deno.serve(async (req) => {
 
     // Step 2: Create jobs and work orders
     const jobsByCustomer = {};
+    const jobsByServiceArea = {}; // For service area mode: customer_serviceArea -> job_id
     const workOrdersByCustomer = {};
     const workOrdersByServiceArea = {}; // For service area mode
 
@@ -117,6 +118,7 @@ Deno.serve(async (req) => {
         console.log(`[IMPORT_TASKS] Row ${rowIdx + 1}:`, {
           customerName,
           taskTitle,
+          serviceArea,
           customerMapped: !!customerMap[customerName]
         });
 
@@ -135,40 +137,76 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Get or create job for customer
-        if (!jobsByCustomer[customerName]) {
-          try {
-            const jobTitle = row[reverseMapping.projectName] || `${customerName} - Imported Tasks`;
-            const boatId = Object.values(boatMap)[0];
-            
-            console.log(`[IMPORT_TASKS] Creating job for ${customerName}:`, {
-              customerId: customerMap[customerName],
-              boatId
-            });
+        let jobId;
 
-            const newJob = await base44.entities.Job.create({
-              customer_id: customerMap[customerName],
-              boat_id: boatId,
-              title: jobTitle,
-              description: serviceArea || 'Imported from task list',
-              status: config?.defaultJobStatus || 'New',
-              intake_date: new Date().toISOString()
-            });
-            jobsByCustomer[customerName] = newJob.id;
-            createdJobs.push(newJob);
-            console.log(`[IMPORT_TASKS] Created job: ${newJob.id}`);
-          } catch (err) {
-            errors.push(`Failed to create job for customer "${customerName}": ${err.message}`);
-            console.error(`[IMPORT_TASKS] Job creation failed:`, err);
-            continue;
+        if (config?.importMode === 'work-orders-by-service-area') {
+          // Create a separate JOB for each service area per customer
+          const jobKey = `${customerName}_${serviceArea}`;
+          if (!jobsByServiceArea[jobKey]) {
+            try {
+              const jobTitle = `${serviceArea || 'Uncategorized'} - ${customerName}`;
+              const boatId = Object.values(boatMap)[0];
+              
+              console.log(`[IMPORT_TASKS] Creating job for service area ${serviceArea}:`, {
+                customerId: customerMap[customerName],
+                boatId
+              });
+
+              const newJob = await base44.entities.Job.create({
+                customer_id: customerMap[customerName],
+                boat_id: boatId,
+                title: jobTitle,
+                description: `Service Area: ${serviceArea || 'Uncategorized'}`,
+                status: config?.defaultJobStatus || 'New',
+                intake_date: new Date().toISOString()
+              });
+              jobsByServiceArea[jobKey] = newJob.id;
+              createdJobs.push(newJob);
+              console.log(`[IMPORT_TASKS] Created job for service area: ${newJob.id}`);
+            } catch (err) {
+              errors.push(`Failed to create job for service area "${serviceArea}": ${err.message}`);
+              console.error(`[IMPORT_TASKS] Job creation failed:`, err);
+              continue;
+            }
           }
+          jobId = jobsByServiceArea[jobKey];
+        } else {
+          // Original behavior: one job per customer
+          if (!jobsByCustomer[customerName]) {
+            try {
+              const jobTitle = row[reverseMapping.projectName] || `${customerName} - Imported Tasks`;
+              const boatId = Object.values(boatMap)[0];
+              
+              console.log(`[IMPORT_TASKS] Creating job for ${customerName}:`, {
+                customerId: customerMap[customerName],
+                boatId
+              });
+
+              const newJob = await base44.entities.Job.create({
+                customer_id: customerMap[customerName],
+                boat_id: boatId,
+                title: jobTitle,
+                description: 'Imported from task list',
+                status: config?.defaultJobStatus || 'New',
+                intake_date: new Date().toISOString()
+              });
+              jobsByCustomer[customerName] = newJob.id;
+              createdJobs.push(newJob);
+              console.log(`[IMPORT_TASKS] Created job: ${newJob.id}`);
+            } catch (err) {
+              errors.push(`Failed to create job for customer "${customerName}": ${err.message}`);
+              console.error(`[IMPORT_TASKS] Job creation failed:`, err);
+              continue;
+            }
+          }
+          jobId = jobsByCustomer[customerName];
         }
 
         // Get or create work order based on import mode
         let workOrderId;
         
         if (config?.importMode === 'work-orders-by-service-area') {
-          // Create a work order per service area
+          // Create a work order per service area (one WO per service area job)
           const workOrderKey = `${customerName}_${serviceArea}`;
           if (!workOrdersByServiceArea[workOrderKey]) {
             try {
@@ -176,12 +214,12 @@ Deno.serve(async (req) => {
               const scheduledDate = config?.workOrderScheduledDate || new Date().toISOString().split('T')[0];
               
               console.log(`[IMPORT_TASKS] Creating work order for service area ${serviceArea}:`, {
-                jobId: jobsByCustomer[customerName],
+                jobId,
                 scheduledDate
               });
 
               const newWorkOrder = await base44.entities.WorkOrder.create({
-                job_id: jobsByCustomer[customerName],
+                job_id: jobId,
                 title: woTitle,
                 description: `Service Area: ${serviceArea || 'Uncategorized'}`,
                 scheduled_date: scheduledDate,
@@ -204,12 +242,12 @@ Deno.serve(async (req) => {
               const scheduledDate = config?.workOrderScheduledDate || new Date().toISOString().split('T')[0];
               
               console.log(`[IMPORT_TASKS] Creating work order for ${customerName}:`, {
-                jobId: jobsByCustomer[customerName],
+                jobId,
                 scheduledDate
               });
 
               const newWorkOrder = await base44.entities.WorkOrder.create({
-                job_id: jobsByCustomer[customerName],
+                job_id: jobId,
                 title: woTitle,
                 description: 'Imported from task list',
                 scheduled_date: scheduledDate,
