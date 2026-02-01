@@ -251,12 +251,34 @@ export default function TeamOrderDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          {!isNew && workOrder && (
-            <PDFExportButton 
-              document={getPDFDocument()}
-              lineItems={getPDFLineItems()}
+          {!isNew && workOrder && teamOrder.id && (
+            <Button
               variant="outline"
-            />
+              onClick={async () => {
+                try {
+                  const template = await base44.entities.PDFTemplate.list();
+                  const partnerTemplate = template.find(t => t.template_type === 'PartnerBrief') || template[0];
+                  
+                  const response = await base44.functions.invoke('generatePartnerBriefPDF', {
+                    workOrderId: workOrder.id,
+                    teamOrderId: teamOrder.id,
+                    templateData: partnerTemplate
+                  });
+                  
+                  if (response.data.success) {
+                    const link = document.createElement('a');
+                    link.href = `data:application/pdf;base64,${response.data.pdf}`;
+                    link.download = response.data.fileName;
+                    link.click();
+                  }
+                } catch (error) {
+                  console.error('PDF generation error:', error);
+                }
+              }}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Partner Brief PDF
+            </Button>
           )}
           <Button onClick={handleSave} disabled={saving} className="bg-purple-600 hover:bg-purple-700">
             <Save className="h-4 w-4 mr-2" />
