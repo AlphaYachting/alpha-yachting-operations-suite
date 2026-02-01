@@ -274,9 +274,11 @@ export default function TeamOrderDetail() {
                       templateData: partnerTemplate
                     });
                     
-                    console.log('PDF Response:', response.data);
+                    console.log('PDF Response:', response);
+                    console.log('PDF Response Data:', response.data);
+                    console.log('Response Status:', response.status);
                     
-                    if (response.data.success && response.data.pdf) {
+                    if (response.data?.success && response.data?.pdf) {
                       const byteCharacters = atob(response.data.pdf);
                       const byteNumbers = new Array(byteCharacters.length);
                       for (let i = 0; i < byteCharacters.length; i++) {
@@ -288,7 +290,9 @@ export default function TeamOrderDetail() {
                       setPreviewUrl(blobUrl);
                       setShowPreview(true);
                     } else {
-                      setError('Failed to generate PDF: ' + (response.data.error || 'Unknown error'));
+                      const errorMsg = response.data?.error || response.data?.message || JSON.stringify(response.data) || 'Unknown error';
+                      setError('Failed to generate PDF: ' + errorMsg);
+                      console.error('PDF generation failed:', response);
                     }
                   } catch (error) {
                     console.error('PDF preview error:', error);
@@ -318,7 +322,9 @@ export default function TeamOrderDetail() {
                       templateData: partnerTemplate
                     });
                     
-                    if (response.data.success && response.data.pdf) {
+                    console.log('Download PDF Response:', response.data);
+                    
+                    if (response.data?.success && response.data?.pdf) {
                       const byteCharacters = atob(response.data.pdf);
                       const byteNumbers = new Array(byteCharacters.length);
                       for (let i = 0; i < byteCharacters.length; i++) {
@@ -335,7 +341,9 @@ export default function TeamOrderDetail() {
                       document.body.removeChild(link);
                       URL.revokeObjectURL(blobUrl);
                     } else {
-                      setError('Failed to download PDF: ' + (response.data.error || 'Unknown error'));
+                      const errorMsg = response.data?.error || response.data?.message || JSON.stringify(response.data) || 'Unknown error';
+                      setError('Failed to download PDF: ' + errorMsg);
+                      console.error('PDF download failed:', response);
                     }
                   } catch (error) {
                     console.error('PDF download error:', error);
