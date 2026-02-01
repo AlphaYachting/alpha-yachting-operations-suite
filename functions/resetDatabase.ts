@@ -35,12 +35,17 @@ Deno.serve(async (req) => {
 
     for (const entity of deletionOrder) {
       try {
+        // Add delay between entity deletions to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         // Fetch all records for this entity
         const records = await base44.asServiceRole.entities[entity].list('', 10000);
         if (records && records.length > 0) {
-          // Delete each record
+          // Delete each record with small delay
           for (const record of records) {
             await base44.asServiceRole.entities[entity].delete(record.id);
+            // Small delay between individual deletes
+            await new Promise(resolve => setTimeout(resolve, 10));
           }
           results[entity] = `Deleted ${records.length} records`;
           console.log(`[RESET] ${entity}: Deleted ${records.length} records`);
@@ -48,8 +53,8 @@ Deno.serve(async (req) => {
           results[entity] = 'No records found';
         }
       } catch (err) {
-        console.log(`[RESET] ${entity}: Skip or error - ${err.message}`);
-        results[entity] = `Skipped or error: ${err.message}`;
+        console.log(`[RESET] ${entity}: Error - ${err.message}`);
+        results[entity] = `Error: ${err.message}`;
       }
     }
 
