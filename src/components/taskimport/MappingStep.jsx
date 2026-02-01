@@ -14,7 +14,7 @@ export default function MappingStep({ headers = [], mapping = {}, onMappingChang
 
   // Auto-map on component mount or when headers change
   useEffect(() => {
-    if (headers.length > 0 && Object.keys(mapping).length === 0) {
+    if (headers && headers.length > 0 && Object.keys(mapping).length === 0) {
       const debugEnabled = new URLSearchParams(window.location.search).get('debugImporter') === '1';
       setDebugMode(debugEnabled);
 
