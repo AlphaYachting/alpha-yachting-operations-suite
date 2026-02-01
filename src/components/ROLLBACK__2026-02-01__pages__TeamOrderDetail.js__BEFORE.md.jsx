@@ -1,3 +1,17 @@
+# AFTER SNAPSHOT - TeamOrderDetail.js
+## Date: 2026-02-01
+## Change: Added PDF Viewer preview using PDFExportButton
+
+**Changes Made:**
+1. Replaced direct download with PDFExportButton component
+2. Added data preparation functions (getPDFDocument, getPDFLineItems)
+3. Removed backend PDF generation call (generatePartnerBriefPDF)
+4. Loads related entities (job, customer, boat, location) for PDF data
+5. Formats Partner Brief data to match PDFExportButton's expected structure
+
+**File now complete below:**
+
+```javascript
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
@@ -361,3 +375,4 @@ export default function TeamOrderDetail() {
     </div>
   );
 }
+``
