@@ -5,7 +5,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Upload } from 'lucide-react';
 
-export default function ValidationStep({ results, onExecute, onBack, isProcessing, dryRunMode }) {
+export default function ValidationStep({ results, onExecute, onBack, isProcessing, dryRunMode, fieldMapping, parsedData }) {
+  const [showDiagnostics, setShowDiagnostics] = React.useState(false);
+  
+  // Find Service Area column from mapping
+  const serviceAreaEntry = Object.entries(fieldMapping || {}).find(([_, v]) => v === 'serviceArea');
+  const serviceAreaCol = serviceAreaEntry?.[0];
+  const uniqueServiceAreas = serviceAreaCol 
+    ? [...new Set((parsedData || []).map(row => row[serviceAreaCol]).filter(Boolean))]
+    : [];
+
   return (
     <Card>
       <CardHeader>
