@@ -253,6 +253,30 @@ export default function WorkOrderDetail() {
     }
   };
 
+  const handleDragEnd = async (result) => {
+    const { source, destination, draggableId } = result;
+
+    if (!destination) return;
+    if (source.index === destination.index) return;
+
+    const reorderedTasks = Array.from(tasks);
+    const [movedTask] = reorderedTasks.splice(source.index, 1);
+    reorderedTasks.splice(destination.index, 0, movedTask);
+
+    // Update sequence_order for affected tasks
+    const updatePromises = reorderedTasks.map((task, index) => {
+      return base44.entities.Task.update(task.id, { sequence_order: index });
+    });
+
+    try {
+      await Promise.all(updatePromises);
+      setTasks(reorderedTasks);
+    } catch (error) {
+      console.error('Error reordering tasks:', error);
+      await loadWorkOrderDetails();
+    }
+  };
+
   const handleSaveAsTemplate = async () => {
     if (!templateName.trim()) {
       alert('Please enter a template name');
