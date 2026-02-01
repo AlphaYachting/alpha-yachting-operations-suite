@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
     const createdCustomers = [];
     const createdBoats = [];
     const createdJobs = [];
+    const createdWorkOrders = [];
     const createdTasks = [];
     const errors = [];
     const customerMap = {}; // Map customer names to IDs
@@ -242,6 +243,7 @@ Deno.serve(async (req) => {
                 status: 'Draft'
               });
               workOrdersByServiceArea[workOrderKey] = newWorkOrder.id;
+              createdWorkOrders.push(newWorkOrder);
               console.log(`[IMPORT_TASKS] Created work order by service area: ${newWorkOrder.id}`, {
                 job_id: jobId,
                 workOrderKey
@@ -273,6 +275,7 @@ Deno.serve(async (req) => {
                 status: 'Draft'
               });
               workOrdersByCustomer[customerName] = newWorkOrder.id;
+              createdWorkOrders.push(newWorkOrder);
               console.log(`[IMPORT_TASKS] Created work order: ${newWorkOrder.id}`);
             } catch (err) {
               errors.push(`Failed to create work order for customer "${customerName}": ${err.message}`);
@@ -318,6 +321,7 @@ Deno.serve(async (req) => {
       createdCustomers,
       createdBoats,
       createdJobs,
+      createdWorkOrders,
       createdTasks,
       errors
     });
