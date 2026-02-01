@@ -117,16 +117,21 @@ Deno.serve(async (req) => {
         const customerName = row[reverseMapping.customerName];
         const taskTitle = row[reverseMapping.taskTitle] || row[reverseMapping.taskId];
         const taskDescription = row[reverseMapping.taskDescription];
-        // Try serviceArea first, then fall back to service_category
-        const serviceAreaCol = reverseMapping.serviceArea || reverseMapping.service_category;
-        const serviceArea = row[serviceAreaCol];
+        
+        // Find service area column - search mapping like validation engine does
+        let serviceAreaCol = null;
+        const serviceAreaEntry = Object.entries(mapping).find(([_, v]) => v === 'serviceArea' || v === 'service_category');
+        if (serviceAreaEntry) {
+          serviceAreaCol = serviceAreaEntry[0];
+        }
+        const serviceArea = serviceAreaCol ? row[serviceAreaCol] : undefined;
 
         console.log(`[IMPORT_TASKS] Row ${rowIdx + 1} Details:`, {
           customerName,
           taskTitle,
           serviceArea,
-          serviceAreaField: reverseMapping.serviceArea,
-          serviceAreaValue: row[reverseMapping.serviceArea],
+          serviceAreaCol,
+          allMappingEntries: Object.entries(mapping).map(([k, v]) => `${k}->${v}`),
           customerMapped: !!customerMap[customerName],
           importMode: config?.importMode
         });
