@@ -3,13 +3,14 @@ import { Upload, FileSpreadsheet } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-export default function FileUploadStep({ onUpload }) {
+export default function FileUploadStep({ onComplete, onUpload }) {
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      onUpload(file);
+      const callback = onComplete || onUpload;
+      if (callback) callback(file);
     }
   };
 
