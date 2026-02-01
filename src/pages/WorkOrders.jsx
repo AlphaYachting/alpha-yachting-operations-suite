@@ -140,13 +140,9 @@ export default function WorkOrders() {
 
       const woData = await woQuery;
 
-      // Get all unique job IDs referenced by work orders
-      const jobIds = [...new Set(woData.map(wo => wo.job_id).filter(Boolean))];
-
-      // Load jobs: all referenced jobs + recent jobs for creation
-      const [recentJobs, refJobs, techData, custData, boatsData, locData, reservationsData, vehiclesData] = await Promise.all([
-        base44.entities.Job.list('-created_date', 100),
-        jobIds.length > 0 ? base44.entities.Job.filter({ id: { $in: jobIds } }) : Promise.resolve([]),
+      // Load all jobs (no limit) to ensure all referenced jobs are available
+      const [jobsData, techData, custData, boatsData, locData, reservationsData, vehiclesData] = await Promise.all([
+        base44.entities.Job.list('-created_date', 1000),
         base44.entities.Technician.list(),
         base44.entities.Customer.list('-created_date', 50),
         base44.entities.Boat.list('-created_date', 50),
@@ -154,12 +150,6 @@ export default function WorkOrders() {
         base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
         base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
       ]);
-
-      // Merge job lists, deduplicating by ID
-      const jobMap = {};
-      recentJobs.forEach(j => jobMap[j.id] = j);
-      refJobs.forEach(j => jobMap[j.id] = j);
-      const jobsData = Object.values(jobMap);
 
       // Only fetch related data for work orders being displayed
       const woIds = woData.map(wo => wo.id);
