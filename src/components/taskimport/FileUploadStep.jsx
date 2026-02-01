@@ -72,27 +72,28 @@ export default function FileUploadStep({ onComplete }) {
             onChange={handleFileChange}
             className="hidden"
           />
-        </div>
-
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-semibold text-sm text-blue-900 mb-2">Expected Columns:</h4>
-          <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
-            <div>• Project Name</div>
-            <div>• Customer Type</div>
-            <div>• Customer Name</div>
-            <div>• Boat Type / Yacht Model</div>
-            <div>• Location / Marina</div>
-            <div>• Service Area</div>
-            <div>• Task ID</div>
-            <div>• Task Title</div>
-            <div>• Task Description</div>
-            <div>• Priority</div>
-            <div>• Time Required (hrs)</div>
-            <div>• Assigned Person</div>
-            <div>...and more</div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h4 className="font-semibold text-sm text-blue-900 mb-2">Expected Columns:</h4>
+            <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
+              <div>• Project Name</div>
+              <div>• Customer Type</div>
+              <div>• Customer Name</div>
+              <div>• Boat Type / Yacht Model</div>
+              <div>• Location / Marina</div>
+              <div>• Service Area</div>
+              <div>• Task ID</div>
+              <div>• Task Title</div>
+              <div>• Task Description</div>
+              <div>• Priority</div>
+              <div>• Time Required (hrs)</div>
+              <div>• Assigned Person</div>
+              <div>...and more</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
