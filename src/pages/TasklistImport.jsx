@@ -47,7 +47,7 @@ export default function TasklistImport() {
 
   const handleConfigComplete = (configData) => {
     setConfig(configData);
-    setCurrentStep(4);
+    setCurrentStep(5);
   };
 
   const handleValidationComplete = (results) => {
