@@ -18,34 +18,38 @@ export function validateImportData(parsedData, fieldMapping, config) {
     };
   }
 
+  // Find which Excel columns are mapped to required fields
+  const requiredExcelColumns = {};
+  Object.entries(fieldMapping).forEach(([excelCol, targetField]) => {
+    if (REQUIRED_FIELDS.includes(targetField)) {
+      requiredExcelColumns[targetField] = excelCol;
+    }
+  });
+
   let workOrderCount = 0;
   let taskCount = 0;
 
   // Validate each row
   parsedData.forEach((row, rowIdx) => {
     const rowNum = rowIdx + 2; // Excel row numbers start at 2 (1 is header)
-    const mappedRow = {};
+    let rowHasAllRequired = true;
 
-    // Extract mapped values
-    Object.entries(fieldMapping).forEach(([excelCol, targetField]) => {
-      if (targetField && row[excelCol] !== undefined) {
-        mappedRow[targetField] = row[excelCol];
-      }
-    });
-
-    // Check required fields
-    REQUIRED_FIELDS.forEach(requiredField => {
-      if (!mappedRow[requiredField] || String(mappedRow[requiredField]).trim() === '') {
+    // Check required fields have values in the Excel columns
+    Object.entries(requiredExcelColumns).forEach(([requiredField, excelCol]) => {
+      const value = row[excelCol];
+      if (!value || String(value).trim() === '') {
         errors.push({
           row: rowNum,
           field: requiredField,
-          message: `Required field "${requiredField}" is empty`
+          message: `Required field "${requiredField}" is empty in column "${excelCol}"`
         });
+        rowHasAllRequired = false;
       }
     });
 
-    // Group by service area (if exists)
-    const serviceArea = mappedRow.service_category || 'Uncategorized';
+    // Group by service area (if mapped)
+    const serviceAreaCol = Object.entries(fieldMapping).find(([_, v]) => v === 'serviceArea')?.[0];
+    const serviceArea = (serviceAreaCol && row[serviceAreaCol]) || 'Uncategorized';
     if (!serviceAreaGroups[serviceArea]) {
       serviceAreaGroups[serviceArea] = {
         rows: [],
@@ -55,24 +59,23 @@ export function validateImportData(parsedData, fieldMapping, config) {
     serviceAreaGroups[serviceArea].rows.push(rowNum);
     serviceAreaGroups[serviceArea].count++;
 
-    // Count tasks
-    if (mappedRow.title) {
+    // Count tasks (if title column is mapped and has value)
+    const titleCol = Object.entries(fieldMapping).find(([_, v]) => v === 'taskTitle')?.[0];
+    if (titleCol && row[titleCol] && String(row[titleCol]).trim() !== '') {
       taskCount++;
     }
   });
 
-  // Count work orders (unique combinations of certain fields if available)
+  // Count work orders (unique combinations)
   const uniqueWorkOrders = new Set();
+  const customerCol = Object.entries(fieldMapping).find(([_, v]) => v === 'customerName')?.[0];
   parsedData.forEach(row => {
-    const key = [
-      row[Object.entries(fieldMapping).find(([_, v]) => v === 'job_id')?.[0]] || 'default',
-      row[Object.entries(fieldMapping).find(([_, v]) => v === 'scheduled_date')?.[0]] || 'default'
-    ].join('|');
+    const key = row[customerCol] || 'default';
     uniqueWorkOrders.add(key);
   });
   workOrderCount = uniqueWorkOrders.size || 1;
 
-  const isValid = errors.length === 0 && (config?.dryRunMode || true);
+  const isValid = errors.length === 0;
 
   return {
     valid: isValid,
