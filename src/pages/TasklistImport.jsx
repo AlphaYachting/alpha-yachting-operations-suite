@@ -42,7 +42,7 @@ export default function TasklistImport() {
 
   const handleMappingComplete = (mapping) => {
     setFieldMapping(mapping);
-    setCurrentStep(3);
+    setCurrentStep(4);
   };
 
   const handleConfigComplete = (configData) => {
