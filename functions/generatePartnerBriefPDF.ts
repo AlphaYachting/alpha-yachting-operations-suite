@@ -349,28 +349,25 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    const [workOrders, teamOrders, jobs, customers, boats, locations, tasks, technicians] = await Promise.all([
-      base44.entities.WorkOrder.filter({ id: workOrderId }),
-      base44.entities.TeamOrder.filter({ id: teamOrderId }),
-      base44.entities.Job.list(),
-      base44.entities.Customer.list(),
-      base44.entities.Boat.list(),
-      base44.entities.Location.list(),
-      base44.entities.Task.filter({ work_order_id: workOrderId }),
-      base44.entities.Technician.list()
+    const [workOrder, teamOrder, jobs, customers, boats, locations, tasks, technicians] = await Promise.all([
+      base44.asServiceRole.entities.WorkOrder.get(workOrderId),
+      base44.asServiceRole.entities.TeamOrder.get(teamOrderId),
+      base44.asServiceRole.entities.Job.list(),
+      base44.asServiceRole.entities.Customer.list(),
+      base44.asServiceRole.entities.Boat.list(),
+      base44.asServiceRole.entities.Location.list(),
+      base44.asServiceRole.entities.Task.filter({ work_order_id: workOrderId }),
+      base44.asServiceRole.entities.Technician.list()
     ]);
 
-    if (workOrders.length === 0 || teamOrders.length === 0) {
+    if (!workOrder || !teamOrder) {
       return Response.json({ 
         success: false,
         error: 'Work order or team order not found',
-        workOrderFound: workOrders.length > 0,
-        teamOrderFound: teamOrders.length > 0
+        workOrderFound: !!workOrder,
+        teamOrderFound: !!teamOrder
       }, { status: 404 });
     }
-
-    const workOrder = workOrders[0];
-    const teamOrder = teamOrders[0];
     const job = jobs.find(j => j.id === workOrder.job_id);
     const customer = customers.find(c => c.id === job?.customer_id);
     const boat = boats.find(b => b.id === job?.boat_id);
