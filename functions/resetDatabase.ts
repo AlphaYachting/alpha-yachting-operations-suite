@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
     console.log('[RESET] Starting database reset...');
 
-    // Delete in dependency order (children before parents)
+    // Delete only WorkOrders and Tasks (children before parents)
     const deletionOrder = [
       'WorkOrderComment',
       'WorkOrderPhoto',
@@ -20,15 +20,8 @@ Deno.serve(async (req) => {
       'TimeEntry',
       'Task',
       'WorkOrderAccessLog',
-      'InventoryReservation',
-      'InventoryAssignment',
       'TeamOrder',
-      'WorkOrder',
-      'OfferTask',
-      'Offer',
-      'Job',
-      'Boat',
-      'Customer'
+      'WorkOrder'
     ];
 
     const results = {};
