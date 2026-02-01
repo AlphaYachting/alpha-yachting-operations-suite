@@ -53,9 +53,9 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
           <Label className="text-base font-semibold">Import Mode</Label>
           
           <Select
-            value={config.importMode}
-            onValueChange={(value) => updateConfig('importMode', value)}
-          >
+             value={config.importMode || ''}
+             onValueChange={(value) => updateConfig('importMode', value)}
+           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -70,7 +70,7 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
               <div>
                 <Label>Parent Job</Label>
                 <Select
-                  value={config.parentJobId || 'new'}
+                  value={(config.parentJobId || 'new').toString()}
                   onValueChange={(value) => updateConfig('parentJobId', value === 'new' ? null : value)}
                 >
                   <SelectTrigger className="mt-2">
