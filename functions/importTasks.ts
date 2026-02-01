@@ -114,11 +114,11 @@ Deno.serve(async (req) => {
     for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
       try {
         const row = data[rowIdx];
-          const customerName = row[reverseMapping.customerName];
-          // Use taskTitle if mapped, don't fall back to taskId
-          const taskTitle = reverseMapping.taskTitle ? row[reverseMapping.taskTitle] : row[reverseMapping.taskId];
-          const taskDescription = row[reverseMapping.taskDescription];
-        
+        const customerName = row[reverseMapping.customerName];
+        // Prioritize taskTitle mapped field, only use taskId as fallback if no taskTitle mapping exists
+        const taskTitle = row[reverseMapping.taskTitle] || row[reverseMapping.taskId];
+        const taskDescription = row[reverseMapping.taskDescription];
+
         // Find service area column - search mapping like validation engine does
         let serviceAreaCol = null;
         const serviceAreaEntry = Object.entries(mapping).find(([_, v]) => v === 'serviceArea' || v === 'service_category');
@@ -132,6 +132,8 @@ Deno.serve(async (req) => {
           taskTitle,
           serviceArea,
           serviceAreaCol,
+          taskTitleCol: reverseMapping.taskTitle,
+          taskIdCol: reverseMapping.taskId,
           allMappingEntries: Object.entries(mapping).map(([k, v]) => `${k}->${v}`),
           customerMapped: !!customerMap[customerName],
           importMode: config?.importMode
@@ -155,15 +157,13 @@ Deno.serve(async (req) => {
         let jobId;
 
         if (config?.importMode === 'work-orders-by-service-area') {
-          // Create a separate JOB for each service area per customer
-          const jobKey = `${customerName}_${serviceArea}`;
-          console.log(`[IMPORT_TASKS] Service area mode - jobKey: ${jobKey}, exists: ${!!jobsByServiceArea[jobKey]}`);
-          if (!jobsByServiceArea[jobKey]) {
+          // Create ONE job per customer (not per service area)
+          if (!jobsByCustomer[customerName]) {
             try {
-              const jobTitle = `${serviceArea || 'Uncategorized'} - ${customerName}`;
+              const jobTitle = row[reverseMapping.projectName] || `${customerName} - Imported Tasks`;
               const boatId = Object.values(boatMap)[0];
-              
-              console.log(`[IMPORT_TASKS] Creating job for service area ${serviceArea}:`, {
+
+              console.log(`[IMPORT_TASKS] Creating single job for customer ${customerName}:`, {
                 customerId: customerMap[customerName],
                 boatId
               });
@@ -172,20 +172,20 @@ Deno.serve(async (req) => {
                 customer_id: customerMap[customerName],
                 boat_id: boatId,
                 title: jobTitle,
-                description: `Service Area: ${serviceArea || 'Uncategorized'}`,
+                description: 'Imported from task list',
                 status: config?.defaultJobStatus || 'New',
                 intake_date: new Date().toISOString()
               });
-              jobsByServiceArea[jobKey] = newJob.id;
+              jobsByCustomer[customerName] = newJob.id;
               createdJobs.push(newJob);
-              console.log(`[IMPORT_TASKS] Created job for service area: ${newJob.id}`);
+              console.log(`[IMPORT_TASKS] Created job for customer: ${newJob.id}`);
             } catch (err) {
-              errors.push(`Failed to create job for service area "${serviceArea}": ${err.message}`);
+              errors.push(`Failed to create job for customer "${customerName}": ${err.message}`);
               console.error(`[IMPORT_TASKS] Job creation failed:`, err);
               continue;
             }
           }
-          jobId = jobsByServiceArea[jobKey];
+          jobId = jobsByCustomer[customerName];
         } else {
           // Original behavior: one job per customer
           if (!jobsByCustomer[customerName]) {
