@@ -48,6 +48,9 @@ export default function TasklistImport() {
 
   const handleConfigComplete = (configData) => {
     setConfig(configData);
+    // Run validation before moving to step 5
+    const validationResults = validateImportData(parsedData, fieldMapping, configData);
+    setValidationResults(validationResults);
     setCurrentStep(5);
   };
 
