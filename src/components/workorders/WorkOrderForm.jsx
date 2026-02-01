@@ -77,12 +77,15 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       ]);
       
       await saveWithTimeout;
-      // onSave will close the dialog if successful
-    } catch (err) {
-      console.error('Work order save error:', err);
-      setError(err.message || 'Failed to save work order. Please check all required fields.');
-      setSaving(false);
-    }
+       toast.success('Work order saved successfully');
+       // onSave will close the dialog if successful
+      } catch (err) {
+       console.error('Work order save error:', err);
+       const errorMsg = err.message || 'Failed to save work order. Please check all required fields.';
+       setError(errorMsg);
+       toast.error(errorMsg);
+       setSaving(false);
+      }
   };
 
   const updateField = (field, value) => {
