@@ -1,60 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { autoMapHeaders, getTargetFields, getRequiredFields } from './mappingEngine';
 
-const TARGET_FIELDS = [
-  { value: 'projectName', label: 'Project Name', required: false },
-  { value: 'customerType', label: 'Customer Type', required: false },
-  { value: 'customerName', label: 'Customer Name', required: true },
-  { value: 'boatModel', label: 'Boat Type / Yacht Model', required: false },
-  { value: 'boatLength', label: 'Boat Length (m)', required: false },
-  { value: 'locationMarina', label: 'Location / Marina', required: false },
-  { value: 'serviceArea', label: 'Service Area', required: false },
-  { value: 'module', label: 'Subproject / Module', required: false },
-  { value: 'taskId', label: 'Task ID', required: false },
-  { value: 'taskTitle', label: 'Task Title', required: true },
-  { value: 'taskDescription', label: 'Task Description', required: false },
-  { value: 'category', label: 'Category', required: false },
-  { value: 'requiredQualification', label: 'Required Qualification', required: false },
-  { value: 'estimatedHours', label: 'Time Required (hrs)', required: false },
-  { value: 'materialRequired', label: 'Material Required', required: false },
-  { value: 'materialDescription', label: 'Material Description', required: false },
-  { value: 'dependencies', label: 'Dependencies', required: false },
-  { value: 'priority', label: 'Priority', required: false },
-  { value: 'workLocation', label: 'Work Location', required: false },
-  { value: 'riskNotes', label: 'Risk / Special Notes', required: false },
-  { value: 'acceptanceRequired', label: 'Acceptance Required', required: false },
-  { value: 'acceptanceBy', label: 'Acceptance By', required: false },
-  { value: 'billingType', label: 'Billing Type', required: false },
-  { value: 'assumptionUncertainty', label: 'Assumption / Uncertainty', required: false },
-  { value: 'assignedPerson', label: 'Assigned Person', required: false },
-  { value: 'dueDate', label: 'Due Date', required: false }
-];
+const TARGET_FIELDS = getTargetFields().map(f => ({ ...f, required: getRequiredFields().includes(f.value) }));
+const REQUIRED_FIELD_VALUES = getRequiredFields();
 
 export default function MappingStep({ headers = [], mapping = {}, onMappingChange, onNext, onBack }) {
-   const handleMappingChange = (header, targetField) => {
-     const newMapping = { ...mapping };
-     // Remove this target from any other header
-     Object.keys(newMapping).forEach(key => {
-       if (newMapping[key] === targetField) delete newMapping[key];
-     });
-     // Set new mapping
-     if (targetField) {
-       newMapping[header] = targetField;
-     }
-     onMappingChange(newMapping);
-   };
+  const [autoMapping, setAutoMapping] = useState(null);
+  const [debugMode, setDebugMode] = useState(false);
 
-   const getMappedCount = () => {
-     return Object.values(mapping || {}).filter(Boolean).length;
-   };
+  // Auto-map on component mount or when headers change
+  useEffect(() => {
+    if (headers.length > 0 && Object.keys(mapping).length === 0) {
+      const debugEnabled = new URLSearchParams(window.location.search).get('debugImporter') === '1';
+      setDebugMode(debugEnabled);
+
+      const { mapping: suggested, debug } = autoMapHeaders(headers, debugEnabled);
+      setAutoMapping(debug);
+      onMappingChange(suggested);
+    }
+  }, [headers]);
+
+  const handleMappingChange = (header, targetField) => {
+    const newMapping = { ...mapping };
+    Object.keys(newMapping).forEach(key => {
+      if (newMapping[key] === targetField && key !== header) delete newMapping[key];
+    });
+    if (targetField) {
+      newMapping[header] = targetField;
+    }
+    onMappingChange(newMapping);
+  };
+
+  const getMappedCount = () => {
+    return Object.values(mapping || {}).filter(Boolean).length;
+  };
 
   const getRequiredMapped = () => {
-    const required = TARGET_FIELDS.filter(f => f.required).map(f => f.value);
     const mapped = Object.values(mapping || {});
-    return required.filter(r => mapped.includes(r)).length;
+    return REQUIRED_FIELD_VALUES.filter(r => mapped.includes(r)).length;
   };
 
   const requiredFields = TARGET_FIELDS.filter(f => f.required);
