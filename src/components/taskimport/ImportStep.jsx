@@ -66,7 +66,7 @@ export default function ImportStep({ parsedData = [], fieldMapping = {}, config 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Step 6: Execute Import</CardTitle>
+        <CardTitle>Step 7: Execute Import</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="bg-blue-50 p-4 rounded-lg">
