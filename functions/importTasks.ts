@@ -119,11 +119,14 @@ Deno.serve(async (req) => {
         const taskDescription = row[reverseMapping.taskDescription];
         const serviceArea = row[reverseMapping.serviceArea];
 
-        console.log(`[IMPORT_TASKS] Row ${rowIdx + 1}:`, {
+        console.log(`[IMPORT_TASKS] Row ${rowIdx + 1} Details:`, {
           customerName,
           taskTitle,
           serviceArea,
-          customerMapped: !!customerMap[customerName]
+          serviceAreaField: reverseMapping.serviceArea,
+          serviceAreaValue: row[reverseMapping.serviceArea],
+          customerMapped: !!customerMap[customerName],
+          importMode: config?.importMode
         });
 
         if (!customerName) {
