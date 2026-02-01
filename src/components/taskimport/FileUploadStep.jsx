@@ -58,7 +58,7 @@ export default function FileUploadStep({ onComplete }) {
             onClick={() => fileInputRef.current?.click()}
             className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
           >
-          <FileSpreadsheet className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+            <FileSpreadsheet className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <p className="text-lg font-medium text-gray-700 mb-2">
             Click to upload or drag and drop
           </p>
