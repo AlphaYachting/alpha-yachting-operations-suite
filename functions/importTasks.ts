@@ -103,16 +103,34 @@ Deno.serve(async (req) => {
     const jobsByCustomer = {};
     const workOrdersByCustomer = {};
 
+    console.log('[IMPORT_TASKS] Starting job/task creation with reverse mapping:', reverseMapping);
+
     for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
       try {
         const row = data[rowIdx];
         const customerName = row[reverseMapping.customerName];
-        const taskTitle = row[reverseMapping.taskId];
+        const taskTitle = row[reverseMapping.taskTitle] || row[reverseMapping.taskId];
         const taskDescription = row[reverseMapping.taskDescription];
         const serviceArea = row[reverseMapping.serviceArea];
 
-        if (!customerName || !taskTitle) {
-          errors.push(`Row ${rowIdx + 1}: Missing customer name or task title`);
+        console.log(`[IMPORT_TASKS] Row ${rowIdx + 1}:`, {
+          customerName,
+          taskTitle,
+          customerMapped: !!customerMap[customerName]
+        });
+
+        if (!customerName) {
+          errors.push(`Row ${rowIdx + 1}: Missing customer name`);
+          continue;
+        }
+
+        if (!taskTitle) {
+          errors.push(`Row ${rowIdx + 1}: Missing task title`);
+          continue;
+        }
+
+        if (!customerMap[customerName]) {
+          errors.push(`Row ${rowIdx + 1}: Customer "${customerName}" not found in customerMap`);
           continue;
         }
 
@@ -120,9 +138,16 @@ Deno.serve(async (req) => {
         if (!jobsByCustomer[customerName]) {
           try {
             const jobTitle = row[reverseMapping.projectName] || `${customerName} - Imported Tasks`;
+            const boatId = Object.values(boatMap)[0];
+            
+            console.log(`[IMPORT_TASKS] Creating job for ${customerName}:`, {
+              customerId: customerMap[customerName],
+              boatId
+            });
+
             const newJob = await base44.entities.Job.create({
               customer_id: customerMap[customerName],
-              boat_id: Object.values(boatMap)[0],
+              boat_id: boatId,
               title: jobTitle,
               description: serviceArea || 'Imported from task list',
               status: config?.defaultJobStatus || 'New',
@@ -130,8 +155,10 @@ Deno.serve(async (req) => {
             });
             jobsByCustomer[customerName] = newJob.id;
             createdJobs.push(newJob);
+            console.log(`[IMPORT_TASKS] Created job: ${newJob.id}`);
           } catch (err) {
             errors.push(`Failed to create job for customer "${customerName}": ${err.message}`);
+            console.error(`[IMPORT_TASKS] Job creation failed:`, err);
             continue;
           }
         }
@@ -140,35 +167,54 @@ Deno.serve(async (req) => {
         if (!workOrdersByCustomer[customerName]) {
           try {
             const woTitle = `Work Order - ${customerName}`;
+            const scheduledDate = config?.workOrderScheduledDate || new Date().toISOString().split('T')[0];
+            
+            console.log(`[IMPORT_TASKS] Creating work order for ${customerName}:`, {
+              jobId: jobsByCustomer[customerName],
+              scheduledDate
+            });
+
             const newWorkOrder = await base44.entities.WorkOrder.create({
               job_id: jobsByCustomer[customerName],
               title: woTitle,
               description: 'Imported from task list',
-              scheduled_date: config?.workOrderScheduledDate || new Date().toISOString().split('T')[0],
-              status: config?.defaultWorkOrderStatus || 'Draft'
+              scheduled_date: scheduledDate,
+              status: 'Draft'
             });
             workOrdersByCustomer[customerName] = newWorkOrder.id;
+            console.log(`[IMPORT_TASKS] Created work order: ${newWorkOrder.id}`);
           } catch (err) {
             errors.push(`Failed to create work order for customer "${customerName}": ${err.message}`);
+            console.error(`[IMPORT_TASKS] Work order creation failed:`, err);
             continue;
           }
         }
 
         // Create task linked to work order
         try {
+          const estMinutes = (row[reverseMapping['Time Required (hrs)']] || 0) * 60;
+          
+          console.log(`[IMPORT_TASKS] Creating task: ${taskTitle}`, {
+            workOrderId: workOrdersByCustomer[customerName],
+            estimatedMinutes: estMinutes
+          });
+
           const newTask = await base44.entities.Task.create({
             work_order_id: workOrdersByCustomer[customerName],
             title: taskTitle,
             description: taskDescription || '',
-            status: config?.defaultTaskStatus || 'Not Started',
-            estimated_minutes: (row[reverseMapping['Time Required (hrs)']] || 0) * 60
+            status: 'Not Started',
+            estimated_minutes: estMinutes
           });
           createdTasks.push(newTask);
+          console.log(`[IMPORT_TASKS] Created task: ${newTask.id}`);
         } catch (err) {
           errors.push(`Row ${rowIdx + 1}: Failed to create task "${taskTitle}": ${err.message}`);
+          console.error(`[IMPORT_TASKS] Task creation failed:`, err);
         }
       } catch (err) {
         errors.push(`Row ${rowIdx + 1}: ${err.message}`);
+        console.error(`[IMPORT_TASKS] Row error:`, err);
       }
     }
 
