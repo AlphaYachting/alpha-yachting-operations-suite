@@ -111,20 +111,22 @@ export function autoMapHeaders(headers, debugMode = false) {
       if (bestScore === 1.0) break;
     }
 
-    // If no exact match, try fuzzy matching
+    // If no exact match, try fuzzy matching (prefer longer alias matches)
     if (bestScore < 1.0) {
       for (const field of TARGET_FIELDS) {
         let fieldScore = 0;
+        let longestAliasLen = 0;
         
-        // Test against all aliases
+        // Test against all aliases, prefer longer aliases
         for (const alias of field.aliases) {
           const sim = stringSimilarity(header.normalized, alias);
-          if (sim > fieldScore) {
+          if (sim > fieldScore || (sim === fieldScore && alias.length > longestAliasLen)) {
             fieldScore = sim;
+            longestAliasLen = alias.length;
           }
         }
 
-        if (fieldScore > bestScore) {
+        if (fieldScore > bestScore || (fieldScore === bestScore && fieldScore > 0.6)) {
           bestScore = fieldScore;
           bestMatch = field.value;
         }
