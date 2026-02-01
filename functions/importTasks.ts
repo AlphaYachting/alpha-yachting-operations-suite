@@ -99,8 +99,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Step 2: Create jobs and tasks
+    // Step 2: Create jobs and work orders
     const jobsByCustomer = {};
+    const workOrdersByCustomer = {};
 
     for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
       try {
@@ -121,7 +122,7 @@ Deno.serve(async (req) => {
             const jobTitle = row[reverseMapping.projectName] || `${customerName} - Imported Tasks`;
             const newJob = await base44.entities.Job.create({
               customer_id: customerMap[customerName],
-              boat_id: Object.values(boatMap)[0], // Use first boat
+              boat_id: Object.values(boatMap)[0],
               title: jobTitle,
               description: serviceArea || 'Imported from task list',
               status: config?.defaultJobStatus || 'New',
@@ -135,15 +136,32 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Create task
+        // Get or create work order for customer
+        if (!workOrdersByCustomer[customerName]) {
+          try {
+            const woTitle = `Work Order - ${customerName}`;
+            const newWorkOrder = await base44.entities.WorkOrder.create({
+              job_id: jobsByCustomer[customerName],
+              title: woTitle,
+              description: 'Imported from task list',
+              scheduled_date: config?.workOrderScheduledDate || new Date().toISOString().split('T')[0],
+              status: config?.defaultWorkOrderStatus || 'Draft'
+            });
+            workOrdersByCustomer[customerName] = newWorkOrder.id;
+          } catch (err) {
+            errors.push(`Failed to create work order for customer "${customerName}": ${err.message}`);
+            continue;
+          }
+        }
+
+        // Create task linked to work order
         try {
           const newTask = await base44.entities.Task.create({
-            work_order_id: '', // Will be linked to work order later
+            work_order_id: workOrdersByCustomer[customerName],
             title: taskTitle,
             description: taskDescription || '',
             status: config?.defaultTaskStatus || 'Not Started',
-            estimated_minutes: (row[reverseMapping['Time Required (hrs)']] || 0) * 60,
-            notes: row[reverseMapping.notes] || ''
+            estimated_minutes: (row[reverseMapping['Time Required (hrs)']] || 0) * 60
           });
           createdTasks.push(newTask);
         } catch (err) {
