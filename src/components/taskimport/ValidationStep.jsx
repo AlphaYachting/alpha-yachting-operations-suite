@@ -98,24 +98,38 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
           </div>
         )}
 
-        {/* Service Area Groups Preview */}
-        <div>
-          <h3 className="font-semibold text-sm text-gray-900 mb-3">Service Areas Preview</h3>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {Object.entries(results.serviceAreaGroups || {}).slice(0, 5).map(([serviceArea, group], idx) => (
-              <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
-                <div className="font-medium text-gray-900">
-                  {serviceArea || 'Uncategorized'}
+        {/* Service Area Groups Preview - SHOW ALL */}
+        <div className="border rounded-lg p-4">
+          <h3 className="font-semibold text-sm text-gray-900 mb-3">
+            Service Areas Detected ({Object.keys(results.serviceAreaGroups || {}).length})
+          </h3>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {Object.entries(results.serviceAreaGroups || {}).length === 0 ? (
+              <p className="text-sm text-gray-500 italic">No service areas detected</p>
+            ) : (
+              Object.entries(results.serviceAreaGroups || {}).map(([serviceArea, group], idx) => (
+                <div 
+                  key={idx} 
+                  className={`p-3 rounded text-sm border ${
+                    serviceArea === 'Uncategorized' 
+                      ? 'bg-red-50 border-red-200' 
+                      : 'bg-green-50 border-green-200'
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium text-gray-900">
+                      {serviceArea === 'Uncategorized' ? '⚠️ ' : '✓ '}
+                      {serviceArea || 'Uncategorized'}
+                    </div>
+                    <Badge variant={serviceArea === 'Uncategorized' ? 'destructive' : 'default'}>
+                      {group?.rows?.length || 0} tasks
+                    </Badge>
+                  </div>
+                  {serviceArea === 'Uncategorized' && (
+                    <p className="text-xs text-red-600 mt-1">Service area not mapped - these tasks will be skipped</p>
+                  )}
                 </div>
-                <div className="text-xs text-gray-600 mt-1">
-                  {group?.rows?.length || 0} tasks
-                </div>
-              </div>
-            ))}
-            {Object.keys(results.serviceAreaGroups || {}).length > 5 && (
-              <p className="text-xs text-gray-500 text-center">
-                ...and {Object.keys(results.serviceAreaGroups || {}).length - 5} more service areas
-              </p>
+              ))
             )}
           </div>
         </div>
