@@ -48,8 +48,10 @@ export function validateImportData(parsedData, fieldMapping, config) {
     });
 
     // Group by service area (if mapped)
-    const serviceAreaCol = Object.entries(fieldMapping).find(([_, v]) => v === 'serviceArea')?.[0];
-    const serviceArea = (serviceAreaCol && row[serviceAreaCol]) || 'Uncategorized';
+    const serviceAreaEntry = Object.entries(fieldMapping).find(([_, v]) => v === 'serviceArea');
+    const serviceAreaCol = serviceAreaEntry?.[0];
+    const serviceAreaValue = serviceAreaCol && row[serviceAreaCol] ? String(row[serviceAreaCol]).trim() : null;
+    const serviceArea = serviceAreaValue || 'Uncategorized';
     if (!serviceAreaGroups[serviceArea]) {
       serviceAreaGroups[serviceArea] = {
         rows: [],
