@@ -15,7 +15,8 @@ Deno.serve(async (req) => {
     console.log('[IMPORT_TASKS] Request received:', {
       rows: data?.length || 0,
       mappedFields: Object.keys(mapping || {}).length,
-      config: config?.importMode || 'unknown'
+      importMode: config?.importMode,
+      config
     });
 
     // Validation
