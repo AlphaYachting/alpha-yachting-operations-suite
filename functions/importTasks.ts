@@ -32,15 +32,137 @@ Deno.serve(async (req) => {
     console.log('[IMPORT_TASKS] Mapping:', mapping);
     console.log('[IMPORT_TASKS] Sample row:', data[0]);
 
-    // TODO: Implement actual import logic
-    // For now, return success placeholder
+    // Create reverse mapping (Excel header -> system field)
+    const reverseMapping = {};
+    for (const [excelCol, systemField] of Object.entries(mapping)) {
+      reverseMapping[systemField] = excelCol;
+    }
+
+    const createdCustomers = [];
+    const createdBoats = [];
+    const createdJobs = [];
+    const createdTasks = [];
+    const errors = [];
+    const customerMap = {}; // Map customer names to IDs
+    const boatMap = {}; // Map boat names to IDs
+
+    // Step 1: Create/find customers and boats
+    const uniqueCustomers = new Set();
+    const uniqueBoats = new Set();
+    
+    for (const row of data) {
+      const customerName = row[reverseMapping.customerName];
+      if (customerName) uniqueCustomers.add(customerName);
+      const boatName = row[reverseMapping['Boat Type / Yacht Model']] || `${customerName}'s Boat`;
+      if (boatName) uniqueBoats.add(boatName);
+    }
+
+    // Create customers
+    for (const customerName of uniqueCustomers) {
+      try {
+        const existingCustomer = await base44.entities.Customer.filter({ last_name: customerName });
+        if (existingCustomer.length > 0) {
+          customerMap[customerName] = existingCustomer[0].id;
+        } else {
+          const newCustomer = await base44.entities.Customer.create({
+            last_name: customerName,
+            email: `${customerName.toLowerCase().replace(/\s+/g, '.')}@imported.local`
+          });
+          customerMap[customerName] = newCustomer.id;
+          createdCustomers.push(newCustomer);
+        }
+      } catch (err) {
+        errors.push(`Failed to create customer "${customerName}": ${err.message}`);
+      }
+    }
+
+    // Create boats
+    for (const boatName of uniqueBoats) {
+      try {
+        const existingBoat = await base44.entities.Boat.filter({ vessel_name: boatName });
+        if (existingBoat.length > 0) {
+          boatMap[boatName] = existingBoat[0].id;
+        } else {
+          // Find first customer to attach to boat
+          const firstCustomerId = Object.values(customerMap)[0];
+          if (firstCustomerId) {
+            const newBoat = await base44.entities.Boat.create({
+              customer_id: firstCustomerId,
+              vessel_name: boatName
+            });
+            boatMap[boatName] = newBoat.id;
+            createdBoats.push(newBoat);
+          }
+        }
+      } catch (err) {
+        errors.push(`Failed to create boat "${boatName}": ${err.message}`);
+      }
+    }
+
+    // Step 2: Create jobs and tasks
+    const jobsByCustomer = {};
+
+    for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
+      try {
+        const row = data[rowIdx];
+        const customerName = row[reverseMapping.customerName];
+        const taskTitle = row[reverseMapping.taskId];
+        const taskDescription = row[reverseMapping.taskDescription];
+        const serviceArea = row[reverseMapping.serviceArea];
+
+        if (!customerName || !taskTitle) {
+          errors.push(`Row ${rowIdx + 1}: Missing customer name or task title`);
+          continue;
+        }
+
+        // Get or create job for customer
+        if (!jobsByCustomer[customerName]) {
+          try {
+            const jobTitle = row[reverseMapping.projectName] || `${customerName} - Imported Tasks`;
+            const newJob = await base44.entities.Job.create({
+              customer_id: customerMap[customerName],
+              boat_id: Object.values(boatMap)[0], // Use first boat
+              title: jobTitle,
+              description: serviceArea || 'Imported from task list',
+              status: config?.defaultJobStatus || 'New',
+              intake_date: new Date().toISOString()
+            });
+            jobsByCustomer[customerName] = newJob.id;
+            createdJobs.push(newJob);
+          } catch (err) {
+            errors.push(`Failed to create job for customer "${customerName}": ${err.message}`);
+            continue;
+          }
+        }
+
+        // Create task
+        try {
+          const newTask = await base44.entities.Task.create({
+            work_order_id: '', // Will be linked to work order later
+            title: taskTitle,
+            description: taskDescription || '',
+            status: config?.defaultTaskStatus || 'Not Started',
+            estimated_minutes: (row[reverseMapping['Time Required (hrs)']] || 0) * 60,
+            notes: row[reverseMapping.notes] || ''
+          });
+          createdTasks.push(newTask);
+        } catch (err) {
+          errors.push(`Row ${rowIdx + 1}: Failed to create task "${taskTitle}": ${err.message}`);
+        }
+      } catch (err) {
+        errors.push(`Row ${rowIdx + 1}: ${err.message}`);
+      }
+    }
+
     return Response.json({
       success: true,
-      message: 'Import function not yet implemented',
-      importedCount: 0,
-      createdJobs: [],
-      createdTasks: [],
-      errors: []
+      message: 'Import completed',
+      importedCount: createdTasks.length,
+      createdCustomers,
+      createdBoats,
+      createdJobs,
+      createdTasks,
+      errors
     });
 
   } catch (error) {
