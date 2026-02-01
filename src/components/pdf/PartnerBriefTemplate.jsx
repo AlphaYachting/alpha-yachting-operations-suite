@@ -31,7 +31,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     w: 45,  // Width in mm
     h: 15   // Estimated height in mm (will auto-adjust but reserve space)
   };
-  const HEADER_TEXT_START_Y = LOGO_BOX.y + LOGO_BOX.h + 10; // Logo bottom + padding
+  const HEADER_TEXT_START_Y = LOGO_BOX.y + LOGO_BOX.h + 20; // Logo bottom + padding (increased to prevent overlap)
   
   function hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
