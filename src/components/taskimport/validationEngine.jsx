@@ -29,6 +29,12 @@ export function validateImportData(parsedData, fieldMapping, config) {
   let workOrderCount = 0;
   let taskCount = 0;
 
+  // Debug: log mapping info on first row
+  if (parsedData.length > 0) {
+    console.log('[VALIDATION DEBUG] Field Mapping:', fieldMapping);
+    console.log('[VALIDATION DEBUG] First Row Keys:', Object.keys(parsedData[0]));
+  }
+
   // Validate each row
   parsedData.forEach((row, rowIdx) => {
     const rowNum = rowIdx + 2; // Excel row numbers start at 2 (1 is header)
@@ -47,11 +53,17 @@ export function validateImportData(parsedData, fieldMapping, config) {
       }
     });
 
-    // Group by service area (if mapped)
-    const serviceAreaEntry = Object.entries(fieldMapping).find(([_, v]) => v === 'serviceArea');
-    const serviceAreaCol = serviceAreaEntry?.[0];
-    const serviceAreaValue = serviceAreaCol && row[serviceAreaCol] ? String(row[serviceAreaCol]).trim() : null;
-    const serviceArea = serviceAreaValue || 'Uncategorized';
+    // Group by service area (if mapped) - check all possible keys
+    let serviceArea = 'Uncategorized';
+    const serviceAreaEntry = Object.entries(fieldMapping).find(([_, v]) => v === 'serviceArea' || v === 'service_category');
+    if (serviceAreaEntry) {
+      const serviceAreaCol = serviceAreaEntry[0];
+      const serviceAreaValue = row[serviceAreaCol];
+      if (serviceAreaValue && String(serviceAreaValue).trim() !== '') {
+        serviceArea = String(serviceAreaValue).trim();
+        if (rowIdx === 0) console.log('[VALIDATION DEBUG] Row 2 Service Area:', serviceArea, 'from column:', serviceAreaCol);
+      }
+    }
     if (!serviceAreaGroups[serviceArea]) {
       serviceAreaGroups[serviceArea] = {
         rows: [],
