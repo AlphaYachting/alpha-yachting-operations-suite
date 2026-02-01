@@ -135,35 +135,70 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
             </div>
           )}
 
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {Object.entries((results?.serviceAreaGroups) || {}).length === 0 ? (
-              <p className="text-sm text-gray-500 italic">No service areas detected</p>
-            ) : (
-              Object.entries((results?.serviceAreaGroups) || {}).map(([serviceArea, group], idx) => (
-                <div 
-                  key={idx} 
-                  className={`p-3 rounded text-sm border ${
-                    serviceArea === 'Uncategorized' 
-                      ? 'bg-red-50 border-red-200' 
-                      : 'bg-green-50 border-green-200'
-                  }`}
-                >
-                  <div className="flex justify-between items-center">
-                    <div className="font-medium text-gray-900">
-                      {serviceArea === 'Uncategorized' ? '⚠️ ' : '✓ '}
-                      {serviceArea || 'Uncategorized'}
+          {results?.importMode === 'work-orders-by-service-area' ? (
+            // Show work orders by service area mode
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {Object.entries((results?.serviceAreaGroups) || {}).length === 0 ? (
+                <p className="text-sm text-gray-500 italic">No service areas detected</p>
+              ) : (
+                Object.entries((results?.serviceAreaGroups) || {}).map(([serviceArea, group], idx) => (
+                  <div 
+                    key={idx} 
+                    className={`p-3 rounded text-sm border ${
+                      serviceArea === 'Uncategorized' 
+                        ? 'bg-red-50 border-red-200' 
+                        : 'bg-blue-50 border-blue-200'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900 mb-2">
+                      {serviceArea === 'Uncategorized' ? '⚠️ ' : '📋 '}
+                      <strong>{serviceArea || 'Uncategorized'}</strong>
                     </div>
+                    <p className="text-xs text-gray-600 mb-2">
+                      {serviceArea !== 'Uncategorized' && 'Work Order will be created with this name + customer name'}
+                    </p>
                     <Badge variant={serviceArea === 'Uncategorized' ? 'destructive' : 'default'}>
                       {group?.rows?.length || 0} tasks
                     </Badge>
+                    {serviceArea === 'Uncategorized' && (
+                      <p className="text-xs text-red-600 mt-1">⚠️ Service area not mapped - these tasks will be skipped</p>
+                    )}
                   </div>
-                  {serviceArea === 'Uncategorized' && (
-                    <p className="text-xs text-red-600 mt-1">Service area not mapped - these tasks will be skipped</p>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+                ))
+              )}
+            </div>
+          ) : (
+            // Show regular service areas
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {Object.entries((results?.serviceAreaGroups) || {}).length === 0 ? (
+                <p className="text-sm text-gray-500 italic">No service areas detected</p>
+              ) : (
+                Object.entries((results?.serviceAreaGroups) || {}).map(([serviceArea, group], idx) => (
+                  <div 
+                    key={idx} 
+                    className={`p-3 rounded text-sm border ${
+                      serviceArea === 'Uncategorized' 
+                        ? 'bg-red-50 border-red-200' 
+                        : 'bg-green-50 border-green-200'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="font-medium text-gray-900">
+                        {serviceArea === 'Uncategorized' ? '⚠️ ' : '✓ '}
+                        {serviceArea || 'Uncategorized'}
+                      </div>
+                      <Badge variant={serviceArea === 'Uncategorized' ? 'destructive' : 'default'}>
+                        {group?.rows?.length || 0} tasks
+                      </Badge>
+                    </div>
+                    {serviceArea === 'Uncategorized' && (
+                      <p className="text-xs text-red-600 mt-1">Service area not mapped - these tasks will be skipped</p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex justify-between mt-6">
