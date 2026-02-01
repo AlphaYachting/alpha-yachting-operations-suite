@@ -105,8 +105,10 @@ export default function TasklistImport() {
           )}
           {currentStep === 2 && (
             <MappingStep
-              data={parsedData}
-              onComplete={handleMappingComplete}
+              headers={parsedData.length > 0 ? Object.keys(parsedData[0]) : []}
+              mapping={fieldMapping}
+              onMappingChange={setFieldMapping}
+              onNext={handleMappingComplete}
               onBack={() => setCurrentStep(1)}
             />
           )}
