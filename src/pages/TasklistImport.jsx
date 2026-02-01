@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Upload, FileText, CheckCircle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, Eye } from 'lucide-react';
 import FileUploadStep from '@/components/taskimport/FileUploadStep';
 import MappingStep from '@/components/taskimport/MappingStep';
 import ConfigStep from '@/components/taskimport/ConfigStep';
 import ValidationStep from '@/components/taskimport/ValidationStep';
 import PreviewStep from '@/components/taskimport/PreviewStep';
+import ImportPreviewStep from '@/components/taskimport/ImportPreviewStep';
 import ImportStep from '@/components/taskimport/ImportStep';
 import ImportSummary from '@/components/taskimport/ImportSummary';
 import { validateImportData } from '@/components/taskimport/validationEngine';
