@@ -776,6 +776,11 @@ export default function WorkOrders() {
                       
                       <p className="text-sm text-slate-500 mt-1">
                         {projectInfo.customer} • {projectInfo.boat}
+                        {(() => {
+                          const job = jobMap[wo.job_id];
+                          const boat = job ? boatMap[job.boat_id] : null;
+                          return boat?.vessel_type ? ` • ${boat.vessel_type}` : '';
+                        })()}
                       </p>
 
                       <div className="flex flex-wrap items-center gap-4 mt-3">
