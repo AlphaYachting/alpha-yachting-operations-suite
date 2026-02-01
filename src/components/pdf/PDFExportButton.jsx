@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-export default function PDFExportButton({ document: documentData, lineItems, payments = [], variant = "outline" }) {
+export default function PDFExportButton({ document: documentData, lineItems, payments = [], variant = "outline", templateId = null }) {
   const [showPreview, setShowPreview] = useState(false);
   const [template, setTemplate] = useState(null);
   const [pdfError, setPdfError] = useState(null);
@@ -20,7 +20,15 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
   const loadTemplate = async () => {
     try {
       const templates = await base44.entities.PDFTemplate.list();
-      const defaultTemplate = templates.find(t => t.is_default) || templates[0];
+      
+      // If specific templateId provided, use that
+      let selectedTemplate = null;
+      if (templateId) {
+        selectedTemplate = templates.find(t => t.id === templateId || t.template_name === templateId);
+      }
+      
+      // Otherwise use default template
+      const defaultTemplate = selectedTemplate || templates.find(t => t.is_default) || templates[0];
       
       if (!defaultTemplate) {
         const newTemplate = await base44.entities.PDFTemplate.create({

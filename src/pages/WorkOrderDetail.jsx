@@ -338,85 +338,108 @@ export default function WorkOrderDetail() {
       `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 
       'Unknown';
     
-    const costPolicies = [];
-    if (teamOrder.accommodation_paid) {
-      costPolicies.push(`Accommodation: up to €${teamOrder.accommodation_max_per_night || 'TBD'}/night`);
-    }
-    if (teamOrder.meals_per_diem_paid) {
-      costPolicies.push(`Per Diem: €${teamOrder.per_diem_rate_per_day || 'TBD'}/day`);
-    }
-    if (teamOrder.mileage_paid) {
-      costPolicies.push(`Mileage: €${teamOrder.mileage_rate_per_km || '0.35'}/km`);
-    }
-    if (teamOrder.travel_time_paid) {
-      costPolicies.push(`Travel Time: €${teamOrder.travel_time_rate_per_hour || 'TBD'}/hour`);
-    }
-
-    return {
-      id: workOrder.id,
+    // Build structured sections matching reference PDF
+    const sections = {
+      // Header (generated timestamp added automatically)
       document_type: 'PartnerBrief',
-      document_number: workOrder.work_order_number || `BRIEF-${workOrder.id.slice(-6)}`,
-      status: workOrder.status,
+      document_title: 'PARTNER BRIEFING',
+      
+      // Work Order Information
+      work_order_number: workOrder.work_order_number || `WO${workOrder.id.slice(-6)}`,
+      work_order_title: workOrder.title,
+      work_order_status: workOrder.status,
+      scheduled_date: workOrder.scheduled_date,
+      
+      // Customer & Vessel
       customer_name: customerName,
-      customer_address: '',
-      boat_name: boat?.vessel_name,
-      boat_details: boat ? [boat.vessel_type, boat.length_m ? boat.length_m + 'm' : ''].filter(Boolean).join(' · ') : '',
-      location_name: location?.name,
+      vessel_name: boat?.vessel_name || 'Unknown',
+      vessel_type: boat?.vessel_type || 'Unknown',
+      vessel_length: boat?.length_m ? `${boat.length_m}m` : 'Unknown',
+      
+      // Location & Access
+      location_name: location?.name || 'Unknown',
+      location_address: location?.address || '',
+      location_access_notes: location?.access_notes || 'None',
+      
+      // Work Description
+      work_description: workOrder.description || '',
+      
+      // Cost Coverage & Budget (structured)
+      budget_total: teamOrder.approved_budget_total || 0,
+      budget_labor: teamOrder.labor_budget || 0,
+      budget_travel: teamOrder.travel_budget || 0,
+      budget_accommodation: teamOrder.accommodation_budget || 0,
+      budget_per_diem: teamOrder.per_diem_budget || 0,
+      
+      // Covered Costs (policies)
+      covered_costs: {
+        accommodation: teamOrder.accommodation_paid ? {
+          enabled: true,
+          max_per_night: teamOrder.accommodation_max_per_night || 'TBD'
+        } : null,
+        per_diem: teamOrder.meals_per_diem_paid ? {
+          enabled: true,
+          rate_per_day: teamOrder.per_diem_rate_per_day || 'TBD'
+        } : null,
+        mileage: teamOrder.mileage_paid ? {
+          enabled: true,
+          rate_per_km: teamOrder.mileage_rate_per_km || 0.35,
+          cap_total: teamOrder.mileage_cap_total || 'TBD'
+        } : null,
+        travel_time: teamOrder.travel_time_paid ? {
+          enabled: true,
+          rate_per_hour: teamOrder.travel_time_rate_per_hour || 'TBD'
+        } : null
+      },
+      
+      // Approval Requirements
+      approval_requirements: {
+        preapproval_over: teamOrder.requires_preapproval_over || 500,
+        budget_exceed_requires_approval: teamOrder.budget_exceed_requires_approval !== false
+      },
+      
+      // Assigned Team
+      assigned_team: assignedTechs.map(t => ({
+        name: `${t.first_name} ${t.last_name}`,
+        phone: t.phone || '-'
+      })),
+      
+      // Additional notes
+      partner_notes: teamOrder.partner_notes || '',
+      safety_notes: workOrder.safety_notes || '',
+      
+      // System fields
+      id: workOrder.id,
+      document_number: workOrder.work_order_number || `BRIEF-${workOrder.id.slice(-6)}`,
       issue_date: new Date().toISOString().split('T')[0],
-      
-      public_notes: [
-        workOrder.description || '',
-        location?.access_notes ? `\n\nAccess Notes:\n${location.access_notes}` : '',
-        teamOrder.partner_notes ? `\n\nPartner Notes:\n${teamOrder.partner_notes}` : '',
-        workOrder.safety_notes ? `\n\n⚠️ Safety Notes:\n${workOrder.safety_notes}` : '',
-        costPolicies.length > 0 ? `\n\nCovered Costs:\n${costPolicies.map(p => '• ' + p).join('\n')}` : '',
-        `\n\nAssigned Team: ${assignedTechs.map(t => `${t.first_name} ${t.last_name}`).join(', ') || 'None'}`
-      ].filter(Boolean).join(''),
-      
-      subtotal: teamOrder.approved_budget_total || 0,
-      tax_total: 0,
-      total: teamOrder.approved_budget_total || 0,
       currency: 'EUR',
       language: 'English'
     };
+    
+    return sections;
   };
 
   const getPartnerBriefPDFLineItems = () => {
-    if (!teamOrder || !tasks) return [];
+    if (!tasks) return [];
     
-    const items = [];
-    
-    tasks.forEach((task, idx) => {
-      items.push({
-        sort_order: idx,
+    // Tasks & Checklist section - formatted as line items for table rendering
+    return tasks
+      .sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0))
+      .map((task, idx) => ({
+        sort_order: idx + 1,
         title: task.title,
         description: task.description || '',
-        quantity: task.estimated_minutes ? Math.round(task.estimated_minutes / 60 * 10) / 10 : 0,
-        unit: task.estimated_minutes ? 'Hours' : 'Task',
+        estimated_time: task.estimated_minutes ? 
+          `${Math.floor(task.estimated_minutes / 60)}h` : 
+          '-',
+        quantity: 1,
+        unit: 'Task',
         unit_price: 0,
         tax_rate: 0,
         total_net: 0,
         total_tax: 0,
         total_gross: 0
-      });
-    });
-    
-    if (teamOrder.labor_budget > 0) {
-      items.push({
-        sort_order: tasks.length,
-        title: 'Labor Budget',
-        description: '',
-        quantity: 1,
-        unit: 'Budget',
-        unit_price: teamOrder.labor_budget,
-        tax_rate: 0,
-        total_net: teamOrder.labor_budget,
-        total_tax: 0,
-        total_gross: teamOrder.labor_budget
-      });
-    }
-    
-    return items;
+      }));
   };
 
   const handleDeleteWorkOrder = async () => {
@@ -784,6 +807,7 @@ export default function WorkOrderDetail() {
                   <PDFExportButton 
                     document={getPartnerBriefPDFDocument()}
                     lineItems={getPartnerBriefPDFLineItems()}
+                    templateId="PartnerBrief"
                     variant="default"
                   />
                 </div>
