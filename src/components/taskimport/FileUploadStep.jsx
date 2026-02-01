@@ -14,17 +14,26 @@ export default function FileUploadStep({ onComplete }) {
       const arrayBuffer = await file.arrayBuffer();
       
       // Import xlsx dynamically
-      const { read, utils } = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
-      const workbook = read(arrayBuffer, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = utils.sheet_to_json(worksheet);
-      
-      if (data.length === 0) {
-        throw new Error('No data found in Excel file');
-      }
-      
-      onComplete(file, data);
+       const { read, utils } = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+       const workbook = read(arrayBuffer, { type: 'array' });
+       const sheetName = workbook.SheetNames[0];
+       const worksheet = workbook.Sheets[sheetName];
+       const data = utils.sheet_to_json(worksheet);
+
+       if (data.length === 0) {
+         throw new Error('No data found in Excel file');
+       }
+
+       // DIAGNOSTIC: Log parsed data structure
+       console.log('[FILE UPLOAD] Excel parsing complete:');
+       console.log('  - Rows:', data.length);
+       console.log('  - Columns detected:', Object.keys(data[0] || {}));
+       console.log('  - First row:', data[0]);
+       data.slice(1, 3).forEach((row, idx) => {
+         console.log(`  - Row ${idx + 2}:`, row);
+       });
+
+       onComplete(file, data);
     } catch (err) {
       setError(err.message || 'Failed to parse Excel file');
       console.error('Parse error:', err);
