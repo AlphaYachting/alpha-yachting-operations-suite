@@ -266,10 +266,24 @@ export default function TeamOrderDetail() {
                   });
                   
                   if (response.data.success) {
+                    // Convert base64 to blob for proper download
+                    const byteCharacters = atob(response.data.pdf);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                      byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/pdf' });
+                    
+                    // Create blob URL and download
+                    const blobUrl = URL.createObjectURL(blob);
                     const link = document.createElement('a');
-                    link.href = `data:application/pdf;base64,${response.data.pdf}`;
+                    link.href = blobUrl;
                     link.download = response.data.fileName;
+                    document.body.appendChild(link);
                     link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(blobUrl);
                   }
                 } catch (error) {
                   console.error('PDF generation error:', error);
