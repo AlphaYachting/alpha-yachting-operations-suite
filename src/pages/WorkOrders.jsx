@@ -775,6 +775,8 @@ export default function WorkOrders() {
                       </div>
                       
                       <p className="text-sm text-slate-500 mt-1">
+                        <span className="font-medium text-slate-700">{projectInfo.title}</span>
+                        {' • '}
                         {projectInfo.customer} • {projectInfo.boat}
                         {(() => {
                           const job = jobMap[wo.job_id];
@@ -1109,6 +1111,16 @@ export default function WorkOrders() {
                                     Unassigned
                                   </Badge>
                                 )}
+                              </div>
+
+                              {/* Project Reference Line - Show parent job */}
+                              <div className="ml-7 mb-2">
+                                <Link 
+                                  to={createPageUrl('JobDetail') + `?id=${wo.job_id}`}
+                                  className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                                >
+                                  Project: {projectInfo.title}
+                                </Link>
                               </div>
 
                               {/* B) Schedule & Responsibility Line - Second Priority */}
