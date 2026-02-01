@@ -138,7 +138,7 @@ export default function WorkOrderDetail() {
     try {
       const [woData, allTasks, allTechs, allPhotos, teamOrders, allComments, allTimeEntries, allAccessLogs] = await Promise.all([
         base44.entities.WorkOrder.filter({ id: workOrderId }),
-        base44.entities.Task.filter({ work_order_id: workOrderId }),
+        base44.entities.Task.filter({ work_order_id: workOrderId }, 'sequence_order'),
         base44.entities.Technician.list(),
         base44.entities.WorkOrderPhoto.filter({ work_order_id: workOrderId }, '-created_date'),
         base44.entities.TeamOrder.filter({ work_order_id: workOrderId }),
