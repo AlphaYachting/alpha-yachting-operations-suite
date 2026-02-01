@@ -109,9 +109,30 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
 
         {/* Service Area Groups Preview - SHOW ALL */}
         <div className="border rounded-lg p-4">
-          <h3 className="font-semibold text-sm text-gray-900 mb-3">
-            Service Areas Detected ({Object.keys(results.serviceAreaGroups || {}).length})
-          </h3>
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-semibold text-sm text-gray-900">
+              Service Areas Detected ({Object.keys(results.serviceAreaGroups || {}).length})
+            </h3>
+            <button 
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+              className="text-xs text-blue-600 hover:text-blue-700 underline"
+            >
+              {showDiagnostics ? 'Hide' : 'Show'} diagnostics
+            </button>
+          </div>
+
+          {showDiagnostics && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+              <div><strong>Service Area column mapped:</strong> {serviceAreaCol || 'NOT MAPPED'}</div>
+              <div><strong>Unique values in Excel:</strong> {uniqueServiceAreas.length}</div>
+              <div className="mt-2">
+                {uniqueServiceAreas.map((area, i) => (
+                  <div key={i} className="text-blue-700">• {area}</div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {Object.entries(results.serviceAreaGroups || {}).length === 0 ? (
               <p className="text-sm text-gray-500 italic">No service areas detected</p>
