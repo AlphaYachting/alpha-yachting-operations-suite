@@ -85,14 +85,36 @@ export function validateImportData(parsedData, fieldMapping, config) {
     }
   });
 
-  // Count work orders (unique combinations)
-  const uniqueWorkOrders = new Set();
-  const customerCol = Object.entries(fieldMapping).find(([_, v]) => v === 'customerName')?.[0];
-  parsedData.forEach(row => {
-    const key = row[customerCol] || 'default';
-    uniqueWorkOrders.add(key);
-  });
-  workOrderCount = uniqueWorkOrders.size || 1;
+  // Count work orders based on import mode
+  if (config?.importMode === 'work-orders-by-service-area') {
+    // One work order per service area per customer
+    const uniqueWorkOrders = new Set();
+    const customerCol = Object.entries(fieldMapping).find(([_, v]) => v === 'customerName')?.[0];
+    parsedData.forEach(row => {
+      let serviceArea = 'Uncategorized';
+      const serviceAreaEntry = Object.entries(fieldMapping).find(([_, v]) => v === 'serviceArea' || v === 'service_category');
+      if (serviceAreaEntry) {
+        const serviceAreaCol = serviceAreaEntry[0];
+        const serviceAreaValue = row[serviceAreaCol];
+        if (serviceAreaValue && String(serviceAreaValue).trim() !== '') {
+          serviceArea = String(serviceAreaValue).trim();
+        }
+      }
+      const customer = row[customerCol] || 'default';
+      const key = `${customer}_${serviceArea}`;
+      uniqueWorkOrders.add(key);
+    });
+    workOrderCount = uniqueWorkOrders.size || 1;
+  } else {
+    // Original: one work order per customer
+    const uniqueWorkOrders = new Set();
+    const customerCol = Object.entries(fieldMapping).find(([_, v]) => v === 'customerName')?.[0];
+    parsedData.forEach(row => {
+      const key = row[customerCol] || 'default';
+      uniqueWorkOrders.add(key);
+    });
+    workOrderCount = uniqueWorkOrders.size || 1;
+  }
 
   const isValid = errors.length === 0;
 
