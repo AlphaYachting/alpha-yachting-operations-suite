@@ -15,7 +15,7 @@ const TARGET_FIELDS = [
   { value: 'taskDescription', label: 'Task Description', aliases: ['description', 'desc', 'beschreibung', 'details'] },
   { value: 'category', label: 'Category', aliases: ['category', 'kategorie', 'type', 'art'] },
   { value: 'requiredQualification', label: 'Required Qualification', aliases: ['qualification', 'qualifikation', 'skill', 'anforderung'] },
-  { value: 'estimatedHours', label: 'Time Required (hrs)', aliases: ['hours', 'stunden', 'time', 'duration', 'dauer', 'suggested time', 'surveyor'] },
+  { value: 'estimatedHours', label: 'Time Required (hrs)', aliases: ['hours', 'stunden', 'time', 'duration', 'dauer', 'suggested time', 'suggested time surveyor', 'surveyor time', 'surveyor h', 'surveyor', 'estimated hours'] },
   { value: 'materialRequired', label: 'Material Required', aliases: ['material', 'material required', 'material benötigt'] },
   { value: 'materialDescription', label: 'Material Description', aliases: ['material desc', 'material description', 'material details'] },
   { value: 'dependencies', label: 'Dependencies', aliases: ['dependencies', 'depends', 'abhängigkeiten'] },
