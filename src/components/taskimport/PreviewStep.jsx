@@ -4,15 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
-export default function PreviewStep({ data, headers, onNext, onBack }) {
-  const previewData = data.slice(0, 20);
+export default function PreviewStep({ data = [], headers = [], onNext, onBack }) {
+  const previewData = (data || []).slice(0, 20);
+
+  if (!headers || headers.length === 0) {
+    return <div className="p-4 text-slate-600">No data to preview. Please upload a file first.</div>;
+  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Step 2: Preview Data</CardTitle>
         <CardDescription>
-          Showing first 20 rows of {data.length} total rows. {headers.length} columns detected.
+          Showing first 20 rows of {(data || []).length} total rows. {headers.length} columns detected.
         </CardDescription>
       </CardHeader>
       <CardContent>
