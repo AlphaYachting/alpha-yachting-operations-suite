@@ -261,8 +261,12 @@ export default function TeamOrderDetail() {
                 onClick={async () => {
                   try {
                     setGenerating(true);
+                    setError(null);
+                    
                     const template = await base44.entities.PDFTemplate.list();
                     const partnerTemplate = template.find(t => t.template_type === 'PartnerBrief') || template[0];
+                    
+                    console.log('Generating PDF with:', { workOrderId: workOrder.id, teamOrderId: teamOrder.id });
                     
                     const response = await base44.functions.invoke('generatePartnerBriefPDF', {
                       workOrderId: workOrder.id,
@@ -270,7 +274,9 @@ export default function TeamOrderDetail() {
                       templateData: partnerTemplate
                     });
                     
-                    if (response.data.success) {
+                    console.log('PDF Response:', response.data);
+                    
+                    if (response.data.success && response.data.pdf) {
                       const byteCharacters = atob(response.data.pdf);
                       const byteNumbers = new Array(byteCharacters.length);
                       for (let i = 0; i < byteCharacters.length; i++) {
@@ -281,9 +287,12 @@ export default function TeamOrderDetail() {
                       const blobUrl = URL.createObjectURL(blob);
                       setPreviewUrl(blobUrl);
                       setShowPreview(true);
+                    } else {
+                      setError('Failed to generate PDF: ' + (response.data.error || 'Unknown error'));
                     }
                   } catch (error) {
                     console.error('PDF preview error:', error);
+                    setError('PDF generation failed: ' + error.message);
                   } finally {
                     setGenerating(false);
                   }
@@ -298,6 +307,8 @@ export default function TeamOrderDetail() {
                 onClick={async () => {
                   try {
                     setGenerating(true);
+                    setError(null);
+                    
                     const template = await base44.entities.PDFTemplate.list();
                     const partnerTemplate = template.find(t => t.template_type === 'PartnerBrief') || template[0];
                     
@@ -307,7 +318,7 @@ export default function TeamOrderDetail() {
                       templateData: partnerTemplate
                     });
                     
-                    if (response.data.success) {
+                    if (response.data.success && response.data.pdf) {
                       const byteCharacters = atob(response.data.pdf);
                       const byteNumbers = new Array(byteCharacters.length);
                       for (let i = 0; i < byteCharacters.length; i++) {
@@ -323,9 +334,12 @@ export default function TeamOrderDetail() {
                       link.click();
                       document.body.removeChild(link);
                       URL.revokeObjectURL(blobUrl);
+                    } else {
+                      setError('Failed to download PDF: ' + (response.data.error || 'Unknown error'));
                     }
                   } catch (error) {
                     console.error('PDF download error:', error);
+                    setError('PDF download failed: ' + error.message);
                   } finally {
                     setGenerating(false);
                   }
