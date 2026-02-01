@@ -408,8 +408,8 @@ Deno.serve(async (req) => {
     console.log('   labor_budget:', documentDebug.labor_budget);
     console.log('=== END TRACE ===');
 
-    // Build document and line items for jsPDF
-    const document = buildPartnerBriefDocument(workOrder, teamOrder, job, customer, boat, location, tasks, technicians);
+    // Build document and line items for jsPDF (use debug version from above)
+    const document = documentDebug;
     const lineItems = buildPartnerBriefLineItems(tasks, teamOrder);
     
     // Generate PDF using jsPDF
