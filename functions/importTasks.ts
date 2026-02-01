@@ -117,7 +117,9 @@ Deno.serve(async (req) => {
         const customerName = row[reverseMapping.customerName];
         const taskTitle = row[reverseMapping.taskTitle] || row[reverseMapping.taskId];
         const taskDescription = row[reverseMapping.taskDescription];
-        const serviceArea = row[reverseMapping.serviceArea];
+        // Try serviceArea first, then fall back to service_category
+        const serviceAreaCol = reverseMapping.serviceArea || reverseMapping.service_category;
+        const serviceArea = row[serviceAreaCol];
 
         console.log(`[IMPORT_TASKS] Row ${rowIdx + 1} Details:`, {
           customerName,
