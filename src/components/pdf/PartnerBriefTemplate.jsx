@@ -23,6 +23,16 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   const tealColor = { r: 0, g: 188, b: 212 }; // #00bcd4 - teal for headers/tables
   const fontFamily = 'helvetica';
   
+  // HEADER LAYOUT CONSTANTS - Reserve space for logo to prevent overlap
+  const HEADER_TOP_Y = margins.top;
+  const LOGO_BOX = {
+    x: margins.left,
+    y: HEADER_TOP_Y,
+    w: 45,  // Width in mm
+    h: 15   // Estimated height in mm (will auto-adjust but reserve space)
+  };
+  const HEADER_TEXT_START_Y = LOGO_BOX.y + LOGO_BOX.h + 10; // Logo bottom + padding
+  
   function hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -81,31 +91,33 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     return y;
   }
   
+  // === HEADER SECTION - Reserved space, no overlap ===
+  
   // Logo - preserve aspect ratio by setting width only
   if (template.logo_url) {
     try {
-      const logoWidth = 45; // Fixed width in mm
       // By not specifying height, jsPDF will maintain aspect ratio
-      doc.addImage(template.logo_url, 'PNG', margins.left, yPos, logoWidth, 0, undefined, 'FAST');
+      doc.addImage(template.logo_url, 'PNG', LOGO_BOX.x, LOGO_BOX.y, LOGO_BOX.w, 0, undefined, 'FAST');
     } catch (e) {
       console.log('Logo not loaded');
     }
   }
   
-  // Company name (right aligned, teal)
+  // Company name (right aligned, teal) - within header area
   doc.setFont(fontFamily, 'bold');
   doc.setFontSize(12);
   doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
-  doc.text(template.company_name || 'Alpha Yachting', pageWidth - margins.right, yPos + 5, { align: 'right' });
+  doc.text(template.company_name || 'Alpha Yachting', pageWidth - margins.right, HEADER_TOP_Y + 5, { align: 'right' });
   
   doc.setFont(fontFamily, 'normal');
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
   if (template.company_address) {
-    doc.text(template.company_address, pageWidth - margins.right, yPos + 10, { align: 'right' });
+    doc.text(template.company_address, pageWidth - margins.right, HEADER_TOP_Y + 10, { align: 'right' });
   }
   
-  yPos += 25;
+  // Move yPos to start of content area (below header)
+  yPos = HEADER_TEXT_START_Y;
   
   // PARTNER BRIEFING header - teal
   doc.setFont(fontFamily, 'bold');
@@ -274,17 +286,31 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   }
   
   // ASSIGNED TEAM
-  yPos = drawSectionHeader('ASSIGNED TEAM', yPos);
-  
-  // Table header - teal background
-  doc.setFont(fontFamily, 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(255, 255, 255);
-  doc.setFillColor(tealColor.r, tealColor.g, tealColor.b);
-  doc.rect(margins.left, yPos - 4, contentWidth, 6, 'F');
-  doc.text('Name', margins.left + 2, yPos);
-  doc.text('Phone', pageWidth - margins.right - 2, yPos, { align: 'right' });
-  yPos += 6;
+  if (document.assigned_team && document.assigned_team.length > 0) {
+    yPos = drawSectionHeader('ASSIGNED TEAM', yPos);
+    
+    // Table header - teal background
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.setFillColor(tealColor.r, tealColor.g, tealColor.b);
+    doc.rect(margins.left, yPos - 4, contentWidth, 6, 'F');
+    doc.text('Name', margins.left + 2, yPos);
+    doc.text('Phone', pageWidth - margins.right - 2, yPos, { align: 'right' });
+    yPos += 6;
+    
+    // Table rows
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    document.assigned_team.forEach(tech => {
+      doc.text(tech.name || '-', margins.left + 2, yPos);
+      doc.text(tech.phone || '-', pageWidth - margins.right - 2, yPos, { align: 'right' });
+      yPos += 5;
+      doc.setDrawColor(220, 220, 220);
+      doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
+    });
+    yPos += 3;
+  }
   
   // Footer
   const footerY = pageHeight - margins.bottom - 5;

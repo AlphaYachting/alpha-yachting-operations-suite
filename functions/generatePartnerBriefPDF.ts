@@ -30,10 +30,11 @@ function buildPartnerBriefDocument(workOrder, teamOrder, job, customer, boat, lo
   return {
     document_type: 'PartnerBrief',
     document_number: workOrder.work_order_number || `BRIEF-${workOrder.id.slice(-6)}`,
+    work_order_number: workOrder.work_order_number || `BRIEF-${workOrder.id.slice(-6)}`,
     status: workOrder.status,
     customer_name: customerName,
-    boat_name: boat?.vessel_name,
-    location_name: location?.name,
+    boat_name: boat?.vessel_name || null,
+    location_name: location?.name || null,
     issue_date: new Date().toISOString().split('T')[0],
     
     // Partner brief specific fields
@@ -44,25 +45,32 @@ function buildPartnerBriefDocument(workOrder, teamOrder, job, customer, boat, lo
     scheduled_date: workOrder.scheduled_date,
     estimated_duration: workOrder.estimated_duration_hours,
     
-    // Vessel details
-    boat_type: boat?.vessel_type,
-    boat_length: boat?.length_m,
+    // Vessel details - use null instead of undefined to prevent "|| '-'" fallback when value exists
+    boat_type: boat?.vessel_type || null,
+    boat_length: boat?.length_m || null,
     
     // Location details
-    location_address: location?.address,
-    location_access_notes: location?.access_notes,
+    location_address: location?.address || null,
+    location_access_notes: location?.access_notes || null,
     
-    // Team order / budget
-    approved_budget: teamOrder.approved_budget_total || 0,
-    labor_budget: teamOrder.labor_budget || 0,
-    travel_budget: teamOrder.travel_budget || 0,
-    accommodation_budget: teamOrder.accommodation_budget || 0,
-    per_diem_budget: teamOrder.per_diem_budget || 0,
+    // Team order / budget - preserve actual values, use 0 only if truly missing
+    approved_budget: teamOrder?.approved_budget_total ?? 0,
+    labor_budget: teamOrder?.labor_budget ?? 0,
+    travel_budget: teamOrder?.travel_budget ?? 0,
+    accommodation_budget: teamOrder?.accommodation_budget ?? 0,
+    per_diem_budget: teamOrder?.per_diem_budget ?? 0,
     cost_policies: costPolicies,
     requires_preapproval: teamOrder.requires_preapproval_over,
     budget_exceed_requires_approval: teamOrder.budget_exceed_requires_approval,
     partner_notes: teamOrder.partner_notes,
     safety_notes: workOrder.safety_notes,
+    
+    // Assigned team for template
+    assigned_team: assignedTechs.map(t => ({
+      name: `${t.first_name || ''} ${t.last_name || ''}`.trim(),
+      phone: t.phone || null,
+      email: t.email || null
+    })),
     
     // Additional fields
     tasks_count: tasks.length,
