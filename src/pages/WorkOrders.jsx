@@ -140,7 +140,7 @@ export default function WorkOrders() {
 
       const [woData, jobsData, techData, custData, boatsData, locData, reservationsData, vehiclesData] = await Promise.all([
         woQuery,
-        base44.entities.Job.list('-created_date', 50),
+        base44.entities.Job.list('-created_date', 200),
         base44.entities.Technician.list(),
         base44.entities.Customer.list('-created_date', 50),
         base44.entities.Boat.list('-created_date', 50),

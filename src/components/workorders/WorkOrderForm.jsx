@@ -133,7 +133,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       {/* Project Selection */}
        <div className="space-y-2">
          <Label>Parent Project *</Label>
-         <Select value={formData.job_id} onValueChange={(v) => updateField('job_id', v)}>
+         <Select value={formData.job_id || ''} onValueChange={(v) => updateField('job_id', v)}>
            <SelectTrigger>
              <SelectValue placeholder="Select project" />
           </SelectTrigger>
