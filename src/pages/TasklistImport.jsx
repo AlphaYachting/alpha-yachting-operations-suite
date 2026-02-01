@@ -153,7 +153,7 @@ export default function TasklistImport() {
             <ConfigStep
               config={config}
               onConfigChange={setConfig}
-              onNext={() => handleConfigComplete(config)}
+              onNext={() => handleConfigComplete(config, fieldMapping)}
               onBack={() => setCurrentStep(3)}
             />
           )}
