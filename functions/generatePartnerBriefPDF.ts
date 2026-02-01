@@ -376,22 +376,37 @@ Deno.serve(async (req) => {
     const boat = boats.find(b => b.id === job?.boat_id);
     const location = locations.find(l => l.id === job?.location_id);
 
-    // Debug logging to identify missing data
-    console.log('PDF Generation Debug:', {
-      workOrderId: workOrder.id,
-      jobId: workOrder.job_id,
-      jobFound: !!job,
-      boatId: job?.boat_id,
-      boatFound: !!boat,
-      boatData: boat ? { vessel_name: boat.vessel_name, vessel_type: boat.vessel_type, length_m: boat.length_m } : null,
-      teamOrderBudget: {
-        approved_budget_total: teamOrder.approved_budget_total,
-        labor_budget: teamOrder.labor_budget,
-        travel_budget: teamOrder.travel_budget,
-        accommodation_budget: teamOrder.accommodation_budget,
-        per_diem_budget: teamOrder.per_diem_budget
-      }
-    });
+    // DETAILED DEBUG LOGGING - TRACE DATA PIPELINE
+    console.log('=== PARTNER BRIEF DATA TRACE ===');
+    console.log('1. LOADED ENTITIES:');
+    console.log('   WorkOrders:', workOrders.length, 'found');
+    console.log('   TeamOrders:', teamOrders.length, 'found');
+    console.log('   Jobs:', jobs.length, 'total');
+    console.log('   Boats:', boats.length, 'total');
+
+    console.log('2. SELECTED RECORDS:');
+    console.log('   WorkOrder:', workOrder ? { id: workOrder.id, job_id: workOrder.job_id } : 'NOT FOUND');
+    console.log('   TeamOrder:', teamOrder ? { 
+      id: teamOrder.id, 
+      approved_budget_total: teamOrder.approved_budget_total,
+      labor_budget: teamOrder.labor_budget,
+      travel_budget: teamOrder.travel_budget
+    } : 'NOT FOUND');
+    console.log('   Job:', job ? { id: job.id, boat_id: job.boat_id, customer_id: job.customer_id } : 'NOT FOUND');
+    console.log('   Boat:', boat ? { 
+      id: boat.id, 
+      vessel_name: boat.vessel_name, 
+      vessel_type: boat.vessel_type, 
+      length_m: boat.length_m 
+    } : 'NOT FOUND');
+
+    console.log('3. DOCUMENT BUILDER INPUT:');
+    const documentDebug = buildPartnerBriefDocument(workOrder, teamOrder, job, customer, boat, location, tasks, technicians);
+    console.log('   boat_type:', documentDebug.boat_type);
+    console.log('   boat_length:', documentDebug.boat_length);
+    console.log('   approved_budget:', documentDebug.approved_budget);
+    console.log('   labor_budget:', documentDebug.labor_budget);
+    console.log('=== END TRACE ===');
 
     // Build document and line items for jsPDF
     const document = buildPartnerBriefDocument(workOrder, teamOrder, job, customer, boat, location, tasks, technicians);
