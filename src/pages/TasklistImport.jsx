@@ -26,11 +26,12 @@ export default function TasklistImport() {
 
   const steps = [
     { number: 1, title: 'Upload File', icon: Upload },
-    { number: 2, title: 'Map Fields', icon: FileText },
-    { number: 3, title: 'Configure', icon: FileText },
-    { number: 4, title: 'Validate', icon: CheckCircle },
-    { number: 5, title: 'Preview & Import', icon: CheckCircle },
-    { number: 6, title: 'Summary', icon: CheckCircle }
+    { number: 2, title: 'Preview Data', icon: FileText },
+    { number: 3, title: 'Map Fields', icon: FileText },
+    { number: 4, title: 'Configure', icon: FileText },
+    { number: 5, title: 'Validate', icon: CheckCircle },
+    { number: 6, title: 'Import', icon: CheckCircle },
+    { number: 7, title: 'Summary', icon: CheckCircle }
   ];
 
   const handleFileUpload = (file, data) => {
