@@ -454,8 +454,9 @@ export default function Reports() {
 
       {/* Reports Tabs */}
       <Tabs defaultValue="skills" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="skills">Skills Capacity</TabsTrigger>
+          <TabsTrigger value="service-areas">Service Areas</TabsTrigger>
           <TabsTrigger value="jobs">Job Completion</TabsTrigger>
           <TabsTrigger value="technicians">Technician Performance</TabsTrigger>
           <TabsTrigger value="time">Time Tracking</TabsTrigger>
@@ -689,7 +690,172 @@ export default function Reports() {
           </Card>
         </TabsContent>
 
-        {/* Job Completion Report */}
+        {/* Service Areas Report */}
+        <TabsContent value="service-areas" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Estimated Hours by Service Area</CardTitle>
+              <Button 
+                onClick={() => {
+                  const serviceAreaData = filteredWorkOrders
+                    .filter(wo => wo.service_category)
+                    .reduce((acc, wo) => {
+                      const category = wo.service_category || 'Uncategorized';
+                      const existing = acc.find(item => item.service_area === category);
+                      if (existing) {
+                        existing.estimated_hours += wo.estimated_duration_hours || 0;
+                        existing.work_orders += 1;
+                      } else {
+                        acc.push({
+                          service_area: category,
+                          estimated_hours: wo.estimated_duration_hours || 0,
+                          work_orders: 1
+                        });
+                      }
+                      return acc;
+                    }, [])
+                    .sort((a, b) => b.estimated_hours - a.estimated_hours);
+                  exportToCSV(serviceAreaData, 'service_areas_hours_report');
+                }}
+                size="sm"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {filteredWorkOrders.some(wo => wo.service_category) ? (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-700 mb-4">Estimated Hours Distribution</h3>
+                      <div className="space-y-4">
+                        {filteredWorkOrders
+                          .filter(wo => wo.service_category)
+                          .reduce((acc, wo) => {
+                            const category = wo.service_category || 'Uncategorized';
+                            const existing = acc.find(item => item.service_area === category);
+                            if (existing) {
+                              existing.estimated_hours += wo.estimated_duration_hours || 0;
+                              existing.work_orders += 1;
+                            } else {
+                              acc.push({
+                                service_area: category,
+                                estimated_hours: wo.estimated_duration_hours || 0,
+                                work_orders: 1
+                              });
+                            }
+                            return acc;
+                          }, [])
+                          .sort((a, b) => b.estimated_hours - a.estimated_hours)
+                          .map((item) => {
+                            const totalHours = filteredWorkOrders
+                              .filter(wo => wo.service_category)
+                              .reduce((sum, wo) => sum + (wo.estimated_duration_hours || 0), 0);
+                            const percentage = totalHours > 0 ? (item.estimated_hours / totalHours) * 100 : 0;
+
+                            return (
+                              <div key={item.service_area} className="border border-slate-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all">
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-cyan-50 rounded-lg">
+                                      <Target className="h-5 w-5 text-cyan-600" />
+                                    </div>
+                                    <div>
+                                      <h4 className="text-base font-semibold text-slate-900">{item.service_area}</h4>
+                                      <p className="text-xs text-slate-500 mt-0.5">
+                                        {item.work_orders} work order{item.work_orders !== 1 ? 's' : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-2xl font-bold text-slate-900">{Math.round(item.estimated_hours * 10) / 10}h</div>
+                                    <div className="text-xs text-slate-500">
+                                      {Math.round(percentage * 10) / 10}% of total
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="relative w-full h-8 bg-slate-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-500 ${
+                                      item.estimated_hours >= 100 ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                                      item.estimated_hours >= 50 ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
+                                      item.estimated_hours >= 20 ? 'bg-gradient-to-r from-cyan-500 to-cyan-600' :
+                                      'bg-gradient-to-r from-slate-400 to-slate-500'
+                                    }`}
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                  <div className="absolute inset-0 flex items-center px-3 text-xs font-medium">
+                                    <span className={percentage > 30 ? 'text-white' : 'text-slate-700'}>
+                                      {Math.round(percentage)}%
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Target className="h-5 w-5 text-cyan-600" />
+                          <p className="text-sm font-medium text-cyan-900">Total Service Areas</p>
+                        </div>
+                        <p className="text-2xl font-bold text-cyan-700">
+                          {filteredWorkOrders.filter(wo => wo.service_category).reduce((acc, wo) => {
+                            return acc.has(wo.service_category) ? acc : acc.add(wo.service_category);
+                          }, new Set()).size}
+                        </p>
+                      </div>
+
+                      <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Clock className="h-5 w-5 text-emerald-600" />
+                          <p className="text-sm font-medium text-emerald-900">Total Estimated Hours</p>
+                        </div>
+                        <p className="text-2xl font-bold text-emerald-700">
+                          {Math.round(filteredWorkOrders
+                            .filter(wo => wo.service_category)
+                            .reduce((sum, wo) => sum + (wo.estimated_duration_hours || 0), 0) * 10) / 10}h
+                        </p>
+                      </div>
+
+                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Activity className="h-5 w-5 text-blue-600" />
+                          <p className="text-sm font-medium text-blue-900">Avg Hours per Service Area</p>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-700">
+                          {filteredWorkOrders.filter(wo => wo.service_category).reduce((acc, wo) => {
+                            return acc.has(wo.service_category) ? acc : acc.add(wo.service_category);
+                          }, new Set()).size > 0
+                            ? Math.round((filteredWorkOrders
+                                .filter(wo => wo.service_category)
+                                .reduce((sum, wo) => sum + (wo.estimated_duration_hours || 0), 0) / 
+                                filteredWorkOrders.filter(wo => wo.service_category).reduce((acc, wo) => {
+                                  return acc.has(wo.service_category) ? acc : acc.add(wo.service_category);
+                                }, new Set()).size) * 10) / 10
+                            : 0}h
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12 text-slate-500">
+                    <Target className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+                    <p>No service area data available</p>
+                    <p className="text-sm mt-1">Service categories need to be assigned to work orders</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+         {/* Job Completion Report */}
         <TabsContent value="jobs" className="space-y-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
