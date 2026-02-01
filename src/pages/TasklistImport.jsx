@@ -33,8 +33,9 @@ export default function TasklistImport() {
     { number: 3, title: 'Map Fields', icon: FileText },
     { number: 4, title: 'Configure', icon: FileText },
     { number: 5, title: 'Validate', icon: CheckCircle },
-    { number: 6, title: 'Import', icon: CheckCircle },
-    { number: 7, title: 'Summary', icon: CheckCircle }
+    { number: 6, title: 'Import Preview', icon: Eye },
+    { number: 7, title: 'Import', icon: CheckCircle },
+    { number: 8, title: 'Summary', icon: CheckCircle }
   ];
 
   const handleFileUpload = (file, data) => {
