@@ -7,6 +7,7 @@ import ConfigStep from '@/components/taskimport/ConfigStep';
 import ValidationStep from '@/components/taskimport/ValidationStep';
 import PreviewStep from '@/components/taskimport/PreviewStep';
 import ImportSummary from '@/components/taskimport/ImportSummary';
+import { validateImportData } from '@/components/taskimport/validationEngine';
 
 export default function TasklistImport() {
   const [currentStep, setCurrentStep] = useState(1);
