@@ -124,6 +124,7 @@ export function validateImportData(parsedData, fieldMapping, config) {
     warnings,
     workOrderCount,
     taskCount,
-    serviceAreaGroups
+    serviceAreaGroups,
+    importMode: config?.importMode
   };
 }
