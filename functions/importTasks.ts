@@ -289,10 +289,11 @@ Deno.serve(async (req) => {
         // Create task linked to work order
         try {
           const estMinutes = (row[reverseMapping.estimatedHours] || 0) * 60;
-          
+
           console.log(`[IMPORT_TASKS] Creating task: ${taskTitle}`, {
             workOrderId,
-            estimatedMinutes: estMinutes
+            estimatedMinutes: estMinutes,
+            sequenceOrder: rowIdx
           });
 
           const newTask = await base44.entities.Task.create({
@@ -300,7 +301,8 @@ Deno.serve(async (req) => {
             title: taskTitle,
             description: taskDescription || '',
             status: 'Not Started',
-            estimated_minutes: estMinutes
+            estimated_minutes: estMinutes,
+            sequence_order: rowIdx
           });
           createdTasks.push(newTask);
           console.log(`[IMPORT_TASKS] Created task: ${newTask.id}`);
