@@ -53,7 +53,7 @@ export default function MappingStep({ headers = [], mapping = {}, onMappingChang
 
   const getRequiredMapped = () => {
     const required = TARGET_FIELDS.filter(f => f.required).map(f => f.value);
-    const mapped = Object.values(mapping);
+    const mapped = Object.values(mapping || {});
     return required.filter(r => mapped.includes(r)).length;
   };
 
