@@ -1,3 +1,8 @@
+# BEFORE SNAPSHOT: PartnerBriefTemplate.js (Logo Fix)
+## Date: 2026-02-01
+## Purpose: Fix logo rendering with correct aspect ratio
+
+```javascript
 import { jsPDF } from 'jspdf';
 
 export async function generatePartnerBriefPDF(document, lineItems, template) {
@@ -81,12 +86,12 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     return y;
   }
   
-  // Logo - preserve aspect ratio by setting width only
+  // Logo - preserve aspect ratio
   if (template.logo_url) {
     try {
-      const logoWidth = 45; // Fixed width in mm
-      // By not specifying height, jsPDF will maintain aspect ratio
-      doc.addImage(template.logo_url, 'PNG', margins.left, yPos, logoWidth, 0, undefined, 'FAST');
+      const maxLogoHeight = 15;
+      const maxLogoWidth = 50;
+      doc.addImage(template.logo_url, 'PNG', margins.left, yPos, maxLogoWidth, maxLogoHeight, undefined, 'FAST');
     } catch (e) {
       console.log('Logo not loaded');
     }
@@ -300,3 +305,4 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   
   return doc;
 }
+``
