@@ -114,9 +114,10 @@ Deno.serve(async (req) => {
     for (let rowIdx = 0; rowIdx < data.length; rowIdx++) {
       try {
         const row = data[rowIdx];
-        const customerName = row[reverseMapping.customerName];
-        const taskTitle = row[reverseMapping.taskTitle] || row[reverseMapping.taskId];
-        const taskDescription = row[reverseMapping.taskDescription];
+          const customerName = row[reverseMapping.customerName];
+          // Use taskTitle if mapped, don't fall back to taskId
+          const taskTitle = reverseMapping.taskTitle ? row[reverseMapping.taskTitle] : row[reverseMapping.taskId];
+          const taskDescription = row[reverseMapping.taskDescription];
         
         // Find service area column - search mapping like validation engine does
         let serviceAreaCol = null;
