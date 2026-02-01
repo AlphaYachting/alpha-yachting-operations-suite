@@ -160,6 +160,8 @@ export default function TasklistImport() {
           {currentStep === 5 && (
             <ValidationStep
               results={validationResults || { valid: false, workOrderCount: 0, taskCount: 0, errors: [], warnings: [], serviceAreaGroups: {} }}
+              fieldMapping={fieldMapping}
+              parsedData={parsedData}
               onExecute={() => {
                 // Trigger import in next step (Step 6)
                 setCurrentStep(6);
