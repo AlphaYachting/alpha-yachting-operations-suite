@@ -1284,8 +1284,10 @@ export default function WorkOrderDetail() {
                   await base44.entities.WorkOrder.update(workOrderId, formData);
                   await loadWorkOrderDetails();
                   setShowEditWorkOrder(false);
+                  toast.success('Work order saved successfully');
                 } catch (error) {
                   console.error('Error updating work order:', error);
+                  toast.error('Failed to save work order: ' + (error.message || 'Unknown error'));
                 }
               }}
               onCancel={() => setShowEditWorkOrder(false)}
