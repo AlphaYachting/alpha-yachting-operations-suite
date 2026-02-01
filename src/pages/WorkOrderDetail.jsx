@@ -62,6 +62,7 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import TeamOrderCard from '@/components/teamorder/TeamOrderCard';
 import { notifyTaskStatusChange } from '@/components/notifications/notificationUtils';
 import RequirementsSection from '@/components/requirements/RequirementsSection';
+import PDFExportButton from '@/components/pdf/PDFExportButton';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -115,6 +116,7 @@ export default function WorkOrderDetail() {
   const [accessLogs, setAccessLogs] = useState([]);
   const [generatingBrief, setGeneratingBrief] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showPartnerBriefPDF, setShowPartnerBriefPDF] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
@@ -325,42 +327,96 @@ export default function WorkOrderDetail() {
     }
   };
 
-  const handleGenerateBrief = async () => {
-    if (!teamOrder) return;
-
-    setGeneratingBrief(true);
-    try {
-      // Fetch PDF template
-      const templates = await base44.entities.PDFTemplate.list();
-      const template = templates.find(t => t.is_default) || templates[0];
-
-      if (!template) {
-        alert('No PDF template found. Please create one in Settings.');
-        setGeneratingBrief(false);
-        return;
-      }
-
-      const response = await base44.functions.invoke('generatePartnerBrief', {
-        workOrderId,
-        teamOrderId: teamOrder.id,
-        templateData: template
-      });
-
-      if (response.data.success && response.data.html) {
-        // Open print dialog with HTML content
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(response.data.html);
-        printWindow.document.close();
-        setTimeout(() => printWindow.print(), 250);
-      } else {
-        alert('Failed to generate partner brief: ' + (response.data.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error generating partner brief:', error);
-      alert('Error generating partner brief: ' + error.message);
-    } finally {
-      setGeneratingBrief(false);
+  const getPartnerBriefPDFDocument = () => {
+    if (!teamOrder || !workOrder) return null;
+    
+    const assignedTechs = technicians.filter(t => 
+      workOrder.assigned_technicians?.includes(t.id)
+    );
+    
+    const customerName = customer?.company_name || 
+      `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 
+      'Unknown';
+    
+    const costPolicies = [];
+    if (teamOrder.accommodation_paid) {
+      costPolicies.push(`Accommodation: up to €${teamOrder.accommodation_max_per_night || 'TBD'}/night`);
     }
+    if (teamOrder.meals_per_diem_paid) {
+      costPolicies.push(`Per Diem: €${teamOrder.per_diem_rate_per_day || 'TBD'}/day`);
+    }
+    if (teamOrder.mileage_paid) {
+      costPolicies.push(`Mileage: €${teamOrder.mileage_rate_per_km || '0.35'}/km`);
+    }
+    if (teamOrder.travel_time_paid) {
+      costPolicies.push(`Travel Time: €${teamOrder.travel_time_rate_per_hour || 'TBD'}/hour`);
+    }
+
+    return {
+      id: workOrder.id,
+      document_type: 'PartnerBrief',
+      document_number: workOrder.work_order_number || `BRIEF-${workOrder.id.slice(-6)}`,
+      status: workOrder.status,
+      customer_name: customerName,
+      customer_address: '',
+      boat_name: boat?.vessel_name,
+      boat_details: boat ? [boat.vessel_type, boat.length_m ? boat.length_m + 'm' : ''].filter(Boolean).join(' · ') : '',
+      location_name: location?.name,
+      issue_date: new Date().toISOString().split('T')[0],
+      
+      public_notes: [
+        workOrder.description || '',
+        location?.access_notes ? `\n\nAccess Notes:\n${location.access_notes}` : '',
+        teamOrder.partner_notes ? `\n\nPartner Notes:\n${teamOrder.partner_notes}` : '',
+        workOrder.safety_notes ? `\n\n⚠️ Safety Notes:\n${workOrder.safety_notes}` : '',
+        costPolicies.length > 0 ? `\n\nCovered Costs:\n${costPolicies.map(p => '• ' + p).join('\n')}` : '',
+        `\n\nAssigned Team: ${assignedTechs.map(t => `${t.first_name} ${t.last_name}`).join(', ') || 'None'}`
+      ].filter(Boolean).join(''),
+      
+      subtotal: teamOrder.approved_budget_total || 0,
+      tax_total: 0,
+      total: teamOrder.approved_budget_total || 0,
+      currency: 'EUR',
+      language: 'English'
+    };
+  };
+
+  const getPartnerBriefPDFLineItems = () => {
+    if (!teamOrder || !tasks) return [];
+    
+    const items = [];
+    
+    tasks.forEach((task, idx) => {
+      items.push({
+        sort_order: idx,
+        title: task.title,
+        description: task.description || '',
+        quantity: task.estimated_minutes ? Math.round(task.estimated_minutes / 60 * 10) / 10 : 0,
+        unit: task.estimated_minutes ? 'Hours' : 'Task',
+        unit_price: 0,
+        tax_rate: 0,
+        total_net: 0,
+        total_tax: 0,
+        total_gross: 0
+      });
+    });
+    
+    if (teamOrder.labor_budget > 0) {
+      items.push({
+        sort_order: tasks.length,
+        title: 'Labor Budget',
+        description: '',
+        quantity: 1,
+        unit: 'Budget',
+        unit_price: teamOrder.labor_budget,
+        tax_rate: 0,
+        total_net: teamOrder.labor_budget,
+        total_tax: 0,
+        total_gross: teamOrder.labor_budget
+      });
+    }
+    
+    return items;
   };
 
   const handleDeleteWorkOrder = async () => {
@@ -678,13 +734,62 @@ export default function WorkOrderDetail() {
       {/* Team Order Section */}
       {teamOrder && (
         <>
-          <TeamOrderCard
-            teamOrder={teamOrder}
-            workOrder={workOrder}
-            onEdit={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
-            onGenerateBrief={handleGenerateBrief}
-            isGenerating={generatingBrief}
-          />
+          <Card className="border-l-4 border-l-purple-500">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Team Order</CardTitle>
+                    <p className="text-sm text-slate-600">External Partner Assignment</p>
+                  </div>
+                </div>
+                <Badge className={
+                  teamOrder.status === 'Completed' || teamOrder.status === 'Accepted' ? 'bg-green-100 text-green-700' :
+                  teamOrder.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                  'bg-slate-100 text-slate-700'
+                }>
+                  {teamOrder.status}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-slate-600">Partner</p>
+                  <p className="font-semibold">
+                    {teamOrder.partner_name || 'Not assigned'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-600">Approved Budget</p>
+                  <p className="font-semibold text-green-600">
+                    €{(teamOrder.approved_budget_total || 0).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  onClick={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                >
+                  Edit Team Order
+                </Button>
+                <div className="flex-1">
+                  <PDFExportButton 
+                    document={getPartnerBriefPDFDocument()}
+                    lineItems={getPartnerBriefPDFLineItems()}
+                    variant="default"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
 
