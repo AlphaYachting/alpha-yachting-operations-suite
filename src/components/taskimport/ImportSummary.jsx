@@ -6,9 +6,20 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Users, Ship, MapPin, Briefcase, ListTodo, AlertTriangle, Home } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 
-export default function ImportSummary({ results, onStartNew }) {
+export default function ImportSummary({ results = {}, onStartNew }) {
+  const safeResults = {
+    createdCustomers: results.createdCustomers || [],
+    createdBoats: results.createdBoats || [],
+    createdLocations: results.createdLocations || [],
+    createdJobs: results.createdJobs || [],
+    createdTasks: results.createdTasks || [],
+    reviewList: results.reviewList || [],
+    parentJobId: results.parentJobId || null,
+    ...results
+  };
+
   const handleViewJob = () => {
-    const jobId = results.parentJobId || results.createdJobs[0]?.id;
+    const jobId = safeResults.parentJobId || safeResults.createdJobs[0]?.id;
     if (jobId) {
       window.location.href = `/jobs?id=${jobId}`;
     }
@@ -28,13 +39,13 @@ export default function ImportSummary({ results, onStartNew }) {
       </Card>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 text-blue-600" />
-              <div>
-                <div className="text-2xl font-bold">{results.createdCustomers.length}</div>
+       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+         <Card>
+           <CardContent className="pt-6">
+             <div className="flex items-center gap-3">
+               <Users className="w-8 h-8 text-blue-600" />
+               <div>
+                 <div className="text-2xl font-bold">{safeResults.createdCustomers.length}</div>
                 <div className="text-xs text-gray-600">Customers</div>
               </div>
             </div>
@@ -46,7 +57,7 @@ export default function ImportSummary({ results, onStartNew }) {
             <div className="flex items-center gap-3">
               <Ship className="w-8 h-8 text-teal-600" />
               <div>
-                <div className="text-2xl font-bold">{results.createdBoats.length}</div>
+                <div className="text-2xl font-bold">{safeResults.createdBoats.length}</div>
                 <div className="text-xs text-gray-600">Boats</div>
               </div>
             </div>
@@ -58,7 +69,7 @@ export default function ImportSummary({ results, onStartNew }) {
             <div className="flex items-center gap-3">
               <MapPin className="w-8 h-8 text-purple-600" />
               <div>
-                <div className="text-2xl font-bold">{results.createdLocations.length}</div>
+                <div className="text-2xl font-bold">{safeResults.createdLocations.length}</div>
                 <div className="text-xs text-gray-600">Locations</div>
               </div>
             </div>
@@ -70,7 +81,7 @@ export default function ImportSummary({ results, onStartNew }) {
             <div className="flex items-center gap-3">
               <Briefcase className="w-8 h-8 text-indigo-600" />
               <div>
-                <div className="text-2xl font-bold">{results.createdJobs.length}</div>
+                <div className="text-2xl font-bold">{safeResults.createdJobs.length}</div>
                 <div className="text-xs text-gray-600">Jobs</div>
               </div>
             </div>
@@ -82,7 +93,7 @@ export default function ImportSummary({ results, onStartNew }) {
             <div className="flex items-center gap-3">
               <ListTodo className="w-8 h-8 text-green-600" />
               <div>
-                <div className="text-2xl font-bold">{results.createdTasks.length}</div>
+                <div className="text-2xl font-bold">{safeResults.createdTasks.length}</div>
                 <div className="text-xs text-gray-600">Tasks</div>
               </div>
             </div>
@@ -91,12 +102,12 @@ export default function ImportSummary({ results, onStartNew }) {
       </div>
 
       {/* Review List */}
-      {results.reviewList.length > 0 && (
+      {safeResults.reviewList.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-900">
               <AlertTriangle className="w-5 h-5" />
-              Items Requiring Review ({results.reviewList.length})
+              Items Requiring Review ({safeResults.reviewList.length})
             </CardTitle>
             <CardDescription>
               These items need your attention before scheduling
@@ -104,7 +115,7 @@ export default function ImportSummary({ results, onStartNew }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {results.reviewList.map((item, idx) => (
+              {safeResults.reviewList.map((item, idx) => (
                 <div key={idx} className="p-3 bg-amber-50 border border-amber-200 rounded">
                   <div className="flex items-start justify-between">
                     <div>
@@ -133,7 +144,7 @@ export default function ImportSummary({ results, onStartNew }) {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {results.createdJobs.map((job, idx) => (
+            {safeResults.createdJobs.map((job, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100">
                 <div>
                   <div className="font-medium text-sm">{job.title}</div>
@@ -152,7 +163,7 @@ export default function ImportSummary({ results, onStartNew }) {
 
       {/* Actions */}
       <div className="flex gap-4">
-        {results.parentJobId && (
+        {safeResults.parentJobId && (
           <Button onClick={handleViewJob} className="flex-1 bg-green-600 hover:bg-green-700">
             <Briefcase className="w-4 h-4 mr-2" />
             View Main Job
