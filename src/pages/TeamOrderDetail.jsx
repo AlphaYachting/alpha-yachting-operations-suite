@@ -252,47 +252,14 @@ export default function TeamOrderDetail() {
         </div>
         <div className="flex gap-2">
           {!isNew && workOrder && teamOrder.id && (
-            <Button
+            <PDFExportButton
+              documentType="PartnerBrief"
+              documentId={workOrder.id}
+              document={getPDFDocument()}
+              lineItems={getPDFLineItems()}
+              buttonText="Partner Brief"
               variant="outline"
-              onClick={async () => {
-                try {
-                  const template = await base44.entities.PDFTemplate.list();
-                  const partnerTemplate = template.find(t => t.template_type === 'PartnerBrief') || template[0];
-                  
-                  const response = await base44.functions.invoke('generatePartnerBriefPDF', {
-                    workOrderId: workOrder.id,
-                    teamOrderId: teamOrder.id,
-                    templateData: partnerTemplate
-                  });
-                  
-                  if (response.data.success) {
-                    // Convert base64 to blob for proper download
-                    const byteCharacters = atob(response.data.pdf);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                      byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    const blob = new Blob([byteArray], { type: 'application/pdf' });
-                    
-                    // Create blob URL and download
-                    const blobUrl = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = blobUrl;
-                    link.download = response.data.fileName;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(blobUrl);
-                  }
-                } catch (error) {
-                  console.error('PDF generation error:', error);
-                }
-              }}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Partner Brief PDF
-            </Button>
+            />
           )}
           <Button onClick={handleSave} disabled={saving} className="bg-purple-600 hover:bg-purple-700">
             <Save className="h-4 w-4 mr-2" />
