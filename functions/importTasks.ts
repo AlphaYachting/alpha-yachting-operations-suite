@@ -321,6 +321,19 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Update WorkOrders with total estimated duration hours
+    for (const woId in workOrderDurations) {
+      try {
+        await base44.entities.WorkOrder.update(woId, {
+          estimated_duration_hours: workOrderDurations[woId],
+        });
+        console.log(`[IMPORT_TASKS] Updated WorkOrder ${woId} with estimated_duration_hours: ${workOrderDurations[woId]}`);
+      } catch (err) {
+        errors.push(`Failed to update WorkOrder ${woId} with estimated duration: ${err.message}`);
+        console.error(`[IMPORT_TASKS] WorkOrder update failed for ${woId}:`, err);
+      }
+    }
+
     return Response.json({
       success: true,
       message: 'Import completed',
