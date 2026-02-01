@@ -103,9 +103,8 @@ Deno.serve(async (req) => {
 
     // Step 2: Create jobs and work orders
     const jobsByCustomer = {};
-    const jobsByServiceArea = {}; // For service area mode: customer_serviceArea -> job_id
     const workOrdersByCustomer = {};
-    const workOrdersByServiceArea = {}; // For service area mode
+    const workOrdersByServiceArea = {}; // For service area mode: customer_serviceArea -> work_order_id
 
     console.log('[IMPORT_TASKS] Starting job/task creation');
     console.log('[IMPORT_TASKS] Reverse mapping:', reverseMapping);
