@@ -145,12 +145,12 @@ export default function TasklistImport() {
               onBack={() => setCurrentStep(2)}
             />
           )}
-          {currentStep === 3 && (
+          {currentStep === 4 && (
             <ConfigStep
               config={config}
               onConfigChange={setConfig}
               onNext={() => handleConfigComplete(config)}
-              onBack={() => setCurrentStep(2)}
+              onBack={() => setCurrentStep(3)}
             />
           )}
           {currentStep === 4 && (
