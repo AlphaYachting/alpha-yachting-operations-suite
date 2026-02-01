@@ -233,7 +233,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   doc.setTextColor(0, 0, 0);
   doc.setFont(fontFamily, 'normal');
   const budgetRows = [
-    ['Total Approved Budget', `€${(document.approved_budget || 0).toFixed(2)}`],
+    ['Total Approved Budget', `€${(document.approved_budget_total || 0).toFixed(2)}`],
     ['Labor', `€${(document.labor_budget || 0).toFixed(2)}`],
     ['Travel', `€${(document.travel_budget || 0).toFixed(2)}`],
     ['Accommodation', `€${(document.accommodation_budget || 0).toFixed(2)}`],
