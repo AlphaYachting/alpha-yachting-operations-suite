@@ -145,18 +145,19 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     yPos += descLines.length * 4.5 + 5;
   }
   
-  // SAFETY & NOTES
+  // SAFETY & NOTES - always show section
+  yPos = drawSectionHeader('SAFETY & NOTES', yPos);
+  
   const safetyNotes = document.safety_notes || '';
   const partnerNotes = document.partner_notes || '';
   const combinedNotes = [safetyNotes, partnerNotes].filter(n => n.trim()).join('\n\n');
   
   if (combinedNotes) {
-    yPos = drawSectionHeader('SAFETY & NOTES', yPos);
     doc.setFont(fontFamily, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
     
-    // Split into bullet points if multiple paragraphs, otherwise render as-is
+    // Split into bullet points if multiple paragraphs
     const noteParagraphs = combinedNotes.split('\n').filter(p => p.trim());
     noteParagraphs.forEach(paragraph => {
       const bulletLine = `• ${paragraph.trim()}`;
@@ -164,8 +165,15 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
       doc.text(lines, margins.left + 2, yPos);
       yPos += lines.length * 4.5 + 2;
     });
-    yPos += 3;
+  } else {
+    // Show "None" if no notes
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text('None', margins.left + 2, yPos);
+    yPos += 5;
   }
+  yPos += 3;
   
   // TASKS & CHECKLIST
   if (lineItems && lineItems.length > 0) {
