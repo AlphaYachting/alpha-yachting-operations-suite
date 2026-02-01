@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
     const errors = [];
     const customerMap = {}; // Map customer names to IDs
     const boatMap = {}; // Map boat names to IDs
+    const workOrderDurations = {}; // Map work order IDs to total estimated duration hours
 
     // Step 1: Create/find customers and boats
     const uniqueCustomers = new Set();
@@ -306,7 +307,11 @@ Deno.serve(async (req) => {
           });
           createdTasks.push(newTask);
           console.log(`[IMPORT_TASKS] Created task: ${newTask.id}`);
-        } catch (err) {
+
+          // Accumulate estimated hours for work order
+          const estimatedDurationHours = estMinutes / 60;
+          workOrderDurations[workOrderId] = (workOrderDurations[workOrderId] || 0) + estimatedDurationHours;
+          } catch (err) {
           errors.push(`Row ${rowIdx + 1}: Failed to create task "${taskTitle}": ${err.message}`);
           console.error(`[IMPORT_TASKS] Task creation failed:`, err);
         }
