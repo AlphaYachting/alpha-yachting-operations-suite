@@ -57,6 +57,7 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="grouped-jobs">Create Jobs + Tasks (grouped by project/boat)</SelectItem>
+              <SelectItem value="work-orders-by-service-area">Create Work Orders by Service Area</SelectItem>
               <SelectItem value="single-job">Attach all Tasks to One Main Job</SelectItem>
             </SelectContent>
           </Select>
@@ -103,6 +104,8 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
           <p className="text-xs text-gray-600">
             {safeConfig.importMode === 'single-job' 
               ? '📌 All Excel rows will be imported as Tasks under one main Job. Customer/Boat info stored in task details.'
+              : safeConfig.importMode === 'work-orders-by-service-area'
+              ? '📌 Creates separate Work Orders for each Service Area, allowing independent assignment to different teams/professions.'
               : '📌 Creates separate Jobs grouped by Project/Customer/Boat/Location/Service/Module.'}
           </p>
         </div>

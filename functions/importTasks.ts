@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
     // Step 2: Create jobs and work orders
     const jobsByCustomer = {};
     const workOrdersByCustomer = {};
+    const workOrdersByServiceArea = {}; // For service area mode
 
     console.log('[IMPORT_TASKS] Starting job/task creation with reverse mapping:', reverseMapping);
 
@@ -163,31 +164,66 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Get or create work order for customer
-        if (!workOrdersByCustomer[customerName]) {
-          try {
-            const woTitle = `Work Order - ${customerName}`;
-            const scheduledDate = config?.workOrderScheduledDate || new Date().toISOString().split('T')[0];
-            
-            console.log(`[IMPORT_TASKS] Creating work order for ${customerName}:`, {
-              jobId: jobsByCustomer[customerName],
-              scheduledDate
-            });
+        // Get or create work order based on import mode
+        let workOrderId;
+        
+        if (config?.importMode === 'work-orders-by-service-area') {
+          // Create a work order per service area
+          const workOrderKey = `${customerName}_${serviceArea}`;
+          if (!workOrdersByServiceArea[workOrderKey]) {
+            try {
+              const woTitle = `${serviceArea || 'Uncategorized'} - ${customerName}`;
+              const scheduledDate = config?.workOrderScheduledDate || new Date().toISOString().split('T')[0];
+              
+              console.log(`[IMPORT_TASKS] Creating work order for service area ${serviceArea}:`, {
+                jobId: jobsByCustomer[customerName],
+                scheduledDate
+              });
 
-            const newWorkOrder = await base44.entities.WorkOrder.create({
-              job_id: jobsByCustomer[customerName],
-              title: woTitle,
-              description: 'Imported from task list',
-              scheduled_date: scheduledDate,
-              status: 'Draft'
-            });
-            workOrdersByCustomer[customerName] = newWorkOrder.id;
-            console.log(`[IMPORT_TASKS] Created work order: ${newWorkOrder.id}`);
-          } catch (err) {
-            errors.push(`Failed to create work order for customer "${customerName}": ${err.message}`);
-            console.error(`[IMPORT_TASKS] Work order creation failed:`, err);
-            continue;
+              const newWorkOrder = await base44.entities.WorkOrder.create({
+                job_id: jobsByCustomer[customerName],
+                title: woTitle,
+                description: `Service Area: ${serviceArea || 'Uncategorized'}`,
+                scheduled_date: scheduledDate,
+                status: 'Draft'
+              });
+              workOrdersByServiceArea[workOrderKey] = newWorkOrder.id;
+              console.log(`[IMPORT_TASKS] Created work order by service area: ${newWorkOrder.id}`);
+            } catch (err) {
+              errors.push(`Failed to create work order for "${serviceArea}": ${err.message}`);
+              console.error(`[IMPORT_TASKS] Work order creation failed:`, err);
+              continue;
+            }
           }
+          workOrderId = workOrdersByServiceArea[workOrderKey];
+        } else {
+          // Original behavior: work order per customer
+          if (!workOrdersByCustomer[customerName]) {
+            try {
+              const woTitle = `Work Order - ${customerName}`;
+              const scheduledDate = config?.workOrderScheduledDate || new Date().toISOString().split('T')[0];
+              
+              console.log(`[IMPORT_TASKS] Creating work order for ${customerName}:`, {
+                jobId: jobsByCustomer[customerName],
+                scheduledDate
+              });
+
+              const newWorkOrder = await base44.entities.WorkOrder.create({
+                job_id: jobsByCustomer[customerName],
+                title: woTitle,
+                description: 'Imported from task list',
+                scheduled_date: scheduledDate,
+                status: 'Draft'
+              });
+              workOrdersByCustomer[customerName] = newWorkOrder.id;
+              console.log(`[IMPORT_TASKS] Created work order: ${newWorkOrder.id}`);
+            } catch (err) {
+              errors.push(`Failed to create work order for customer "${customerName}": ${err.message}`);
+              console.error(`[IMPORT_TASKS] Work order creation failed:`, err);
+              continue;
+            }
+          }
+          workOrderId = workOrdersByCustomer[customerName];
         }
 
         // Create task linked to work order
@@ -195,12 +231,12 @@ Deno.serve(async (req) => {
           const estMinutes = (row[reverseMapping['Time Required (hrs)']] || 0) * 60;
           
           console.log(`[IMPORT_TASKS] Creating task: ${taskTitle}`, {
-            workOrderId: workOrdersByCustomer[customerName],
+            workOrderId,
             estimatedMinutes: estMinutes
           });
 
           const newTask = await base44.entities.Task.create({
-            work_order_id: workOrdersByCustomer[customerName],
+            work_order_id: workOrderId,
             title: taskTitle,
             description: taskDescription || '',
             status: 'Not Started',
