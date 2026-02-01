@@ -108,7 +108,7 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
                   {serviceArea || 'Uncategorized'}
                 </div>
                 <div className="text-xs text-gray-600 mt-1">
-                  {group.rows.length} tasks
+                  {group?.rows?.length || 0} tasks
                 </div>
               </div>
             ))}
