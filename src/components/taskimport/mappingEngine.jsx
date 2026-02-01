@@ -95,21 +95,22 @@ export function autoMapHeaders(headers, debugMode = false) {
   };
 
   // Try to match each header
-  for (const header of normalized) {
-    let bestMatch = null;
-    let bestScore = 0.5; // Minimum confidence threshold
+   for (const header of normalized) {
+     let bestMatch = null;
+     let bestScore = 0.5; // Minimum confidence threshold
 
-    // Test exact alias match first
-    for (const field of TARGET_FIELDS) {
-      for (const alias of field.aliases) {
-        if (header.normalized === alias) {
-          bestMatch = field.value;
-          bestScore = 1.0;
-          break;
-        }
-      }
-      if (bestScore === 1.0) break;
-    }
+     // Test exact alias match first (normalize aliases for comparison)
+     for (const field of TARGET_FIELDS) {
+       for (const alias of field.aliases) {
+         const normalizedAlias = normalizeHeader(alias); // Normalize alias too!
+         if (header.normalized === normalizedAlias) {
+           bestMatch = field.value;
+           bestScore = 1.0;
+           break;
+         }
+       }
+       if (bestScore === 1.0) break;
+     }
 
     // If no exact match, try fuzzy matching (prefer longer alias matches)
     if (bestScore < 1.0) {
