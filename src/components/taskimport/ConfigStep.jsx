@@ -19,21 +19,17 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
     loadJobs();
   }, []);
 
-  // Initialize config with defaults if empty
-  React.useEffect(() => {
-    if (!config.importMode) {
-      onConfigChange({
-        importMode: 'grouped-jobs',
-        parentJobId: null,
-        newJobTitle: '',
-        jobStatus: 'Imported – Review Required',
-        taskStatus: 'Draft',
-        workOrderScheduledDate: '',
-        dryRunOnly: false,
-        ...config
-      });
-    }
-  }, []);
+  // Ensure config has all required fields
+  const safeConfig = React.useMemo(() => ({
+    importMode: config?.importMode || 'grouped-jobs',
+    parentJobId: config?.parentJobId || null,
+    newJobTitle: config?.newJobTitle || '',
+    jobStatus: config?.jobStatus || 'Imported – Review Required',
+    taskStatus: config?.taskStatus || 'Draft',
+    workOrderScheduledDate: config?.workOrderScheduledDate || '',
+    dryRunOnly: config?.dryRunOnly === true,
+    ...config
+  }), [config]);
 
   const updateConfig = (key, value) => {
     onConfigChange({ ...config, [key]: value });
@@ -53,7 +49,7 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
           <Label className="text-base font-semibold">Import Mode</Label>
           
           <Select
-             value={config.importMode || ''}
+             value={safeConfig.importMode}
              onValueChange={(value) => updateConfig('importMode', value)}
            >
             <SelectTrigger>
@@ -65,12 +61,12 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
             </SelectContent>
           </Select>
 
-          {config.importMode === 'single-job' && (
+          {safeConfig.importMode === 'single-job' && (
             <div className="space-y-4 mt-4">
               <div>
                 <Label>Parent Job</Label>
                 <Select
-                  value={(config.parentJobId || 'new').toString()}
+                  value={(safeConfig.parentJobId || 'new').toString()}
                   onValueChange={(value) => updateConfig('parentJobId', value === 'new' ? null : value)}
                 >
                   <SelectTrigger className="mt-2">
@@ -87,11 +83,11 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
                 </Select>
               </div>
 
-              {!config.parentJobId && (
+              {!safeConfig.parentJobId && (
                 <div>
                   <Label>New Job Title</Label>
                   <Input
-                    value={config.newJobTitle}
+                    value={safeConfig.newJobTitle}
                     onChange={(e) => updateConfig('newJobTitle', e.target.value)}
                     className="mt-2"
                     placeholder="e.g., Winter Service"
@@ -105,7 +101,7 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
           )}
 
           <p className="text-xs text-gray-600">
-            {config.importMode === 'single-job' 
+            {safeConfig.importMode === 'single-job' 
               ? '📌 All Excel rows will be imported as Tasks under one main Job. Customer/Boat info stored in task details.'
               : '📌 Creates separate Jobs grouped by Project/Customer/Boat/Location/Service/Module.'}
           </p>
@@ -115,7 +111,7 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
         <div>
           <Label>Default Job Status</Label>
           <Input
-            value={config.jobStatus}
+            value={safeConfig.jobStatus}
             onChange={(e) => updateConfig('jobStatus', e.target.value)}
             className="mt-2"
             placeholder="e.g., Imported – Review Required"
@@ -129,7 +125,7 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
         <div>
           <Label>Default Task Status</Label>
           <Input
-            value={config.taskStatus}
+            value={safeConfig.taskStatus}
             onChange={(e) => updateConfig('taskStatus', e.target.value)}
             className="mt-2"
             placeholder="e.g., Draft"
@@ -147,7 +143,7 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
           </p>
           <Input
             type="date"
-            value={config.workOrderScheduledDate || ''}
+            value={safeConfig.workOrderScheduledDate}
             onChange={(e) => updateConfig('workOrderScheduledDate', e.target.value)}
             required
           />
@@ -162,7 +158,7 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
             </p>
           </div>
           <Switch
-            checked={config.dryRunOnly}
+            checked={safeConfig.dryRunOnly}
             onCheckedChange={(checked) => updateConfig('dryRunOnly', checked)}
           />
         </div>
