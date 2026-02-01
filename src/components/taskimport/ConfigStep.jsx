@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
-export default function ConfigStep({ config, onConfigChange, onNext, onBack, isProcessing }) {
+export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack, isProcessing }) {
   const [existingJobs, setExistingJobs] = React.useState([]);
 
   React.useEffect(() => {
@@ -19,13 +19,18 @@ export default function ConfigStep({ config, onConfigChange, onNext, onBack, isP
     loadJobs();
   }, []);
 
-  // Add WorkOrder Date field if not in config
+  // Initialize config with defaults if empty
   React.useEffect(() => {
-    if (!config.workOrderDateMode) {
+    if (!config.importMode) {
       onConfigChange({
-        ...config,
-        workOrderDateMode: 'column', // 'column', 'single', or 'priority-based'
-        workOrderBaseDate: null
+        importMode: 'grouped-jobs',
+        parentJobId: null,
+        newJobTitle: '',
+        jobStatus: 'Imported – Review Required',
+        taskStatus: 'Draft',
+        workOrderScheduledDate: '',
+        dryRunOnly: false,
+        ...config
       });
     }
   }, []);
