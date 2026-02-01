@@ -19,12 +19,20 @@ export default function ImportStep({ parsedData = [], fieldMapping = {}, config 
     setError(null);
 
     try {
-      // Call the import function
+      console.log('[IMPORT STEP] Starting import with:', {
+        rows: parsedData.length,
+        mappedFields: Object.keys(fieldMapping).length,
+        mappingValues: Object.values(fieldMapping),
+        config
+      });
+
       const response = await base44.functions.invoke('importTasks', {
         data: parsedData,
         mapping: fieldMapping,
         config: config
       });
+
+      console.log('[IMPORT STEP] Import successful:', response);
 
       setImportStatus({
         success: true,
@@ -34,10 +42,20 @@ export default function ImportStep({ parsedData = [], fieldMapping = {}, config 
 
       onComplete(response.data);
     } catch (err) {
-      setError(err.message || 'Import failed');
+      console.error('[IMPORT STEP] Import error:', {
+        message: err.message,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        errorData: err.response?.data,
+        fullError: err
+      });
+
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Import failed';
+      
+      setError(errorMessage);
       setImportStatus({
         success: false,
-        message: err.message || 'Import failed',
+        message: errorMessage,
         error: err
       });
     } finally {
