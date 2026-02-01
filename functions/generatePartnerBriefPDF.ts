@@ -376,6 +376,23 @@ Deno.serve(async (req) => {
     const boat = boats.find(b => b.id === job?.boat_id);
     const location = locations.find(l => l.id === job?.location_id);
 
+    // Debug logging to identify missing data
+    console.log('PDF Generation Debug:', {
+      workOrderId: workOrder.id,
+      jobId: workOrder.job_id,
+      jobFound: !!job,
+      boatId: job?.boat_id,
+      boatFound: !!boat,
+      boatData: boat ? { vessel_name: boat.vessel_name, vessel_type: boat.vessel_type, length_m: boat.length_m } : null,
+      teamOrderBudget: {
+        approved_budget_total: teamOrder.approved_budget_total,
+        labor_budget: teamOrder.labor_budget,
+        travel_budget: teamOrder.travel_budget,
+        accommodation_budget: teamOrder.accommodation_budget,
+        per_diem_budget: teamOrder.per_diem_budget
+      }
+    });
+
     // Build document and line items for jsPDF
     const document = buildPartnerBriefDocument(workOrder, teamOrder, job, customer, boat, location, tasks, technicians);
     const lineItems = buildPartnerBriefLineItems(tasks, teamOrder);
