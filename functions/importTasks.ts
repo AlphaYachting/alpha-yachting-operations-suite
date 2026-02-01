@@ -281,7 +281,7 @@ Deno.serve(async (req) => {
 
         // Create task linked to work order
         try {
-          const estMinutes = (row[reverseMapping['Time Required (hrs)']] || 0) * 60;
+          const estMinutes = (row[reverseMapping.estimatedHours] || 0) * 60;
           
           console.log(`[IMPORT_TASKS] Creating task: ${taskTitle}`, {
             workOrderId,
