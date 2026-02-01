@@ -111,7 +111,7 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
         <div className="border rounded-lg p-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="font-semibold text-sm text-gray-900">
-              Service Areas Detected ({Object.keys(results.serviceAreaGroups || {}).length})
+              Service Areas Detected ({Object.keys((results?.serviceAreaGroups) || {}).length})
             </h3>
             <button 
               onClick={() => setShowDiagnostics(!showDiagnostics)}
@@ -134,10 +134,10 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
           )}
 
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {Object.entries(results.serviceAreaGroups || {}).length === 0 ? (
+            {Object.entries((results?.serviceAreaGroups) || {}).length === 0 ? (
               <p className="text-sm text-gray-500 italic">No service areas detected</p>
             ) : (
-              Object.entries(results.serviceAreaGroups || {}).map(([serviceArea, group], idx) => (
+              Object.entries((results?.serviceAreaGroups) || {}).map(([serviceArea, group], idx) => (
                 <div 
                   key={idx} 
                   className={`p-3 rounded text-sm border ${
