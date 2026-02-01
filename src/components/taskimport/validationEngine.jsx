@@ -33,6 +33,8 @@ export function validateImportData(parsedData, fieldMapping, config) {
   if (parsedData.length > 0) {
     console.log('[VALIDATION DEBUG] Field Mapping:', fieldMapping);
     console.log('[VALIDATION DEBUG] First Row Keys:', Object.keys(parsedData[0]));
+    console.log('[VALIDATION DEBUG] First Row Full Data:', parsedData[0]);
+    console.log('[VALIDATION DEBUG] Service Area mapping target:', Object.entries(fieldMapping).find(([_, v]) => v === 'serviceArea'));
   }
 
   // Validate each row
