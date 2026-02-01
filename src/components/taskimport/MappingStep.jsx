@@ -33,23 +33,23 @@ const TARGET_FIELDS = [
   { value: 'dueDate', label: 'Due Date', required: false }
 ];
 
-export default function MappingStep({ headers, mapping, onMappingChange, onNext, onBack }) {
-  const handleMappingChange = (header, targetField) => {
-    const newMapping = { ...mapping };
-    // Remove this target from any other header
-    Object.keys(newMapping).forEach(key => {
-      if (newMapping[key] === targetField) delete newMapping[key];
-    });
-    // Set new mapping
-    if (targetField) {
-      newMapping[header] = targetField;
-    }
-    onMappingChange(newMapping);
-  };
+export default function MappingStep({ headers = [], mapping = {}, onMappingChange, onNext, onBack }) {
+   const handleMappingChange = (header, targetField) => {
+     const newMapping = { ...mapping };
+     // Remove this target from any other header
+     Object.keys(newMapping).forEach(key => {
+       if (newMapping[key] === targetField) delete newMapping[key];
+     });
+     // Set new mapping
+     if (targetField) {
+       newMapping[header] = targetField;
+     }
+     onMappingChange(newMapping);
+   };
 
-  const getMappedCount = () => {
-    return Object.values(mapping).filter(Boolean).length;
-  };
+   const getMappedCount = () => {
+     return Object.values(mapping || {}).filter(Boolean).length;
+   };
 
   const getRequiredMapped = () => {
     const required = TARGET_FIELDS.filter(f => f.required).map(f => f.value);
