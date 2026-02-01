@@ -70,8 +70,13 @@ export default function TasklistImport() {
   };
 
   const handleValidationProceed = () => {
-    if (debugMode) console.log('[IMPORTER] Step 5→6: Proceeding with import');
+    if (debugMode) console.log('[IMPORTER] Step 5→6: Proceeding to import preview');
     setCurrentStep(6);
+  };
+
+  const handlePreviewProceed = () => {
+    if (debugMode) console.log('[IMPORTER] Step 6→7: Preview complete, proceeding with import');
+    setCurrentStep(7);
   };
 
   const handleImportComplete = (results) => {
