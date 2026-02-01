@@ -352,9 +352,9 @@ export default function WorkOrderDetail() {
       
       // Customer & Vessel
       customer_name: customerName,
-      vessel_name: boat?.vessel_name || 'Unknown',
-      vessel_type: boat?.vessel_type || 'Unknown',
-      vessel_length: boat?.length_m ? `${boat.length_m}m` : 'Unknown',
+      boat_name: boat?.vessel_name || 'Unknown',
+      boat_type: boat?.vessel_type || 'Unknown',
+      boat_length: boat?.length_m ? `${boat.length_m}m` : 'Unknown',
       
       // Location & Access
       location_name: location?.name || 'Unknown',
@@ -365,11 +365,11 @@ export default function WorkOrderDetail() {
       work_description: workOrder.description || '',
       
       // Cost Coverage & Budget (structured)
-      budget_total: teamOrder.approved_budget_total || 0,
-      budget_labor: teamOrder.labor_budget || 0,
-      budget_travel: teamOrder.travel_budget || 0,
-      budget_accommodation: teamOrder.accommodation_budget || 0,
-      budget_per_diem: teamOrder.per_diem_budget || 0,
+      approved_budget_total: teamOrder.approved_budget_total || 0,
+      labor_budget: teamOrder.labor_budget || 0,
+      travel_budget: teamOrder.travel_budget || 0,
+      accommodation_budget: teamOrder.accommodation_budget || 0,
+      per_diem_budget: teamOrder.per_diem_budget || 0,
       
       // Covered Costs (policies)
       covered_costs: {
