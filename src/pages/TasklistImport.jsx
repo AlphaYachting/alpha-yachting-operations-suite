@@ -62,7 +62,7 @@ export default function TasklistImport() {
       {/* Progress Steps */}
       <div className="flex items-center justify-between">
         {steps.map((step, idx) => (
-          <React.Fragment key={step.number}>
+          <div key={step.number} className="flex items-center flex-1">
             <div className="flex flex-col items-center">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center ${
