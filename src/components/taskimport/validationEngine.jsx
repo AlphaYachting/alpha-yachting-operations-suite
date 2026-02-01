@@ -75,9 +75,9 @@ export function validateImportData(parsedData, fieldMapping, config) {
     serviceAreaGroups[serviceArea].rows.push(rowNum);
     serviceAreaGroups[serviceArea].count++;
 
-    // Count tasks (if title column is mapped and has value)
+    // Count tasks (if title column is mapped and has value AND service area is assigned)
     const titleCol = Object.entries(fieldMapping).find(([_, v]) => v === 'taskTitle')?.[0];
-    if (titleCol && row[titleCol] && String(row[titleCol]).trim() !== '') {
+    if (titleCol && row[titleCol] && String(row[titleCol]).trim() !== '' && serviceArea !== 'Uncategorized') {
       taskCount++;
     }
   });
