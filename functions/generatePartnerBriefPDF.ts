@@ -420,7 +420,18 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       pdf: base64Pdf,
-      fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`
+      fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`,
+      debug: {
+        boat_from_db: boat ? { vessel_type: boat.vessel_type, length_m: boat.length_m } : null,
+        teamOrder_from_db: teamOrder ? { 
+          approved_budget_total: teamOrder.approved_budget_total,
+          labor_budget: teamOrder.labor_budget 
+        } : null,
+        document_boat_type: documentDebug.boat_type,
+        document_boat_length: documentDebug.boat_length,
+        document_approved_budget: documentDebug.approved_budget,
+        document_labor_budget: documentDebug.labor_budget
+      }
     });
   } catch (error) {
     return Response.json({
