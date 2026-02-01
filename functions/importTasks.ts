@@ -242,7 +242,10 @@ Deno.serve(async (req) => {
                 status: 'Draft'
               });
               workOrdersByServiceArea[workOrderKey] = newWorkOrder.id;
-              console.log(`[IMPORT_TASKS] Created work order by service area: ${newWorkOrder.id}`);
+              console.log(`[IMPORT_TASKS] Created work order by service area: ${newWorkOrder.id}`, {
+                job_id: jobId,
+                workOrderKey
+              });
             } catch (err) {
               errors.push(`Failed to create work order for "${serviceArea}": ${err.message}`);
               console.error(`[IMPORT_TASKS] Work order creation failed:`, err);
