@@ -22,7 +22,13 @@ const SKILLS = [
   'Sealing',
   'Diagnostics',
   'Installations',
-  'General Service'
+  'General Service',
+  'Sail Making',
+  'Tent Making',
+  'Cushion Making',
+  'Carpentry',
+  'Woodworking',
+  'Steel Work'
 ];
 
 const LANGUAGES = ['German', 'English', 'Italian', 'Slovenian', 'Croatian'];
