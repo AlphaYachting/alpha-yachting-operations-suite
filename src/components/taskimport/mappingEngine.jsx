@@ -8,7 +8,7 @@ const TARGET_FIELDS = [
   { value: 'boatModel', label: 'Boat Type / Yacht Model', aliases: ['boat', 'yacht', 'vessel', 'boot', 'modell', 'type'] },
   { value: 'boatLength', label: 'Boat Length (m)', aliases: ['length', 'länge', 'boat length', 'size'] },
   { value: 'locationMarina', label: 'Location / Marina', aliases: ['location', 'marina', 'ort', 'hafen', 'standort'] },
-  { value: 'serviceArea', label: 'Service Area', aliases: ['area', 'service', 'region', 'bereich'] },
+  { value: 'serviceArea', label: 'Service Area', aliases: ['service area', 'servicearea', 'area', 'service', 'region', 'bereich'] },
   { value: 'module', label: 'Subproject / Module', aliases: ['module', 'subproject', 'modul', 'project'] },
   { value: 'taskId', label: 'Task ID', aliases: ['id', 'task id', 'nr', 'nummer'] },
   { value: 'taskTitle', label: 'Task Title', aliases: ['task', 'title', 'aufgabe', 'beschreibung', 'name'] },
