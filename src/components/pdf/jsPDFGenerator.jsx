@@ -1,6 +1,12 @@
 import { jsPDF } from 'jspdf';
+import { generatePartnerBriefPDF } from './PartnerBriefTemplate';
 
 export async function generatePDFWithJsPDF(document, lineItems, template, payments = []) {
+  // Route to Partner Brief template if applicable
+  if (document.document_type === 'PartnerBrief') {
+    return await generatePartnerBriefPDF(document, lineItems, template);
+  }
+  
   const isInvoice = document.document_type === 'Invoice';
   const currency = document.currency === 'EUR' ? '€' : document.currency;
 

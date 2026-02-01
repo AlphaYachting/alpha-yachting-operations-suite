@@ -1,316 +1,292 @@
-import React from 'react';
+import { jsPDF } from 'jspdf';
 
-export default function PartnerBriefTemplate({ workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template }) {
-  const assignedTechs = technicians.filter(t => workOrder.assigned_technicians?.includes(t.id));
-  const customerName = customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown';
+export async function generatePartnerBriefPDF(document, lineItems, template) {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   
-  const costPolicies = [];
-  if (teamOrder.accommodation_paid) {
-    costPolicies.push(`Accommodation: up to €${teamOrder.accommodation_max_per_night || 'TBD'}/night`);
+  const margins = {
+    top: 20,
+    right: 15,
+    bottom: 20,
+    left: 15
+  };
+  
+  const contentWidth = pageWidth - margins.left - margins.right;
+  let yPos = margins.top;
+  
+  const primaryColor = hexToRgb(template.primary_color || '#06b6d4');
+  const fontFamily = 'helvetica';
+  
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 6, g: 182, b: 212 };
   }
-  if (teamOrder.meals_per_diem_paid) {
-    costPolicies.push(`Per Diem: €${teamOrder.per_diem_rate_per_day || 'TBD'}/day`);
+  
+  function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' });
   }
-  if (teamOrder.mileage_paid) {
-    costPolicies.push(`Mileage: €${teamOrder.mileage_rate_per_km || '0.35'}/km (cap: €${teamOrder.mileage_cap_total || 'TBD'})`);
+  
+  function drawSectionHeader(title, y) {
+    doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+    doc.rect(margins.left, y - 4, contentWidth, 7, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(10);
+    doc.text(title, margins.left + 2, y);
+    return y + 8;
   }
-  if (teamOrder.travel_time_paid) {
-    costPolicies.push(`Travel Time: €${teamOrder.travel_time_rate_per_hour || 'TBD'}/hour`);
+  
+  function drawField(label, value, y, labelWidth = 40) {
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(label, margins.left, y);
+    
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    const valueLines = doc.splitTextToSize(value || '-', contentWidth - labelWidth);
+    doc.text(valueLines, margins.left + labelWidth, y);
+    
+    return y + (valueLines.length * 4.5) + 1;
   }
-
-  return (
-    <div id="partner-brief-print" className="print-document-container" style={{ fontFamily: template?.font_family || 'Arial' }}>
-      <style>{`
-        @media print {
-          @page {
-            size: A4;
-            margin: ${template?.margin_top_mm || 20}mm ${template?.margin_right_mm || 20}mm ${template?.margin_bottom_mm || 20}mm ${template?.margin_left_mm || 20}mm;
-          }
-          body * { visibility: hidden; }
-          #partner-brief-print, #partner-brief-print * { visibility: visible; }
-          #partner-brief-print {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-        }
-      `}</style>
-
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        {template?.logo_url && (
-          <img src={template.logo_url} alt="Logo" style={{ height: `${template.logo_height_mm || 20}mm` }} />
-        )}
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: `${template?.font_size_company_name || 20}pt`, fontWeight: 'bold', color: template?.primary_color || '#2563eb' }}>
-            {template?.company_name || 'Alpha Yachting'}
-          </div>
-          {template?.company_address && (
-            <div style={{ fontSize: `${template?.font_size_body - 2 || 9}pt`, color: '#555' }}>
-              {template.company_address}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <h1 style={{ color: template?.primary_color || '#2563eb', fontSize: `${template?.font_size_heading || 18}pt`, borderBottom: `2px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '6px', marginBottom: '10px' }}>
-        PARTNER BRIEFING
-      </h1>
-      <div style={{ color: '#999', fontSize: '8pt', marginBottom: '15px' }}>
-        Generated: {new Date().toLocaleString('de-DE')}
-      </div>
-
-      {/* Work Order Information */}
-      <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-        WORK ORDER INFORMATION
-      </h2>
-      <div style={{ marginBottom: '12px' }}>
-        <div style={{ marginBottom: '6px' }}>
-          <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Work Order #</strong>
-          <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-            {workOrder.work_order_number || workOrder.id.slice(-6)}
-          </div>
-        </div>
-        <div style={{ marginBottom: '6px' }}>
-          <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Title</strong>
-          <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-            {workOrder.title}
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-          <div>
-            <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Status</strong>
-            <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-              {workOrder.status}
-            </div>
-          </div>
-          <div>
-            <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Scheduled Date</strong>
-            <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-              {workOrder.scheduled_date || 'TBD'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Customer & Vessel */}
-      <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-        CUSTOMER & VESSEL
-      </h2>
-      <div style={{ marginBottom: '12px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '10px' }}>
-          <div>
-            <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Customer</strong>
-            <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-              {customerName}
-            </div>
-          </div>
-          <div>
-            <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Vessel</strong>
-            <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-              {boat?.vessel_name || 'Unknown'}
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-          <div>
-            <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Type</strong>
-            <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-              {boat?.vessel_type || 'Unknown'}
-            </div>
-          </div>
-          <div>
-            <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Length</strong>
-            <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-              {boat?.length_m ? boat.length_m + 'm' : 'Unknown'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Location & Access */}
-      <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-        LOCATION & ACCESS
-      </h2>
-      <div style={{ marginBottom: '12px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '10px' }}>
-          <div>
-            <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Location</strong>
-            <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-              {location?.name || 'Unknown'}
-            </div>
-          </div>
-          <div>
-            <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Address</strong>
-            <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-              {location?.address || '-'}
-            </div>
-          </div>
-        </div>
-        <div>
-          <strong style={{ color: template?.primary_color || '#2563eb', fontSize: '8pt' }}>Access Notes</strong>
-          <div style={{ fontSize: `${template?.font_size_body || 11}pt`, marginTop: '2px' }}>
-            {location?.access_notes || 'None'}
-          </div>
-        </div>
-      </div>
-
-      {/* Work Description */}
-      {workOrder.description && (
-        <>
-          <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-            WORK DESCRIPTION
-          </h2>
-          <div style={{ marginBottom: '12px', whiteSpace: 'pre-wrap', fontSize: `${template?.font_size_body - 1 || 10}pt` }}>
-            {workOrder.description}
-          </div>
-        </>
-      )}
-
-      {/* Tasks */}
-      {tasks.length > 0 && (
-        <>
-          <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-            TASKS & CHECKLIST
-          </h2>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt', marginBottom: '12px' }}>
-            <thead>
-              <tr style={{ backgroundColor: template?.primary_color || '#2563eb', color: 'white' }}>
-                <th style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'left' }}>#</th>
-                <th style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'left' }}>Task</th>
-                <th style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'left' }}>Est. Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map((task, idx) => (
-                <tr key={task.id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9' }}>
-                  <td style={{ padding: '6px', border: '1px solid #ddd' }}>{idx + 1}</td>
-                  <td style={{ padding: '6px', border: '1px solid #ddd' }}>{task.title}</td>
-                  <td style={{ padding: '6px', border: '1px solid #ddd' }}>
-                    {task.estimated_minutes ? Math.round(task.estimated_minutes / 60) + 'h' : '-'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-
-      {/* Budget */}
-      <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-        COST COVERAGE & BUDGET
-      </h2>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt', marginBottom: '12px' }}>
-        <thead>
-          <tr style={{ backgroundColor: template?.primary_color || '#2563eb', color: 'white' }}>
-            <th style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'left' }}>Budget Category</th>
-            <th style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'left' }}>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr style={{ backgroundColor: 'white' }}>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>Total Approved Budget</td>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>€{(teamOrder.approved_budget_total || 0).toFixed(2)}</td>
-          </tr>
-          <tr style={{ backgroundColor: '#f9f9f9' }}>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>Labor</td>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>€{(teamOrder.labor_budget || 0).toFixed(2)}</td>
-          </tr>
-          <tr style={{ backgroundColor: 'white' }}>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>Travel</td>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>€{(teamOrder.travel_budget || 0).toFixed(2)}</td>
-          </tr>
-          <tr style={{ backgroundColor: '#f9f9f9' }}>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>Accommodation</td>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>€{(teamOrder.accommodation_budget || 0).toFixed(2)}</td>
-          </tr>
-          <tr style={{ backgroundColor: 'white' }}>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>Per Diem</td>
-            <td style={{ padding: '6px', border: '1px solid #ddd' }}>€{(teamOrder.per_diem_budget || 0).toFixed(2)}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      {/* Covered Costs */}
-      <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-        COVERED COSTS
-      </h2>
-      <div style={{ marginBottom: '12px' }}>
-        {costPolicies.length > 0 ? (
-          <ul style={{ marginLeft: '20px', fontSize: `${template?.font_size_body || 11}pt` }}>
-            {costPolicies.map((policy, idx) => (
-              <li key={idx}>{policy}</li>
-            ))}
-            {teamOrder.other_reimbursables_allowed && (
-              <li>Other reimbursables allowed (pre-approval required)</li>
-            )}
-          </ul>
-        ) : (
-          <p style={{ fontSize: `${template?.font_size_body || 11}pt` }}>No additional costs covered</p>
-        )}
-      </div>
-
-      {/* Approval Requirements */}
-      {(teamOrder.requires_preapproval_over > 0 || teamOrder.budget_exceed_requires_approval) && (
-        <>
-          <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-            APPROVAL REQUIREMENTS
-          </h2>
-          <div style={{ marginBottom: '12px' }}>
-            <ul style={{ marginLeft: '20px', fontSize: `${template?.font_size_body || 11}pt` }}>
-              {teamOrder.requires_preapproval_over > 0 && (
-                <li>Purchases over €{teamOrder.requires_preapproval_over} require pre-approval</li>
-              )}
-              {teamOrder.budget_exceed_requires_approval && (
-                <li>Budget overages require approval before proceeding</li>
-              )}
-            </ul>
-          </div>
-        </>
-      )}
-
-      {/* Assigned Team */}
-      <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-        ASSIGNED TEAM
-      </h2>
-      {assignedTechs.length > 0 ? (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9pt', marginBottom: '12px' }}>
-          <thead>
-            <tr style={{ backgroundColor: template?.primary_color || '#2563eb', color: 'white' }}>
-              <th style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'left' }}>Name</th>
-              <th style={{ padding: '6px', border: '1px solid #ddd', textAlign: 'left' }}>Phone</th>
-            </tr>
-          </thead>
-          <tbody>
-            {assignedTechs.map((tech, idx) => (
-              <tr key={tech.id} style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#f9f9f9' }}>
-                <td style={{ padding: '6px', border: '1px solid #ddd' }}>{tech.first_name} {tech.last_name}</td>
-                <td style={{ padding: '6px', border: '1px solid #ddd' }}>{tech.phone || '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p style={{ fontSize: `${template?.font_size_body || 11}pt` }}>No technicians assigned</p>
-      )}
-
-      {/* Special Notes */}
-      {teamOrder.partner_notes && (
-        <>
-          <h2 style={{ color: template?.primary_color || '#2563eb', fontSize: '12pt', marginTop: '15px', marginBottom: '8px', borderBottom: `1px solid ${template?.primary_color || '#2563eb'}`, paddingBottom: '4px' }}>
-            SPECIAL NOTES
-          </h2>
-          <div style={{ marginBottom: '12px', whiteSpace: 'pre-wrap', fontSize: `${template?.font_size_body - 1 || 10}pt` }}>
-            {teamOrder.partner_notes}
-          </div>
-        </>
-      )}
-
-      {/* Footer */}
-      <div style={{ marginTop: '30px', paddingTop: '15px', borderTop: '1px solid #ddd', fontSize: '8pt', color: '#666', textAlign: 'center' }}>
-        {template?.company_name || 'Alpha Yachting'} | This briefing is confidential and intended for the assigned partner.
-      </div>
-    </div>
+  
+  // Logo
+  if (template.logo_url) {
+    try {
+      const logoHeight = 15;
+      const logoWidth = logoHeight * 3;
+      doc.addImage(template.logo_url, 'PNG', margins.left, yPos, logoWidth, logoHeight);
+    } catch (e) {
+      console.log('Logo not loaded');
+    }
+  }
+  
+  // Company name (right aligned)
+  doc.setFont(fontFamily, 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+  doc.text(template.company_name || 'Alpha Yachting', pageWidth - margins.right, yPos + 5, { align: 'right' });
+  
+  doc.setFont(fontFamily, 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  if (template.company_address) {
+    doc.text(template.company_address, pageWidth - margins.right, yPos + 10, { align: 'right' });
+  }
+  
+  yPos += 25;
+  
+  // PARTNER BRIEFING header
+  doc.setFont(fontFamily, 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+  doc.text('PARTNER BRIEFING', margins.left, yPos);
+  yPos += 8;
+  
+  // Generated timestamp
+  const timestamp = new Date().toLocaleDateString('de-DE', { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  doc.setFont(fontFamily, 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Generated: ${timestamp}`, margins.left, yPos);
+  yPos += 12;
+  
+  // WORK ORDER INFORMATION
+  yPos = drawSectionHeader('WORK ORDER INFORMATION', yPos);
+  yPos = drawField('Work Order #', document.work_order_number, yPos);
+  yPos = drawField('Title', document.work_order_title, yPos);
+  yPos = drawField('Status', document.work_order_status, yPos);
+  yPos = drawField('Scheduled Date', formatDate(document.scheduled_date), yPos);
+  yPos += 5;
+  
+  // CUSTOMER & VESSEL
+  yPos = drawSectionHeader('CUSTOMER & VESSEL', yPos);
+  yPos = drawField('Customer', document.customer_name, yPos);
+  yPos = drawField('Vessel', document.vessel_name, yPos);
+  yPos = drawField('Type', document.vessel_type, yPos);
+  yPos = drawField('Length', document.vessel_length, yPos);
+  yPos += 5;
+  
+  // LOCATION & ACCESS
+  yPos = drawSectionHeader('LOCATION & ACCESS', yPos);
+  yPos = drawField('Location', document.location_name, yPos);
+  yPos = drawField('Address', document.location_address, yPos);
+  yPos = drawField('Access Notes', document.location_access_notes, yPos);
+  yPos += 5;
+  
+  // WORK DESCRIPTION
+  if (document.work_description) {
+    yPos = drawSectionHeader('WORK DESCRIPTION', yPos);
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    const descLines = doc.splitTextToSize(document.work_description, contentWidth - 4);
+    doc.text(descLines, margins.left + 2, yPos);
+    yPos += descLines.length * 4.5 + 5;
+  }
+  
+  // TASKS & CHECKLIST
+  if (lineItems && lineItems.length > 0) {
+    yPos = drawSectionHeader('TASKS & CHECKLIST', yPos);
+    
+    // Table header
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+    doc.rect(margins.left, yPos - 4, contentWidth, 6, 'F');
+    doc.text('#', margins.left + 2, yPos);
+    doc.text('Task', margins.left + 10, yPos);
+    doc.text('Est. Time', pageWidth - margins.right - 15, yPos);
+    yPos += 6;
+    
+    // Table rows
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    lineItems.forEach((item, idx) => {
+      if (yPos > pageHeight - 40) {
+        doc.addPage();
+        yPos = margins.top;
+      }
+      
+      doc.text((idx + 1).toString(), margins.left + 2, yPos);
+      const taskLines = doc.splitTextToSize(item.title, contentWidth - 30);
+      doc.text(taskLines, margins.left + 10, yPos);
+      doc.text(item.estimated_time || '-', pageWidth - margins.right - 15, yPos);
+      yPos += Math.max(taskLines.length * 4.5, 5) + 1;
+    });
+    yPos += 5;
+  }
+  
+  // COST COVERAGE & BUDGET
+  if (document.budget_total) {
+    yPos = drawSectionHeader('COST COVERAGE & BUDGET', yPos);
+    
+    // Table
+    const budgetData = [
+      ['Total Approved Budget', `€${(document.budget_total || 0).toFixed(2)}`],
+      ['Labor', `€${(document.budget_labor || 0).toFixed(2)}`],
+      ['Travel', `€${(document.budget_travel || 0).toFixed(2)}`],
+      ['Accommodation', `€${(document.budget_accommodation || 0).toFixed(2)}`],
+      ['Per Diem', `€${(document.budget_per_diem || 0).toFixed(2)}`]
+    ];
+    
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+    doc.rect(margins.left, yPos - 4, contentWidth, 6, 'F');
+    doc.text('Budget Category', margins.left + 2, yPos);
+    doc.text('Amount', pageWidth - margins.right - 30, yPos);
+    yPos += 6;
+    
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    budgetData.forEach(([category, amount]) => {
+      doc.text(category, margins.left + 2, yPos);
+      doc.text(amount, pageWidth - margins.right - 30, yPos);
+      yPos += 5;
+    });
+    yPos += 5;
+  }
+  
+  // COVERED COSTS
+  if (document.covered_costs) {
+    yPos = drawSectionHeader('COVERED COSTS', yPos);
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    
+    const costs = document.covered_costs;
+    if (costs.accommodation?.enabled) {
+      doc.text(`• Accommodation: up to €${costs.accommodation.max_per_night}/night`, margins.left + 2, yPos);
+      yPos += 5;
+    }
+    if (costs.per_diem?.enabled) {
+      doc.text(`• Per Diem: €${costs.per_diem.rate_per_day}/day`, margins.left + 2, yPos);
+      yPos += 5;
+    }
+    if (costs.mileage?.enabled) {
+      doc.text(`• Mileage: €${costs.mileage.rate_per_km}/km (cap: €${costs.mileage.cap_total || 'TBD'})`, margins.left + 2, yPos);
+      yPos += 5;
+    }
+    if (costs.travel_time?.enabled) {
+      doc.text(`• Travel Time: €${costs.travel_time.rate_per_hour}/hour`, margins.left + 2, yPos);
+      yPos += 5;
+    }
+    yPos += 3;
+  }
+  
+  // APPROVAL REQUIREMENTS
+  if (document.approval_requirements) {
+    yPos = drawSectionHeader('APPROVAL REQUIREMENTS', yPos);
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    
+    doc.text(`• Purchases over €${document.approval_requirements.preapproval_over || 500} require pre-approval`, margins.left + 2, yPos);
+    yPos += 5;
+    if (document.approval_requirements.budget_exceed_requires_approval) {
+      doc.text('• Budget overages require approval before proceeding', margins.left + 2, yPos);
+      yPos += 5;
+    }
+    yPos += 3;
+  }
+  
+  // ASSIGNED TEAM
+  if (document.assigned_team && document.assigned_team.length > 0) {
+    yPos = drawSectionHeader('ASSIGNED TEAM', yPos);
+    
+    // Table header
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.setFillColor(primaryColor.r, primaryColor.g, primaryColor.b);
+    doc.rect(margins.left, yPos - 4, contentWidth, 6, 'F');
+    doc.text('Name', margins.left + 2, yPos);
+    doc.text('Phone', pageWidth - margins.right - 30, yPos);
+    yPos += 6;
+    
+    // Table rows
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    document.assigned_team.forEach(member => {
+      doc.text(member.name, margins.left + 2, yPos);
+      doc.text(member.phone || '-', pageWidth - margins.right - 30, yPos);
+      yPos += 5;
+    });
+  }
+  
+  // Footer
+  const footerY = pageHeight - margins.bottom - 5;
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.setFont(fontFamily, 'normal');
+  doc.text(
+    `${template.company_name || 'Alpha Yachting'} | This briefing is confidential and intended for the assigned partner.`,
+    pageWidth / 2,
+    footerY,
+    { align: 'center' }
   );
+  
+  return doc;
 }
