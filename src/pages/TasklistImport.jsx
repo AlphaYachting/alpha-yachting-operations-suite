@@ -155,11 +155,14 @@ export default function TasklistImport() {
           )}
           {currentStep === 5 && (
             <ValidationStep
-              data={parsedData}
-              mapping={fieldMapping}
-              config={config}
-              onComplete={handleValidationComplete}
+              results={validationResults || { valid: false, workOrderCount: 0, taskCount: 0, errors: [], warnings: [], serviceAreaGroups: {} }}
+              onExecute={() => {
+                // Trigger import in next step (Step 6)
+                setCurrentStep(6);
+              }}
               onBack={() => setCurrentStep(4)}
+              isProcessing={false}
+              dryRunMode={config.dryRunMode}
             />
           )}
           {currentStep === 6 && (
