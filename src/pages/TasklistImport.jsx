@@ -128,12 +128,20 @@ export default function TasklistImport() {
             <FileUploadStep onComplete={handleFileUpload} />
           )}
           {currentStep === 2 && (
+            <PreviewStep
+              data={parsedData}
+              headers={parsedData.length > 0 ? Object.keys(parsedData[0]) : []}
+              onNext={() => setCurrentStep(3)}
+              onBack={() => setCurrentStep(1)}
+            />
+          )}
+          {currentStep === 3 && (
             <MappingStep
               headers={parsedData.length > 0 ? Object.keys(parsedData[0]) : []}
               mapping={fieldMapping}
               onMappingChange={setFieldMapping}
               onNext={handleMappingComplete}
-              onBack={() => setCurrentStep(1)}
+              onBack={() => setCurrentStep(2)}
             />
           )}
           {currentStep === 3 && (
