@@ -30,8 +30,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No field mapping provided' }, { status: 400 });
     }
 
-    console.log('[IMPORT_TASKS] Mapping:', mapping);
+    console.log('[IMPORT_TASKS] Full Mapping:', mapping);
     console.log('[IMPORT_TASKS] Sample row:', data[0]);
+    console.log('[IMPORT_TASKS] Sample row keys:', Object.keys(data[0] || {}));
 
     // Create reverse mapping (Excel header -> system field)
     const reverseMapping = {};
