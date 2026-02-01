@@ -411,15 +411,31 @@ Deno.serve(async (req) => {
     // Build document and line items for jsPDF (use debug version from above)
     const document = documentDebug;
     const lineItems = buildPartnerBriefLineItems(tasks, teamOrder);
-    
-    // Generate PDF using jsPDF
-    const doc = await generatePDFWithJsPDF(document, lineItems, templateData);
-    const pdfBuffer = doc.output('arraybuffer');
-    const base64Pdf = Buffer.from(pdfBuffer).toString('base64');
-    
+
+    // Generate PDF using jsPDF with explicit base64 output
+    const { jsPDF } = await import('npm:jspdf@4.0.0');
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Use the template generator to build the PDF
+    const htmlContent = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, templateData);
+
+    // Convert HTML to PDF using jsPDF's built-in html method
+    await doc.html(htmlContent, {
+      callback: () => {},
+      x: 0,
+      y: 0,
+      html2canvas: { scale: 0.264 }
+    });
+
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+
     return Response.json({
       success: true,
-      pdf: base64Pdf,
+      pdf: pdfBase64,
       fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`,
       debug: {
         boat_from_db: boat ? { vessel_type: boat.vessel_type, length_m: boat.length_m } : null,
