@@ -107,12 +107,14 @@ export default function ValidationStep({ results, onExecute, onBack, isProcessin
           </div>
         )}
 
-        {/* Service Area Groups Preview - SHOW ALL */}
-        <div className="border rounded-lg p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold text-sm text-gray-900">
-              Service Areas Detected ({Object.keys((results?.serviceAreaGroups) || {}).length})
-            </h3>
+        {/* Work Orders Preview based on import mode */}
+         <div className="border rounded-lg p-4">
+           <div className="flex justify-between items-center mb-3">
+             <h3 className="font-semibold text-sm text-gray-900">
+               {results?.importMode === 'work-orders-by-service-area' 
+                 ? `Work Orders by Service Area (${results?.workOrderCount || 0} work orders)`
+                 : `Service Areas Detected (${Object.keys((results?.serviceAreaGroups) || {}).length})`}
+             </h3>
             <button 
               onClick={() => setShowDiagnostics(!showDiagnostics)}
               className="text-xs text-blue-600 hover:text-blue-700 underline"
