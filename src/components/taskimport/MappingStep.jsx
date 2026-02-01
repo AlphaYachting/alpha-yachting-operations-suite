@@ -21,6 +21,11 @@ export default function MappingStep({ headers = [], mapping = {}, onMappingChang
       const { mapping: suggested, debug } = autoMapHeaders(headers, debugEnabled);
       setAutoMapping(debug);
       onMappingChange(suggested);
+      
+      if (debugEnabled) {
+        console.log('[MAPPING STEP] Auto-mapping completed:', suggested);
+        console.log('[MAPPING STEP] Service Area in mapping?', Object.entries(suggested).find(([_, v]) => v === 'serviceArea'));
+      }
     }
   }, [headers]);
 
