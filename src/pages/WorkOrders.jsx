@@ -135,8 +135,8 @@ export default function WorkOrders() {
     try {
       // Optimize: Only load work orders matching the current status filter
       const woQuery = statusFilter === 'all' 
-        ? base44.entities.WorkOrder.list('-scheduled_date', 100)
-        : base44.entities.WorkOrder.filter({ status: statusFilter }, '-scheduled_date', 100);
+        ? base44.entities.WorkOrder.list('scheduled_date', 100)
+        : base44.entities.WorkOrder.filter({ status: statusFilter }, 'scheduled_date', 100);
 
       const [woData, jobsData, techData, custData, boatsData, locData, reservationsData, vehiclesData] = await Promise.all([
         woQuery,
