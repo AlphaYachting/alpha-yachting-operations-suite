@@ -153,26 +153,26 @@ export default function TasklistImport() {
               onBack={() => setCurrentStep(3)}
             />
           )}
-          {currentStep === 4 && (
+          {currentStep === 5 && (
             <ValidationStep
               data={parsedData}
               mapping={fieldMapping}
               config={config}
               onComplete={handleValidationComplete}
-              onBack={() => setCurrentStep(3)}
+              onBack={() => setCurrentStep(4)}
             />
           )}
-          {currentStep === 5 && (
+          {currentStep === 6 && (
             <PreviewStep
               data={parsedData}
               mapping={fieldMapping}
               config={config}
               validationResults={validationResults}
               onComplete={handleImportComplete}
-              onBack={() => setCurrentStep(4)}
+              onBack={() => setCurrentStep(5)}
             />
           )}
-          {currentStep === 6 && (
+          {currentStep === 7 && (
             <ImportSummary
               results={importResults}
               onReset={() => {
