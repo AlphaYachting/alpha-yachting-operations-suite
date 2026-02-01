@@ -114,8 +114,9 @@ export default function TasklistImport() {
           )}
           {currentStep === 3 && (
             <ConfigStep
-              mapping={fieldMapping}
-              onComplete={handleConfigComplete}
+              config={config}
+              onConfigChange={setConfig}
+              onNext={() => handleConfigComplete(config)}
               onBack={() => setCurrentStep(2)}
             />
           )}
