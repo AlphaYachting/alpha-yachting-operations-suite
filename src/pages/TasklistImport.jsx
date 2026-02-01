@@ -6,6 +6,7 @@ import MappingStep from '@/components/taskimport/MappingStep';
 import ConfigStep from '@/components/taskimport/ConfigStep';
 import ValidationStep from '@/components/taskimport/ValidationStep';
 import PreviewStep from '@/components/taskimport/PreviewStep';
+import ImportStep from '@/components/taskimport/ImportStep';
 import ImportSummary from '@/components/taskimport/ImportSummary';
 import { validateImportData } from '@/components/taskimport/validationEngine';
 
@@ -187,11 +188,10 @@ export default function TasklistImport() {
             />
           )}
           {currentStep === 6 && (
-            <PreviewStep
-              data={parsedData}
-              mapping={fieldMapping}
+            <ImportStep
+              parsedData={parsedData}
+              fieldMapping={fieldMapping}
               config={config}
-              validationResults={validationResults}
               onComplete={handleImportComplete}
               onBack={() => setCurrentStep(5)}
             />
