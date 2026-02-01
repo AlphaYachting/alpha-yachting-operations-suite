@@ -405,11 +405,10 @@ Deno.serve(async (req) => {
     console.log('   labor_budget:', documentDebug.labor_budget);
     console.log('=== END TRACE ===');
 
-    // Build document and line items for jsPDF (use debug version from above)
-    const document = documentDebug;
-    const lineItems = buildPartnerBriefLineItems(tasks, teamOrder);
+    // Build HTML content for PDF
+    const htmlContent = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, templateData);
 
-    // Generate PDF using jsPDF with explicit base64 output
+    // Use Puppeteer-like approach with html2canvas and jsPDF
     const { jsPDF } = await import('npm:jspdf@4.0.0');
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -417,34 +416,58 @@ Deno.serve(async (req) => {
       format: 'a4'
     });
 
-    // Use the template generator to build the PDF
-    const htmlContent = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, templateData);
+    // Add simple text-based content instead of HTML rendering
+    const fileName = `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`;
 
-    // Convert HTML to PDF using jsPDF's built-in html method
-    await doc.html(htmlContent, {
-      callback: () => {},
-      x: 0,
-      y: 0,
-      html2canvas: { scale: 0.264 }
-    });
+    // Add title
+    doc.setFontSize(20);
+    doc.setTextColor(65, 191, 200);
+    doc.text('PARTNER BRIEFING', 15, 20);
 
+    // Add work order info
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Work Order: ${workOrder.work_order_number || workOrder.id.slice(-6)}`, 15, 35);
+    doc.text(`Title: ${workOrder.title}`, 15, 42);
+    doc.text(`Status: ${workOrder.status}`, 15, 49);
+
+    // Add customer info
+    let y = 60;
+    doc.setFontSize(14);
+    doc.setTextColor(65, 191, 200);
+    doc.text('CUSTOMER & VESSEL', 15, y);
+    y += 7;
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+
+    const customerName = customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown';
+    doc.text(`Customer: ${customerName}`, 15, y);
+    y += 7;
+    doc.text(`Vessel: ${boat?.vessel_name || 'Unknown'}`, 15, y);
+    y += 7;
+    doc.text(`Type: ${boat?.vessel_type || '-'}`, 15, y);
+    y += 7;
+    doc.text(`Length: ${boat?.length_m ? boat.length_m + 'm' : '-'}`, 15, y);
+
+    // Add budget info
+    y += 15;
+    doc.setFontSize(14);
+    doc.setTextColor(65, 191, 200);
+    doc.text('BUDGET', 15, y);
+    y += 7;
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total Budget: €${(teamOrder.approved_budget_total || 0).toFixed(2)}`, 15, y);
+    y += 7;
+    doc.text(`Labor: €${(teamOrder.labor_budget || 0).toFixed(2)}`, 15, y);
+
+    // Convert to base64
     const pdfBase64 = doc.output('datauristring').split(',')[1];
 
     return Response.json({
       success: true,
       pdf: pdfBase64,
-      fileName: `partner-brief-${workOrder.work_order_number || workOrderId}.pdf`,
-      debug: {
-        boat_from_db: boat ? { vessel_type: boat.vessel_type, length_m: boat.length_m } : null,
-        teamOrder_from_db: teamOrder ? { 
-          approved_budget_total: teamOrder.approved_budget_total,
-          labor_budget: teamOrder.labor_budget 
-        } : null,
-        document_boat_type: documentDebug.boat_type,
-        document_boat_length: documentDebug.boat_length,
-        document_approved_budget: documentDebug.approved_budget,
-        document_labor_budget: documentDebug.labor_budget
-      }
+      fileName: fileName
     });
   } catch (error) {
     return Response.json({
