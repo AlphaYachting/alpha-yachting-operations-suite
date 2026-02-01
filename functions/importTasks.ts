@@ -149,6 +149,7 @@ Deno.serve(async (req) => {
         if (config?.importMode === 'work-orders-by-service-area') {
           // Create a separate JOB for each service area per customer
           const jobKey = `${customerName}_${serviceArea}`;
+          console.log(`[IMPORT_TASKS] Service area mode - jobKey: ${jobKey}, exists: ${!!jobsByServiceArea[jobKey]}`);
           if (!jobsByServiceArea[jobKey]) {
             try {
               const jobTitle = `${serviceArea || 'Uncategorized'} - ${customerName}`;
