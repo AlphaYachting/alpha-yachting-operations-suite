@@ -1,16 +1,40 @@
-import React, { useRef } from 'react';
-import { Upload, FileSpreadsheet } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Upload, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-export default function FileUploadStep({ onComplete, onUpload }) {
+export default function FileUploadStep({ onComplete }) {
   const fileInputRef = useRef(null);
+  const [error, setError] = useState(null);
+
+  const parseExcelFile = async (file) => {
+    try {
+      setError(null);
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Import xlsx dynamically
+      const { read, utils } = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+      const workbook = read(arrayBuffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const data = utils.sheet_to_json(worksheet);
+      
+      if (data.length === 0) {
+        throw new Error('No data found in Excel file');
+      }
+      
+      onComplete(file, data);
+    } catch (err) {
+      setError(err.message || 'Failed to parse Excel file');
+      console.error('Parse error:', err);
+    }
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const callback = onComplete || onUpload;
-      if (callback) callback(file);
+      parseExcelFile(file);
     }
   };
 
