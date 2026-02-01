@@ -67,25 +67,27 @@ export default function MappingStep({ headers = [], mapping = {}, onMappingChang
       </CardHeader>
       <CardContent>
         {debugMode && autoMapping && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-300 rounded-lg text-xs">
-            <h4 className="font-bold text-blue-900 mb-3">🔍 IMPORTER DIAGNOSTIC SUMMARY</h4>
-            <div className="space-y-2 text-blue-800">
-              <div><strong>Headers detected:</strong> {autoMapping.headerCount}</div>
-              <div><strong>Target fields registry:</strong> {autoMapping.targetFieldsCount}</div>
-              <div><strong>Auto-mapped:</strong> {autoMapping.mappedCount}</div>
-              {autoMapping.missingRequired.length > 0 && (
-                <div className="text-red-600">
-                  <strong>❌ Missing required:</strong> {autoMapping.missingRequired.join(', ')}
-                </div>
-              )}
-              <div className="mt-2 bg-white p-2 rounded max-h-32 overflow-y-auto">
-                <strong>Suggestions:</strong>
-                {autoMapping.suggestions.map((s, i) => (
-                  <div key={i}>{s.header} → {s.matched} ({s.score})</div>
-                ))}
-              </div>
-            </div>
-          </div>
+           <div className="mb-6 p-4 bg-blue-50 border border-blue-300 rounded-lg text-xs">
+             <h4 className="font-bold text-blue-900 mb-3">🔍 IMPORTER DIAGNOSTIC SUMMARY</h4>
+             <div className="space-y-2 text-blue-800">
+               <div><strong>Headers detected:</strong> {autoMapping.headerCount}</div>
+               <div><strong>Target fields registry:</strong> {autoMapping.targetFieldsCount}</div>
+               <div><strong>Auto-mapped:</strong> {autoMapping.mappedCount}</div>
+               <div><strong>Current mapping passed to next step:</strong> {Object.keys(mapping || {}).length}</div>
+               <div className="text-green-700"><strong>✓ Service Area mapped?</strong> {Object.values(mapping || {}).includes('serviceArea') ? 'YES' : 'NO'}</div>
+               {autoMapping.missingRequired.length > 0 && (
+                 <div className="text-red-600">
+                   <strong>❌ Missing required:</strong> {autoMapping.missingRequired.join(', ')}
+                 </div>
+               )}
+               <div className="mt-2 bg-white p-2 rounded max-h-32 overflow-y-auto">
+                 <strong>All Mappings:</strong>
+                 {Object.entries(mapping || {}).map(([header, target], i) => (
+                   <div key={i}>{header} → {target}</div>
+                 ))}
+               </div>
+             </div>
+           </div>
         )}
 
         <div className="space-y-3 max-h-96 overflow-y-auto">
