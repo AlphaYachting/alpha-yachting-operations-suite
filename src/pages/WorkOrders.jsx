@@ -451,15 +451,20 @@ export default function WorkOrders() {
 
   const getProjectInfo = useMemo(() => {
     return (projectId) => {
+      if (!projectId) return { title: 'Unknown', customer: '', boat: '', location: '' };
+      
       const project = jobMap[projectId];
-      if (!project) return { title: 'Unknown', customer: '', boat: '', location: '' };
+      if (!project) {
+        console.warn(`Job ${projectId} not found in jobMap. Available jobs:`, Object.keys(jobMap));
+        return { title: 'Unknown', customer: '', boat: '', location: '' };
+      }
 
       const customer = customerMap[project.customer_id];
       const boat = boatMap[project.boat_id];
       const location = locationMap[project.location_id];
 
       return {
-        title: project.title,
+        title: project.title || 'Untitled Project',
         customer: customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown',
         boat: boat?.vessel_name || 'Unknown',
         location: location?.name || ''
