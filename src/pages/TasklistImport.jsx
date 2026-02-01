@@ -80,9 +80,9 @@ export default function TasklistImport() {
   };
 
   const handleImportComplete = (results) => {
-    if (debugMode) console.log('[IMPORTER] Step 6→7: Import complete');
+    if (debugMode) console.log('[IMPORTER] Step 7→8: Import complete');
     setImportResults(results);
-    setCurrentStep(7);
+    setCurrentStep(8);
   };
 
   return (
