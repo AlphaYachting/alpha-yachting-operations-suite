@@ -62,12 +62,13 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     return y + (valueLines.length * 4.5) + 1;
   }
   
-  // Logo
+  // Logo - fixed aspect ratio preservation
   if (template.logo_url) {
     try {
-      const logoHeight = 15;
-      const logoWidth = logoHeight * 3;
-      doc.addImage(template.logo_url, 'PNG', margins.left, yPos, logoWidth, logoHeight);
+      const maxLogoHeight = 15;
+      const maxLogoWidth = 50;
+      // Let browser determine aspect ratio by only setting height
+      doc.addImage(template.logo_url, 'PNG', margins.left, yPos, maxLogoWidth, maxLogoHeight, undefined, 'FAST');
     } catch (e) {
       console.log('Logo not loaded');
     }
@@ -142,6 +143,28 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     const descLines = doc.splitTextToSize(document.work_description, contentWidth - 4);
     doc.text(descLines, margins.left + 2, yPos);
     yPos += descLines.length * 4.5 + 5;
+  }
+  
+  // SAFETY & NOTES
+  const safetyNotes = document.safety_notes || '';
+  const partnerNotes = document.partner_notes || '';
+  const combinedNotes = [safetyNotes, partnerNotes].filter(n => n.trim()).join('\n\n');
+  
+  if (combinedNotes) {
+    yPos = drawSectionHeader('SAFETY & NOTES', yPos);
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    
+    // Split into bullet points if multiple paragraphs, otherwise render as-is
+    const noteParagraphs = combinedNotes.split('\n').filter(p => p.trim());
+    noteParagraphs.forEach(paragraph => {
+      const bulletLine = `• ${paragraph.trim()}`;
+      const lines = doc.splitTextToSize(bulletLine, contentWidth - 6);
+      doc.text(lines, margins.left + 2, yPos);
+      yPos += lines.length * 4.5 + 2;
+    });
+    yPos += 3;
   }
   
   // TASKS & CHECKLIST
