@@ -172,7 +172,7 @@ export default function ConfigStep({ config = {}, onConfigChange, onNext, onBack
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <Button onClick={onNext} disabled={isProcessing}>
+          <Button onClick={() => onNext(config)} disabled={isProcessing}>
             {isProcessing ? 'Validating...' : 'Next: Validate'}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
