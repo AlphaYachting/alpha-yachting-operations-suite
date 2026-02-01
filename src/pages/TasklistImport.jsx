@@ -16,6 +16,13 @@ export default function TasklistImport() {
   const [config, setConfig] = useState({});
   const [validationResults, setValidationResults] = useState(null);
   const [importResults, setImportResults] = useState(null);
+  const [debugMode, setDebugMode] = useState(false);
+
+  // Detect debug mode on mount
+  React.useEffect(() => {
+    const debugEnabled = new URLSearchParams(window.location.search).get('debugImporter') === '1';
+    setDebugMode(debugEnabled);
+  }, []);
 
   const steps = [
     { number: 1, title: 'Upload File', icon: Upload },
