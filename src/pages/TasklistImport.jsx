@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, FileText, CheckCircle } from 'lucide-react';
 import FileUploadStep from '@/components/taskimport/FileUploadStep';
@@ -20,7 +20,7 @@ export default function TasklistImport() {
   const [debugMode, setDebugMode] = useState(false);
 
   // Detect debug mode on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const debugEnabled = new URLSearchParams(window.location.search).get('debugImporter') === '1';
     setDebugMode(debugEnabled);
   }, []);
@@ -36,32 +36,45 @@ export default function TasklistImport() {
   ];
 
   const handleFileUpload = (file, data) => {
+    if (debugMode) console.log('[IMPORTER] Step 1→2: File uploaded', file.name, 'Rows:', data.length);
     setUploadedFile(file);
     setParsedData(data);
+    setFieldMapping({}); // Reset mapping for new file
     setCurrentStep(2);
   };
 
+  const handlePreviewNext = () => {
+    if (debugMode) console.log('[IMPORTER] Step 2→3: Moving to mapping');
+    setCurrentStep(3);
+  };
+
   const handleMappingComplete = (mapping) => {
+    if (debugMode) console.log('[IMPORTER] Step 3→4: Mapping complete', mapping);
     setFieldMapping(mapping);
     setCurrentStep(4);
   };
 
-  const handleConfigComplete = (configData, mapping) => {
+  const handleConfigComplete = (configData) => {
+    if (debugMode) console.log('[IMPORTER] Step 4→5: Config complete, mapping is:', fieldMapping);
+    
+    // Validate with the stored fieldMapping
+    const results = validateImportData(parsedData, fieldMapping, configData);
+    if (debugMode) console.log('[IMPORTER] Validation results:', results);
+    
     setConfig(configData);
-    // Run validation before moving to step 5
-    const validationResults = validateImportData(parsedData, mapping, configData);
-    setValidationResults(validationResults);
-    setCurrentStep(5);
-  };
-
-  const handleValidationComplete = (results) => {
     setValidationResults(results);
     setCurrentStep(5);
   };
 
-  const handleImportComplete = (results) => {
-    setImportResults(results);
+  const handleValidationProceed = () => {
+    if (debugMode) console.log('[IMPORTER] Step 5→6: Proceeding with import');
     setCurrentStep(6);
+  };
+
+  const handleImportComplete = (results) => {
+    if (debugMode) console.log('[IMPORTER] Step 6→7: Import complete');
+    setImportResults(results);
+    setCurrentStep(7);
   };
 
   return (
@@ -71,19 +84,24 @@ export default function TasklistImport() {
         <p className="text-slate-500 mt-1">Import tasks from Excel or CSV files</p>
       </div>
 
-      {/* DIAGNOSTIC PANEL - ONLY IN DEBUG MODE */}
       {debugMode && (
         <div className="p-4 bg-red-50 border-2 border-red-300 rounded-lg text-xs font-mono space-y-2">
           <div className="font-bold text-red-900">🔴 IMPORTER END-TO-END DIAGNOSTIC</div>
           <div className="text-red-800 space-y-1">
-            <div><strong>Current Step:</strong> {currentStep} (0=not started, 1=upload, 2=preview, 3=mapping, 4=config, 5=validation, 6=preview&import, 7=summary)</div>
+            <div><strong>Current Step:</strong> {currentStep}</div>
             <div><strong>File uploaded:</strong> {uploadedFile ? uploadedFile.name : 'NO'}</div>
             <div><strong>Parsed rows:</strong> {parsedData.length}</div>
-            <div><strong>Detected columns:</strong> {parsedData.length > 0 ? Object.keys(parsedData[0]).length : 0}</div>
-            <div><strong>Column names:</strong> {parsedData.length > 0 ? Object.keys(parsedData[0]).slice(0, 5).join(', ') + (Object.keys(parsedData[0]).length > 5 ? '...' : '') : 'N/A'}</div>
-            <div><strong>Field mapping count:</strong> {Object.keys(fieldMapping).length}</div>
-            <div><strong>Step 2 (Preview) visible:</strong> {currentStep === 2 ? 'YES' : 'NO'}</div>
-            <div><strong>Step 3 (Mapping) visible:</strong> {currentStep === 3 ? 'YES' : 'NO'}</div>
+            <div><strong>Field mapping keys:</strong> {Object.keys(fieldMapping).length}</div>
+            <div><strong>Service Area mapped:</strong> {Object.values(fieldMapping).includes('serviceArea') ? '✓ YES' : '✗ NO'}</div>
+            <div><strong>Validation ran:</strong> {validationResults ? 'YES' : 'NO'}</div>
+            {validationResults && (
+              <div className="mt-2 bg-white p-2 rounded">
+                <strong>Validation Results:</strong>
+                <div>- Service Areas detected: {Object.keys(validationResults.serviceAreaGroups).length}</div>
+                <div>- Tasks to import: {validationResults.taskCount}</div>
+                <div>- Uncategorized tasks: {validationResults.serviceAreaGroups['Uncategorized']?.count || 0}</div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -117,9 +135,9 @@ export default function TasklistImport() {
                 }`}
               />
             )}
-            </div>
-            ))}
-            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Step Content */}
       <Card>
@@ -136,7 +154,7 @@ export default function TasklistImport() {
             <PreviewStep
               data={parsedData}
               headers={parsedData.length > 0 ? Object.keys(parsedData[0]) : []}
-              onNext={() => setCurrentStep(3)}
+              onNext={handlePreviewNext}
               onBack={() => setCurrentStep(1)}
             />
           )}
@@ -145,7 +163,7 @@ export default function TasklistImport() {
               headers={parsedData.length > 0 ? Object.keys(parsedData[0]) : []}
               mapping={fieldMapping}
               onMappingChange={setFieldMapping}
-              onNext={handleMappingComplete}
+              onNext={() => handleMappingComplete(fieldMapping)}
               onBack={() => setCurrentStep(2)}
             />
           )}
@@ -153,7 +171,7 @@ export default function TasklistImport() {
             <ConfigStep
               config={config}
               onConfigChange={setConfig}
-              onNext={() => handleConfigComplete(config, fieldMapping)}
+              onNext={handleConfigComplete}
               onBack={() => setCurrentStep(3)}
             />
           )}
@@ -162,10 +180,7 @@ export default function TasklistImport() {
               results={validationResults || { valid: false, workOrderCount: 0, taskCount: 0, errors: [], warnings: [], serviceAreaGroups: {} }}
               fieldMapping={fieldMapping}
               parsedData={parsedData}
-              onExecute={() => {
-                // Trigger import in next step (Step 6)
-                setCurrentStep(6);
-              }}
+              onExecute={handleValidationProceed}
               onBack={() => setCurrentStep(4)}
               isProcessing={false}
               dryRunMode={config.dryRunMode}
