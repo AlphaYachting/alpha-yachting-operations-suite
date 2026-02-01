@@ -46,10 +46,10 @@ export default function TasklistImport() {
     setCurrentStep(4);
   };
 
-  const handleConfigComplete = (configData) => {
+  const handleConfigComplete = (configData, mapping) => {
     setConfig(configData);
     // Run validation before moving to step 5
-    const validationResults = validateImportData(parsedData, fieldMapping, configData);
+    const validationResults = validateImportData(parsedData, mapping, configData);
     setValidationResults(validationResults);
     setCurrentStep(5);
   };
