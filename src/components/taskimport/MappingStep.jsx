@@ -9,12 +9,16 @@ const TARGET_FIELDS = getTargetFields().map(f => ({ ...f, required: getRequiredF
 const REQUIRED_FIELD_VALUES = getRequiredFields();
 
 export default function MappingStep({ headers = [], mapping = {}, onMappingChange, onNext, onBack }) {
-  const [autoMapping, setAutoMapping] = useState(null);
-  const [debugMode, setDebugMode] = useState(false);
+   const [autoMapping, setAutoMapping] = useState(null);
+   const [debugMode, setDebugMode] = useState(false);
 
-  // Auto-map on component mount or when headers change
-  useEffect(() => {
-    if (headers && headers.length > 0 && Object.keys(mapping).length === 0) {
+   if (!headers || !Array.isArray(headers) || headers.length === 0) {
+     return <div className="p-4 text-slate-600">No headers to map. Please upload a file first.</div>;
+   }
+
+   // Auto-map on component mount or when headers change
+   useEffect(() => {
+     if (headers.length > 0 && Object.keys(mapping).length === 0) {
       const debugEnabled = new URLSearchParams(window.location.search).get('debugImporter') === '1';
       setDebugMode(debugEnabled);
 
