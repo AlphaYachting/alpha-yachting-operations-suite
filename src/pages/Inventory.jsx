@@ -281,6 +281,7 @@ export default function Inventory() {
                 <TableHead className="text-center">Van 1</TableHead>
                 <TableHead className="text-center">Van 2</TableHead>
                 <TableHead className="text-right">Unit Price</TableHead>
+                <TableHead className="text-right">Total Value</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -314,6 +315,9 @@ export default function Inventory() {
                     <TableCell className="text-center">{item.stock_van_2 || 0}</TableCell>
                     <TableCell className="text-right">
                       €{(item.sales_price || item.unit_cost || 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      €{((item.unit_cost || 0) * totalStock).toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 justify-end">
