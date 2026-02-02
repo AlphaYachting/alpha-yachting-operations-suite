@@ -27,17 +27,28 @@ export default function InventoryImport() {
     }
 
     setImporting(true);
+    setTestResult(null);
+    
     try {
       // Upload file
+      console.log('[UI] Uploading file...');
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      console.log('[UI] File uploaded:', file_url);
 
       // Run test import
+      console.log('[UI] Running test import...');
       const result = await base44.functions.invoke('importInventoryItems', { file_url });
+      console.log('[UI] Import result:', result);
       
-      setTestResult(result.data);
-      toast.success('Test import completed');
+      if (result.data) {
+        setTestResult(result.data);
+        toast.success('Test import completed');
+      } else {
+        console.error('[UI] No data in response:', result);
+        toast.error('Import failed: No data returned');
+      }
     } catch (error) {
-      console.error('Test import error:', error);
+      console.error('[UI] Test import error:', error);
       toast.error(error.message || 'Test import failed');
     } finally {
       setImporting(false);
