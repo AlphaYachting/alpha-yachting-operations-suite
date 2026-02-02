@@ -90,6 +90,7 @@ import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
 import InventoryExportSchema from './pages/InventoryExportSchema';
+import InventoryImport from './pages/InventoryImport';
 import __Layout from './Layout.jsx';
 
 
@@ -137,6 +138,7 @@ export const PAGES = {
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
     "InventoryExportSchema": InventoryExportSchema,
+    "InventoryImport": InventoryImport,
 }
 
 export const pagesConfig = {
