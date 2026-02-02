@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, ChevronRight, Bell, Layout, Bug, Smartphone, Ruler, Download } from 'lucide-react';
+import { FileText, ChevronRight, Bell, Layout, Bug, Smartphone, Ruler, Download, Upload } from 'lucide-react';
 import PDFDiagnosticsPanel from '@/components/pdf/PDFDiagnosticsPanel';
 
 export default function Settings() {
@@ -34,6 +34,12 @@ export default function Settings() {
       description: 'Manage measurement units used across the application',
       icon: Ruler,
       page: 'UnitSettingsPage'
+    },
+    {
+      title: 'Inventory Import',
+      description: 'Import inventory items from Excel with strict validation',
+      icon: Upload,
+      page: 'InventoryImport'
     },
     {
       title: 'Inventory Export Schema',
