@@ -67,6 +67,8 @@ export default function Inventory() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [stockFilter, setStockFilter] = useState('all');
+  const [manufacturerFilter, setManufacturerFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
@@ -132,11 +134,22 @@ export default function Inventory() {
     
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     
-    return matchesSearch && matchesCategory;
+    // Stock filter
+    const totalStock = getTotalStock(item);
+    const matchesStock = stockFilter === 'all' || 
+      (stockFilter === 'out' && totalStock === 0) ||
+      (stockFilter === 'low' && totalStock > 0 && totalStock <= (item.min_stock_level || 1)) ||
+      (stockFilter === 'in' && totalStock > (item.min_stock_level || 1));
+    
+    // Manufacturer filter
+    const matchesManufacturer = manufacturerFilter === 'all' || item.manufacturer === manufacturerFilter;
+    
+    return matchesSearch && matchesCategory && matchesStock && matchesManufacturer;
   });
 
   const lowStockItems = items.filter(isLowStock);
   const categories = [...new Set(items.map(i => i.category))].filter(Boolean);
+  const manufacturers = [...new Set(items.map(i => i.manufacturer))].filter(Boolean).sort();
 
   return (
     <div className="space-y-6">
@@ -191,6 +204,28 @@ export default function Inventory() {
             <SelectItem value="all">All Categories</SelectItem>
             {categories.map(cat => (
               <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={stockFilter} onValueChange={setStockFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Stock Level" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stock Levels</SelectItem>
+            <SelectItem value="out">Out of Stock</SelectItem>
+            <SelectItem value="low">Low Stock</SelectItem>
+            <SelectItem value="in">In Stock</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={manufacturerFilter} onValueChange={setManufacturerFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Manufacturer" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Manufacturers</SelectItem>
+            {manufacturers.map(mfr => (
+              <SelectItem key={mfr} value={mfr}>{mfr}</SelectItem>
             ))}
           </SelectContent>
         </Select>
