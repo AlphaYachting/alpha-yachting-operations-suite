@@ -31,22 +31,33 @@ export default function InventoryImport() {
     
     try {
       // Upload file
-      toast.info('Uploading file...');
+      toast.info('Datei wird hochgeladen...');
+      console.log('[UI] Uploading file...');
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      console.log('[UI] File uploaded:', file_url);
 
       // Run test import
-      toast.info('Processing file...');
+      toast.info('Datei wird analysiert...');
+      console.log('[UI] Calling import function...');
       const result = await base44.functions.invoke('importInventoryItems', { file_url });
+      console.log('[UI] Import result:', result);
       
       if (result?.data) {
+        console.log('[UI] Setting test result:', result.data);
         setTestResult(result.data);
-        toast.success(`Analysis complete: ${result.data.summary.importedCount} valid, ${result.data.summary.rejectedCount} rejected`);
+        toast.success(`Analyse abgeschlossen: ${result.data.summary.importedCount} gültig, ${result.data.summary.rejectedCount} abgelehnt`);
       } else {
-        toast.error('No data returned from import');
+        console.error('[UI] No data in result:', result);
+        toast.error('Import fehlgeschlagen: Keine Daten zurückgegeben');
       }
     } catch (error) {
-      console.error('Import error:', error);
-      toast.error(error?.response?.data?.error || error.message || 'Import failed');
+      console.error('[UI] Import error:', error);
+      console.error('[UI] Error details:', {
+        message: error.message,
+        response: error.response,
+        data: error.response?.data
+      });
+      toast.error(error?.response?.data?.error || error.message || 'Import fehlgeschlagen');
     } finally {
       setImporting(false);
     }
