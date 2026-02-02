@@ -98,10 +98,10 @@ Deno.serve(async (req) => {
     const skuCol = findColumn(sampleRow, ['SKU', 'Šifra', 'Sifra', 'Code']);
     const nameCol = findColumn(sampleRow, ['Item name (EN)', 'Naziv artikla', 'Item name', 'Name']);
     const groupCol = findColumn(sampleRow, ['Group', 'Grupa', 'Category']);
-    const unitCol = findColumn(sampleRow, ['Unit (as in source)', 'Jed. mj.', 'Unit', 'UOM']);
+    const unitCol = findColumn(sampleRow, ['Unit (as in source)', 'Unit (source)', 'Jed. mj.', 'Unit', 'UOM']);
     const stockCol = findColumn(sampleRow, ['Stock']);
     const unitCostCol = findColumn(sampleRow, ['Unit cost (purchase)']);
-    const salesPriceCol = findColumn(sampleRow, ['Sales price (MPC)']);
+    const salesPriceCol = findColumn(sampleRow, ['Sales price (MPC)', 'Sales price']);
 
     console.log('[IMPORT] Column mapping:', {
       sku: skuCol,
@@ -280,8 +280,13 @@ Deno.serve(async (req) => {
     }
 
     // Check for existing SKUs in database
-    const existingItems = await base44.entities.InventoryItem.list();
-    const existingSkus = new Set(existingItems.map(item => item.sku));
+    let existingSkus = new Set();
+    try {
+      const existingItems = await base44.entities.InventoryItem.list();
+      existingSkus = new Set(Array.isArray(existingItems) ? existingItems.map(item => item.sku) : []);
+    } catch (error) {
+      console.log('[IMPORT] Warning: Could not check existing SKUs:', error.message);
+    }
     
     const finalImported = [];
     for (const item of importedRows) {
