@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
     const sampleRow = rawData[0] || {};
     const skuCol = findColumn(sampleRow, ['SKU', 'Šifra', 'Sifra', 'Code']);
     const nameCol = findColumn(sampleRow, ['Item name (EN)', 'Naziv artikla', 'Item name', 'Name']);
+    const groupCol = findColumn(sampleRow, ['Group', 'Grupa', 'Category']);
     const unitCol = findColumn(sampleRow, ['Unit (as in source)', 'Jed. mj.', 'Unit', 'UOM']);
     const stockCol = findColumn(sampleRow, ['Stock']);
     const unitCostCol = findColumn(sampleRow, ['Unit cost (purchase)']);
@@ -105,11 +106,45 @@ Deno.serve(async (req) => {
     console.log('[IMPORT] Column mapping:', {
       sku: skuCol,
       name: nameCol,
+      group: groupCol,
       unit: unitCol,
       stock: stockCol,
       unitCost: unitCostCol,
       salesPrice: salesPriceCol
     });
+
+    // Group-based category mapping (PRIMARY)
+    const groupMapping = {
+      '14': { category: 'Workshop Supplies', item_type: 'CONSUMABLE' },
+      '1': { category: 'Engine Parts', item_type: 'PART' },
+      '15': { category: 'Consumables', item_type: 'CONSUMABLE' },
+      '6': { category: 'Engine Parts', item_type: 'PART' },
+      '4': { category: 'Electrical Power', item_type: 'PART' },
+      '9': { category: 'Sealants/Adhesives', item_type: 'CONSUMABLE' },
+      '5': { category: 'Fasteners', item_type: 'CONSUMABLE' },
+      '23': { category: 'Other', item_type: 'PART' }
+    };
+
+    // Keyword-based fallback (ONLY if Group is missing/unknown)
+    const categorizeByName = (name) => {
+      const nameLower = name.toLowerCase();
+      
+      if (nameLower.includes('sandpaper') || nameLower.includes('abrasive') || nameLower.includes('putty')) {
+        return { category: 'Workshop Supplies', item_type: 'CONSUMABLE' };
+      }
+      if (nameLower.includes('exhaust') || nameLower.includes('engine') || nameLower.includes('mercruiser')) {
+        return { category: 'Engine Parts', item_type: 'PART' };
+      }
+      if (nameLower.includes('sealant') || nameLower.includes('adhesive')) {
+        return { category: 'Sealants/Adhesives', item_type: 'CONSUMABLE' };
+      }
+      if (nameLower.includes('respirator') || nameLower.includes('mask') || nameLower.includes('gloves')) {
+        return { category: 'PPE', item_type: 'PPE' };
+      }
+      
+      // Default fallback
+      return { category: 'Other', item_type: 'PART' };
+    };
 
     for (let i = 0; i < rawData.length; i++) {
       const row = rawData[i];
@@ -119,6 +154,7 @@ Deno.serve(async (req) => {
       // Extract and process fields with normalization
       const skuRaw = skuCol ? normalizeSKU(row[skuCol]) : '';
       const nameRaw = nameCol ? String(row[nameCol] || '').trim() : '';
+      const groupRaw = groupCol ? String(row[groupCol] || '').trim() : '';
       const unitSourceRaw = unitCol ? String(row[unitCol] || '').trim() : '';
       const stockRaw = stockCol ? row[stockCol] : null;
       const unitCostRaw = unitCostCol ? row[unitCostCol] : null;
@@ -129,11 +165,27 @@ Deno.serve(async (req) => {
         console.log(`[IMPORT] Row ${rowIndex} normalized:`, {
           sku: skuRaw,
           name: nameRaw,
+          group: groupRaw,
           unit: unitSourceRaw,
           stock: stockRaw,
           unitCost: unitCostRaw,
           salesPrice: salesPriceRaw
         });
+      }
+
+      // Determine category and item_type
+      let category, item_type;
+      
+      // PRIMARY: Use Group mapping if available
+      if (groupRaw && groupMapping[groupRaw]) {
+        const mapping = groupMapping[groupRaw];
+        category = mapping.category;
+        item_type = mapping.item_type;
+      } else {
+        // FALLBACK: Use keyword-based rules
+        const fallback = categorizeByName(nameRaw);
+        category = fallback.category;
+        item_type = fallback.item_type;
       }
 
       // Validation 1: SKU must be present
@@ -200,15 +252,14 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Build the item object with defaults
+      // Build the item object with determined categorization
       const itemData = {
         sku: skuRaw,
         name: nameRaw,
         unit,
-        item_type: 'PART',
-        category: 'Other',
+        item_type,
+        category,
         status: 'Active',
-        vat_rate: 25,
         quantity_mode: 'pooled',
         stock_novigrad: stockNovigrad,
         stock_van_1: 0,
