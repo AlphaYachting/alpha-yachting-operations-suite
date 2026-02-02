@@ -53,6 +53,8 @@ import Boats from './pages/Boats';
 import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
+import InventoryExportSchema from './pages/InventoryExportSchema';
+import InventoryImport from './pages/InventoryImport';
 import InvoiceDetail from './pages/InvoiceDetail';
 import Invoices from './pages/Invoices';
 import JobDetail from './pages/JobDetail';
@@ -89,8 +91,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import InventoryExportSchema from './pages/InventoryExportSchema';
-import InventoryImport from './pages/InventoryImport';
 import __Layout from './Layout.jsx';
 
 
@@ -101,6 +101,8 @@ export const PAGES = {
     "Customers": Customers,
     "Dashboard": Dashboard,
     "Inventory": Inventory,
+    "InventoryExportSchema": InventoryExportSchema,
+    "InventoryImport": InventoryImport,
     "InvoiceDetail": InvoiceDetail,
     "Invoices": Invoices,
     "JobDetail": JobDetail,
@@ -137,8 +139,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "InventoryExportSchema": InventoryExportSchema,
-    "InventoryImport": InventoryImport,
 }
 
 export const pagesConfig = {

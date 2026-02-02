@@ -76,8 +76,11 @@ export default function Inventory() {
 
   const loadData = async () => {
     try {
-      const itemsData = await base44.entities.InventoryItem.filter({ item_type: 'TOOL' }, 'name');
-      setItems(itemsData);
+      // Load all inventory items (TOOL and legacy PART items)
+      const itemsData = await base44.entities.InventoryItem.list('name');
+      // Filter out vehicles (item_type: VEHICLE)
+      const filteredItems = itemsData.filter(item => item.item_type !== 'VEHICLE');
+      setItems(filteredItems);
     } catch (error) {
       console.error('Error loading inventory:', error);
     } finally {
