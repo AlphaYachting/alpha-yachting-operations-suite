@@ -317,7 +317,7 @@ export default function Inventory() {
                       €{(item.sales_price || item.unit_cost || 0).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      €{((item.unit_cost || 0) * totalStock).toFixed(2)}
+                      €{(((item.unit_cost || item.sales_price || 0) * totalStock)).toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 justify-end">
