@@ -130,7 +130,9 @@ Deno.serve(async (req) => {
           sku: skuRaw,
           name: nameRaw,
           unit: unitSourceRaw,
-          stock: stockRaw
+          stock: stockRaw,
+          unitCost: unitCostRaw,
+          salesPrice: salesPriceRaw
         });
       }
 
@@ -215,11 +217,11 @@ Deno.serve(async (req) => {
         serial_number_required: false
       };
 
-      // Add optional numeric fields only if present
-      if (unitCost !== null) {
+      // Add optional numeric fields only if present AND valid
+      if (unitCost !== null && !isNaN(unitCost)) {
         itemData.unit_cost = unitCost;
       }
-      if (salesPrice !== null) {
+      if (salesPrice !== null && !isNaN(salesPrice)) {
         itemData.sales_price = salesPrice;
       }
 
