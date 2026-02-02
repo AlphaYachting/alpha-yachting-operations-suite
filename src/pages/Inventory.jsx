@@ -69,6 +69,7 @@ export default function Inventory() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
   const [manufacturerFilter, setManufacturerFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('stock-high');
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
@@ -145,6 +146,18 @@ export default function Inventory() {
     const matchesManufacturer = manufacturerFilter === 'all' || item.manufacturer === manufacturerFilter;
     
     return matchesSearch && matchesCategory && matchesStock && matchesManufacturer;
+  }).sort((a, b) => {
+    // Sorting logic
+    if (sortBy === 'stock-high') {
+      return getTotalStock(b) - getTotalStock(a);
+    } else if (sortBy === 'stock-low') {
+      return getTotalStock(a) - getTotalStock(b);
+    } else if (sortBy === 'name-asc') {
+      return (a.name || '').localeCompare(b.name || '');
+    } else if (sortBy === 'name-desc') {
+      return (b.name || '').localeCompare(a.name || '');
+    }
+    return 0;
   });
 
   const lowStockItems = items.filter(isLowStock);
@@ -227,6 +240,17 @@ export default function Inventory() {
             {manufacturers.map(mfr => (
               <SelectItem key={mfr} value={mfr}>{mfr}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Sort By" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="stock-high">Stock: High to Low</SelectItem>
+            <SelectItem value="stock-low">Stock: Low to High</SelectItem>
+            <SelectItem value="name-asc">Name: A to Z</SelectItem>
+            <SelectItem value="name-desc">Name: Z to A</SelectItem>
           </SelectContent>
         </Select>
       </div>
