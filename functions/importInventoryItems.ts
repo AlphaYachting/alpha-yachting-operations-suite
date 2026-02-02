@@ -22,11 +22,42 @@ Deno.serve(async (req) => {
     const arrayBuffer = await fileResponse.arrayBuffer();
     const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
     
-    const sheetName = workbook.SheetNames[0];
+    // Try to find "Inventory_EN" sheet, fallback to first sheet
+    let sheetName = 'Inventory_EN';
+    if (!workbook.SheetNames.includes(sheetName)) {
+      sheetName = workbook.SheetNames[0];
+    }
+    
     const worksheet = workbook.Sheets[sheetName];
-    const rawData = XLSX.utils.sheet_to_json(worksheet);
+    const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
 
+    console.log('[IMPORT] Selected sheet:', sheetName);
+    console.log('[IMPORT] Available sheets:', workbook.SheetNames);
     console.log('[IMPORT] Loaded rows:', rawData.length);
+    
+    // Diagnostics: Show detected headers
+    if (rawData.length > 0) {
+      const headers = Object.keys(rawData[0]);
+      console.log('[IMPORT] Detected headers:', headers);
+      
+      // Show first 3 rows for debugging
+      for (let i = 0; i < Math.min(3, rawData.length); i++) {
+        console.log(`[IMPORT] Row ${i + 1} raw:`, rawData[i]);
+      }
+    }
+
+    // Header mapping with synonyms (case-insensitive)
+    const findColumn = (row, synonyms) => {
+      for (const key of Object.keys(row)) {
+        const normalizedKey = key.trim().toLowerCase();
+        for (const syn of synonyms) {
+          if (normalizedKey === syn.toLowerCase()) {
+            return key;
+          }
+        }
+      }
+      return null;
+    };
 
     // Unit mapping (deterministic)
     const unitMapping = {
@@ -43,22 +74,65 @@ Deno.serve(async (req) => {
       'pak.': 'Box'
     };
 
+    // Normalize SKU (handle numeric values from Excel)
+    const normalizeSKU = (value) => {
+      if (value === null || value === undefined || value === '') return '';
+      
+      let str = String(value).trim();
+      
+      // If it's a number (including scientific notation), convert to integer string
+      const num = Number(str);
+      if (!isNaN(num) && str !== '') {
+        str = Math.floor(num).toString();
+      }
+      
+      return str.toUpperCase();
+    };
+
     const importedRows = [];
     const rejectedRows = [];
     const seenSkus = new Set();
+
+    // Detect column names using synonyms
+    const sampleRow = rawData[0] || {};
+    const skuCol = findColumn(sampleRow, ['SKU', 'Šifra', 'Sifra', 'Code']);
+    const nameCol = findColumn(sampleRow, ['Item name (EN)', 'Naziv artikla', 'Item name', 'Name']);
+    const unitCol = findColumn(sampleRow, ['Unit (as in source)', 'Jed. mj.', 'Unit', 'UOM']);
+    const stockCol = findColumn(sampleRow, ['Stock']);
+    const unitCostCol = findColumn(sampleRow, ['Unit cost (purchase)']);
+    const salesPriceCol = findColumn(sampleRow, ['Sales price (MPC)']);
+
+    console.log('[IMPORT] Column mapping:', {
+      sku: skuCol,
+      name: nameCol,
+      unit: unitCol,
+      stock: stockCol,
+      unitCost: unitCostCol,
+      salesPrice: salesPriceCol
+    });
 
     for (let i = 0; i < rawData.length; i++) {
       const row = rawData[i];
       const rowIndex = i + 2; // Excel row (1-indexed + header)
       const reasons = [];
 
-      // Extract and process fields
-      const skuRaw = row['SKU'] ? String(row['SKU']).trim().toUpperCase() : '';
-      const nameRaw = row['Item name (EN)'] ? String(row['Item name (EN)']).trim() : '';
-      const unitSourceRaw = row['Unit (as in source)'] ? String(row['Unit (as in source)']).trim() : '';
-      const stockRaw = row['Stock'];
-      const unitCostRaw = row['Unit cost (purchase)'];
-      const salesPriceRaw = row['Sales price (MPC)'];
+      // Extract and process fields with normalization
+      const skuRaw = skuCol ? normalizeSKU(row[skuCol]) : '';
+      const nameRaw = nameCol ? String(row[nameCol] || '').trim() : '';
+      const unitSourceRaw = unitCol ? String(row[unitCol] || '').trim() : '';
+      const stockRaw = stockCol ? row[stockCol] : null;
+      const unitCostRaw = unitCostCol ? row[unitCostCol] : null;
+      const salesPriceRaw = salesPriceCol ? row[salesPriceCol] : null;
+
+      // Diagnostics for first 3 rows
+      if (i < 3) {
+        console.log(`[IMPORT] Row ${rowIndex} normalized:`, {
+          sku: skuRaw,
+          name: nameRaw,
+          unit: unitSourceRaw,
+          stock: stockRaw
+        });
+      }
 
       // Validation 1: SKU must be present
       if (!skuRaw) {
