@@ -31,25 +31,22 @@ export default function InventoryImport() {
     
     try {
       // Upload file
-      console.log('[UI] Uploading file...');
+      toast.info('Uploading file...');
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      console.log('[UI] File uploaded:', file_url);
 
       // Run test import
-      console.log('[UI] Running test import...');
+      toast.info('Processing file...');
       const result = await base44.functions.invoke('importInventoryItems', { file_url });
-      console.log('[UI] Import result:', result);
       
-      if (result.data) {
+      if (result?.data) {
         setTestResult(result.data);
-        toast.success('Test import completed');
+        toast.success(`Analysis complete: ${result.data.summary.importedCount} valid, ${result.data.summary.rejectedCount} rejected`);
       } else {
-        console.error('[UI] No data in response:', result);
-        toast.error('Import failed: No data returned');
+        toast.error('No data returned from import');
       }
     } catch (error) {
-      console.error('[UI] Test import error:', error);
-      toast.error(error.message || 'Test import failed');
+      console.error('Import error:', error);
+      toast.error(error?.response?.data?.error || error.message || 'Import failed');
     } finally {
       setImporting(false);
     }
@@ -159,7 +156,10 @@ export default function InventoryImport() {
               className="gap-2"
             >
               {importing ? (
-                <>Processing...</>
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Processing...
+                </>
               ) : (
                 <>
                   <Upload className="h-4 w-4" />
