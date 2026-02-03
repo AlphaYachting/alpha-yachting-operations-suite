@@ -15,6 +15,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -72,6 +80,8 @@ export default function Inventory() {
   const [sortBy, setSortBy] = useState('stock-high');
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(50);
 
   useEffect(() => {
     loadData();
@@ -159,6 +169,18 @@ export default function Inventory() {
     }
     return 0;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoryFilter, stockFilter, manufacturerFilter, sortBy]);
 
   const lowStockItems = items.filter(isLowStock);
   const categories = [...new Set(items.map(i => i.category))].filter(Boolean);
@@ -286,7 +308,7 @@ export default function Inventory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredItems.map((item) => {
+              {paginatedItems.map((item) => {
                 const totalStock = getTotalStock(item);
                 const lowStock = isLowStock(item);
                 
@@ -350,6 +372,45 @@ export default function Inventory() {
             </TableBody>
           </Table>
         </Card>
+      )}
+
+      {/* Pagination */}
+      {filteredItems.length > itemsPerPage && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-slate-600">
+            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredItems.length)} of {filteredItems.length} items
+          </p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <PaginationItem key={pageNum}>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(pageNum)}
+                      isActive={currentPage === pageNum}
+                      className="cursor-pointer"
+                    >
+                      {pageNum}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
 
       {/* Inventory Form Dialog */}

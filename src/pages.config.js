@@ -52,6 +52,7 @@ import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
 import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
+import DatabaseBackup from './pages/DatabaseBackup';
 import Inventory from './pages/Inventory';
 import InventoryExportSchema from './pages/InventoryExportSchema';
 import InventoryImport from './pages/InventoryImport';
@@ -91,7 +92,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import DatabaseBackup from './pages/DatabaseBackup';
 import __Layout from './Layout.jsx';
 
 
@@ -101,6 +101,7 @@ export const PAGES = {
     "Boats": Boats,
     "Customers": Customers,
     "Dashboard": Dashboard,
+    "DatabaseBackup": DatabaseBackup,
     "Inventory": Inventory,
     "InventoryExportSchema": InventoryExportSchema,
     "InventoryImport": InventoryImport,
@@ -140,7 +141,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "DatabaseBackup": DatabaseBackup,
 }
 
 export const pagesConfig = {
