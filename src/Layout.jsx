@@ -28,7 +28,8 @@ import {
                     Phone,
                     Camera,
                     Bell,
-                    Monitor
+                    Monitor,
+                    Database
                   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -60,6 +61,7 @@ const navItems = [
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
         { name: 'Workshop Display', icon: Monitor, page: 'WorkshopDisplay' },
+        { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
         { name: 'Settings', icon: Settings, page: 'Settings' },
       ];
 
