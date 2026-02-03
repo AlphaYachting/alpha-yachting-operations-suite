@@ -55,6 +55,7 @@ const navItems = [
   { name: 'Schedule', icon: Clock, page: 'Schedule' },
   { name: 'Technicians', icon: Wrench, page: 'Technicians' },
   { name: 'Tools & Inventory', icon: Package, page: 'Inventory' },
+  { name: 'Inventory Stats', icon: BarChart3, page: 'InventoryDashboard' },
   { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
   { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates', adminOnly: true },
   { name: 'Offers', icon: FileText, page: 'Offers' },

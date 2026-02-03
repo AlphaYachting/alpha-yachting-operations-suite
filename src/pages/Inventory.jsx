@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { 
   Plus, 
   Search, 
@@ -7,7 +9,8 @@ import {
   MoreHorizontal,
   AlertTriangle,
   Truck,
-  Archive
+  Archive,
+  BarChart3
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -173,13 +176,21 @@ export default function Inventory() {
           <h1 className="text-2xl font-bold text-slate-900">Tools & Inventory</h1>
           <p className="text-slate-500 mt-1">{items.length} items in stock</p>
         </div>
-        <Button 
-          onClick={() => { setEditingItem(null); setShowForm(true); }}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Item
-        </Button>
+        <div className="flex gap-2">
+          <Link to={createPageUrl('InventoryDashboard')}>
+            <Button variant="outline">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Statistics
+            </Button>
+          </Link>
+          <Button 
+            onClick={() => { setEditingItem(null); setShowForm(true); }}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Item
+          </Button>
+        </div>
       </div>
 
       {/* Low Stock Alert */}
