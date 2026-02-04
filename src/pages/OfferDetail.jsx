@@ -281,6 +281,8 @@ export default function OfferDetail() {
       document_type: 'Offer',
       document_number: formData.offer_number || 'DRAFT',
       status: formData.status,
+      title: formData.title,
+      description: formData.description,
       customer_name: customer ? (customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim()) : '',
       customer_address: customer ? [
         customer.billing_address,

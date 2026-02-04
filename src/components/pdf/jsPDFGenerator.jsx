@@ -237,6 +237,28 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
 
   yPos = Math.max(yPos, metaY) + 10;
 
+  // Offer title and description (for offers only, before line items)
+  if (!isInvoice) {
+    if (document.title) {
+      checkPageBreak(15);
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont(fontFamily, 'bold');
+      doc.text(document.title, margins.left, yPos);
+      yPos += 8;
+    }
+    
+    if (document.description) {
+      checkPageBreak(20);
+      doc.setFontSize(9);
+      doc.setTextColor(85, 85, 85);
+      doc.setFont(fontFamily, 'normal');
+      const descLines = doc.splitTextToSize(document.description, contentWidth);
+      doc.text(descLines, margins.left, yPos);
+      yPos += (descLines.length * 4.5) + 8;
+    }
+  }
+
   // Vessel info
   if (document.boat_name || document.location_name) {
     doc.setFillColor(248, 250, 252);
