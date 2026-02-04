@@ -33,6 +33,7 @@ import {
   Clock,
   Send,
   AlertCircle,
+  Copy,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -70,6 +71,52 @@ export default function Offers() {
     queryKey: ['jobs'],
     queryFn: () => base44.entities.Job.list(),
   });
+
+  const duplicateOfferMutation = useMutation({
+    mutationFn: async (offerId) => {
+      // Get original offer
+      const originalOffer = offers.find(o => o.id === offerId);
+      if (!originalOffer) throw new Error('Offer not found');
+
+      // Get original offer tasks
+      const originalTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
+
+      // Create new offer (copy of original, but set status to Draft)
+      const { id: newOfferId, created_date, updated_date, created_by, ...offerData } = originalOffer;
+      const newOffer = await base44.entities.Offer.create({
+        ...offerData,
+        status: 'Draft',
+        title: `${offerData.title} (Copy)`,
+        offer_number: null, // Will be auto-generated
+        approved_date: null,
+        converted_work_order_id: null,
+      });
+
+      // Duplicate all tasks
+      const taskPromises = originalTasks.map(task => {
+        const { id, created_date, updated_date, created_by, offer_id, ...taskData } = task;
+        return base44.entities.OfferTask.create({
+          ...taskData,
+          offer_id: newOffer.id,
+        });
+      });
+      await Promise.all(taskPromises);
+
+      return newOffer;
+    },
+    onSuccess: (newOffer) => {
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+      window.location.href = createPageUrl('OfferDetail') + `?id=${newOffer.id}`;
+    },
+  });
+
+  const handleDuplicate = (e, offerId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm('Duplicate this offer?')) {
+      duplicateOfferMutation.mutate(offerId);
+    }
+  };
 
   const getCustomer = (customerId) => {
     return customers.find(c => c.id === customerId);
@@ -296,13 +343,24 @@ export default function Offers() {
                           )}
                         </div>
                       </div>
-                      {offer.total_amount !== undefined && offer.total_amount !== null && (
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-lg font-bold text-slate-900">
-                            €{offer.total_amount.toFixed(2)}
-                          </p>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {offer.total_amount !== undefined && offer.total_amount !== null && (
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-slate-900">
+                              €{offer.total_amount.toFixed(2)}
+                            </p>
+                          </div>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => handleDuplicate(e, offer.id)}
+                          disabled={duplicateOfferMutation.isPending}
+                          className="flex-shrink-0"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
