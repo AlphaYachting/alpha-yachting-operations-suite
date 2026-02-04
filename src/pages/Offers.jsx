@@ -48,6 +48,7 @@ const statusConfig = {
 export default function Offers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [monthFilter, setMonthFilter] = useState('all');
   const queryClient = useQueryClient();
 
   const { data: offers = [], isLoading: offersLoading } = useQuery({
@@ -82,6 +83,12 @@ export default function Offers() {
     return jobs.find(j => j.id === jobId);
   };
 
+  // Generate list of months from offers
+  const availableMonths = [...new Set(offers.map(o => {
+    const date = new Date(o.created_date);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  }))].sort().reverse();
+
   const filteredOffers = offers.filter(offer => {
     const matchesSearch = !searchTerm || 
       offer.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,7 +96,13 @@ export default function Offers() {
     
     const matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
     
-    return matchesSearch && matchesStatus;
+    const matchesMonth = monthFilter === 'all' || (() => {
+      const date = new Date(offer.created_date);
+      const offerMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      return offerMonth === monthFilter;
+    })();
+    
+    return matchesSearch && matchesStatus && matchesMonth;
   });
 
   const stats = {
@@ -198,6 +211,23 @@ export default function Offers() {
                 <SelectItem value="Converted">Converted</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by month" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Months</SelectItem>
+                {availableMonths.map(month => {
+                  const [year, monthNum] = month.split('-');
+                  const date = new Date(year, parseInt(monthNum) - 1);
+                  return (
+                    <SelectItem key={month} value={month}>
+                      {format(date, 'MMMM yyyy')}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -230,52 +260,47 @@ export default function Offers() {
             return (
               <Link key={offer.id} to={createPageUrl('OfferDetail') + `?id=${offer.id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <CardTitle className="text-xl">{offer.title}</CardTitle>
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-slate-900 truncate">{offer.title}</h3>
                           <Badge className={statusConfig[offer.status]?.color}>
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {offer.status}
                           </Badge>
                         </div>
-                        <CardDescription>
+                        <div className="flex items-center gap-4 text-sm text-slate-600">
                           {offer.offer_number && (
                             <span className="font-medium">#{offer.offer_number}</span>
                           )}
-                          {offer.description && ` • ${offer.description}`}
-                        </CardDescription>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            <span className="truncate">
+                              {customer?.company_name || 
+                               `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() ||
+                               'Unknown'}
+                            </span>
+                          </div>
+                          {boat && (
+                            <div className="flex items-center gap-1">
+                              <Ship className="h-3 w-3" />
+                              <span className="truncate">{boat.vessel_name}</span>
+                            </div>
+                          )}
+                          {offer.valid_until && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>{format(new Date(offer.valid_until), 'MMM d')}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       {offer.total_amount !== undefined && offer.total_amount !== null && (
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-slate-900">
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-lg font-bold text-slate-900">
                             €{offer.total_amount.toFixed(2)}
                           </p>
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                      <div className="flex items-center gap-2 text-slate-600">
-                        <Users className="h-4 w-4" />
-                        <span>
-                          {customer?.company_name || 
-                           `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() ||
-                           'Unknown Customer'}
-                        </span>
-                      </div>
-                      {boat && (
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Ship className="h-4 w-4" />
-                          <span>{boat.vessel_name}</span>
-                        </div>
-                      )}
-                      {offer.valid_until && (
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Calendar className="h-4 w-4" />
-                          <span>Valid until {format(new Date(offer.valid_until), 'MMM d, yyyy')}</span>
                         </div>
                       )}
                     </div>
