@@ -113,77 +113,61 @@ export default function WorkshopDisplay() {
     return job?.location_id || '';
   };
 
-  // Status mapping to 4 columns
-  const planned = workOrders.filter(wo => 
-    ['Draft', 'Scheduled'].includes(wo.status)
-  );
-  const inProgress = workOrders.filter(wo => 
-    ['In Progress', 'In Transit', 'Dispatched'].includes(wo.status)
-  );
-  const blocked = workOrders.filter(wo => 
-    ['Paused', 'Waiting for Parts', 'Waiting for Approval'].includes(wo.status)
-  );
-  const done = workOrders.filter(wo => 
-    wo.status === 'Completed'
-  );
+  // Sort work orders by scheduled time, put unscheduled at the end
+  const sortedWorkOrders = [...workOrders].sort((a, b) => {
+    if (!a.scheduled_start_time && !b.scheduled_start_time) return 0;
+    if (!a.scheduled_start_time) return 1;
+    if (!b.scheduled_start_time) return -1;
+    return a.scheduled_start_time.localeCompare(b.scheduled_start_time);
+  });
 
-  // Technician summary
-  const techSummary = technicians.map(tech => {
-    const inProgressWO = inProgress.find(wo => wo.assigned_technicians?.includes(tech.id));
-    const blockedWO = blocked.find(wo => wo.assigned_technicians?.includes(tech.id));
-    const plannedWO = planned.find(wo => wo.assigned_technicians?.includes(tech.id));
-
-    let state = 'Free';
-    let icon = '✓';
-    let color = 'text-slate-400';
-    let wo = null;
-
-    if (inProgressWO) {
-      state = 'In Progress';
-      icon = '▶';
-      color = 'text-amber-400';
-      wo = inProgressWO;
-    } else if (blockedWO) {
-      state = 'Blocked';
-      icon = '⚠';
-      color = 'text-red-400';
-      wo = blockedWO;
-    } else if (plannedWO) {
-      state = 'Planned';
-      icon = '⏳';
-      color = 'text-blue-400';
-      wo = plannedWO;
-    }
-
-    return {
-      name: `${tech.first_name} ${tech.last_name}`,
-      state,
-      icon,
-      color,
-      wo,
-      isActive: tech.status === 'Active'
+  // Group by time slots for better overview
+  const groupByTimeSlot = (wos) => {
+    const groups = {
+      morning: [], // before 12:00
+      afternoon: [], // 12:00 - 17:00
+      evening: [], // after 17:00
+      unscheduled: []
     };
-  }).filter(t => t.isActive);
 
-  const WorkOrderCard = ({ wo, columnColor }) => (
-    <div className="bg-slate-800 rounded-lg p-4 border-l-4" style={{ borderColor: columnColor }}>
-      <div className="text-2xl font-bold text-white mb-2">
-        {getBoatName(wo.job_id)}
+    wos.forEach(wo => {
+      if (!wo.scheduled_start_time) {
+        groups.unscheduled.push(wo);
+        return;
+      }
+      const hour = parseInt(wo.scheduled_start_time.split(':')[0]);
+      if (hour < 12) groups.morning.push(wo);
+      else if (hour < 17) groups.afternoon.push(wo);
+      else groups.evening.push(wo);
+    });
+
+    return groups;
+  };
+
+  const timeGroups = groupByTimeSlot(sortedWorkOrders);
+
+  const WorkOrderCard = ({ wo }) => (
+    <div className="bg-slate-800 rounded-lg p-4 border-l-4 border-blue-500 hover:bg-slate-750 transition-colors">
+      <div className="flex items-start justify-between mb-2">
+        <div className="text-3xl font-bold text-white">
+          {getBoatName(wo.job_id)}
+        </div>
+        {wo.scheduled_start_time && (
+          <div className="text-2xl font-bold text-blue-400 ml-4">
+            {wo.scheduled_start_time}
+          </div>
+        )}
       </div>
-      <div className="text-lg text-slate-300 mb-2">
+      <div className="text-xl text-slate-300 mb-1">
         {wo.title}
       </div>
-      <div className="text-xl font-semibold text-amber-400 mb-2">
-        {getTechName(wo.assigned_technicians)}
-      </div>
-      <div className="text-sm text-slate-400">
-        {wo.scheduled_start_time && wo.scheduled_end_time 
-          ? `${wo.scheduled_start_time} – ${wo.scheduled_end_time}`
-          : 'Time TBD'
-        }
-      </div>
+      {wo.scheduled_end_time && (
+        <div className="text-sm text-slate-500">
+          Expected completion: {wo.scheduled_end_time}
+        </div>
+      )}
       {getJobLocation(wo.job_id) && (
-        <div className="text-xs text-slate-500 mt-1">
+        <div className="text-sm text-slate-400 mt-2">
           📍 {getJobLocation(wo.job_id)}
         </div>
       )}
@@ -228,93 +212,108 @@ export default function WorkshopDisplay() {
         </div>
       )}
 
-      {/* Main Board - 4 Columns */}
-      <div className="flex gap-6 mb-6">
-        {/* Left: 4-column board (70%) */}
-        <div className="flex-1 grid grid-cols-4 gap-4">
-          {/* PLANNED */}
-          <div>
-            <div className="bg-blue-900/30 rounded-lg p-3 mb-3 flex items-center gap-2">
-              <Timer className="h-5 w-5 text-blue-400" />
-              <h2 className="text-lg font-bold text-blue-400">PLANNED</h2>
-              <span className="ml-auto text-blue-300 font-semibold">{planned.length}</span>
-            </div>
-            <div className="space-y-3">
-              {planned.map(wo => (
-                <WorkOrderCard key={wo.id} wo={wo} columnColor="#60a5fa" />
-              ))}
-            </div>
+      {/* Main Board - Today's Schedule */}
+      <div className="space-y-6">
+        {/* Summary Stats */}
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg p-4">
+            <div className="text-blue-200 text-sm mb-1">Morning Jobs</div>
+            <div className="text-4xl font-bold text-white">{timeGroups.morning.length}</div>
           </div>
-
-          {/* IN PROGRESS */}
-          <div>
-            <div className="bg-amber-900/30 rounded-lg p-3 mb-3 flex items-center gap-2">
-              <Play className="h-5 w-5 text-amber-400" />
-              <h2 className="text-lg font-bold text-amber-400">IN PROGRESS</h2>
-              <span className="ml-auto text-amber-300 font-semibold">{inProgress.length}</span>
-            </div>
-            <div className="space-y-3">
-              {inProgress.map(wo => (
-                <WorkOrderCard key={wo.id} wo={wo} columnColor="#fbbf24" />
-              ))}
-            </div>
+          <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-lg p-4">
+            <div className="text-amber-200 text-sm mb-1">Afternoon Jobs</div>
+            <div className="text-4xl font-bold text-white">{timeGroups.afternoon.length}</div>
           </div>
-
-          {/* BLOCKED */}
-          <div>
-            <div className="bg-red-900/30 rounded-lg p-3 mb-3 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-400" />
-              <h2 className="text-lg font-bold text-red-400">BLOCKED</h2>
-              <span className="ml-auto text-red-300 font-semibold">{blocked.length}</span>
-            </div>
-            <div className="space-y-3">
-              {blocked.map(wo => (
-                <WorkOrderCard key={wo.id} wo={wo} columnColor="#f87171" />
-              ))}
-            </div>
+          <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg p-4">
+            <div className="text-purple-200 text-sm mb-1">Evening Jobs</div>
+            <div className="text-4xl font-bold text-white">{timeGroups.evening.length}</div>
           </div>
-
-          {/* DONE */}
-          <div>
-            <div className="bg-emerald-900/30 rounded-lg p-3 mb-3 flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-emerald-400" />
-              <h2 className="text-lg font-bold text-emerald-400">DONE</h2>
-              <span className="ml-auto text-emerald-300 font-semibold">{done.length}</span>
-            </div>
-            <div className="space-y-3">
-              {done.map(wo => (
-                <WorkOrderCard key={wo.id} wo={wo} columnColor="#34d399" />
-              ))}
-            </div>
+          <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-lg p-4">
+            <div className="text-slate-200 text-sm mb-1">Total Today</div>
+            <div className="text-4xl font-bold text-white">{workOrders.length}</div>
           </div>
         </div>
 
-        {/* Right: Technician Summary (30%) */}
-        <div className="w-80">
-          <div className="bg-slate-800 rounded-lg p-4">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <Clock className="h-5 w-5 text-slate-400" />
-              Technicians Today
-            </h2>
-            <div className="space-y-2 max-h-[70vh] overflow-y-auto">
-              {techSummary.map((tech, idx) => (
-                <div key={idx} className="p-3 bg-slate-700 rounded flex items-start gap-3">
-                  <span className={`text-xl ${tech.color}`}>{tech.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-white truncate">{tech.name}</div>
-                    {tech.wo ? (
-                      <div className="text-sm text-slate-300 truncate">
-                        {getBoatName(tech.wo.job_id)} • {tech.wo.title}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-slate-500">Free</div>
-                    )}
-                  </div>
-                </div>
+        {/* Morning Jobs */}
+        {timeGroups.morning.length > 0 && (
+          <div>
+            <div className="bg-blue-900/30 rounded-lg p-4 mb-4 flex items-center gap-3">
+              <div className="text-3xl">🌅</div>
+              <div>
+                <h2 className="text-2xl font-bold text-blue-400">Morning (before 12:00)</h2>
+                <p className="text-slate-400">{timeGroups.morning.length} job{timeGroups.morning.length !== 1 ? 's' : ''} scheduled</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {timeGroups.morning.map(wo => (
+                <WorkOrderCard key={wo.id} wo={wo} />
               ))}
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Afternoon Jobs */}
+        {timeGroups.afternoon.length > 0 && (
+          <div>
+            <div className="bg-amber-900/30 rounded-lg p-4 mb-4 flex items-center gap-3">
+              <div className="text-3xl">☀️</div>
+              <div>
+                <h2 className="text-2xl font-bold text-amber-400">Afternoon (12:00 - 17:00)</h2>
+                <p className="text-slate-400">{timeGroups.afternoon.length} job{timeGroups.afternoon.length !== 1 ? 's' : ''} scheduled</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {timeGroups.afternoon.map(wo => (
+                <WorkOrderCard key={wo.id} wo={wo} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Evening Jobs */}
+        {timeGroups.evening.length > 0 && (
+          <div>
+            <div className="bg-purple-900/30 rounded-lg p-4 mb-4 flex items-center gap-3">
+              <div className="text-3xl">🌙</div>
+              <div>
+                <h2 className="text-2xl font-bold text-purple-400">Evening (after 17:00)</h2>
+                <p className="text-slate-400">{timeGroups.evening.length} job{timeGroups.evening.length !== 1 ? 's' : ''} scheduled</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {timeGroups.evening.map(wo => (
+                <WorkOrderCard key={wo.id} wo={wo} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Unscheduled Jobs */}
+        {timeGroups.unscheduled.length > 0 && (
+          <div>
+            <div className="bg-slate-700 rounded-lg p-4 mb-4 flex items-center gap-3">
+              <div className="text-3xl">⏰</div>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-300">Time Not Set</h2>
+                <p className="text-slate-400">{timeGroups.unscheduled.length} job{timeGroups.unscheduled.length !== 1 ? 's' : ''} without scheduled time</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {timeGroups.unscheduled.map(wo => (
+                <WorkOrderCard key={wo.id} wo={wo} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* No Jobs Today */}
+        {workOrders.length === 0 && !loading && (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold text-slate-300 mb-2">No jobs scheduled for today</h2>
+            <p className="text-slate-500">Enjoy your day!</p>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
