@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -91,14 +92,14 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
     setTasks(updated);
   };
 
-  const moveTask = (index, direction) => {
-    const newTasks = [...tasks];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+  const handleDragEnd = (result) => {
+    if (!result.destination) return;
     
-    if (targetIndex >= 0 && targetIndex < tasks.length) {
-      [newTasks[index], newTasks[targetIndex]] = [newTasks[targetIndex], newTasks[index]];
-      setTasks(newTasks);
-    }
+    const items = Array.from(tasks);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    setTasks(items);
   };
 
   return (
@@ -113,95 +114,107 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
         </div>
       ) : (
         <>
-          {tasks.map((task, index) => (
-            <Card key={index} className="p-4">
-              <div className="flex items-start gap-4">
-                <div className="flex flex-col gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => moveTask(index, 'up')}
-                    disabled={index === 0}
-                  >
-                    <GripVertical className="h-4 w-4 text-slate-400" />
-                  </Button>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="tasks">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                  {tasks.map((task, index) => (
+                    <Draggable key={`task-${index}`} draggableId={`task-${index}`} index={index}>
+                      {(provided, snapshot) => (
+                        <Card 
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`p-4 ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div 
+                              {...provided.dragHandleProps}
+                              className="flex flex-col gap-1 cursor-grab active:cursor-grabbing pt-1"
+                            >
+                              <GripVertical className="h-5 w-5 text-slate-400" />
+                            </div>
+                            <div className="flex-1 space-y-3">
+                              <div>
+                                <h4 className="font-semibold text-slate-900">{task.title}</h4>
+                                {task.description && (
+                                  <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{task.description}</p>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                  <Label className="text-xs text-slate-500">Quantity</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    value={task.quantity || 0}
+                                    onChange={(e) => updateTaskField(index, 'quantity', parseFloat(e.target.value) || 0)}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-slate-500">Unit</Label>
+                                  <Select 
+                                    value={task.unit_type || 'Hour'} 
+                                    onValueChange={(v) => updateTaskField(index, 'unit_type', v)}
+                                  >
+                                    <SelectTrigger className="h-8 text-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {unitOptions.map(unit => (
+                                        <SelectItem key={unit.value} value={unit.value}>
+                                          {unit.display}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label className="text-xs text-slate-500">Price/Unit (€)</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={task.unit_price || 0}
+                                    onChange={(e) => updateTaskField(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-between items-center pt-2 border-t">
+                                <span className="text-sm text-slate-600">Total</span>
+                                <span className="text-lg font-bold text-slate-900">
+                                  €{((task.quantity || 0) * (task.unit_price || 0)).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditTask(task, index)}
+                              >
+                                <Edit className="h-4 w-4 text-slate-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteTask(index)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
                 </div>
-                <div className="flex-1 space-y-3">
-                  <div>
-                    <h4 className="font-semibold text-slate-900">{task.title}</h4>
-                    {task.description && (
-                      <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{task.description}</p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <Label className="text-xs text-slate-500">Quantity</Label>
-                      <Input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={task.quantity || 0}
-                        onChange={(e) => updateTaskField(index, 'quantity', parseFloat(e.target.value) || 0)}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">Unit</Label>
-                      <Select 
-                        value={task.unit_type || 'Hour'} 
-                        onValueChange={(v) => updateTaskField(index, 'unit_type', v)}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {unitOptions.map(unit => (
-                            <SelectItem key={unit.value} value={unit.value}>
-                              {unit.display}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">Price/Unit (€)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={task.unit_price || 0}
-                        onChange={(e) => updateTaskField(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-sm text-slate-600">Total</span>
-                    <span className="text-lg font-bold text-slate-900">
-                      €{((task.quantity || 0) * (task.unit_price || 0)).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditTask(task, index)}
-                  >
-                    <Edit className="h-4 w-4 text-slate-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteTask(index)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
+              )}
+            </Droppable>
+          </DragDropContext>
           <Button onClick={openNewTask} variant="outline" className="w-full">
             <Plus className="h-4 w-4 mr-2" />
             Add Task
