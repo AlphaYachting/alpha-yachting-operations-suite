@@ -81,9 +81,10 @@ export default function DatabaseBackup() {
       
       // Auto-download
       if (data.backup_url) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
         const a = document.createElement('a');
         a.href = data.backup_url;
-        a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `database-backup-${timestamp}.json`;
         a.click();
       }
     } catch (error) {
