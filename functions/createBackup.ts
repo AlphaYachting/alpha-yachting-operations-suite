@@ -30,9 +30,10 @@ Deno.serve(async (req) => {
     }
 
     // Create backup file
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
     const backupJson = JSON.stringify(backup, null, 2);
     const blob = new Blob([backupJson], { type: 'application/json' });
-    const file = new File([blob], `backup-${Date.now()}.json`, { type: 'application/json' });
+    const file = new File([blob], `database-backup-${timestamp}.json`, { type: 'application/json' });
 
     // Upload to storage
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
