@@ -172,7 +172,7 @@ export default function OfferDetail() {
       if (isNewOffer) {
         // Generate offer number
         const offerCount = await base44.entities.Offer.list().then(offers => offers.length);
-        const offerNumber = `2026/${String(offerCount + 1).padStart(6, '0')}`;
+        const offerNumber = `OFF-2026-${String(offerCount + 1).padStart(4, '0')}`;
         
         const newOffer = await base44.entities.Offer.create({
           ...formData,
