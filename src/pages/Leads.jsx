@@ -172,7 +172,7 @@ export default function Leads() {
       </Card>
 
       {/* Leads List */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {filteredLeads.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
@@ -182,72 +182,61 @@ export default function Leads() {
         ) : (
           filteredLeads.map(lead => (
             <Card key={lead.id} className="hover:border-slate-300 transition-colors">
-              <CardContent className="p-3">
-                <div className="flex items-start gap-4">
-                  {/* Left: Name & Status */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-sm font-semibold text-slate-900 truncate">{lead.name}</h3>
-                      <LeadStatusChange lead={lead} onStatusChange={loadData} />
-                      <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0.5`}>
-                        {lead.priority}
-                      </Badge>
-                    </div>
-
-                    {/* Contact Info - Horizontal */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 mb-2">
-                      {lead.phone && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-slate-400" />
-                          <span>{lead.phone}</span>
-                        </div>
-                      )}
-                      {lead.email && (
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3 text-slate-400" />
-                          <span className="truncate max-w-[200px]">{lead.email}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Boat & Location - Horizontal */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
-                      {lead.boat_name && (
-                        <div className="flex items-center gap-1">
-                          <Anchor className="h-3 w-3 text-slate-400" />
-                          <span>{lead.boat_name}</span>
-                        </div>
-                      )}
-                      {lead.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-slate-400" />
-                          <span>{lead.location}</span>
-                        </div>
-                      )}
-                      {lead.inquiry_type && (
-                        <Badge variant="outline" className="text-xs px-1.5 py-0">
-                          {lead.inquiry_type}
-                        </Badge>
-                      )}
-                    </div>
+              <CardContent className="p-2 px-3">
+                <div className="flex items-center gap-3">
+                  {/* Name & Status - Compact */}
+                  <div className="flex items-center gap-2 min-w-[180px]">
+                    <h3 className="text-sm font-semibold text-slate-900 truncate">{lead.name}</h3>
+                    <LeadStatusChange lead={lead} onStatusChange={loadData} />
                   </div>
 
-                  {/* Right: Notes Preview */}
-                  {lead.notes && (
-                    <div className="flex-1 min-w-0 max-w-xs">
-                      <p className="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-2 rounded border border-slate-200">
-                        {lead.notes}
-                      </p>
-                    </div>
+                  {/* Priority Badge */}
+                  <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
+                    {lead.priority}
+                  </Badge>
+
+                  {/* Contact Info - Inline */}
+                  <div className="flex items-center gap-3 text-xs text-slate-600 flex-1 min-w-0">
+                    {lead.phone && (
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                        <span className="truncate">{lead.phone}</span>
+                      </div>
+                    )}
+                    {lead.email && (
+                      <div className="flex items-center gap-1 min-w-0">
+                        <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                        <span className="truncate">{lead.email}</span>
+                      </div>
+                    )}
+                    {lead.boat_name && (
+                      <div className="flex items-center gap-1">
+                        <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                        <span className="truncate">{lead.boat_name}</span>
+                      </div>
+                    )}
+                    {lead.location && (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                        <span className="truncate">{lead.location}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Inquiry Type */}
+                  {lead.inquiry_type && (
+                    <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 flex-shrink-0">
+                      {lead.inquiry_type}
+                    </Badge>
                   )}
 
-                  {/* Right: Actions */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {/* Actions - Compact */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
                       size="sm"
                       variant="outline"
                       asChild
-                      className="h-7 px-2"
+                      className="h-6 w-6 p-0"
                     >
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
                         <Eye className="h-3 w-3" />
@@ -260,9 +249,8 @@ export default function Leads() {
                           setConvertingLead(lead);
                           setShowConvertDialog(true);
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs"
+                        className="bg-emerald-600 hover:bg-emerald-700 h-6 px-2 text-xs"
                       >
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
                         Convert
                       </Button>
                     )}
@@ -273,7 +261,7 @@ export default function Leads() {
                         setEditingLead(lead);
                         setShowForm(true);
                       }}
-                      className="h-7 w-7 p-0"
+                      className="h-6 w-6 p-0"
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
@@ -281,7 +269,7 @@ export default function Leads() {
                       size="sm"
                       variant="outline"
                       onClick={() => handleDeleteLead(lead.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
