@@ -137,6 +137,13 @@ export default function DatabaseBackup() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <Alert className="border-blue-200 bg-blue-50">
+            <Database className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              <strong>Tip:</strong> Regular backups protect your data. Download and store backup files securely.
+            </AlertDescription>
+          </Alert>
+
           <div>
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium">Select entities to backup:</p>
