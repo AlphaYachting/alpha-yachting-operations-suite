@@ -578,8 +578,11 @@ export default function OfferDetail() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="0">0% (No VAT)</SelectItem>
-                      <SelectItem value="13">13% (Reduced)</SelectItem>
-                      <SelectItem value="20">20% (Standard)</SelectItem>
+                      <SelectItem value="5">5% (Reduced - Croatia)</SelectItem>
+                      <SelectItem value="10">10% (Reduced - Austria)</SelectItem>
+                      <SelectItem value="13">13% (Reduced - Austria/Croatia)</SelectItem>
+                      <SelectItem value="20">20% (Standard - Austria)</SelectItem>
+                      <SelectItem value="25">25% (Standard - Croatia)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
