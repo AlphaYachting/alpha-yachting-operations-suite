@@ -92,9 +92,10 @@ export default function Projects() {
    const [progressByJobId, setProgressByJobId] = useState({});
    const [loadingProgressFor, setLoadingProgressFor] = useState(null);
    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [priorityFilter, setPriorityFilter] = useState('all');
-    const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
+   const [statusFilter, setStatusFilter] = useState('all');
+   const [priorityFilter, setPriorityFilter] = useState('all');
+   const [boatFilter, setBoatFilter] = useState('all');
+   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
 
     // Apply filter from dashboard
     useEffect(() => {
@@ -405,8 +406,9 @@ export default function Projects() {
 
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || project.priority === priorityFilter;
+    const matchesBoat = boatFilter === 'all' || project.boat_id === boatFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesFilter;
+    return matchesSearch && matchesStatus && matchesPriority && matchesBoat && matchesFilter;
   });
 
   return (
@@ -485,6 +487,19 @@ export default function Projects() {
             <SelectItem value="Express">Express</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={boatFilter} onValueChange={setBoatFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Boat" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Boats</SelectItem>
+            {boats.map(boat => (
+              <SelectItem key={boat.id} value={boat.id}>
+                {boat.vessel_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Projects List */}
@@ -500,7 +515,7 @@ export default function Projects() {
             <Briefcase className="h-12 w-12 mx-auto text-slate-300 mb-4" />
             <h3 className="text-lg font-medium text-slate-900">No projects found</h3>
             <p className="text-slate-500 mt-1">
-              {searchTerm || statusFilter !== 'all' || priorityFilter !== 'all' 
+              {searchTerm || statusFilter !== 'all' || priorityFilter !== 'all' || boatFilter !== 'all'
                 ? 'Try adjusting your filters' 
                 : 'Create your first project to get started'}
             </p>
