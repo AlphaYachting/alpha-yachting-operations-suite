@@ -18,7 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Edit, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Edit, GripVertical, Tag } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
 import { UNIT_OPTIONS, getUnitOptions } from './unitMapping';
 
@@ -33,6 +34,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
     unit_type: 'Hour',
     quantity: 1,
     unit_price: 50,
+    is_optional: false,
   });
 
   useEffect(() => {
@@ -50,6 +52,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
       unit_type: 'Hour',
       quantity: 1,
       unit_price: 50,
+      is_optional: false,
     });
     setEditingTask(null);
     setShowDialog(true);
@@ -134,11 +137,18 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                               <GripVertical className="h-5 w-5 text-slate-400" />
                             </div>
                             <div className="flex-1 space-y-3">
-                              <div>
-                                <h4 className="font-semibold text-slate-900">{task.title}</h4>
-                                {task.description && (
-                                  <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{task.description}</p>
-                                )}
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h4 className="font-semibold text-slate-900">{task.title}</h4>
+                                    {task.is_optional && (
+                                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Optional</span>
+                                    )}
+                                  </div>
+                                  {task.description && (
+                                    <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{task.description}</p>
+                                  )}
+                                </div>
                               </div>
                               <div className="grid grid-cols-3 gap-3">
                                 <div>
@@ -183,10 +193,24 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                                 </div>
                               </div>
                               <div className="flex justify-between items-center pt-2 border-t">
-                                <span className="text-sm text-slate-600">Total</span>
-                                <span className="text-lg font-bold text-slate-900">
-                                  €{((task.quantity || 0) * (task.unit_price || 0)).toFixed(2)}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={task.is_optional || false}
+                                    onCheckedChange={(checked) => updateTaskField(index, 'is_optional', checked)}
+                                    id={`optional-${index}`}
+                                  />
+                                  <label htmlFor={`optional-${index}`} className="text-sm text-slate-600 cursor-pointer">
+                                    Optional
+                                  </label>
+                                </div>
+                                <div className="text-right">
+                                  <span className={`text-lg font-bold ${task.is_optional ? 'text-amber-600' : 'text-slate-900'}`}>
+                                    €{((task.quantity || 0) * (task.unit_price || 0)).toFixed(2)}
+                                  </span>
+                                  {task.is_optional && (
+                                    <div className="text-xs text-amber-600">Not in total</div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             <div className="flex gap-2">
@@ -289,12 +313,30 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                 />
               </div>
             </div>
-            <div className="p-4 bg-slate-50 rounded-lg">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={taskForm.is_optional || false}
+                  onCheckedChange={(checked) => setTaskForm({ ...taskForm, is_optional: checked })}
+                  id="task-optional"
+                />
+                <label htmlFor="task-optional" className="text-sm text-slate-600 cursor-pointer flex items-center gap-1">
+                  <Tag className="h-4 w-4" />
+                  Optional (shown but not included in total)
+                </label>
+              </div>
+            </div>
+            <div className={`p-4 rounded-lg ${taskForm.is_optional ? 'bg-amber-50' : 'bg-slate-50'}`}>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-600">Task Total</span>
-                <span className="text-lg font-bold text-slate-900">
-                  €{((taskForm.quantity || 0) * (taskForm.unit_price || 0)).toFixed(2)}
-                </span>
+                <div className="text-right">
+                  <span className={`text-lg font-bold ${taskForm.is_optional ? 'text-amber-600' : 'text-slate-900'}`}>
+                    €{((taskForm.quantity || 0) * (taskForm.unit_price || 0)).toFixed(2)}
+                  </span>
+                  {taskForm.is_optional && (
+                    <div className="text-xs text-amber-600">Not in total</div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

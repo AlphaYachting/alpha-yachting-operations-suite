@@ -149,8 +149,11 @@ export default function OfferDetail() {
   }, [offerTasks]);
 
   useEffect(() => {
-    // Recalculate total whenever tasks change
-    const total = tasks.reduce((sum, task) => sum + (task.total_amount || 0), 0);
+    // Recalculate total whenever tasks change - exclude optional items
+    const total = tasks.reduce((sum, task) => {
+      if (task.is_optional) return sum;
+      return sum + (task.total_amount || 0);
+    }, 0);
     setFormData(prev => ({ ...prev, total_amount: total }));
   }, [tasks]);
 
@@ -344,7 +347,8 @@ export default function OfferDetail() {
         tax_rate: vatRate,
         total_net: totalNet,
         total_tax: 0,
-        total_gross: totalNet
+        total_gross: totalNet,
+        is_optional: task.is_optional || false
       };
     });
   };
