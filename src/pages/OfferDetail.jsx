@@ -64,6 +64,7 @@ export default function OfferDetail() {
    language: 'German',
    status: 'Draft',
    valid_until: '',
+   vat_rate: 0,
    notes: '',
    customer_notes: '',
    total_amount: 0,
@@ -136,6 +137,7 @@ export default function OfferDetail() {
         customer_id: offer.customer_id || '',
         boat_id: offer.boat_id || '',
         job_id: offer.job_id || '',
+        vat_rate: offer.vat_rate || 0,
       });
     }
   }, [offer]);
@@ -528,7 +530,7 @@ export default function OfferDetail() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label>Language</Label>
                   <Select value={formData.language} onValueChange={(v) => updateField('language', v)}>
@@ -556,6 +558,19 @@ export default function OfferDetail() {
                       <SelectItem value="Approved">Approved</SelectItem>
                       <SelectItem value="Rejected">Rejected</SelectItem>
                       <SelectItem value="Expired">Expired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>VAT Rate (%)</Label>
+                  <Select value={String(formData.vat_rate || 0)} onValueChange={(v) => updateField('vat_rate', parseFloat(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0% (No VAT)</SelectItem>
+                      <SelectItem value="13">13% (Reduced)</SelectItem>
+                      <SelectItem value="20">20% (Standard)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -640,11 +655,21 @@ export default function OfferDetail() {
                   {tasks.reduce((sum, t) => sum + (t.quantity || 0), 0).toFixed(1)}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-4 bg-blue-50 px-4 rounded-lg">
-                <span className="text-lg font-semibold text-slate-900">Total Amount</span>
-                <span className="text-2xl font-bold text-blue-600">
-                  €{(formData.total_amount || 0).toFixed(2)}
-                </span>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-3 border-b">
+                  <span className="text-slate-600">Subtotal (excl. VAT)</span>
+                  <span className="font-semibold">€{(formData.total_amount || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b">
+                  <span className="text-slate-600">VAT ({formData.vat_rate || 0}%)</span>
+                  <span className="font-semibold">€{((formData.total_amount || 0) * (formData.vat_rate || 0) / 100).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center py-4 bg-blue-50 px-4 rounded-lg">
+                  <span className="text-lg font-semibold text-slate-900">Total Amount</span>
+                  <span className="text-2xl font-bold text-blue-600">
+                    €{((formData.total_amount || 0) * (1 + (formData.vat_rate || 0) / 100)).toFixed(2)}
+                  </span>
+                </div>
               </div>
             </CardContent>
           </Card>
