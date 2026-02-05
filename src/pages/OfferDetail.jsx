@@ -334,8 +334,6 @@ export default function OfferDetail() {
     return tasks.map((task, index) => {
       const unit = task.unit_type || 'Hour';
       const totalNet = task.total_amount || 0;
-      const totalTax = totalNet * (vatRate / 100);
-      const totalGross = totalNet + totalTax;
       return {
         sort_order: task.sequence_order || index,
         title: task.title,
@@ -345,8 +343,8 @@ export default function OfferDetail() {
         unit_price: task.unit_price || 0,
         tax_rate: vatRate,
         total_net: totalNet,
-        total_tax: totalTax,
-        total_gross: totalGross
+        total_tax: 0,
+        total_gross: totalNet
       };
     });
   };
