@@ -24,7 +24,9 @@ import {
   AlertCircle,
   AlertTriangle,
   Briefcase,
-  Trash2
+  Trash2,
+  Eye,
+  Edit
 } from 'lucide-react';
 import { notifyWorkOrderAssignment } from '@/components/notifications/notificationUtils';
 import { Card, CardContent } from '@/components/ui/card';
@@ -972,34 +974,36 @@ export default function WorkOrders() {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button asChild variant="ghost" size="sm">
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        asChild
+                        className="h-7 w-7 p-0"
+                      >
                         <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}>
-                          <ChevronRight className="h-4 w-4" />
+                          <Eye className="h-3 w-3" />
                         </Link>
                       </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setEditingWorkOrder(wo); setShowForm(true); }}>
-                            Edit
-                          </DropdownMenuItem>
-                          {currentUser?.role === 'admin' && (
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(wo.id)}
-                              disabled={deleting}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {deleting ? 'Deleting...' : 'Delete All'}
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => { setEditingWorkOrder(wo); setShowForm(true); }}
+                        className="h-7 w-7 p-0"
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      {currentUser?.role === 'admin' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDelete(wo.id)}
+                          disabled={deleting}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
