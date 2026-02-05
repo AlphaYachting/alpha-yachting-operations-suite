@@ -378,11 +378,22 @@ export default function ProjectDetail() {
                               key={task.id}
                               className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors"
                             >
-                              {task.status === 'Completed' ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                              ) : (
-                                <Circle className="h-4 w-4 text-slate-300 flex-shrink-0" />
-                              )}
+                              <button
+                                onClick={async () => {
+                                  if (task.status !== 'Completed') {
+                                    await base44.entities.Task.update(task.id, { status: 'Completed', completed_at: new Date().toISOString() });
+                                    loadProjectData();
+                                  }
+                                }}
+                                disabled={task.status === 'Completed'}
+                                className="flex-shrink-0 hover:scale-110 transition-transform disabled:cursor-not-allowed"
+                              >
+                                {task.status === 'Completed' ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-slate-300 hover:text-green-500" />
+                                )}
+                              </button>
                               <span className={`flex-1 text-sm ${task.status === 'Completed' ? 'text-slate-500 line-through' : 'text-slate-700'}`}>
                                 {task.title}
                               </span>
