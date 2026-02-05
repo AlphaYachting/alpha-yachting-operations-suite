@@ -17,14 +17,18 @@ import {
   DollarSign,
   FileText,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Edit
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, isPast, isToday, parseISO, differenceInDays } from 'date-fns';
+import { toast } from 'sonner';
+import JobForm from '@/components/jobs/JobForm';
 
 const statusColors = {
   New: 'bg-slate-100 text-slate-700',
@@ -59,6 +63,10 @@ export default function ProjectDetail() {
    const [workOrders, setWorkOrders] = useState([]);
    const [tasks, setTasks] = useState([]);
    const [loading, setLoading] = useState(true);
+   const [showEditDialog, setShowEditDialog] = useState(false);
+   const [allCustomers, setAllCustomers] = useState([]);
+   const [allBoats, setAllBoats] = useState([]);
+   const [allLocations, setAllLocations] = useState([]);
 
    useEffect(() => {
      if (projectId) {
@@ -83,6 +91,9 @@ export default function ProjectDetail() {
          setCustomer(customers.find(c => c.id === currentProject.customer_id));
          setBoat(boats.find(b => b.id === currentProject.boat_id));
          setLocation(locations.find(l => l.id === currentProject.location_id));
+         setAllCustomers(customers);
+         setAllBoats(boats);
+         setAllLocations(locations);
 
          const projectWOs = allWOs.filter(wo => wo.job_id === projectId);
          setWorkOrders(projectWOs);
@@ -100,6 +111,18 @@ export default function ProjectDetail() {
 
   const getTasksForWO = (woId) => {
     return tasks.filter(t => t.work_order_id === woId).sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
+  };
+
+  const handleSaveProject = async (projectData) => {
+    try {
+      await base44.entities.Job.update(projectId, projectData);
+      setShowEditDialog(false);
+      toast.success('Project updated');
+      await loadProjectData();
+    } catch (error) {
+      console.error('Error updating project:', error);
+      toast.error('Failed to update project');
+    }
   };
 
   if (loading) {
@@ -180,6 +203,10 @@ export default function ProjectDetail() {
           </div>
           <p className="text-slate-500 mt-1">{project.service_category} • {project.job_type}</p>
         </div>
+        <Button onClick={() => setShowEditDialog(true)} className="gap-2">
+          <Edit className="h-4 w-4" />
+          Edit Project
+        </Button>
       </div>
 
       {/* Overview Cards */}
@@ -412,6 +439,23 @@ export default function ProjectDetail() {
           </div>
         )}
       </div>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+          </DialogHeader>
+          <JobForm
+            job={project}
+            customers={allCustomers}
+            boats={allBoats}
+            locations={allLocations}
+            onSave={handleSaveProject}
+            onCancel={() => setShowEditDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
