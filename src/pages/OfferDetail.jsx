@@ -324,7 +324,7 @@ export default function OfferDetail() {
       retention_of_title_text: formData.retention_of_title_text,
       vat_rate: vatRate,
       subtotal: subtotal,
-      tax_total: taxTotal,
+      tax_amount: taxTotal,
       total: total,
       public_notes: formData.customer_notes,
       currency: 'EUR',
