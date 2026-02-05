@@ -185,16 +185,21 @@ export default function Leads() {
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1">
-                    {/* Row 1: Name, Status, Priority */}
+                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-semibold text-slate-900 truncate">{lead.name}</h3>
+                      {lead.inquiry_type && (
+                        <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
+                          {lead.inquiry_type}
+                        </Badge>
+                      )}
                       <LeadStatusChange lead={lead} onStatusChange={loadData} />
                       <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
                         {lead.priority}
                       </Badge>
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location, Inquiry Type */}
+                    {/* Row 2: Contact, Boat, Location */}
                     <div className="flex items-center gap-4 text-xs text-slate-600">
                       {lead.phone && (
                         <div className="flex items-center gap-1">
@@ -219,11 +224,6 @@ export default function Leads() {
                           <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span>{lead.location}</span>
                         </div>
-                      )}
-                      {lead.inquiry_type && (
-                        <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
-                          {lead.inquiry_type}
-                        </Badge>
                       )}
                     </div>
                   </div>
