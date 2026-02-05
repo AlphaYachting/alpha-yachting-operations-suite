@@ -18,11 +18,13 @@ Deno.serve(async (req) => {
       entities: {}
     };
 
-    // Export each entity
+    // Export each entity - get ALL records without limit
     for (const entityName of entities) {
       try {
-        const data = await base44.asServiceRole.entities[entityName].list();
+        // Use filter with empty query to get all records, explicitly request large limit
+        const data = await base44.asServiceRole.entities[entityName].filter({}, null, 10000);
         backup.entities[entityName] = data;
+        console.log(`Backed up ${entityName}: ${data.length} records`);
       } catch (error) {
         console.error(`Error backing up ${entityName}:`, error.message);
         backup.entities[entityName] = { error: error.message };
