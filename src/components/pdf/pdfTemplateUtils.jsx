@@ -595,12 +595,12 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
             <span>Subtotal (Net):</span>
             <span>${currency}${(document.subtotal || 0).toFixed(2)}</span>
           </div>
-          ${Object.entries(taxBreakdown).map(([rate, amount]) => `
+          ${vatRate > 0 ? `
             <div class="total-row">
-              <span style="color: #666;">VAT ${rate}%:</span>
-              <span style="color: #666;">${currency}${amount.toFixed(2)}</span>
+              <span>VAT ${vatRate}%:</span>
+              <span>${currency}${taxTotal.toFixed(2)}</span>
             </div>
-          `).join('')}
+          ` : ''}
           <div class="total-row final">
             <span>Total (Gross):</span>
             <span>${currency}${(document.total || 0).toFixed(2)}</span>
