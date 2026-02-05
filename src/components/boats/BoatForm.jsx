@@ -106,7 +106,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
         <div className="space-y-2">
           <Label>Vessel Name *</Label>
           <Input
-            value={formData.vessel_name}
+            value={formData.vessel_name || ''}
             onChange={(e) => updateField('vessel_name', e.target.value)}
             placeholder="Vessel name"
             required
@@ -135,7 +135,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
         <div className="space-y-2">
           <Label>Manufacturer</Label>
           <Input
-            value={formData.manufacturer}
+            value={formData.manufacturer || ''}
             onChange={(e) => updateField('manufacturer', e.target.value)}
             placeholder="e.g., Bavaria, Beneteau"
           />
@@ -143,7 +143,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
         <div className="space-y-2">
           <Label>Model</Label>
           <Input
-            value={formData.model}
+            value={formData.model || ''}
             onChange={(e) => updateField('model', e.target.value)}
             placeholder="e.g., Cruiser 46"
           />
@@ -291,7 +291,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
           <div className="space-y-2">
             <Label>Engine Make</Label>
             <Input
-              value={formData.engine_manufacturer}
+              value={formData.engine_manufacturer || ''}
               onChange={(e) => updateField('engine_manufacturer', e.target.value)}
               placeholder="e.g., Volvo"
             />
@@ -299,7 +299,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
           <div className="space-y-2">
             <Label>Engine Model</Label>
             <Input
-              value={formData.engine_model}
+              value={formData.engine_model || ''}
               onChange={(e) => updateField('engine_model', e.target.value)}
               placeholder="e.g., D2-40"
             />
@@ -317,7 +317,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
         <div className="space-y-2">
           <Label>Engine Number</Label>
           <Input
-            value={formData.engine_number}
+            value={formData.engine_number || ''}
             onChange={(e) => updateField('engine_number', e.target.value.trim())}
             placeholder="Engine serial / engine number as found on the engine plate"
           />
@@ -346,7 +346,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
           <div className="space-y-2">
             <Label>Berth Number</Label>
             <Input
-              value={formData.berth_number}
+              value={formData.berth_number || ''}
               onChange={(e) => updateField('berth_number', e.target.value)}
               placeholder="e.g., A-15"
             />
@@ -359,7 +359,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
         <div className="space-y-2">
           <Label>Registration Number</Label>
           <Input
-            value={formData.registration_number}
+            value={formData.registration_number || ''}
             onChange={(e) => updateField('registration_number', e.target.value)}
             placeholder="Registration #"
           />
@@ -367,7 +367,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
         <div className="space-y-2">
           <Label>Flag Country</Label>
           <Input
-            value={formData.flag_country}
+            value={formData.flag_country || ''}
             onChange={(e) => updateField('flag_country', e.target.value)}
             placeholder="e.g., Austria"
           />
@@ -392,7 +392,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
       <div className="space-y-2">
         <Label>Access Details</Label>
         <Textarea
-          value={formData.access_details}
+          value={formData.access_details || ''}
           onChange={(e) => updateField('access_details', e.target.value)}
           placeholder="Keys location, lockbox code, contact person..."
           rows={2}
@@ -402,7 +402,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
       <div className="space-y-2">
         <Label>Known Issues / Recurring Problems</Label>
         <Textarea
-          value={formData.known_issues}
+          value={formData.known_issues || ''}
           onChange={(e) => updateField('known_issues', e.target.value)}
           placeholder="History of problems, weak spots..."
           rows={2}
@@ -412,7 +412,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
       <div className="space-y-2">
         <Label>Systems Notes</Label>
         <Textarea
-          value={formData.systems_notes}
+          value={formData.systems_notes || ''}
           onChange={(e) => updateField('systems_notes', e.target.value)}
           placeholder="Installed systems, upgrades, special equipment..."
           rows={2}

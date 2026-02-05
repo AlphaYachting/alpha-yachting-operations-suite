@@ -82,7 +82,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>Company Name</Label>
           <Input
-            value={formData.company_name}
+            value={formData.company_name || ''}
             onChange={(e) => updateField('company_name', e.target.value)}
             placeholder="Company name"
           />
@@ -94,7 +94,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>First Name</Label>
           <Input
-            value={formData.first_name}
+            value={formData.first_name || ''}
             onChange={(e) => updateField('first_name', e.target.value)}
             placeholder="First name"
           />
@@ -102,7 +102,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>Last Name *</Label>
           <Input
-            value={formData.last_name}
+            value={formData.last_name || ''}
             onChange={(e) => updateField('last_name', e.target.value)}
             placeholder="Last name"
             required
@@ -116,7 +116,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
           <Label>Email *</Label>
           <Input
             type="email"
-            value={formData.email}
+            value={formData.email || ''}
             onChange={(e) => updateField('email', e.target.value)}
             placeholder="email@example.com"
             required
@@ -125,7 +125,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>Phone</Label>
           <Input
-            value={formData.phone}
+            value={formData.phone || ''}
             onChange={(e) => updateField('phone', e.target.value)}
             placeholder="+43 ..."
           />
@@ -136,7 +136,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>Secondary Phone</Label>
           <Input
-            value={formData.phone_secondary}
+            value={formData.phone_secondary || ''}
             onChange={(e) => updateField('phone_secondary', e.target.value)}
             placeholder="Secondary phone"
           />
@@ -164,7 +164,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>Street Address</Label>
           <Input
-            value={formData.billing_address}
+            value={formData.billing_address || ''}
             onChange={(e) => updateField('billing_address', e.target.value)}
             placeholder="Street address"
           />
@@ -173,7 +173,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
           <div className="space-y-2">
             <Label>Postal Code</Label>
             <Input
-              value={formData.billing_postal_code}
+              value={formData.billing_postal_code || ''}
               onChange={(e) => updateField('billing_postal_code', e.target.value)}
               placeholder="12345"
             />
@@ -181,7 +181,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
           <div className="space-y-2">
             <Label>City</Label>
             <Input
-              value={formData.billing_city}
+              value={formData.billing_city || ''}
               onChange={(e) => updateField('billing_city', e.target.value)}
               placeholder="City"
             />
@@ -189,7 +189,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
           <div className="space-y-2">
             <Label>Country</Label>
             <Input
-              value={formData.billing_country}
+              value={formData.billing_country || ''}
               onChange={(e) => updateField('billing_country', e.target.value)}
               placeholder="Country"
             />
@@ -202,7 +202,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>VAT Number</Label>
           <Input
-            value={formData.vat_number}
+            value={formData.vat_number || ''}
             onChange={(e) => updateField('vat_number', e.target.value)}
             placeholder="VAT number"
           />
@@ -227,7 +227,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
       <div className="space-y-2">
         <Label>Internal Notes</Label>
         <Textarea
-          value={formData.notes}
+          value={formData.notes || ''}
           onChange={(e) => updateField('notes', e.target.value)}
           placeholder="Access rules, preferences, special instructions..."
           rows={3}

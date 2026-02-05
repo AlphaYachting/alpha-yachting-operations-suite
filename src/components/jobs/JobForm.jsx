@@ -300,7 +300,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
       <div className="space-y-2">
         <Label>Job Title *</Label>
         <Input
-          value={formData.title}
+          value={formData.title || ''}
           onChange={(e) => updateField('title', e.target.value)}
           placeholder="Brief description of the work needed"
           required
@@ -311,7 +311,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
       <div className="space-y-2">
         <Label>Detailed Description</Label>
         <Textarea
-          value={formData.description}
+          value={formData.description || ''}
           onChange={(e) => updateField('description', e.target.value)}
           placeholder="Detailed problem description, customer request..."
           rows={4}
@@ -417,7 +417,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
           <Label>Intake Date</Label>
           <Input
             type="date"
-            value={formData.intake_date}
+            value={formData.intake_date || ''}
             onChange={(e) => updateField('intake_date', e.target.value)}
           />
         </div>
@@ -429,7 +429,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
           <Label>Job Due Date</Label>
           <Input
             type="date"
-            value={formData.requested_date}
+            value={formData.requested_date || ''}
             onChange={(e) => updateField('requested_date', e.target.value)}
             placeholder="When should the job be completed?"
           />
@@ -469,7 +469,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
         <div className="space-y-2">
           <Label>Internal Notes</Label>
           <Textarea
-            value={formData.internal_notes}
+            value={formData.internal_notes || ''}
             onChange={(e) => updateField('internal_notes', e.target.value)}
             placeholder="Notes for technicians..."
             rows={3}
@@ -478,7 +478,7 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
         <div className="space-y-2">
           <Label>Customer-Facing Notes</Label>
           <Textarea
-            value={formData.customer_notes}
+            value={formData.customer_notes || ''}
             onChange={(e) => updateField('customer_notes', e.target.value)}
             placeholder="Notes visible to customer..."
             rows={3}

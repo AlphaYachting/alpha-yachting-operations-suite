@@ -80,7 +80,7 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
               <Label>Payment Schedule Description</Label>
               <Textarea
                 value={formData.payment_schedule || ''}
-                onChange={(e) => updateField('payment_schedule', e.target.value)}
+                onChange={(e) => updateField('payment_schedule', e.target.value || '')}
                 placeholder="e.g., 50% downpayment upon order, 50% upon completion"
                 rows={2}
               />
@@ -94,7 +94,7 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
             <Label>Payment Schedule Description</Label>
             <Textarea
               value={formData.payment_schedule || ''}
-              onChange={(e) => updateField('payment_schedule', e.target.value)}
+              onChange={(e) => updateField('payment_schedule', e.target.value || '')}
               placeholder="e.g., 33% upon order, 33% at 50% completion, 34% upon final delivery"
               rows={3}
             />
@@ -116,7 +116,7 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
               <Label>Legal Text (Retention of Title)</Label>
               <Textarea
                 value={formData.retention_of_title_text || DEFAULT_RETENTION_TEXT}
-                onChange={(e) => updateField('retention_of_title_text', e.target.value)}
+                onChange={(e) => updateField('retention_of_title_text', e.target.value || '')}
                 placeholder="Enter legal text..."
                 rows={4}
                 className="font-mono text-xs"
