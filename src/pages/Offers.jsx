@@ -34,6 +34,9 @@ import {
   Send,
   AlertCircle,
   Copy,
+  Eye,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -110,11 +113,33 @@ export default function Offers() {
     },
   });
 
+  const deleteOfferMutation = useMutation({
+    mutationFn: async (offerId) => {
+      // Delete associated tasks first
+      const tasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
+      await Promise.all(tasks.map(task => base44.entities.OfferTask.delete(task.id)));
+      
+      // Delete the offer
+      await base44.entities.Offer.delete(offerId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+    },
+  });
+
   const handleDuplicate = (e, offerId) => {
     e.preventDefault();
     e.stopPropagation();
     if (confirm('Duplicate this offer?')) {
       duplicateOfferMutation.mutate(offerId);
+    }
+  };
+
+  const handleDelete = (e, offerId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this offer and all its tasks?')) {
+      deleteOfferMutation.mutate(offerId);
     }
   };
 
@@ -305,66 +330,111 @@ export default function Offers() {
             const StatusIcon = statusConfig[offer.status]?.icon || Clock;
 
             return (
-              <Link key={offer.id} to={createPageUrl('OfferDetail') + `?id=${offer.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="py-4">
-                    <div className="flex items-center justify-between gap-4">
+              <Card key={offer.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
+                      {/* Offer Icon */}
+                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center flex-shrink-0">
+                        <FileText className="h-6 w-6 text-blue-500" />
+                      </div>
+
+                      {/* Offer Details */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-slate-900 truncate">{offer.title}</h3>
+                        {/* Row 1: Title, Status, Offer Number */}
+                        <div className="flex items-center gap-2 flex-wrap mb-2">
+                          <h3 className="font-semibold text-slate-900">{offer.title}</h3>
                           <Badge className={statusConfig[offer.status]?.color}>
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {offer.status}
                           </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-slate-600">
                           {offer.offer_number && (
-                            <span className="font-medium">#{offer.offer_number}</span>
+                            <span className="text-sm font-medium text-slate-600">#{offer.offer_number}</span>
                           )}
+                        </div>
+
+                        {/* Row 2: Customer, Boat, Valid Until */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
                           <div className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
-                            <span className="truncate">
+                            <span>
                               {customer?.company_name || 
                                `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() ||
                                'Unknown'}
                             </span>
                           </div>
                           {boat && (
-                            <div className="flex items-center gap-1">
-                              <Ship className="h-3 w-3" />
-                              <span className="truncate">{boat.vessel_name}</span>
-                            </div>
+                            <>
+                              <span>•</span>
+                              <div className="flex items-center gap-1">
+                                <Ship className="h-3 w-3" />
+                                <span>{boat.vessel_name}</span>
+                              </div>
+                            </>
                           )}
                           {offer.valid_until && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              <span>{format(new Date(offer.valid_until), 'MMM d')}</span>
-                            </div>
+                            <>
+                              {(customer || boat) && <span>•</span>}
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>Valid until {format(new Date(offer.valid_until), 'MMM d, yyyy')}</span>
+                              </div>
+                            </>
                           )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0">
+
+                        {/* Row 3: Total Amount (if present) */}
                         {offer.total_amount !== undefined && offer.total_amount !== null && (
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-slate-900">
-                              €{offer.total_amount.toFixed(2)}
-                            </p>
+                          <div className="mt-1 text-sm text-slate-500">
+                            Total: <span className="font-semibold text-slate-900">€{offer.total_amount.toFixed(2)}</span>
                           </div>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => handleDuplicate(e, offer.id)}
-                          disabled={duplicateOfferMutation.isPending}
-                          className="flex-shrink-0"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Link to={createPageUrl('OfferDetail') + `?id=${offer.id}`}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 w-7 p-0"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                      <Link to={createPageUrl('OfferDetail') + `?id=${offer.id}`}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 w-7 p-0"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => handleDelete(e, offer.id)}
+                        disabled={deleteOfferMutation.isPending}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => handleDuplicate(e, offer.id)}
+                        disabled={duplicateOfferMutation.isPending}
+                        className="h-7 w-7 p-0"
+                        title="Duplicate offer"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })
         )}
