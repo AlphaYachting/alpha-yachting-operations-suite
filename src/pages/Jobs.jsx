@@ -17,7 +17,10 @@ import {
   AlertTriangle,
   AlertCircle,
   TrendingUp,
-  Loader2
+  Loader2,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -647,35 +650,33 @@ export default function Projects() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button asChild variant="ghost" size="sm">
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      asChild
+                      className="h-7 w-7 p-0"
+                    >
                       <Link to={createPageUrl('JobDetail') + `?id=${project.id}`}>
-                        <ChevronRight className="h-4 w-4" />
+                        <Eye className="h-3 w-3" />
                       </Link>
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditingProject(project); setShowForm(true); }}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to={createPageUrl('WorkOrders') + `?job=${project.id}&new=true`}>
-                            Create Work Order
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(project)}
-                          className="text-red-600"
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setEditingProject(project); setShowForm(true); }}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(project)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
