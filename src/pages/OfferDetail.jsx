@@ -289,6 +289,10 @@ export default function OfferDetail() {
   const getPDFDocument = () => {
     const customer = customers.find(c => c.id === formData.customer_id);
     const boat = boats.find(b => b.id === formData.boat_id);
+    const subtotal = formData.total_amount || 0;
+    const vatRate = formData.vat_rate || 0;
+    const taxTotal = subtotal * (vatRate / 100);
+    const total = subtotal + taxTotal;
     
     return {
       id: offerId,
@@ -315,9 +319,10 @@ export default function OfferDetail() {
       payment_schedule: formData.payment_schedule,
       retention_of_title_enabled: formData.retention_of_title_enabled,
       retention_of_title_text: formData.retention_of_title_text,
-      subtotal: formData.total_amount || 0,
-      tax_total: 0,
-      total: formData.total_amount || 0,
+      vat_rate: vatRate,
+      subtotal: subtotal,
+      tax_total: taxTotal,
+      total: total,
       public_notes: formData.customer_notes,
       currency: 'EUR',
       language: formData.language
