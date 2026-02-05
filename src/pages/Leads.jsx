@@ -183,67 +183,74 @@ export default function Leads() {
           filteredLeads.map(lead => (
             <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-3">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-4">
+                  {/* Left: Name & Status */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <h3 className="text-base font-semibold text-slate-900 truncate">{lead.name}</h3>
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-sm font-semibold text-slate-900 truncate">{lead.name}</h3>
                       <LeadStatusChange lead={lead} onStatusChange={loadData} />
-                      <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0`}>
+                      <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0.5`}>
                         {lead.priority}
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-xs text-slate-600 mb-2">
+                    {/* Contact Info - Horizontal */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 mb-2">
                       {lead.phone && (
-                        <div className="flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="truncate">{lead.phone}</span>
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3 text-slate-400" />
+                          <span>{lead.phone}</span>
                         </div>
                       )}
                       {lead.email && (
-                        <div className="flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="truncate">{lead.email}</span>
-                        </div>
-                      )}
-                      {lead.boat_name && (
-                        <div className="flex items-center gap-1.5">
-                          <Anchor className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="truncate">{lead.boat_name}</span>
-                        </div>
-                      )}
-                      {lead.location && (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="truncate">{lead.location}</span>
+                        <div className="flex items-center gap-1">
+                          <Mail className="h-3 w-3 text-slate-400" />
+                          <span className="truncate max-w-[200px]">{lead.email}</span>
                         </div>
                       )}
                     </div>
 
-                    {lead.notes && (
-                      <div className="bg-slate-50 p-1.5 rounded text-xs text-slate-700 mb-1.5 line-clamp-2">
-                        {lead.notes}
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 text-xs text-slate-500">
-                      <span>Created: {format(parseISO(lead.created_date), 'MMM d, yyyy')}</span>
-                      {lead.converted_at && (
-                        <span>Converted: {format(parseISO(lead.converted_at), 'MMM d, yyyy')}</span>
+                    {/* Boat & Location - Horizontal */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+                      {lead.boat_name && (
+                        <div className="flex items-center gap-1">
+                          <Anchor className="h-3 w-3 text-slate-400" />
+                          <span>{lead.boat_name}</span>
+                        </div>
+                      )}
+                      {lead.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-slate-400" />
+                          <span>{lead.location}</span>
+                        </div>
+                      )}
+                      {lead.inquiry_type && (
+                        <Badge variant="outline" className="text-xs px-1.5 py-0">
+                          {lead.inquiry_type}
+                        </Badge>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex gap-1.5 flex-shrink-0">
+                  {/* Right: Notes Preview */}
+                  {lead.notes && (
+                    <div className="flex-1 min-w-0 max-w-xs">
+                      <p className="text-xs text-slate-600 line-clamp-2 bg-slate-50 p-2 rounded border border-slate-200">
+                        {lead.notes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Right: Actions */}
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <Button
                       size="sm"
                       variant="outline"
                       asChild
-                      className="h-8 px-2"
+                      className="h-7 px-2"
                     >
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-3.5 w-3.5 mr-1" />
-                        <span className="text-xs">View</span>
+                        <Eye className="h-3 w-3" />
                       </Link>
                     </Button>
                     {lead.status === 'Pending' && (
@@ -253,10 +260,10 @@ export default function Leads() {
                           setConvertingLead(lead);
                           setShowConvertDialog(true);
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-700 h-8 px-2"
+                        className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                        <span className="text-xs">Convert</span>
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Convert
                       </Button>
                     )}
                     <Button
@@ -266,17 +273,17 @@ export default function Leads() {
                         setEditingLead(lead);
                         setShowForm(true);
                       }}
-                      className="h-8 w-8 p-0"
+                      className="h-7 w-7 p-0"
                     >
-                      <Edit className="h-3.5 w-3.5" />
+                      <Edit className="h-3 w-3" />
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleDeleteLead(lead.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
