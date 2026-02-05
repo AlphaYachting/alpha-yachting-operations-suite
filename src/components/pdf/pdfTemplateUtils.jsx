@@ -582,8 +582,8 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
                 <td class="col-qty">${(item.quantity || 0).toFixed(2)}</td>
                 <td class="col-unit">${item.unit || '-'}</td>
                 <td class="col-price">${currency}${(item.unit_price || 0).toFixed(2)}</td>
-                ${template.show_vat_column ? `<td class="col-vat">${item.tax_rate || 0}%</td>` : ''}
-                <td class="col-total">${currency}${(item.total_gross || 0).toFixed(2)}</td>
+                ${template.show_vat_column ? `<td class="col-vat">-</td>` : ''}
+                <td class="col-total">${currency}${(item.total_net || 0).toFixed(2)}</td>
               </tr>
             `).join('')}
           </tbody>
