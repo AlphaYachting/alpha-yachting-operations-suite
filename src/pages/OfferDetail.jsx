@@ -330,8 +330,12 @@ export default function OfferDetail() {
   };
 
   const getPDFLineItems = () => {
+    const vatRate = formData.vat_rate || 0;
     return tasks.map((task, index) => {
       const unit = task.unit_type || 'Hour';
+      const totalNet = task.total_amount || 0;
+      const totalTax = totalNet * (vatRate / 100);
+      const totalGross = totalNet + totalTax;
       return {
         sort_order: task.sequence_order || index,
         title: task.title,
@@ -339,10 +343,10 @@ export default function OfferDetail() {
         quantity: task.quantity || 0,
         unit: unit,
         unit_price: task.unit_price || 0,
-        tax_rate: 0,
-        total_net: task.total_amount || 0,
-        total_tax: 0,
-        total_gross: task.total_amount || 0
+        tax_rate: vatRate,
+        total_net: totalNet,
+        total_tax: totalTax,
+        total_gross: totalGross
       };
     });
   };
