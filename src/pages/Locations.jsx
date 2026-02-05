@@ -8,7 +8,10 @@ import {
   Phone,
   Clock,
   Building2,
-  Star
+  Star,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -146,68 +149,103 @@ export default function Locations() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4">
           {filteredLocations.map((location) => (
             <Card key={location.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-900">{location.name}</span>
-                      {location.is_partner && (
-                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <Badge className={typeColors[location.location_type]}>{location.location_type}</Badge>
-                      <Badge className={regionColors[location.region]}>{location.region}</Badge>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    {/* Location Icon */}
+                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center flex-shrink-0">
+                      <MapPin className="h-6 w-6 text-blue-500" />
                     </div>
 
-                    <div className="mt-3 space-y-1 text-sm text-slate-500">
-                      {(location.city || location.address) && (
-                        <div className="flex items-start gap-2">
-                          <Building2 className="h-4 w-4 shrink-0 mt-0.5" />
-                          <span className="truncate">
-                            {location.address && `${location.address}, `}{location.city}
-                          </span>
-                        </div>
-                      )}
-                      {location.contact_phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 shrink-0" />
-                          <a href={`tel:${location.contact_phone}`} className="hover:text-blue-600">
-                            {location.contact_phone}
-                          </a>
-                        </div>
-                      )}
-                      {location.opening_hours && (
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 shrink-0" />
-                          <span className="truncate">{location.opening_hours}</span>
+                    {/* Location Details */}
+                    <div className="flex-1 min-w-0">
+                      {/* Row 1: Name, Partner Badge, Type, Region */}
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <span className="font-semibold text-slate-900">{location.name}</span>
+                        {location.is_partner && (
+                          <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        )}
+                        <Badge className={typeColors[location.location_type]}>{location.location_type}</Badge>
+                        <Badge className={regionColors[location.region]}>{location.region}</Badge>
+                      </div>
+
+                      {/* Row 2: Address, Phone, Opening Hours */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+                        {(location.city || location.address) && (
+                          <div className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            <span>
+                              {location.address && `${location.address}, `}{location.city}{location.country && `, ${location.country}`}
+                            </span>
+                          </div>
+                        )}
+                        {location.contact_phone && (
+                          <>
+                            {(location.city || location.address) && <span>•</span>}
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              <a href={`tel:${location.contact_phone}`} className="hover:text-blue-600">
+                                {location.contact_phone}
+                              </a>
+                            </div>
+                          </>
+                        )}
+                        {location.opening_hours && (
+                          <>
+                            {(location.city || location.address || location.contact_phone) && <span>•</span>}
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              <span>{location.opening_hours}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Row 3: Contact Person & Access Notes (if available) */}
+                      {(location.contact_person || location.access_notes) && (
+                        <div className="mt-1 text-xs text-slate-500">
+                          {location.contact_person && (
+                            <span>Contact: {location.contact_person}</span>
+                          )}
+                          {location.contact_person && location.access_notes && <span> • </span>}
+                          {location.access_notes && (
+                            <span className="italic">{location.access_notes}</span>
+                          )}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="shrink-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setEditingLocation(location); setShowForm(true); }}>
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(location.id)}
-                        className="text-red-600"
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setEditingLocation(location); setShowForm(true); }}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setEditingLocation(location); setShowForm(true); }}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(location.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
