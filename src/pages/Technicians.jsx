@@ -8,7 +8,10 @@ import {
   Phone,
   Mail,
   Star,
-  Badge as BadgeIcon
+  Badge as BadgeIcon,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -158,84 +161,116 @@ export default function Technicians() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4">
           {filteredTechnicians.map((tech) => (
             <Card key={tech.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <Avatar className="h-12 w-12">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    {/* Avatar */}
+                    <Avatar className="h-16 w-16 flex-shrink-0">
                       {tech.photo_url && <AvatarImage src={tech.photo_url} />}
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white">
+                      <AvatarFallback 
+                        className="text-white text-lg"
+                        style={{ backgroundColor: tech.color || '#3b82f6' }}
+                      >
                         {tech.first_name?.[0]}{tech.last_name?.[0]}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <h3 className="font-semibold text-slate-900">
-                        {tech.first_name} {tech.last_name}
-                      </h3>
-                      <Badge className={roleColors[tech.role]}>{tech.role}</Badge>
+
+                    {/* Technician Details */}
+                    <div className="flex-1 min-w-0">
+                      {/* Row 1: Name, Role, Availability, External Badge */}
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <h3 className="font-semibold text-slate-900">
+                          {tech.first_name} {tech.last_name}
+                        </h3>
+                        <Badge className={roleColors[tech.role]}>{tech.role}</Badge>
+                        <Badge className={availabilityColors[tech.availability_status]}>
+                          {tech.availability_status}
+                        </Badge>
+                        {tech.is_external && (
+                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                            External
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Row 2: Contact Info */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600 mb-2">
+                        {tech.email && (
+                          <a href={`mailto:${tech.email}`} className="flex items-center gap-1 hover:text-blue-600">
+                            <Mail className="h-3 w-3" />
+                            {tech.email}
+                          </a>
+                        )}
+                        {tech.phone && (
+                          <>
+                            {tech.email && <span>•</span>}
+                            <a href={`tel:${tech.phone}`} className="flex items-center gap-1 hover:text-blue-600">
+                              <Phone className="h-3 w-3" />
+                              {tech.phone}
+                            </a>
+                          </>
+                        )}
+                        {tech.home_base && (
+                          <>
+                            {(tech.email || tech.phone) && <span>•</span>}
+                            <span>Base: {tech.home_base}</span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Row 3: Skills */}
+                      {tech.skills && tech.skills.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {tech.skills.slice(0, 6).map((skill, idx) => (
+                            <Badge 
+                              key={idx} 
+                              variant="outline" 
+                              className={`text-xs ${skillColors[skill] || 'bg-slate-50 text-slate-700 border-slate-200'}`}
+                            >
+                              {skill}
+                            </Badge>
+                          ))}
+                          {tech.skills.length > 6 && (
+                            <Badge variant="outline" className="text-xs bg-slate-50 text-slate-700 border-slate-200">
+                              +{tech.skills.length - 6} more
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setEditingTechnician(tech); setShowForm(true); }}>
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(tech.id)}
-                        className="text-red-600"
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
 
-                <div className="mt-4 space-y-2 text-sm">
-                  {tech.email && (
-                    <a href={`mailto:${tech.email}`} className="flex items-center gap-2 text-slate-500 hover:text-blue-600">
-                      <Mail className="h-4 w-4" />
-                      {tech.email}
-                    </a>
-                  )}
-                  {tech.phone && (
-                    <a href={`tel:${tech.phone}`} className="flex items-center gap-2 text-slate-500 hover:text-blue-600">
-                      <Phone className="h-4 w-4" />
-                      {tech.phone}
-                    </a>
-                  )}
-                </div>
-
-                <div className="mt-4 flex items-center justify-between">
-                  <Badge className={availabilityColors[tech.availability_status]}>
-                    {tech.availability_status}
-                  </Badge>
-                </div>
-
-                {tech.skills && tech.skills.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {tech.skills.slice(0, 4).map((skill, idx) => (
-                      <Badge 
-                        key={idx} 
-                        variant="outline" 
-                        className={`text-xs ${skillColors[skill] || 'bg-slate-50 text-slate-700'}`}
-                      >
-                        {skill}
-                      </Badge>
-                    ))}
-                    {tech.skills.length > 4 && (
-                      <Badge variant="outline" className="text-xs bg-slate-50">
-                        +{tech.skills.length - 4}
-                      </Badge>
-                    )}
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setEditingTechnician(tech); setShowForm(true); }}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setEditingTechnician(tech); setShowForm(true); }}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(tech.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           ))}
