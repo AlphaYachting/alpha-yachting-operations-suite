@@ -13,7 +13,10 @@ import {
   Ship,
   ChevronRight,
   X,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -174,72 +177,91 @@ export default function Customers() {
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold shrink-0">
+                    {/* Customer Avatar */}
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold text-xl flex-shrink-0">
                       {getDisplayName(customer).charAt(0).toUpperCase()}
                     </div>
+
+                    {/* Customer Details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                         <Link 
-                           to={createPageUrl('CustomerDetail') + `?id=${customer.id}`}
-                           className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
-                         >
-                           {getDisplayName(customer)}
-                         </Link>
-                         <Badge className={statusColors[customer.status]}>{customer.status}</Badge>
-                         {customer.customer_type && customer.customer_type !== 'Private' && (
-                           <Badge variant="outline">{customer.customer_type}</Badge>
-                         )}
-                         {!isDataComplete(customer) && (
-                           <Badge className="bg-amber-100 text-amber-700 flex items-center gap-1">
-                             <AlertCircle className="h-3 w-3" />
-                             Incomplete
-                           </Badge>
-                         )}
-                       </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-slate-500">
+                      {/* Row 1: Name, Status, Type, Incomplete Badge */}
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <h3 className="font-semibold text-slate-900">{getDisplayName(customer)}</h3>
+                        <Badge className={statusColors[customer.status]}>{customer.status}</Badge>
+                        {customer.customer_type && customer.customer_type !== 'Private' && (
+                          <Badge variant="outline">{customer.customer_type}</Badge>
+                        )}
+                        {!isDataComplete(customer) && (
+                          <Badge className="bg-amber-100 text-amber-700 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Incomplete
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Row 2: Contact Info & Boat Count */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
                         {customer.email && (
                           <a href={`mailto:${customer.email}`} className="flex items-center gap-1 hover:text-blue-600">
-                            <Mail className="h-3.5 w-3.5" />
+                            <Mail className="h-3 w-3" />
                             {customer.email}
                           </a>
                         )}
                         {customer.phone && (
-                          <a href={`tel:${customer.phone}`} className="flex items-center gap-1 hover:text-blue-600">
-                            <Phone className="h-3.5 w-3.5" />
-                            {customer.phone}
-                          </a>
+                          <>
+                            {customer.email && <span>•</span>}
+                            <a href={`tel:${customer.phone}`} className="flex items-center gap-1 hover:text-blue-600">
+                              <Phone className="h-3 w-3" />
+                              {customer.phone}
+                            </a>
+                          </>
                         )}
+                        {(customer.email || customer.phone) && <span>•</span>}
                         <div className="flex items-center gap-1">
-                          <Ship className="h-3.5 w-3.5" />
-                          {getBoatCount(customer.id)} boat{getBoatCount(customer.id) !== 1 ? 's' : ''}
+                          <Ship className="h-3 w-3" />
+                          <span>{getBoatCount(customer.id)} boat{getBoatCount(customer.id) !== 1 ? 's' : ''}</span>
                         </div>
                       </div>
+
+                      {/* Row 3: Location (if available) */}
+                      {(customer.billing_city || customer.billing_country) && (
+                        <div className="mt-1 text-xs text-slate-500">
+                          <Building2 className="h-3 w-3 inline mr-1" />
+                          {customer.billing_city && customer.billing_country && `${customer.billing_city}, ${customer.billing_country}`}
+                          {customer.billing_city && !customer.billing_country && customer.billing_city}
+                          {!customer.billing_city && customer.billing_country && customer.billing_country}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button asChild variant="ghost" size="sm">
-                      <Link to={createPageUrl('CustomerDetail') + `?id=${customer.id}`}>
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Link to={createPageUrl('CustomerDetail') + `?id=${customer.id}`}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-7 p-0"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    </Link>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setEditingCustomer(customer); setShowForm(true); }}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit className="h-3 w-3" />
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditingCustomer(customer); setShowForm(true); }}>
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(customer.id)}
-                          className="text-red-600"
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(customer.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
