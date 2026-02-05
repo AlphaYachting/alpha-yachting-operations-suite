@@ -202,9 +202,11 @@ export default function Leads() {
                         </Badge>
                       )}
                       <LeadStatusChange lead={lead} onStatusChange={loadData} />
-                      <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
-                        {lead.priority}
-                      </Badge>
+                      {lead.priority && (
+                        <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
+                          {lead.priority}
+                        </Badge>
+                      )}
                     </div>
 
                     {/* Row 2: Contact, Boat, Location */}
