@@ -124,7 +124,19 @@ export default function OfferDetail() {
 
   useEffect(() => {
     if (offer) {
-      setFormData(offer);
+      setFormData({
+        ...offer,
+        title: offer.title || '',
+        description: offer.description || '',
+        notes: offer.notes || '',
+        customer_notes: offer.customer_notes || '',
+        payment_schedule: offer.payment_schedule || '',
+        retention_of_title_text: offer.retention_of_title_text || '',
+        valid_until: offer.valid_until || '',
+        customer_id: offer.customer_id || '',
+        boat_id: offer.boat_id || '',
+        job_id: offer.job_id || '',
+      });
     }
   }, [offer]);
 
@@ -500,7 +512,7 @@ export default function OfferDetail() {
               <div className="space-y-2">
                 <Label>Title *</Label>
                 <Input
-                  value={formData.title}
+                  value={formData.title || ''}
                   onChange={(e) => updateField('title', e.target.value)}
                   placeholder="Offer title"
                 />
@@ -509,7 +521,7 @@ export default function OfferDetail() {
               <div className="space-y-2">
                 <Label>Description</Label>
                 <Textarea
-                  value={formData.description}
+                  value={formData.description || ''}
                   onChange={(e) => updateField('description', e.target.value)}
                   placeholder="Offer description"
                   rows={3}
@@ -551,7 +563,7 @@ export default function OfferDetail() {
                   <Label>Valid Until</Label>
                   <Input
                     type="date"
-                    value={formData.valid_until}
+                    value={formData.valid_until || ''}
                     onChange={(e) => updateField('valid_until', e.target.value)}
                   />
                 </div>
@@ -560,7 +572,7 @@ export default function OfferDetail() {
               <div className="space-y-2">
                 <Label>Customer Notes</Label>
                 <Textarea
-                  value={formData.customer_notes}
+                  value={formData.customer_notes || ''}
                   onChange={(e) => updateField('customer_notes', e.target.value)}
                   placeholder="Notes visible to customer"
                   rows={2}
@@ -570,7 +582,7 @@ export default function OfferDetail() {
               <div className="space-y-2">
                 <Label>Internal Notes</Label>
                 <Textarea
-                  value={formData.notes}
+                  value={formData.notes || ''}
                   onChange={(e) => updateField('notes', e.target.value)}
                   placeholder="Internal notes"
                   rows={2}

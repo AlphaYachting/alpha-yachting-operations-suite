@@ -77,6 +77,7 @@ import PrintDocument from './pages/PrintDocument';
 import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
+import StandardizeWorkOrders from './pages/StandardizeWorkOrders';
 import TaskTemplates from './pages/TaskTemplates';
 import TasklistImport from './pages/TasklistImport';
 import TeamCalendar from './pages/TeamCalendar';
@@ -93,7 +94,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import StandardizeWorkOrders from './pages/StandardizeWorkOrders';
 import __Layout from './Layout.jsx';
 
 
@@ -128,6 +128,7 @@ export const PAGES = {
     "Reports": Reports,
     "Schedule": Schedule,
     "Settings": Settings,
+    "StandardizeWorkOrders": StandardizeWorkOrders,
     "TaskTemplates": TaskTemplates,
     "TasklistImport": TasklistImport,
     "TeamCalendar": TeamCalendar,
@@ -144,7 +145,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "StandardizeWorkOrders": StandardizeWorkOrders,
 }
 
 export const pagesConfig = {
