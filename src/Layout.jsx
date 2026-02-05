@@ -63,8 +63,8 @@ const navItems = [
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
         { name: 'Workshop Display', icon: Monitor, page: 'WorkshopDisplay' },
         { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
-        { name: 'Standardize WOs', icon: ClipboardList, page: 'StandardizeWorkOrders', adminOnly: true },
         { name: 'Settings', icon: Settings, page: 'Settings' },
+        { name: 'Standardize WOs', icon: ClipboardList, page: 'StandardizeWorkOrders', adminOnly: true },
       ];
 
 export default function Layout({ children, currentPageName }) {
