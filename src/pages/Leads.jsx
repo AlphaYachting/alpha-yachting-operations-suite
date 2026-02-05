@@ -120,25 +120,25 @@ export default function Leads() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
         <Button onClick={() => {
           setEditingLead(null);
           setShowForm(true);
-        }} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
+        }} className="bg-blue-600 hover:bg-blue-700" size="sm">
+          <Plus className="h-4 w-4 mr-1" />
           New Lead
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         {['Pending', 'Contacted', 'Converted', 'Lost'].map(status => {
           const count = leads.filter(l => l.status === status).length;
           return (
             <Card key={status}>
-              <CardContent className="p-4">
-                <p className="text-sm text-slate-500 mb-1">{status}</p>
-                <p className="text-2xl font-bold text-slate-900">{count}</p>
+              <CardContent className="p-3">
+                <p className="text-xs text-slate-500 mb-0.5">{status}</p>
+                <p className="text-xl font-bold text-slate-900">{count}</p>
               </CardContent>
             </Card>
           );
@@ -147,7 +147,7 @@ export default function Leads() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           <div className="flex gap-3 flex-wrap">
             <Input
               placeholder="Search by name, phone, email..."
@@ -172,56 +172,56 @@ export default function Leads() {
       </Card>
 
       {/* Leads List */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filteredLeads.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center">
-              <p className="text-slate-500">No leads found</p>
+            <CardContent className="p-6 text-center">
+              <p className="text-slate-500 text-sm">No leads found</p>
             </CardContent>
           </Card>
         ) : (
           filteredLeads.map(lead => (
             <Card key={lead.id} className="hover:border-slate-300 transition-colors">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-slate-900">{lead.name}</h3>
+              <CardContent className="p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <h3 className="text-base font-semibold text-slate-900 truncate">{lead.name}</h3>
                       <LeadStatusChange lead={lead} onStatusChange={loadData} />
-                      <Badge className={priorityColors[lead.priority]}>
+                      <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0`}>
                         {lead.priority}
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600 mb-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-xs text-slate-600 mb-2">
                       {lead.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-slate-400" />
-                          {lead.phone}
+                        <div className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="truncate">{lead.phone}</span>
                         </div>
                       )}
                       {lead.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-slate-400" />
-                          {lead.email}
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="truncate">{lead.email}</span>
                         </div>
                       )}
                       {lead.boat_name && (
-                        <div className="flex items-center gap-2">
-                          <Anchor className="h-4 w-4 text-slate-400" />
-                          {lead.boat_name}
+                        <div className="flex items-center gap-1.5">
+                          <Anchor className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="truncate">{lead.boat_name}</span>
                         </div>
                       )}
                       {lead.location && (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-slate-400" />
-                          {lead.location}
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="truncate">{lead.location}</span>
                         </div>
                       )}
                     </div>
 
                     {lead.notes && (
-                      <div className="bg-slate-50 p-2 rounded text-sm text-slate-700 mb-2">
+                      <div className="bg-slate-50 p-1.5 rounded text-xs text-slate-700 mb-1.5 line-clamp-2">
                         {lead.notes}
                       </div>
                     )}
@@ -234,15 +234,16 @@ export default function Leads() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex gap-1.5 flex-shrink-0">
                     <Button
                       size="sm"
                       variant="outline"
                       asChild
+                      className="h-8 px-2"
                     >
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Details
+                        <Eye className="h-3.5 w-3.5 mr-1" />
+                        <span className="text-xs">View</span>
                       </Link>
                     </Button>
                     {lead.status === 'Pending' && (
@@ -252,10 +253,10 @@ export default function Leads() {
                           setConvertingLead(lead);
                           setShowConvertDialog(true);
                         }}
-                        className="bg-emerald-600 hover:bg-emerald-700"
+                        className="bg-emerald-600 hover:bg-emerald-700 h-8 px-2"
                       >
-                        <CheckCircle2 className="h-4 w-4 mr-1" />
-                        Convert
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                        <span className="text-xs">Convert</span>
                       </Button>
                     )}
                     <Button
@@ -265,16 +266,17 @@ export default function Leads() {
                         setEditingLead(lead);
                         setShowForm(true);
                       }}
+                      className="h-8 w-8 p-0"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleDeleteLead(lead.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
