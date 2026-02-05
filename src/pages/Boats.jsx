@@ -12,7 +12,10 @@ import {
   Settings,
   ChevronRight,
   Anchor,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -179,101 +182,115 @@ export default function Boats() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4">
           {filteredBoats.map((boat) => (
-            <Card key={boat.id} className="hover:shadow-md transition-shadow overflow-hidden">
-              {boat.photo_url ? (
-                <div className="h-32 bg-slate-100">
-                  <img 
-                    src={boat.photo_url} 
-                    alt={boat.vessel_name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="h-32 bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
-                  <Anchor className="h-12 w-12 text-blue-200" />
-                </div>
-              )}
+            <Card key={boat.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                       <Link 
-                         to={createPageUrl('BoatDetail') + `?id=${boat.id}`}
-                         className="font-semibold text-slate-900 hover:text-blue-600 transition-colors truncate"
-                       >
-                         {boat.vessel_name}
-                       </Link>
-                       <Badge className={typeColors[boat.vessel_type]}>{boat.vessel_type}</Badge>
-                       {!isDataComplete(boat) && (
-                         <Badge className="bg-amber-100 text-amber-700 flex items-center gap-1">
-                           <AlertCircle className="h-3 w-3" />
-                           Incomplete
-                         </Badge>
-                       )}
-                     </div>
-                    
-                    {(boat.manufacturer || boat.model) && (
-                      <p className="text-sm text-slate-600 mt-1 truncate">
-                        {boat.manufacturer} {boat.model}
-                      </p>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    {/* Boat Image */}
+                    {boat.photo_url ? (
+                      <div className="h-20 w-20 rounded-lg bg-slate-100 flex-shrink-0">
+                        <img 
+                          src={boat.photo_url} 
+                          alt={boat.vessel_name}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-20 w-20 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center flex-shrink-0">
+                        <Anchor className="h-8 w-8 text-blue-200" />
+                      </div>
                     )}
 
-                    <p className="text-sm text-slate-500 mt-1 truncate">
-                      {getCustomerName(boat.customer_id)}
-                    </p>
+                    {/* Boat Details */}
+                    <div className="flex-1 min-w-0">
+                      {/* Row 1: Name, Type, Status */}
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <Link 
+                          to={createPageUrl('BoatDetail') + `?id=${boat.id}`}
+                          className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                        >
+                          {boat.vessel_name}
+                        </Link>
+                        <Badge className={typeColors[boat.vessel_type]}>{boat.vessel_type}</Badge>
+                        {!isDataComplete(boat) && (
+                          <Badge className="bg-amber-100 text-amber-700">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Incomplete
+                          </Badge>
+                        )}
+                      </div>
 
-                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-400">
-                      {boat.length_m && (
-                        <div className="flex items-center gap-1">
-                          <Ruler className="h-3 w-3" />
-                          {boat.length_m}m
-                        </div>
-                      )}
-                      {boat.current_location_id && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {getLocationName(boat.current_location_id)}
-                        </div>
-                      )}
-                      {boat.engine_type && (
-                        <div className="flex items-center gap-1">
-                          <Settings className="h-3 w-3" />
-                          {boat.engine_type}
-                        </div>
-                      )}
+                      {/* Row 2: Manufacturer/Model, Customer, Location, Engine */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+                        {(boat.manufacturer || boat.model) && (
+                          <span className="font-medium">
+                            {boat.manufacturer} {boat.model}
+                          </span>
+                        )}
+                        <span>•</span>
+                        <span>{getCustomerName(boat.customer_id)}</span>
+                        {boat.current_location_id && (
+                          <>
+                            <span>•</span>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {getLocationName(boat.current_location_id)}
+                            </div>
+                          </>
+                        )}
+                        {boat.length_m && (
+                          <>
+                            <span>•</span>
+                            <div className="flex items-center gap-1">
+                              <Ruler className="h-3 w-3" />
+                              {boat.length_m}m
+                            </div>
+                          </>
+                        )}
+                        {boat.engine_type && (
+                          <>
+                            <span>•</span>
+                            <div className="flex items-center gap-1">
+                              <Settings className="h-3 w-3" />
+                              {boat.engine_type}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="shrink-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link to={createPageUrl('BoatDetail') + `?id=${boat.id}`}>
-                          View Details
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setEditingBoat(boat); setShowForm(true); }}>
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to={createPageUrl('Jobs') + `?new=true&boat=${boat.id}`}>
-                          Create Job
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(boat.id)}
-                        className="text-red-600"
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      asChild
+                      className="h-7 w-7 p-0"
+                    >
+                      <Link to={createPageUrl('BoatDetail') + `?id=${boat.id}`}>
+                        <Eye className="h-3 w-3" />
+                      </Link>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setEditingBoat(boat); setShowForm(true); }}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDelete(boat.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
