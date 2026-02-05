@@ -186,7 +186,12 @@ export default function Customers() {
                     <div className="flex-1 min-w-0">
                       {/* Row 1: Name, Status, Type, Incomplete Badge */}
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <h3 className="font-semibold text-slate-900">{getDisplayName(customer)}</h3>
+                        <Link 
+                          to={createPageUrl('CustomerDetail') + `?id=${customer.id}`}
+                          className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                        >
+                          {getDisplayName(customer)}
+                        </Link>
                         <Badge className={statusColors[customer.status]}>{customer.status}</Badge>
                         {customer.customer_type && customer.customer_type !== 'Private' && (
                           <Badge variant="outline">{customer.customer_type}</Badge>
