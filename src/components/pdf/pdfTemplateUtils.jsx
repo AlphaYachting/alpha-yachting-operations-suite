@@ -40,13 +40,11 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
     total: 'right'
   };
 
-  // Calculate totals
-  const taxBreakdown = lineItems.reduce((acc, item) => {
-    const rate = item.tax_rate || 0;
-    if (!acc[rate]) acc[rate] = 0;
-    acc[rate] += item.total_tax || 0;
-    return acc;
-  }, {});
+  // Calculate totals - VAT is calculated once at document level, not per line item
+  const vatRate = document.vat_rate || 0;
+  const subtotal = document.subtotal || 0;
+  const taxTotal = subtotal * (vatRate / 100);
+  const taxBreakdown = vatRate > 0 ? { [vatRate]: taxTotal } : {};
 
   const outstanding = isInvoice ? (document.total || 0) - (document.paid_amount || 0) : 0;
 
