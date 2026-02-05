@@ -36,6 +36,14 @@ const priorityColors = {
   'Urgent': 'bg-red-100 text-red-700'
 };
 
+const inquiryTypeColors = {
+  'Service Inquiry': 'bg-blue-100 text-blue-700 border-blue-200',
+  'Parts Request': 'bg-purple-100 text-purple-700 border-purple-200',
+  'Maintenance': 'bg-teal-100 text-teal-700 border-teal-200',
+  'Emergency': 'bg-red-100 text-red-700 border-red-200',
+  'Other': 'bg-slate-100 text-slate-700 border-slate-200'
+};
+
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -184,12 +192,12 @@ export default function Leads() {
             <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex-1 min-w-0 space-y-1.5">
                     {/* Row 1: Name, Status, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-semibold text-slate-900 truncate">{lead.name}</h3>
                       {lead.inquiry_type && (
-                        <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
+                        <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
                           {lead.inquiry_type}
                         </Badge>
                       )}
@@ -226,6 +234,13 @@ export default function Leads() {
                         </div>
                       )}
                     </div>
+
+                    {/* Row 3: Description Preview */}
+                    {lead.description && (
+                      <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                        <span className="line-clamp-2">{lead.description}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}

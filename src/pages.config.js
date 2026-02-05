@@ -50,6 +50,7 @@
 import AccessLogs from './pages/AccessLogs';
 import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
+import CustomerDetail from './pages/CustomerDetail';
 import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import DatabaseBackup from './pages/DatabaseBackup';
@@ -94,7 +95,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import CustomerDetail from './pages/CustomerDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -102,6 +102,7 @@ export const PAGES = {
     "AccessLogs": AccessLogs,
     "BoatDetail": BoatDetail,
     "Boats": Boats,
+    "CustomerDetail": CustomerDetail,
     "Customers": Customers,
     "Dashboard": Dashboard,
     "DatabaseBackup": DatabaseBackup,
@@ -146,7 +147,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "CustomerDetail": CustomerDetail,
 }
 
 export const pagesConfig = {
