@@ -239,10 +239,11 @@ export default function WorkOrders() {
         toast.success('Work order updated');
       } else {
         console.log('Creating new work order...');
-        const woNumber = `WO${Date.now().toString().slice(-6)}`;
+        // Generate sequential work order number
+        const { work_order_number } = await base44.functions.invoke('generateWorkOrderNumber', {});
         const newWo = await base44.entities.WorkOrder.create({ 
           ...workOrderData, 
-          work_order_number: woNumber 
+          work_order_number 
         });
         createdWoId = newWo.id;
         savedWorkOrder = newWo;
