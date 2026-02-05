@@ -13,21 +13,23 @@ import {
 import { AlertCircle } from 'lucide-react';
 
 export default function LeadForm({ lead, locations, onSave, onCancel }) {
-  const [formData, setFormData] = useState(lead || {
-    name: '',
-    phone: '',
-    email: '',
-    boat_name: '',
-    boat_details: '',
-    location: '',
-    location_id: '',
-    contact_method: 'Phone',
-    inquiry_type: 'Service Inquiry',
-    notes: '',
-    description: '',
-    priority: 'Medium'
+  const [formData, setFormData] = useState({
+    name: lead?.name || '',
+    phone: lead?.phone || '',
+    email: lead?.email || '',
+    boat_name: lead?.boat_name || '',
+    boat_details: lead?.boat_details || '',
+    location: lead?.location || '',
+    location_id: lead?.location_id || '',
+    contact_method: lead?.contact_method || 'Phone',
+    inquiry_type: lead?.inquiry_type || 'Service Inquiry',
+    notes: lead?.notes || '',
+    description: lead?.description || '',
+    priority: lead?.priority || 'Medium',
+    status: lead?.status || 'Pending'
   });
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,9 +45,13 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
     }
 
     try {
+      setSaving(true);
       await onSave(formData);
     } catch (err) {
-      setError(err.message);
+      console.error('Error saving lead:', err);
+      setError(err?.message || 'Failed to save lead. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -62,7 +68,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>Name *</Label>
           <Input
-            value={formData.name}
+            value={formData.name || ''}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Contact person name"
           />
@@ -71,7 +77,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>Phone *</Label>
           <Input
-            value={formData.phone}
+            value={formData.phone || ''}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             placeholder="+43 123 456"
           />
@@ -81,7 +87,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
           <Label>Email</Label>
           <Input
             type="email"
-            value={formData.email}
+            value={formData.email || ''}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="name@example.com"
           />
@@ -106,7 +112,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>Boat Name</Label>
           <Input
-            value={formData.boat_name}
+            value={formData.boat_name || ''}
             onChange={(e) => setFormData({ ...formData, boat_name: e.target.value })}
             placeholder="e.g., Blue Horizon"
           />
@@ -115,7 +121,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
         <div className="space-y-2">
           <Label>Boat Details</Label>
           <Input
-            value={formData.boat_details}
+            value={formData.boat_details || ''}
             onChange={(e) => setFormData({ ...formData, boat_details: e.target.value })}
             placeholder="Type, length, engine..."
           />
@@ -139,7 +145,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
             </Select>
           ) : (
             <Input
-              value={formData.location}
+              value={formData.location || ''}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               placeholder="Marina or anchorage"
             />
@@ -181,7 +187,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
       <div className="space-y-2">
         <Label>Email / Transcript / Description</Label>
         <Textarea
-          value={formData.description}
+          value={formData.description || ''}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           placeholder="Paste the customer email, phone transcript, or detailed inquiry here. This will be used to generate task checklist."
           rows={4}
@@ -191,7 +197,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
       <div className="space-y-2">
         <Label>Additional Notes</Label>
         <Textarea
-          value={formData.notes}
+          value={formData.notes || ''}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           placeholder="Any other information..."
           rows={2}
@@ -199,11 +205,11 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button type="button" variant="outline" onClick={onCancel}>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-          {lead ? 'Update Lead' : 'Create Lead'}
+        <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={saving}>
+          {saving ? 'Saving...' : lead ? 'Update Lead' : 'Create Lead'}
         </Button>
       </div>
     </form>
