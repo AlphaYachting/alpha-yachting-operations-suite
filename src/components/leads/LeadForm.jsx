@@ -136,7 +136,7 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
       </div>
 
       {/* Existing Customer Selection */}
-      {isExistingCustomer && customers && (
+      {isExistingCustomer && (
         <div className="space-y-2">
           <Label>Select Customer *</Label>
           <Select value={formData.customer_id || ''} onValueChange={handleCustomerSelect}>
@@ -144,11 +144,15 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
               <SelectValue placeholder="Choose existing customer..." />
             </SelectTrigger>
             <SelectContent>
-              {customers.map(c => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()} - {c.email}
-                </SelectItem>
-              ))}
+              {customers && customers.length > 0 ? (
+                customers.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()} - {c.email}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value={null} disabled>No customers available</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
