@@ -40,7 +40,7 @@ export default function CustomerHeader({ jobCount = 0, welcomeMessage, customerN
           {/* Logo */}
           <div className="h-16 w-16 flex items-center justify-center">
             <img 
-              src={logoUrl || "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"}
+              src={logoUrl || "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/c0a60bb17_AlphaYachtingLogoWhite.png"}
               alt="Alpha Yachting"
               className="h-12 object-contain"
             />
