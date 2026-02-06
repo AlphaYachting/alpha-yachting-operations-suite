@@ -124,107 +124,105 @@ export default function CustomerBoatDetailSimulate() {
     `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Test Mode Banner */}
-        <div className="mb-6 bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-yellow-700" />
-            <p className="text-yellow-700 font-medium">
-              TEST MODE - Viewing as: {displayName}
-            </p>
-          </div>
+    <>
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-slate-900 to-slate-800 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-center">
+          <img 
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
+            alt="Alpha Yachting"
+            className="h-10 object-contain"
+          />
         </div>
+      </header>
 
-        {/* Back Button */}
-        <Link to={createPageUrl('CustomerPortalSimulate') + `?customerId=${customerId}`}>
-          <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to My Boats
-          </Button>
-        </Link>
+      <div className="min-h-screen bg-slate-50 pt-16">
+        <div className="max-w-4xl mx-auto p-4">
+          {/* Test Mode Banner */}
+          <div className="mb-4 bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-700" />
+              <p className="text-yellow-700 font-medium">
+                TEST MODE - Viewing as: {displayName}
+              </p>
+            </div>
+          </div>
 
-        {/* Boat Header */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="h-20 w-20 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center flex-shrink-0">
-                <Ship className="h-10 w-10 text-blue-600" />
+          {/* Back Button */}
+          <Link to={createPageUrl('CustomerPortalSimulate') + `?customerId=${customerId}`}>
+            <Button variant="ghost" className="mb-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to My Vessels
+            </Button>
+          </Link>
+
+          {/* Boat Header */}
+          <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center flex-shrink-0">
+                <Ship className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-slate-900 mb-2">{boat.vessel_name}</h1>
+                <h1 className="text-2xl font-bold text-slate-900">{boat.vessel_name}</h1>
                 <p className="text-slate-600">
-                  {boat.manufacturer} {boat.model} • {boat.year}
+                  {boat.manufacturer} {boat.model} • {boat.year} • {boat.length_m}m
                 </p>
-                {boat.length_m && (
-                  <p className="text-sm text-slate-500 mt-1">Length: {boat.length_m}m</p>
-                )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Projects List */}
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">Active Projects</h2>
-        
-        {jobs.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center py-12">
-              <Clock className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+          {/* Projects List */}
+          {jobs.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+              <Clock className="h-16 w-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-xl font-medium text-slate-900 mb-2">No Projects</h3>
               <p className="text-slate-600">
                 There are currently no active projects for this vessel.
               </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {jobs.map(job => {
-              const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
-              const latestWO = jobWorkOrders.sort((a, b) => 
-                new Date(b.updated_date) - new Date(a.updated_date)
-              )[0];
-              const customerStatus = latestWO ? mapWorkOrderStatus(latestWO.status) : 'Planned';
-              const StatusIcon = statusConfig[customerStatus]?.icon || Clock;
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h2 className="text-xl font-bold text-slate-900 mb-4 px-1">Your Projects</h2>
+              {jobs.map(job => {
+                const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
+                const latestWO = jobWorkOrders.sort((a, b) => 
+                  new Date(b.updated_date) - new Date(a.updated_date)
+                )[0];
+                const customerStatus = latestWO ? mapWorkOrderStatus(latestWO.status) : 'Planned';
+                const borderColor = customerStatus === 'In Progress' ? '#eab308' : 
+                                  customerStatus === 'On Hold' ? '#f97316' : 
+                                  customerStatus === 'Completed' ? '#10b981' : '#3b82f6';
 
-              return (
-                <Link 
-                  key={job.id} 
-                  to={createPageUrl('CustomerProjectDetailSimulate') + `?jobId=${job.id}&customerId=${customerId}`}
-                >
-                  <Card className="hover:shadow-lg transition-all cursor-pointer">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-semibold text-slate-900">{job.title}</h3>
-                            <Badge className={statusConfig[customerStatus]?.color}>
-                              <StatusIcon className="h-3 w-3 mr-1" />
-                              {customerStatus}
-                            </Badge>
+                return (
+                  <Link 
+                    key={job.id} 
+                    to={createPageUrl('CustomerProjectDetailSimulate') + `?jobId=${job.id}&customerId=${customerId}`}
+                  >
+                    <Card className="hover:shadow-md transition-all cursor-pointer border-l-4" style={{ borderLeftColor: borderColor }}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-slate-900 mb-1">{job.title}</h3>
                           </div>
-                          {job.customer_notes && (
-                            <p className="text-slate-600 mb-3">{job.customer_notes}</p>
-                          )}
-                          <div className="flex items-center gap-4 text-sm text-slate-500">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Started {format(new Date(job.intake_date || job.created_date), 'MMM d, yyyy')}
-                            </div>
-                            {jobWorkOrders.length > 0 && (
-                              <span>{jobWorkOrders.length} work order{jobWorkOrders.length > 1 ? 's' : ''}</span>
-                            )}
-                          </div>
+                          <Badge className={statusConfig[customerStatus]?.color}>
+                            {customerStatus}
+                          </Badge>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-        )}
+                        {job.customer_notes && (
+                          <p className="text-slate-600 text-sm mb-3">{job.customer_notes}</p>
+                        )}
+                        <div className="text-xs text-slate-500">
+                          Started {format(new Date(job.intake_date || job.created_date), 'MMM d, yyyy')}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

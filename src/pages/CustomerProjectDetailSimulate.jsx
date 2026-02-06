@@ -154,144 +154,130 @@ export default function CustomerProjectDetailSimulate() {
     `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Test Mode Banner */}
-        <div className="mb-6 bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-yellow-700" />
-            <p className="text-yellow-700 font-medium">
-              TEST MODE - Viewing as: {displayName}
-            </p>
-          </div>
+    <>
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-slate-900 to-slate-800 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-center">
+          <img 
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
+            alt="Alpha Yachting"
+            className="h-10 object-contain"
+          />
         </div>
+      </header>
 
-        {/* Back Button */}
-        <Link to={createPageUrl('CustomerBoatDetailSimulate') + `?boatId=${boat?.id}&customerId=${customerId}`}>
-          <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to {boat?.vessel_name}
-          </Button>
-        </Link>
-
-        {/* Project Header */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between gap-4 mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold text-slate-900">{job.title}</h1>
-                  <Badge className={statusConfig[customerStatus]?.color}>
-                    <StatusIcon className="h-4 w-4 mr-1" />
-                    {customerStatus}
-                  </Badge>
-                </div>
-                {boat && (
-                  <div className="flex items-center gap-2 text-slate-600 mb-3">
-                    <Ship className="h-4 w-4" />
-                    <span>{boat.vessel_name}</span>
-                  </div>
-                )}
-                {job.customer_notes && (
-                  <p className="text-slate-700 text-lg">{job.customer_notes}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6 text-sm text-slate-500 pt-4 border-t border-slate-200">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span>Started {format(new Date(job.intake_date || job.created_date), 'MMM d, yyyy')}</span>
-              </div>
-              {latestWO?.completion_date && (
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Completed {format(new Date(latestWO.completion_date), 'MMM d, yyyy')}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Timeline */}
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">Project Updates</h2>
-
-        {timeline.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center py-12">
-              <Clock className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-xl font-medium text-slate-900 mb-2">No Updates Yet</h3>
-              <p className="text-slate-600">
-                Updates and photos will appear here as work progresses.
+      <div className="min-h-screen bg-slate-50 pt-16">
+        <div className="max-w-4xl mx-auto p-4">
+          {/* Test Mode Banner */}
+          <div className="mb-4 bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-700" />
+              <p className="text-yellow-700 font-medium">
+                TEST MODE - Viewing as: {displayName}
               </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {timeline.map((item, index) => (
-              <Card key={index}>
-                <CardContent className="pt-6">
-                  {item.type === 'photo' ? (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <ImageIcon className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-slate-700">Photo Update</span>
-                        <span className="text-sm text-slate-500">
-                          • {format(new Date(item.date), 'MMM d, yyyy h:mm a')}
-                        </span>
-                      </div>
-                      <img
-                        src={item.file_url}
-                        alt={item.caption || 'Project photo'}
-                        className="w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => setSelectedPhoto(item)}
-                      />
-                      {item.caption && (
-                        <p className="text-slate-600 mt-3">{item.caption}</p>
-                      )}
-                      {item.category && (
-                        <Badge variant="outline" className="mt-2">{item.category}</Badge>
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <MessageSquare className="h-4 w-4 text-green-600" />
-                        <span className="text-sm font-medium text-slate-700">
-                          {item.author_name || 'Team'}
-                        </span>
-                        <span className="text-sm text-slate-500">
-                          • {format(new Date(item.date), 'MMM d, yyyy h:mm a')}
-                        </span>
-                      </div>
-                      <p className="text-slate-700">{item.content}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Photo Modal */}
-        {selectedPhoto && (
-          <div
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
-            onClick={() => setSelectedPhoto(null)}
-          >
-            <div className="max-w-5xl w-full">
-              <img
-                src={selectedPhoto.file_url}
-                alt={selectedPhoto.caption || 'Project photo'}
-                className="w-full rounded-lg"
-              />
-              {selectedPhoto.caption && (
-                <p className="text-white mt-4 text-center">{selectedPhoto.caption}</p>
-              )}
             </div>
           </div>
-        )}
+
+          {/* Back Button */}
+          <Link to={createPageUrl('CustomerBoatDetailSimulate') + `?boatId=${boat?.id}&customerId=${customerId}`}>
+            <Button variant="ghost" className="mb-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Projects
+            </Button>
+          </Link>
+
+          {/* Project Header */}
+          <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <h1 className="text-2xl font-bold text-slate-900">{job.title}</h1>
+              <Badge className={statusConfig[customerStatus]?.color}>
+                {customerStatus}
+              </Badge>
+            </div>
+            
+            {job.customer_notes && (
+              <p className="text-slate-700 whitespace-pre-wrap">{job.customer_notes}</p>
+            )}
+          </div>
+
+          {/* Timeline */}
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-6">Project Updates</h2>
+
+            {timeline.length === 0 ? (
+              <div className="text-center py-12 text-slate-500">
+                No updates yet
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {timeline.map((item, index) => (
+                  <div key={index} className="flex gap-4">
+                    <div className="flex-shrink-0">
+                      {item.type === 'photo' ? (
+                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                          <ImageIcon className="h-5 w-5 text-blue-600" />
+                        </div>
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <MessageSquare className="h-5 w-5 text-green-600" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-500 mb-2">
+                        {format(new Date(item.date), 'MMM d, yyyy • h:mm a')}
+                      </p>
+                      {item.type === 'photo' ? (
+                        <button 
+                          onClick={() => setSelectedPhoto(item)}
+                          className="block"
+                        >
+                          <img 
+                            src={item.file_url} 
+                            alt="Project update"
+                            className="rounded-lg max-w-xs hover:opacity-90 transition-opacity"
+                          />
+                          {item.caption && (
+                            <p className="text-sm text-slate-700 mt-2">{item.caption}</p>
+                          )}
+                        </button>
+                      ) : (
+                        <div className="bg-slate-50 rounded-lg p-4">
+                          {item.author_name && (
+                            <p className="text-sm font-medium text-slate-900 mb-1">
+                              {item.author_name}
+                            </p>
+                          )}
+                          <p className="text-slate-700">{item.content}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Photo Modal */}
+          {selectedPhoto && (
+            <div
+              className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6"
+              onClick={() => setSelectedPhoto(null)}
+            >
+              <div className="max-w-5xl w-full">
+                <img
+                  src={selectedPhoto.file_url}
+                  alt={selectedPhoto.caption || 'Project photo'}
+                  className="w-full rounded-lg"
+                />
+                {selectedPhoto.caption && (
+                  <p className="text-white mt-4 text-center">{selectedPhoto.caption}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
