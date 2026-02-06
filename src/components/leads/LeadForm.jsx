@@ -35,6 +35,17 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
   const [customerBoats, setCustomerBoats] = useState([]);
   const [useExistingBoat, setUseExistingBoat] = useState(false);
 
+  // Load customer boats on initialization if editing a lead with customer_id
+  React.useEffect(() => {
+    if (lead?.customer_id && boats) {
+      const custBoats = boats.filter(b => b.customer_id === lead.customer_id);
+      setCustomerBoats(custBoats);
+      if (custBoats.length > 0) {
+        setUseExistingBoat(true);
+      }
+    }
+  }, [lead?.customer_id, boats]);
+
   // Auto-fill contact details when existing customer is selected
   const handleCustomerSelect = (customerId) => {
     const customer = customers?.find(c => c.id === customerId);
