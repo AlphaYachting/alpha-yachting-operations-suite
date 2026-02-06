@@ -74,12 +74,18 @@ export default function CustomerDashboard() {
   const customerName = customer.company_name || 
     `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
 
+  const activeJobs = jobs.filter(j => j.status !== 'Cancelled');
+  const welcomeMessage = `Welcome, ${customerName}! You have ${activeJobs.length} ${activeJobs.length === 1 ? 'project' : 'projects'} on your ${boats.length} ${boats.length === 1 ? 'vessel' : 'vessels'}`;
+
   return (
     <>
-      <CustomerHeader />
-      <div className="min-h-screen bg-slate-50 pt-16">
+      <CustomerHeader 
+        jobCount={activeJobs.length} 
+        welcomeMessage={welcomeMessage}
+        customerName={customerName}
+      />
+      <div className="min-h-screen bg-slate-50 pt-44">
         <div className="max-w-4xl mx-auto p-4">
-          <CustomerWelcome customerName={customerName} boatCount={boats.length} />
           <CustomerJobList jobs={jobs} photos={photos} comments={comments} boats={boats} />
         </div>
       </div>

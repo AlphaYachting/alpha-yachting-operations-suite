@@ -153,20 +153,43 @@ export default function CustomerProjectDetailSimulate() {
   const displayName = customer?.company_name || 
     `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim();
 
+  const welcomeMessage = `Project: ${job.title}`;
+
   return (
     <>
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-slate-900 to-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-center">
-          <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
-            alt="Alpha Yachting"
-            className="h-10 object-contain"
-          />
+      {/* Header with Technician Style */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg">
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-center h-16 w-16 rounded-full bg-white/20 backdrop-blur-sm">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-white">1</div>
+                <div className="text-xs text-white/90">project</div>
+              </div>
+            </div>
+            <div className="text-center flex-1 mx-4">
+              <div className="text-3xl font-bold text-white">
+                {format(new Date(), 'HH:mm')}
+              </div>
+              <div className="text-sm text-white/90">
+                {format(new Date(), 'EEE, MMM d')}
+              </div>
+            </div>
+            <div className="h-16 w-16 flex items-center justify-center">
+              <img 
+                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
+                alt="Alpha Yachting"
+                className="h-12 object-contain"
+              />
+            </div>
+          </div>
+          <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-6 py-4">
+            <p className="text-white text-center font-medium">{welcomeMessage}</p>
+          </div>
         </div>
       </header>
 
-      <div className="min-h-screen bg-slate-50 pt-16">
+      <div className="min-h-screen bg-slate-50 pt-44">
         <div className="max-w-4xl mx-auto p-4">
           {/* Test Mode Banner */}
           <div className="mb-4 bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded">
