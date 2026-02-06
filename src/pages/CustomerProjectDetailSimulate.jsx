@@ -44,11 +44,16 @@ export default function CustomerProjectDetailSimulate() {
   }, [jobId, customerId]);
 
   const loadData = async () => {
+    setLoading(true);
     try {
+      console.log('Loading project detail, jobId:', jobId, 'customerId:', customerId);
       const [customerData, jobData] = await Promise.all([
         base44.entities.Customer.filter({ id: customerId }),
         base44.entities.Job.filter({ id: jobId })
       ]);
+
+      console.log('Customer data:', customerData);
+      console.log('Job data:', jobData);
 
       if (customerData.length > 0) setCustomer(customerData[0]);
 

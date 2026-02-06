@@ -20,12 +20,17 @@ export default function CustomerPortalSimulate() {
   }, [customerId]);
 
   const loadData = async () => {
+    setLoading(true);
     try {
       const customerData = await base44.entities.Customer.filter({ id: customerId });
+      console.log('Customer data loaded:', customerData);
       if (customerData.length > 0) {
         setCustomer(customerData[0]);
         const boatsData = await base44.entities.Boat.filter({ customer_id: customerId });
+        console.log('Boats data loaded:', boatsData);
         setBoats(boatsData);
+      } else {
+        console.log('No customer found');
       }
     } catch (error) {
       console.error('Error loading data:', error);

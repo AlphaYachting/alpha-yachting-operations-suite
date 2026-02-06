@@ -40,16 +40,22 @@ export default function CustomerBoatDetailSimulate() {
   }, [boatId, customerId]);
 
   const loadData = async () => {
+    setLoading(true);
     try {
+      console.log('Loading boat detail, boatId:', boatId, 'customerId:', customerId);
       const [customerData, boatData] = await Promise.all([
         base44.entities.Customer.filter({ id: customerId }),
         base44.entities.Boat.filter({ id: boatId })
       ]);
 
+      console.log('Customer data:', customerData);
+      console.log('Boat data:', boatData);
+
       if (customerData.length > 0) setCustomer(customerData[0]);
       if (boatData.length > 0) {
         setBoat(boatData[0]);
         const jobsData = await base44.entities.Job.filter({ boat_id: boatId });
+        console.log('Jobs data:', jobsData);
         setJobs(jobsData.filter(j => j.status !== 'Cancelled'));
 
         const allWorkOrders = [];
