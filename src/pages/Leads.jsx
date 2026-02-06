@@ -204,7 +204,7 @@ export default function Leads() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
+                    {/* Row 1: Name, Status Badges, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2 flex-wrap mb-2">
                       <h3 className="text-base font-semibold text-slate-900">{lead.name}</h3>
                       <LeadStatusChange lead={lead} onStatusChange={loadData} />
@@ -220,52 +220,44 @@ export default function Leads() {
                   }
                     </div>
 
-                    {/* Row 2: Created Date First, then Contact, Boat, Location */}
-                    <div className="flex items-center gap-3 text-sm text-slate-600 flex-wrap">
-                      {lead.created_date && (
-                        <span className="text-slate-500">
-                          {format(parseISO(lead.created_date), 'MMM d, yyyy')}
-                        </span>
-                      )}
-                      {lead.phone && (
-                        <>
-                          <span>•</span>
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3.5 w-3.5 text-slate-400" />
-                            <span>{lead.phone}</span>
-                          </div>
-                        </>
-                      )}
-                      {lead.email && (
-                        <>
+                    {/* Row 2: Created Date, Phone, Email, Boat, Location */}
+                    <div className="flex items-center gap-2 text-sm text-slate-600 flex-wrap">
+                      {lead.phone &&
+                  <div className="flex items-center gap-1">
+                          <Phone className="h-3.5 w-3.5 text-slate-400" />
+                          <span>{lead.phone}</span>
+                        </div>
+                  }
+                      {lead.email &&
+                  <>
                           <span>•</span>
                           <div className="flex items-center gap-1">
                             <Mail className="h-3.5 w-3.5 text-slate-400" />
                             <span className="truncate">{lead.email}</span>
                           </div>
                         </>
-                      )}
-                      {lead.boat_name && (
-                        <>
+                  }
+                      {lead.boat_name &&
+                  <>
                           <span>•</span>
                           <div className="flex items-center gap-1">
                             <Anchor className="h-3.5 w-3.5 text-slate-400" />
                             <span>{lead.boat_name}</span>
                           </div>
                         </>
-                      )}
-                      {lead.location && (
-                        <>
+                  }
+                      {lead.location &&
+                  <>
                           <span>•</span>
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3.5 w-3.5 text-slate-400" />
                             <span>{lead.location}</span>
                           </div>
                         </>
-                      )}
+                  }
                     </div>
 
-                    {/* Row 3: Description Preview */}
+                    {/* Row 3: Description */}
                     {lead.description &&
                 <div className="text-sm text-slate-600 mt-2">
                         {lead.description}
@@ -277,12 +269,12 @@ export default function Leads() {
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <Button
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                   asChild
-                  className="h-9 w-9 p-0">
+                  className="h-7 w-7 p-0">
 
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3 w-3" />
                       </Link>
                     </Button>
                     {lead.status === 'Pending' &&
@@ -292,29 +284,29 @@ export default function Leads() {
                     setConvertingLead(lead);
                     setShowConvertDialog(true);
                   }}
-                  className="bg-emerald-600 hover:bg-emerald-700 h-9 px-3 text-sm">
+                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
 
                         Convert
                       </Button>
                 }
                     <Button
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => {
                     setEditingLead(lead);
                     setShowForm(true);
                   }}
-                  className="h-9 w-9 p-0">
+                  className="h-7 w-7 p-0">
 
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-3 w-3" />
                     </Button>
                     <Button
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => handleDeleteLead(lead.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-9 w-9 p-0">
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
 
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
