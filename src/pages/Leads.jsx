@@ -189,13 +189,34 @@ export default function Leads() {
           </Card> :
 
         filteredLeads.map((lead) =>
-        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
-              <CardContent className="p-2.5 px-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0 space-y-1.5">
+        <Card key={lead.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="py-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    {/* Lead Icon */}
+                    <div className={`h-12 w-12 rounded-lg bg-gradient-to-br flex items-center justify-center flex-shrink-0 ${
+                      lead.status === 'Pending' ? 'from-amber-50 to-yellow-50' :
+                      lead.status === 'Contacted' ? 'from-blue-50 to-cyan-50' :
+                      lead.status === 'Converted' ? 'from-emerald-50 to-green-50' :
+                      lead.status === 'Rejected' ? 'from-red-50 to-rose-50' :
+                      lead.status === 'Lost' ? 'from-slate-50 to-gray-50' :
+                      'from-blue-50 to-cyan-50'
+                    }`}>
+                      <Phone className={`h-6 w-6 ${
+                        lead.status === 'Pending' ? 'text-amber-500' :
+                        lead.status === 'Contacted' ? 'text-blue-500' :
+                        lead.status === 'Converted' ? 'text-emerald-500' :
+                        lead.status === 'Rejected' ? 'text-red-500' :
+                        lead.status === 'Lost' ? 'text-slate-500' :
+                        'text-blue-500'
+                      }`} />
+                    </div>
+
+                    {/* Lead Details */}
+                    <div className="flex-1 min-w-0">
                     {/* Row 1: Name, Status, Priority, Inquiry Type */}
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <h3 className="font-semibold text-slate-900">{lead.name}</h3>
                       {lead.inquiry_type &&
                   <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
                           {lead.inquiry_type}
@@ -209,7 +230,7 @@ export default function Leads() {
                   }
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location, Created */}
+                    {/* Row 2: Contact, Boat, Location */}
                     <div className="flex items-center gap-4 text-xs text-slate-600">
                       {lead.phone &&
                   <div className="flex items-center gap-1">
@@ -235,19 +256,15 @@ export default function Leads() {
                           <span>{lead.location}</span>
                         </div>
                   }
-                      {lead.created_date &&
-                  <div className="flex items-center gap-1 text-slate-500">
-                          <span>Created: {format(parseISO(lead.created_date), 'MMM d, yyyy')}</span>
-                        </div>
-                  }
                     </div>
 
                     {/* Row 3: Description Preview */}
-                    {lead.description &&
-                <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                        <span className="text-sm line-clamp-2">{lead.description}</span>
+                    {lead.description && (
+                      <div className="mt-1 text-sm text-slate-500 line-clamp-2">
+                        {lead.description}
                       </div>
-                }
+                    )}
+                    </div>
                   </div>
 
                   {/* Actions */}
