@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { AlertCircle } from 'lucide-react';
 
-export default function LeadForm({ lead, locations, customers, onSave, onCancel }) {
+export default function LeadForm({ lead, locations, customers, boats, onSave, onCancel }) {
   const [isExistingCustomer, setIsExistingCustomer] = useState(!!lead?.customer_id);
   const [formData, setFormData] = useState({
     customer_id: lead?.customer_id || '',
@@ -32,6 +32,8 @@ export default function LeadForm({ lead, locations, customers, onSave, onCancel 
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [customerBoats, setCustomerBoats] = useState([]);
+  const [useExistingBoat, setUseExistingBoat] = useState(false);
 
   // Auto-fill contact details when existing customer is selected
   const handleCustomerSelect = (customerId) => {
@@ -42,10 +44,35 @@ export default function LeadForm({ lead, locations, customers, onSave, onCancel 
         customer_id: customerId,
         name: customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
         phone: customer.phone || '',
-        email: customer.email || ''
+        email: customer.email || '',
+        boat_name: '',
+        boat_details: '',
+        location: '',
+        location_id: ''
       });
+      
+      // Load customer's boats
+      const custBoats = boats?.filter(b => b.customer_id === customerId) || [];
+      setCustomerBoats(custBoats);
+      setUseExistingBoat(custBoats.length > 0);
     } else {
       setFormData({ ...formData, customer_id: '' });
+      setCustomerBoats([]);
+      setUseExistingBoat(false);
+    }
+  };
+
+  // Auto-fill boat details when existing boat is selected
+  const handleBoatSelect = (boatId) => {
+    const boat = customerBoats.find(b => b.id === boatId);
+    if (boat) {
+      setFormData({
+        ...formData,
+        boat_name: boat.vessel_name || '',
+        boat_details: [boat.manufacturer, boat.model, boat.year].filter(Boolean).join(' ') || '',
+        location: boat.current_location_id ? locations?.find(l => l.id === boat.current_location_id)?.name || '' : '',
+        location_id: boat.current_location_id || ''
+      });
     }
   };
 
@@ -175,12 +202,60 @@ export default function LeadForm({ lead, locations, customers, onSave, onCancel 
           </Select>
         </div>
 
+        {isExistingCustomer && customerBoats.length > 0 && (
+          <div className="space-y-2 md:col-span-2">
+            <Label>Boat Selection</Label>
+            <div className="flex gap-3 mb-2">
+              <Button
+                type="button"
+                variant={useExistingBoat ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setUseExistingBoat(true)}
+              >
+                Select Existing Boat
+              </Button>
+              <Button
+                type="button"
+                variant={!useExistingBoat ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => {
+                  setUseExistingBoat(false);
+                  setFormData({
+                    ...formData,
+                    boat_name: '',
+                    boat_details: '',
+                    location: '',
+                    location_id: ''
+                  });
+                }}
+              >
+                Enter New Boat
+              </Button>
+            </div>
+            {useExistingBoat && (
+              <Select onValueChange={handleBoatSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose boat..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {customerBoats.map(boat => (
+                    <SelectItem key={boat.id} value={boat.id}>
+                      {boat.vessel_name} {boat.model ? `- ${boat.model}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label>Boat Name</Label>
           <Input
             value={formData.boat_name || ''}
             onChange={(e) => setFormData({ ...formData, boat_name: e.target.value })}
             placeholder="e.g., Blue Horizon"
+            disabled={isExistingCustomer && useExistingBoat && customerBoats.length > 0}
           />
         </div>
 
@@ -190,6 +265,7 @@ export default function LeadForm({ lead, locations, customers, onSave, onCancel 
             value={formData.boat_details || ''}
             onChange={(e) => setFormData({ ...formData, boat_details: e.target.value })}
             placeholder="Type, length, engine..."
+            disabled={isExistingCustomer && useExistingBoat && customerBoats.length > 0}
           />
         </div>
 
