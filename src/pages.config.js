@@ -52,7 +52,9 @@ import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
 import CustomerBoatDetail from './pages/CustomerBoatDetail';
 import CustomerBoatDetailSimulate from './pages/CustomerBoatDetailSimulate';
+import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerDetail from './pages/CustomerDetail';
+import CustomerJobDetail from './pages/CustomerJobDetail';
 import CustomerPortal from './pages/CustomerPortal';
 import CustomerPortalSimulate from './pages/CustomerPortalSimulate';
 import CustomerPortalTest from './pages/CustomerPortalTest';
@@ -102,8 +104,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import CustomerDashboard from './pages/CustomerDashboard';
-import CustomerJobDetail from './pages/CustomerJobDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -113,7 +113,9 @@ export const PAGES = {
     "Boats": Boats,
     "CustomerBoatDetail": CustomerBoatDetail,
     "CustomerBoatDetailSimulate": CustomerBoatDetailSimulate,
+    "CustomerDashboard": CustomerDashboard,
     "CustomerDetail": CustomerDetail,
+    "CustomerJobDetail": CustomerJobDetail,
     "CustomerPortal": CustomerPortal,
     "CustomerPortalSimulate": CustomerPortalSimulate,
     "CustomerPortalTest": CustomerPortalTest,
@@ -163,8 +165,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "CustomerDashboard": CustomerDashboard,
-    "CustomerJobDetail": CustomerJobDetail,
 }
 
 export const pagesConfig = {

@@ -36,6 +36,7 @@ export default function CustomerProjectDetailSimulate() {
   const [workOrders, setWorkOrders] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [comments, setComments] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -86,6 +87,7 @@ export default function CustomerProjectDetailSimulate() {
 
         const allPhotos = [];
         const allComments = [];
+        const allTasks = [];
         
         for (const wo of wos) {
           const woPhotos = await base44.entities.WorkOrderPhoto.filter({ work_order_id: wo.id });
@@ -93,10 +95,14 @@ export default function CustomerProjectDetailSimulate() {
 
           const woComments = await base44.entities.WorkOrderComment.filter({ work_order_id: wo.id });
           allComments.push(...woComments.filter(c => !c.is_internal));
+
+          const woTasks = await base44.entities.Task.filter({ work_order_id: wo.id });
+          allTasks.push(...woTasks.filter(t => t.status === 'Completed'));
         }
 
         setPhotos(allPhotos);
         setComments(allComments);
+        setTasks(allTasks);
 
         const timelineItems = [
           ...allPhotos.map(p => ({ ...p, type: 'photo', date: p.created_date })),
@@ -223,6 +229,31 @@ export default function CustomerProjectDetailSimulate() {
               <p className="text-slate-700 whitespace-pre-wrap">{job.customer_notes}</p>
             )}
           </div>
+
+          {/* Completed Tasks */}
+          {tasks.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
+              <h2 className="text-lg font-bold text-slate-900 mb-4">Completed Work</h2>
+              <div className="space-y-2">
+                {tasks.map((task) => (
+                  <div key={task.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-slate-900">{task.title}</p>
+                      {task.description && (
+                        <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+                      )}
+                      {task.completed_at && (
+                        <p className="text-xs text-slate-500 mt-1">
+                          {format(new Date(task.completed_at), 'MMM d, yyyy')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Timeline */}
           <div className="bg-white rounded-2xl shadow-sm p-6">
