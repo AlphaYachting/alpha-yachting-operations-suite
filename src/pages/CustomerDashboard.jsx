@@ -6,6 +6,7 @@ import CustomerJobList from '@/components/customer/CustomerJobList';
 
 export default function CustomerDashboard() {
   const [customer, setCustomer] = useState(null);
+  const [boats, setBoats] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [comments, setComments] = useState([]);
@@ -24,12 +25,14 @@ export default function CustomerDashboard() {
         const cust = customerData[0];
         setCustomer(cust);
 
-        const [jobsData, photosData, commentsData] = await Promise.all([
+        const [boatsData, jobsData, photosData, commentsData] = await Promise.all([
+          base44.entities.Boat.filter({ customer_id: cust.id }),
           base44.entities.Job.filter({ customer_id: cust.id }),
           base44.entities.WorkOrderPhoto.list(),
           base44.entities.WorkOrderComment.list()
         ]);
 
+        setBoats(boatsData);
         setJobs(jobsData);
         setPhotos(photosData);
         setComments(commentsData);
@@ -74,10 +77,10 @@ export default function CustomerDashboard() {
   return (
     <>
       <CustomerHeader />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 pt-16">
-        <div className="max-w-6xl mx-auto p-6">
-          <CustomerWelcome customerName={customerName} />
-          <CustomerJobList jobs={jobs} photos={photos} comments={comments} />
+      <div className="min-h-screen bg-slate-50 pt-16">
+        <div className="max-w-4xl mx-auto p-4">
+          <CustomerWelcome customerName={customerName} boatCount={boats.length} />
+          <CustomerJobList jobs={jobs} photos={photos} comments={comments} boats={boats} />
         </div>
       </div>
     </>

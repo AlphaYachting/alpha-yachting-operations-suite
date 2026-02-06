@@ -17,8 +17,8 @@ export default function CustomerHeader() {
   }, []);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-slate-900 to-slate-800 shadow-lg">
+      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-center">
         <img 
           src={logoUrl || "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"}
           alt="Alpha Yachting"

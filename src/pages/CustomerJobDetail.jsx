@@ -99,18 +99,18 @@ export default function CustomerJobDetail() {
   return (
     <>
       <CustomerHeader />
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 pt-16">
-        <div className="max-w-4xl mx-auto p-6">
+      <div className="min-h-screen bg-slate-50 pt-16">
+        <div className="max-w-4xl mx-auto p-4">
           <Link to={createPageUrl('CustomerDashboard')}>
-            <Button variant="ghost" className="mb-6">
+            <Button variant="ghost" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Projects
             </Button>
           </Link>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
             <div className="flex items-start justify-between gap-4 mb-4">
-              <h1 className="text-3xl font-bold text-slate-900">{job.title}</h1>
+              <h1 className="text-2xl font-bold text-slate-900">{job.title}</h1>
               <Badge className={config.color}>
                 {config.label}
               </Badge>
@@ -121,8 +121,8 @@ export default function CustomerJobDetail() {
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-slate-900 mb-6">Project Updates</h2>
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-6">Project Updates</h2>
             <CustomerJobTimeline photos={photos} comments={comments} />
           </div>
         </div>

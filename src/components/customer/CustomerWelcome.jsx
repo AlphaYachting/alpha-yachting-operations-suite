@@ -1,18 +1,13 @@
 import React from 'react';
 
-export default function CustomerWelcome({ customerName, boatName }) {
+export default function CustomerWelcome({ customerName, boatCount }) {
   return (
-    <div className="mb-8">
-      <h1 className="text-3xl font-bold text-slate-900 mb-2">
-        Welcome to the Alpha Yachting App, {customerName}
+    <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+      <h1 className="text-2xl font-bold text-slate-900 mb-2">
+        Welcome, {customerName}
       </h1>
-      {boatName && (
-        <p className="text-slate-600 text-lg">
-          Viewing projects for {boatName}
-        </p>
-      )}
-      <p className="text-slate-600 text-lg mt-1">
-        Here you can view the status of work on your vessels
+      <p className="text-slate-600">
+        View the status of work on your {boatCount} {boatCount === 1 ? 'vessel' : 'vessels'}
       </p>
     </div>
   );

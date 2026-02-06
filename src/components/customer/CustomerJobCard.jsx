@@ -27,40 +27,43 @@ function mapJobStatus(status) {
   return statusMap[status] || 'Planned';
 }
 
-export default function CustomerJobCard({ job, hasPhotos, hasComments }) {
+export default function CustomerJobCard({ job, hasPhotos, hasComments, boatName }) {
   const customerStatus = mapJobStatus(job.status);
   const config = statusConfig[customerStatus];
 
   return (
     <Link to={createPageUrl('CustomerJobDetail') + `?jobId=${job.id}`}>
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-        <CardContent className="pt-6">
-          <div className="flex items-start justify-between gap-4">
+      <Card className="hover:shadow-md transition-all cursor-pointer border-l-4" style={{ borderLeftColor: config.color.includes('blue') ? '#3b82f6' : config.color.includes('yellow') ? '#eab308' : config.color.includes('orange') ? '#f97316' : '#10b981' }}>
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-4 mb-3">
             <div className="flex-1">
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">
                 {job.title}
               </h3>
-              <div className="flex items-center gap-3">
-                <Badge className={config.color}>
-                  {config.label}
-                </Badge>
-                <div className="flex items-center gap-2 text-sm text-slate-500">
-                  {hasPhotos && (
-                    <div className="flex items-center gap-1">
-                      <Camera className="h-4 w-4" />
-                      <span>Photos</span>
-                    </div>
-                  )}
-                  {hasComments && (
-                    <div className="flex items-center gap-1">
-                      <MessageSquare className="h-4 w-4" />
-                      <span>Updates</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {boatName && (
+                <p className="text-sm text-slate-500 mb-2">{boatName}</p>
+              )}
             </div>
+            <Badge className={config.color}>
+              {config.label}
+            </Badge>
           </div>
+          {(hasPhotos || hasComments) && (
+            <div className="flex items-center gap-3 text-sm text-slate-500">
+              {hasPhotos && (
+                <div className="flex items-center gap-1">
+                  <Camera className="h-4 w-4" />
+                  <span>Photos</span>
+                </div>
+              )}
+              {hasComments && (
+                <div className="flex items-center gap-1">
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Updates</span>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>
