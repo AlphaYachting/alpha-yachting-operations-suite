@@ -8,7 +8,7 @@ export default function CustomerHeader({ jobCount = 0, welcomeMessage, customerN
 
   useEffect(() => {
     // Use the same white Alpha Yachting logo as technician mobile app
-    setLogoUrl('https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/c0a60bb17_AlphaYachtingLogoWhite.png');
+    setLogoUrl('https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png');
 
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -38,9 +38,9 @@ export default function CustomerHeader({ jobCount = 0, welcomeMessage, customerN
           </div>
 
           {/* Logo */}
-          <div className="h-16 w-16 flex items-center justify-center">
+          <div className="h-16 flex items-center justify-center">
             <img 
-              src={logoUrl || "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/c0a60bb17_AlphaYachtingLogoWhite.png"}
+              src={logoUrl}
               alt="Alpha Yachting"
               className="h-12 object-contain"
             />
