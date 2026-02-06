@@ -98,6 +98,10 @@ import WorkshopDisplay from './pages/WorkshopDisplay';
 import CustomerPortal from './pages/CustomerPortal';
 import CustomerBoatDetail from './pages/CustomerBoatDetail';
 import CustomerProjectDetail from './pages/CustomerProjectDetail';
+import CustomerPortalTest from './pages/CustomerPortalTest';
+import CustomerPortalSimulate from './pages/CustomerPortalSimulate';
+import CustomerBoatDetailSimulate from './pages/CustomerBoatDetailSimulate';
+import CustomerProjectDetailSimulate from './pages/CustomerProjectDetailSimulate';
 import __Layout from './Layout.jsx';
 
 
@@ -153,6 +157,10 @@ export const PAGES = {
     "CustomerPortal": CustomerPortal,
     "CustomerBoatDetail": CustomerBoatDetail,
     "CustomerProjectDetail": CustomerProjectDetail,
+    "CustomerPortalTest": CustomerPortalTest,
+    "CustomerPortalSimulate": CustomerPortalSimulate,
+    "CustomerBoatDetailSimulate": CustomerBoatDetailSimulate,
+    "CustomerProjectDetailSimulate": CustomerProjectDetailSimulate,
 }
 
 export const pagesConfig = {

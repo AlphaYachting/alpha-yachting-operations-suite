@@ -61,6 +61,7 @@ const navItems = [
   { name: 'Offers', icon: FileText, page: 'Offers' },
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
+  { name: 'Customer Portal Test', icon: Users, page: 'CustomerPortalTest', adminOnly: true },
         { name: 'Workshop Display', icon: Monitor, page: 'WorkshopDisplay' },
         { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
         { name: 'Settings', icon: Settings, page: 'Settings' },
