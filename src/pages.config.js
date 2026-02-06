@@ -50,7 +50,14 @@
 import AccessLogs from './pages/AccessLogs';
 import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
+import CustomerBoatDetail from './pages/CustomerBoatDetail';
+import CustomerBoatDetailSimulate from './pages/CustomerBoatDetailSimulate';
 import CustomerDetail from './pages/CustomerDetail';
+import CustomerPortal from './pages/CustomerPortal';
+import CustomerPortalSimulate from './pages/CustomerPortalSimulate';
+import CustomerPortalTest from './pages/CustomerPortalTest';
+import CustomerProjectDetail from './pages/CustomerProjectDetail';
+import CustomerProjectDetailSimulate from './pages/CustomerProjectDetailSimulate';
 import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import DatabaseBackup from './pages/DatabaseBackup';
@@ -95,13 +102,8 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import CustomerPortal from './pages/CustomerPortal';
-import CustomerBoatDetail from './pages/CustomerBoatDetail';
-import CustomerProjectDetail from './pages/CustomerProjectDetail';
-import CustomerPortalTest from './pages/CustomerPortalTest';
-import CustomerPortalSimulate from './pages/CustomerPortalSimulate';
-import CustomerBoatDetailSimulate from './pages/CustomerBoatDetailSimulate';
-import CustomerProjectDetailSimulate from './pages/CustomerProjectDetailSimulate';
+import CustomerDashboard from './pages/CustomerDashboard';
+import CustomerJobDetail from './pages/CustomerJobDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -109,7 +111,14 @@ export const PAGES = {
     "AccessLogs": AccessLogs,
     "BoatDetail": BoatDetail,
     "Boats": Boats,
+    "CustomerBoatDetail": CustomerBoatDetail,
+    "CustomerBoatDetailSimulate": CustomerBoatDetailSimulate,
     "CustomerDetail": CustomerDetail,
+    "CustomerPortal": CustomerPortal,
+    "CustomerPortalSimulate": CustomerPortalSimulate,
+    "CustomerPortalTest": CustomerPortalTest,
+    "CustomerProjectDetail": CustomerProjectDetail,
+    "CustomerProjectDetailSimulate": CustomerProjectDetailSimulate,
     "Customers": Customers,
     "Dashboard": Dashboard,
     "DatabaseBackup": DatabaseBackup,
@@ -154,13 +163,8 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "CustomerPortal": CustomerPortal,
-    "CustomerBoatDetail": CustomerBoatDetail,
-    "CustomerProjectDetail": CustomerProjectDetail,
-    "CustomerPortalTest": CustomerPortalTest,
-    "CustomerPortalSimulate": CustomerPortalSimulate,
-    "CustomerBoatDetailSimulate": CustomerBoatDetailSimulate,
-    "CustomerProjectDetailSimulate": CustomerProjectDetailSimulate,
+    "CustomerDashboard": CustomerDashboard,
+    "CustomerJobDetail": CustomerJobDetail,
 }
 
 export const pagesConfig = {
