@@ -36,7 +36,7 @@ export default function CustomerPortalTest() {
 
   const openCustomerPortal = (customer) => {
     // Open customer portal in new window with simulated customer context
-    const url = window.location.origin + '/#/CustomerPortalSimulate?customerId=' + customer.id;
+    const url = createPageUrl('CustomerPortalSimulate') + '?customerId=' + customer.id;
     window.open(url, '_blank');
   };
 
