@@ -450,20 +450,16 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   doc.text(formatCurrency(document.subtotal), totalsX + totalsWidth, yPos, { align: 'right' });
   yPos += 6;
 
-  // Tax breakdown
-  const taxBreakdown = lineItems.reduce((acc, item) => {
-    const rate = item.tax_rate || 0;
-    if (!acc[rate]) acc[rate] = 0;
-    acc[rate] += item.total_tax || 0;
-    return acc;
-  }, {});
-
-  doc.setTextColor(102, 102, 102);
-  Object.entries(taxBreakdown).forEach(([rate, amount]) => {
-    doc.text(`VAT ${rate}%:`, totalsX, yPos);
-    doc.text(formatCurrency(amount), totalsX + totalsWidth, yPos, { align: 'right' });
+  // Tax - use document-level calculation
+  const vatRate = document.vat_rate || 0;
+  const taxAmount = document.tax_amount || ((document.subtotal || 0) * (vatRate / 100));
+  
+  if (vatRate > 0) {
+    doc.setTextColor(102, 102, 102);
+    doc.text(`VAT ${vatRate}%:`, totalsX, yPos);
+    doc.text(formatCurrency(taxAmount), totalsX + totalsWidth, yPos, { align: 'right' });
     yPos += 6;
-  });
+  }
 
   // Total
   doc.setDrawColor(primaryColor.r, primaryColor.g, primaryColor.b);
