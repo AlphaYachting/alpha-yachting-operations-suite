@@ -230,32 +230,47 @@ export default function Leads() {
                   }
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location */}
-                    <div className="flex items-center gap-4 text-xs text-slate-600">
-                      {lead.phone &&
-                  <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-base">{lead.phone}</span>
-                        </div>
-                  }
-                      {lead.email &&
-                  <div className="flex items-center gap-1 min-w-0">
-                          <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-base truncate">{lead.email}</span>
-                        </div>
-                  }
-                      {lead.boat_name &&
-                  <div className="flex items-center gap-1">
-                          <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span>{lead.boat_name}</span>
-                        </div>
-                  }
-                      {lead.location &&
-                  <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span>{lead.location}</span>
-                        </div>
-                  }
+                    {/* Row 2: Contact, Boat, Location, Created */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        <span>{lead.phone}</span>
+                      </div>
+                      {lead.email && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            <span>{lead.email}</span>
+                          </div>
+                        </>
+                      )}
+                      {lead.boat_name && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center gap-1">
+                            <Anchor className="h-3 w-3" />
+                            <span>{lead.boat_name}</span>
+                          </div>
+                        </>
+                      )}
+                      {lead.location && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            <span>{lead.location}</span>
+                          </div>
+                        </>
+                      )}
+                      {lead.created_date && (
+                        <>
+                          <span>•</span>
+                          <span className="text-slate-500">
+                            Created {format(parseISO(lead.created_date), 'MMM d, yyyy')}
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     {/* Row 3: Description Preview */}
