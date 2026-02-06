@@ -214,13 +214,13 @@ export default function Leads() {
                       {lead.phone &&
                   <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-sm">{lead.phone}</span>
+                          <span className="text-base">{lead.phone}</span>
                         </div>
                   }
                       {lead.email &&
                   <div className="flex items-center gap-1 min-w-0">
                           <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-sm truncate">{lead.email}</span>
+                          <span className="text-base truncate">{lead.email}</span>
                         </div>
                   }
                       {lead.boat_name &&
