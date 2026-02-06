@@ -269,12 +269,12 @@ export default function Leads() {
                   <div className="flex items-center gap-1.5 flex-shrink-0">
                     <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   asChild
-                  className="h-7 w-7 p-0">
+                  className="h-9 w-9 p-0">
 
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-4 w-4" />
                       </Link>
                     </Button>
                     {lead.status === 'Pending' &&
@@ -284,29 +284,29 @@ export default function Leads() {
                     setConvertingLead(lead);
                     setShowConvertDialog(true);
                   }}
-                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
+                  className="bg-emerald-600 hover:bg-emerald-700 h-9 px-3 text-sm">
 
                         Convert
                       </Button>
                 }
                     <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => {
                     setEditingLead(lead);
                     setShowForm(true);
                   }}
-                  className="h-7 w-7 p-0">
+                  className="h-9 w-9 p-0">
 
-                      <Edit className="h-3 w-3" />
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => handleDeleteLead(lead.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-9 w-9 p-0">
 
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
