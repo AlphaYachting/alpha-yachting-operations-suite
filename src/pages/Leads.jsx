@@ -48,6 +48,7 @@ export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -71,14 +72,16 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations, allCustomers] = await Promise.all([
+      const [allLeads, allLocations, allCustomers, allBoats] = await Promise.all([
         base44.entities.Lead.list('-created_date'),
         base44.entities.Location.list(),
-        base44.entities.Customer.list()
+        base44.entities.Customer.list(),
+        base44.entities.Boat.list()
       ]);
       setLeads(allLeads);
       setLocations(allLocations);
       setCustomers(allCustomers);
+      setBoats(allBoats);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -309,6 +312,7 @@ export default function Leads() {
             lead={editingLead}
             locations={locations}
             customers={customers}
+            boats={boats}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
