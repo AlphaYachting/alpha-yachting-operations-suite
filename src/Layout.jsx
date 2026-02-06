@@ -106,7 +106,10 @@ export default function Layout({ children, currentPageName }) {
                        currentPageName === 'TeamMobileHome' || 
                        currentPageName === 'TeamWorkOrderDetail' || 
                        currentPageName === 'TeamTaskDetail' || 
-                       currentPageName === 'TeamPreviewMode';
+                       currentPageName === 'TeamPreviewMode' ||
+                       currentPageName === 'CustomerPortalSimulate' ||
+                       currentPageName === 'CustomerBoatDetailSimulate' ||
+                       currentPageName === 'CustomerProjectDetailSimulate';
 
   if (isMobilePage) {
     return <>{children}</>;
