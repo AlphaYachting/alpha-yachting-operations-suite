@@ -12,8 +12,10 @@ import {
 } from '@/components/ui/select';
 import { AlertCircle } from 'lucide-react';
 
-export default function LeadForm({ lead, locations, onSave, onCancel }) {
+export default function LeadForm({ lead, locations, customers, onSave, onCancel }) {
+  const [isExistingCustomer, setIsExistingCustomer] = useState(!!lead?.customer_id);
   const [formData, setFormData] = useState({
+    customer_id: lead?.customer_id || '',
     name: lead?.name || '',
     phone: lead?.phone || '',
     email: lead?.email || '',
@@ -30,6 +32,22 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Auto-fill contact details when existing customer is selected
+  const handleCustomerSelect = (customerId) => {
+    const customer = customers?.find(c => c.id === customerId);
+    if (customer) {
+      setFormData({
+        ...formData,
+        customer_id: customerId,
+        name: customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+        phone: customer.phone || '',
+        email: customer.email || ''
+      });
+    } else {
+      setFormData({ ...formData, customer_id: '' });
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,6 +82,51 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
         </div>
       )}
 
+      {/* Lead Type Toggle */}
+      <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+        <Label className="text-sm font-semibold">Lead Type</Label>
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant={!isExistingCustomer ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setIsExistingCustomer(false);
+              setFormData({ ...formData, customer_id: '' });
+            }}
+          >
+            New Prospect
+          </Button>
+          <Button
+            type="button"
+            variant={isExistingCustomer ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setIsExistingCustomer(true)}
+          >
+            Existing Customer
+          </Button>
+        </div>
+      </div>
+
+      {/* Existing Customer Selection */}
+      {isExistingCustomer && customers && (
+        <div className="space-y-2">
+          <Label>Select Customer *</Label>
+          <Select value={formData.customer_id || ''} onValueChange={handleCustomerSelect}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose existing customer..." />
+            </SelectTrigger>
+            <SelectContent>
+              {customers.map(c => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()} - {c.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Name *</Label>
@@ -71,6 +134,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
             value={formData.name || ''}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             placeholder="Contact person name"
+            disabled={isExistingCustomer && formData.customer_id}
           />
         </div>
 
@@ -80,6 +144,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
             value={formData.phone || ''}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             placeholder="+43 123 456"
+            disabled={isExistingCustomer && formData.customer_id}
           />
         </div>
 
@@ -90,6 +155,7 @@ export default function LeadForm({ lead, locations, onSave, onCancel }) {
             value={formData.email || ''}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             placeholder="name@example.com"
+            disabled={isExistingCustomer && formData.customer_id}
           />
         </div>
 

@@ -19,6 +19,9 @@ export default function LeadConversionDialog({ lead, open, onOpenChange, onSucce
     location_id: lead?.location_id || ''
   });
 
+  // Check if lead is already linked to an existing customer
+  const isExistingCustomer = !!lead?.customer_id;
+
   const handleConvert = async () => {
     setLoading(true);
     setError('');
@@ -26,7 +29,7 @@ export default function LeadConversionDialog({ lead, open, onOpenChange, onSucce
     try {
       const response = await base44.functions.invoke('convertLeadToCustomer', {
         leadId: lead.id,
-        customerData: {
+        customerData: isExistingCustomer ? null : {
           first_name: formData.first_name,
           last_name: formData.last_name,
           email: formData.email,
@@ -67,34 +70,46 @@ export default function LeadConversionDialog({ lead, open, onOpenChange, onSucce
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-sm">First Name</Label>
-              <Input
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                disabled={loading}
-              />
+          {isExistingCustomer && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700">
+                This lead is for an existing customer. Only boat information will be added if needed.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm">Last Name</Label>
-              <Input
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                disabled={loading}
-              />
-            </div>
-          </div>
+          )}
 
-          <div className="space-y-2">
-            <Label className="text-sm">Email</Label>
-            <Input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              disabled={loading}
-            />
-          </div>
+          {!isExistingCustomer && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-sm">First Name</Label>
+                  <Input
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Last Name</Label>
+                  <Input
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Email</Label>
+                <Input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  disabled={loading}
+                />
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <Label className="text-sm">Boat Name</Label>
@@ -105,9 +120,11 @@ export default function LeadConversionDialog({ lead, open, onOpenChange, onSucce
             />
           </div>
 
-          <p className="text-sm text-slate-500 bg-blue-50 p-3 rounded-lg">
-            This will create a new customer and boat record from this lead. The lead will be marked as converted.
-          </p>
+          {!isExistingCustomer && (
+            <p className="text-sm text-slate-500 bg-blue-50 p-3 rounded-lg">
+              This will create a new customer and boat record from this lead. The lead will be marked as converted.
+            </p>
+          )}
         </div>
 
         <div className="flex gap-3 justify-end pt-4 border-t">
