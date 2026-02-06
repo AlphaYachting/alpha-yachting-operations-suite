@@ -11,26 +11,41 @@ export default function CustomerPortalSimulate() {
   const searchParams = new URLSearchParams(location.search);
   const customerId = searchParams.get('customerId');
 
+  const [user, setUser] = useState(null);
   const [customer, setCustomer] = useState(null);
   const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (customerId) loadData();
+    checkAuthAndLoad();
   }, [customerId]);
 
+  const checkAuthAndLoad = async () => {
+    try {
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+      
+      if (currentUser?.role !== 'admin') {
+        setLoading(false);
+        return;
+      }
+
+      if (customerId) {
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      setLoading(false);
+    }
+  };
+
   const loadData = async () => {
-    setLoading(true);
     try {
       const customerData = await base44.entities.Customer.filter({ id: customerId });
-      console.log('Customer data loaded:', customerData);
       if (customerData.length > 0) {
         setCustomer(customerData[0]);
         const boatsData = await base44.entities.Boat.filter({ customer_id: customerId });
-        console.log('Boats data loaded:', boatsData);
         setBoats(boatsData);
-      } else {
-        console.log('No customer found');
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -43,6 +58,20 @@ export default function CustomerPortalSimulate() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center p-6">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
+            <p className="text-slate-600">Admin access required to view customer portal test.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

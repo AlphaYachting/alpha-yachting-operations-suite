@@ -29,6 +29,7 @@ export default function CustomerProjectDetailSimulate() {
   const jobId = searchParams.get('jobId');
   const customerId = searchParams.get('customerId');
 
+  const [user, setUser] = useState(null);
   const [customer, setCustomer] = useState(null);
   const [job, setJob] = useState(null);
   const [boat, setBoat] = useState(null);
@@ -40,20 +41,34 @@ export default function CustomerProjectDetailSimulate() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   useEffect(() => {
-    if (jobId && customerId) loadData();
+    checkAuthAndLoad();
   }, [jobId, customerId]);
 
-  const loadData = async () => {
-    setLoading(true);
+  const checkAuthAndLoad = async () => {
     try {
-      console.log('Loading project detail, jobId:', jobId, 'customerId:', customerId);
+      const currentUser = await base44.auth.me();
+      setUser(currentUser);
+      
+      if (currentUser?.role !== 'admin') {
+        setLoading(false);
+        return;
+      }
+
+      if (jobId && customerId) {
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      setLoading(false);
+    }
+  };
+
+  const loadData = async () => {
+    try {
       const [customerData, jobData] = await Promise.all([
         base44.entities.Customer.filter({ id: customerId }),
         base44.entities.Job.filter({ id: jobId })
       ]);
-
-      console.log('Customer data:', customerData);
-      console.log('Job data:', jobData);
 
       if (customerData.length > 0) setCustomer(customerData[0]);
 
@@ -99,6 +114,20 @@ export default function CustomerProjectDetailSimulate() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center p-6">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Access Denied</h2>
+            <p className="text-slate-600">Admin access required.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
