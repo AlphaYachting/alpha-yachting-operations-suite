@@ -217,18 +217,20 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
           </Select>
         </div>
 
-        {isExistingCustomer && customerBoats.length > 0 && (
+        {isExistingCustomer && formData.customer_id && (
           <div className="space-y-2 md:col-span-2">
             <Label>Boat Selection</Label>
             <div className="flex gap-3 mb-2">
-              <Button
-                type="button"
-                variant={useExistingBoat ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setUseExistingBoat(true)}
-              >
-                Select Existing Boat
-              </Button>
+              {customerBoats.length > 0 && (
+                <Button
+                  type="button"
+                  variant={useExistingBoat ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setUseExistingBoat(true)}
+                >
+                  Select Existing Boat
+                </Button>
+              )}
               <Button
                 type="button"
                 variant={!useExistingBoat ? 'default' : 'outline'}
@@ -247,7 +249,7 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
                 Enter New Boat
               </Button>
             </div>
-            {useExistingBoat && (
+            {useExistingBoat && customerBoats.length > 0 && (
               <Select onValueChange={handleBoatSelect}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose boat..." />
@@ -270,7 +272,7 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
             value={formData.boat_name || ''}
             onChange={(e) => setFormData({ ...formData, boat_name: e.target.value })}
             placeholder="e.g., Blue Horizon"
-            disabled={isExistingCustomer && useExistingBoat && customerBoats.length > 0}
+            disabled={isExistingCustomer && formData.customer_id && useExistingBoat}
           />
         </div>
 
@@ -280,7 +282,7 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
             value={formData.boat_details || ''}
             onChange={(e) => setFormData({ ...formData, boat_details: e.target.value })}
             placeholder="Type, length, engine..."
-            disabled={isExistingCustomer && useExistingBoat && customerBoats.length > 0}
+            disabled={isExistingCustomer && formData.customer_id && useExistingBoat}
           />
         </div>
 
