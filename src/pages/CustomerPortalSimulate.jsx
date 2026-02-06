@@ -5,6 +5,7 @@ import { createPageUrl } from '@/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Ship, Anchor, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
 export default function CustomerPortalSimulate() {
   const location = useLocation();
