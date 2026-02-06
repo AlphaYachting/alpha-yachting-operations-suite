@@ -7,15 +7,8 @@ export default function CustomerHeader({ jobCount = 0, welcomeMessage, customerN
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const userData = await base44.auth.me();
-        setLogoUrl(userData?.company_logo);
-      } catch (e) {
-        console.log('Could not load user data');
-      }
-    };
-    loadUser();
+    // Use the same white Alpha Yachting logo as technician mobile app
+    setLogoUrl('https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/c0a60bb17_AlphaYachtingLogoWhite.png');
 
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
