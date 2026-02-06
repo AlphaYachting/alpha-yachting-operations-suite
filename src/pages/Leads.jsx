@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye, Search, Clock, XCircle } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
@@ -47,8 +47,6 @@ const inquiryTypeColors = {
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -72,16 +70,12 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations, allCustomers, allBoats] = await Promise.all([
-        base44.entities.Lead.list('-created_date'),
-        base44.entities.Location.list(),
-        base44.entities.Customer.list(),
-        base44.entities.Boat.list()
-      ]);
+      const [allLeads, allLocations] = await Promise.all([
+      base44.entities.Lead.list('-created_date'),
+      base44.entities.Location.list()]
+      );
       setLeads(allLeads);
       setLocations(allLocations);
-      setCustomers(allCustomers);
-      setBoats(allBoats);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -133,69 +127,51 @@ export default function Leads() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
-          <p className="text-slate-600 mt-1">Manage customer inquiries and opportunities</p>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
         <Button onClick={() => {
           setEditingLead(null);
           setShowForm(true);
-        }} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
+        }} className="bg-blue-600 hover:bg-blue-700" size="sm">
+          <Plus className="h-4 w-4 mr-1" />
           New Lead
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { status: 'Pending', icon: Clock, color: 'text-amber-600' },
-          { status: 'Contacted', icon: Phone, color: 'text-blue-600' },
-          { status: 'Converted', icon: CheckCircle2, color: 'text-green-600' },
-          { status: 'Lost', icon: XCircle, color: 'text-slate-600' }
-        ].map(({ status, icon: Icon, color }) => {
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {['Pending', 'Contacted', 'Converted', 'Lost'].map((status) => {
           const count = leads.filter((l) => l.status === status).length;
           return (
             <Card key={status}>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-600">{status}</p>
-                    <p className={`text-2xl font-bold ${color}`}>{count}</p>
-                  </div>
-                  <Icon className={`h-8 w-8 ${color.replace('text-', 'text-').replace('600', '400')}`} />
-                </div>
+              <CardContent className="p-3">
+                <p className="text-xs text-slate-500 mb-0.5">{status}</p>
+                <p className="text-xl font-bold text-slate-900">{count}</p>
               </CardContent>
-            </Card>
-          );
+            </Card>);
+
         })}
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search leads..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+        <CardContent className="p-3">
+          <div className="flex gap-3 flex-wrap">
+            <Input
+              placeholder="Search by name, phone, email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 min-w-xs" />
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by status" />
+              <SelectTrigger className="w-40">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Statuses</SelectItem>
+                <SelectItem value="All">All Status</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Contacted">Contacted</SelectItem>
                 <SelectItem value="Converted">Converted</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
                 <SelectItem value="Lost">Lost</SelectItem>
               </SelectContent>
             </Select>
@@ -204,155 +180,125 @@ export default function Leads() {
       </Card>
 
       {/* Leads List */}
-      <div className="grid gap-4">
-        {filteredLeads.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <Phone className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-900 mb-2">No leads found</h3>
-                <p className="text-slate-600 mb-4">Get started by creating your first lead</p>
-                <Button onClick={() => {
-                  setEditingLead(null);
-                  setShowForm(true);
-                }} className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Lead
-                </Button>
-              </div>
+      <div className="space-y-1.5">
+        {filteredLeads.length === 0 ?
+        <Card>
+            <CardContent className="p-6 text-center">
+              <p className="text-slate-500 text-sm">No leads found</p>
             </CardContent>
-          </Card>
-        ) : (
-          filteredLeads.map((lead) => (
-            <Card key={lead.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="py-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    {/* Lead Icon */}
-                    <div className={`h-12 w-12 rounded-lg bg-gradient-to-br flex items-center justify-center flex-shrink-0 ${
-                      lead.status === 'Pending' ? 'from-amber-50 to-orange-50' :
-                      lead.status === 'Contacted' ? 'from-blue-50 to-cyan-50' :
-                      lead.status === 'Converted' ? 'from-green-50 to-emerald-50' :
-                      'from-slate-50 to-gray-50'
-                    }`}>
-                      <Phone className={`h-6 w-6 ${
-                        lead.status === 'Pending' ? 'text-amber-500' :
-                        lead.status === 'Contacted' ? 'text-blue-500' :
-                        lead.status === 'Converted' ? 'text-green-500' :
-                        'text-slate-500'
-                      }`} />
-                    </div>
+          </Card> :
 
-                    {/* Lead Details */}
-                    <div className="flex-1 min-w-0">
-                      {/* Row 1: Name, Status, Priority */}
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <h3 className="font-semibold text-slate-900">{lead.name}</h3>
-                        <Badge className={statusColors[lead.status]}>
-                          {lead.status}
+        filteredLeads.map((lead) =>
+        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
+              <CardContent className="p-2.5 px-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
+                      {lead.inquiry_type &&
+                  <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
+                          {lead.inquiry_type}
                         </Badge>
-                        {lead.priority && (
-                          <Badge className={priorityColors[lead.priority]}>
-                            {lead.priority}
-                          </Badge>
-                        )}
-                        {lead.inquiry_type && (
-                          <Badge variant="outline" className={`border ${inquiryTypeColors[lead.inquiry_type]}`}>
-                            {lead.inquiry_type}
-                          </Badge>
-                        )}
-                      </div>
-
-                      {/* Row 2: Contact Info, Boat, Location */}
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600">
-                        {lead.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            <span>{lead.phone}</span>
-                          </div>
-                        )}
-                        {lead.email && (
-                          <>
-                            {lead.phone && <span>•</span>}
-                            <div className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              <span>{lead.email}</span>
-                            </div>
-                          </>
-                        )}
-                        {lead.boat_name && (
-                          <>
-                            {(lead.phone || lead.email) && <span>•</span>}
-                            <div className="flex items-center gap-1">
-                              <Anchor className="h-3 w-3" />
-                              <span>{lead.boat_name}</span>
-                            </div>
-                          </>
-                        )}
-                        {lead.location && (
-                          <>
-                            {(lead.phone || lead.email || lead.boat_name) && <span>•</span>}
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              <span>{lead.location}</span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-
-                      {/* Row 3: Description Preview */}
-                      {lead.description && (
-                        <div className="mt-1 text-sm text-slate-500 line-clamp-2">
-                          {lead.description}
-                        </div>
-                      )}
+                  }
+                      <LeadStatusChange lead={lead} onStatusChange={loadData} />
+                      {lead.priority &&
+                  <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
+                          {lead.priority}
+                        </Badge>
+                  }
                     </div>
+
+                    {/* Row 2: Contact, Boat, Location, Created */}
+                    <div className="flex items-center gap-4 text-xs text-slate-600">
+                      {lead.phone &&
+                  <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                          <span className="text-base">{lead.phone}</span>
+                        </div>
+                  }
+                      {lead.email &&
+                  <div className="flex items-center gap-1 min-w-0">
+                          <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                          <span className="text-base truncate">{lead.email}</span>
+                        </div>
+                  }
+                      {lead.boat_name &&
+                  <div className="flex items-center gap-1">
+                          <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                          <span>{lead.boat_name}</span>
+                        </div>
+                  }
+                      {lead.location &&
+                  <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                          <span>{lead.location}</span>
+                        </div>
+                  }
+                      {lead.created_date &&
+                  <div className="flex items-center gap-1 text-slate-500">
+                          <span>Created: {format(parseISO(lead.created_date), 'MMM d, yyyy')}</span>
+                        </div>
+                  }
+                    </div>
+
+                    {/* Row 3: Description Preview */}
+                    {lead.description &&
+                <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                        <span className="text-sm line-clamp-2">{lead.description}</span>
+                      </div>
+                }
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                      <Button size="sm" variant="outline" className="h-7 w-7 p-0">
+                    <Button
+                  size="sm"
+                  variant="outline"
+                  asChild
+                  className="h-7 w-7 p-0">
+
+                      <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
                         <Eye className="h-3 w-3" />
-                      </Button>
-                    </Link>
-                    {lead.status === 'Pending' && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setConvertingLead(lead);
-                          setShowConvertDialog(true);
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs"
-                      >
+                      </Link>
+                    </Button>
+                    {lead.status === 'Pending' &&
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setConvertingLead(lead);
+                    setShowConvertDialog(true);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
+
                         Convert
                       </Button>
-                    )}
+                }
                     <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingLead(lead);
-                        setShowForm(true);
-                      }}
-                      className="h-7 w-7 p-0"
-                    >
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingLead(lead);
+                    setShowForm(true);
+                  }}
+                  className="h-7 w-7 p-0">
+
                       <Edit className="h-3 w-3" />
                     </Button>
                     <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDeleteLead(lead.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
-                    >
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDeleteLead(lead.id)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
+
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
+        )
+        }
       </div>
 
       {/* Lead Form Dialog */}
@@ -364,8 +310,6 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
-            customers={customers}
-            boats={boats}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
