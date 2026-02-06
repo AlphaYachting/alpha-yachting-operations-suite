@@ -32,6 +32,8 @@ export default function CustomerPortalSimulate() {
 
       if (customerId) {
         await loadData();
+      } else {
+        setLoading(false);
       }
     } catch (error) {
       console.error('Auth error:', error);

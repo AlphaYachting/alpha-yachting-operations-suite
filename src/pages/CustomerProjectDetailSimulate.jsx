@@ -56,6 +56,8 @@ export default function CustomerProjectDetailSimulate() {
 
       if (jobId && customerId) {
         await loadData();
+      } else {
+        setLoading(false);
       }
     } catch (error) {
       console.error('Auth error:', error);

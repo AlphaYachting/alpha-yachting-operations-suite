@@ -52,6 +52,8 @@ export default function CustomerBoatDetailSimulate() {
 
       if (boatId && customerId) {
         await loadData();
+      } else {
+        setLoading(false);
       }
     } catch (error) {
       console.error('Auth error:', error);
