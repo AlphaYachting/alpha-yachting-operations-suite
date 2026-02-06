@@ -12,8 +12,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  SelectValue } from
+'@/components/ui/select';
 import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
@@ -47,6 +47,7 @@ const inquiryTypeColors = {
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -70,12 +71,14 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations] = await Promise.all([
+      const [allLeads, allLocations, allCustomers] = await Promise.all([
         base44.entities.Lead.list('-created_date'),
-        base44.entities.Location.list()
+        base44.entities.Location.list(),
+        base44.entities.Customer.list()
       ]);
       setLeads(allLeads);
       setLocations(allLocations);
+      setCustomers(allCustomers);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -102,22 +105,22 @@ export default function Leads() {
     if (window.confirm('Delete this lead?')) {
       try {
         await base44.entities.Lead.delete(leadId);
-        setLeads(leads.filter(l => l.id !== leadId));
+        setLeads(leads.filter((l) => l.id !== leadId));
       } catch (error) {
         console.error('Error deleting lead:', error);
       }
     }
   };
 
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch = 
-      lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone?.includes(searchTerm) ||
-      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.boat_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+  const filteredLeads = leads.filter((lead) => {
+    const matchesSearch =
+    lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.phone?.includes(searchTerm) ||
+    lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.boat_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'All' || lead.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -140,16 +143,16 @@ export default function Leads() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        {['Pending', 'Contacted', 'Converted', 'Lost'].map(status => {
-          const count = leads.filter(l => l.status === status).length;
+        {['Pending', 'Contacted', 'Converted', 'Lost'].map((status) => {
+          const count = leads.filter((l) => l.status === status).length;
           return (
             <Card key={status}>
               <CardContent className="p-3">
                 <p className="text-xs text-slate-500 mb-0.5">{status}</p>
                 <p className="text-xl font-bold text-slate-900">{count}</p>
               </CardContent>
-            </Card>
-          );
+            </Card>);
+
         })}
       </div>
 
@@ -161,8 +164,8 @@ export default function Leads() {
               placeholder="Search by name, phone, email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 min-w-xs"
-            />
+              className="flex-1 min-w-xs" />
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue />
@@ -181,119 +184,119 @@ export default function Leads() {
 
       {/* Leads List */}
       <div className="space-y-1.5">
-        {filteredLeads.length === 0 ? (
-          <Card>
+        {filteredLeads.length === 0 ?
+        <Card>
             <CardContent className="p-6 text-center">
               <p className="text-slate-500 text-sm">No leads found</p>
             </CardContent>
-          </Card>
-        ) : (
-          filteredLeads.map(lead => (
-            <Card key={lead.id} className="hover:border-slate-300 transition-colors">
+          </Card> :
+
+        filteredLeads.map((lead) =>
+        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
                     {/* Row 1: Name, Status, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-slate-900 truncate">{lead.name}</h3>
-                      {lead.inquiry_type && (
-                        <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
+                      <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
+                      {lead.inquiry_type &&
+                  <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
                           {lead.inquiry_type}
                         </Badge>
-                      )}
+                  }
                       <LeadStatusChange lead={lead} onStatusChange={loadData} />
-                      {lead.priority && (
-                        <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
+                      {lead.priority &&
+                  <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
                           {lead.priority}
                         </Badge>
-                      )}
+                  }
                     </div>
 
                     {/* Row 2: Contact, Boat, Location */}
                     <div className="flex items-center gap-4 text-xs text-slate-600">
-                      {lead.phone && (
-                        <div className="flex items-center gap-1">
+                      {lead.phone &&
+                  <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span>{lead.phone}</span>
+                          <span className="text-base">{lead.phone}</span>
                         </div>
-                      )}
-                      {lead.email && (
-                        <div className="flex items-center gap-1 min-w-0">
+                  }
+                      {lead.email &&
+                  <div className="flex items-center gap-1 min-w-0">
                           <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="truncate">{lead.email}</span>
+                          <span className="text-base truncate">{lead.email}</span>
                         </div>
-                      )}
-                      {lead.boat_name && (
-                        <div className="flex items-center gap-1">
+                  }
+                      {lead.boat_name &&
+                  <div className="flex items-center gap-1">
                           <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span>{lead.boat_name}</span>
                         </div>
-                      )}
-                      {lead.location && (
-                        <div className="flex items-center gap-1">
+                  }
+                      {lead.location &&
+                  <div className="flex items-center gap-1">
                           <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span>{lead.location}</span>
                         </div>
-                      )}
+                  }
                     </div>
 
                     {/* Row 3: Description Preview */}
-                    {lead.description && (
-                      <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                        <span className="line-clamp-2">{lead.description}</span>
+                    {lead.description &&
+                <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                        <span className="text-sm line-clamp-2">{lead.description}</span>
                       </div>
-                    )}
+                }
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
-                      size="sm"
-                      variant="outline"
-                      asChild
-                      className="h-7 w-7 p-0"
-                    >
+                  size="sm"
+                  variant="outline"
+                  asChild
+                  className="h-7 w-7 p-0">
+
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
                         <Eye className="h-3 w-3" />
                       </Link>
                     </Button>
-                    {lead.status === 'Pending' && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setConvertingLead(lead);
-                          setShowConvertDialog(true);
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs"
-                      >
+                    {lead.status === 'Pending' &&
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setConvertingLead(lead);
+                    setShowConvertDialog(true);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
+
                         Convert
                       </Button>
-                    )}
+                }
                     <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingLead(lead);
-                        setShowForm(true);
-                      }}
-                      className="h-7 w-7 p-0"
-                    >
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingLead(lead);
+                    setShowForm(true);
+                  }}
+                  className="h-7 w-7 p-0">
+
                       <Edit className="h-3 w-3" />
                     </Button>
                     <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDeleteLead(lead.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
-                    >
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDeleteLead(lead.id)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
+
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
+        )
+        }
       </div>
 
       {/* Lead Form Dialog */}
@@ -305,12 +308,13 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
+            customers={customers}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
               setEditingLead(null);
-            }}
-          />
+            }} />
+
         </DialogContent>
       </Dialog>
 
@@ -320,8 +324,8 @@ export default function Leads() {
           <DialogHeader>
             <DialogTitle>{selectedLeadDetail?.name}</DialogTitle>
           </DialogHeader>
-          {selectedLeadDetail && (
-            <div className="space-y-6">
+          {selectedLeadDetail &&
+          <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-slate-500">Phone</p>
@@ -341,34 +345,34 @@ export default function Leads() {
                 </div>
               </div>
 
-              {selectedLeadDetail.description && (
-                <div className="bg-slate-50 p-4 rounded-lg">
+              {selectedLeadDetail.description &&
+            <div className="bg-slate-50 p-4 rounded-lg">
                   <p className="text-sm text-slate-600 mb-2 font-medium">Description/Inquiry</p>
                   <p className="text-sm text-slate-700 whitespace-pre-wrap">{selectedLeadDetail.description}</p>
                 </div>
-              )}
+            }
 
               <LeadTaskList
-                leadId={selectedLeadDetail.id}
-                leadDescription={selectedLeadDetail.description}
-              />
+              leadId={selectedLeadDetail.id}
+              leadDescription={selectedLeadDetail.description} />
+
             </div>
-          )}
+          }
         </DialogContent>
       </Dialog>
 
       {/* Conversion Dialog */}
-      {convertingLead && (
-        <LeadConversionDialog
-          lead={convertingLead}
-          open={showConvertDialog}
-          onOpenChange={setShowConvertDialog}
-          onSuccess={async () => {
-            await loadData();
-            setConvertingLead(null);
-          }}
-        />
-      )}
-    </div>
-  );
+      {convertingLead &&
+      <LeadConversionDialog
+        lead={convertingLead}
+        open={showConvertDialog}
+        onOpenChange={setShowConvertDialog}
+        onSuccess={async () => {
+          await loadData();
+          setConvertingLead(null);
+        }} />
+
+      }
+    </div>);
+
 }
