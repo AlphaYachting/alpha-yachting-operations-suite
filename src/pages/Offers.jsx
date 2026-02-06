@@ -335,8 +335,24 @@ export default function Offers() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4 flex-1 min-w-0">
                       {/* Offer Icon */}
-                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center flex-shrink-0">
-                        <FileText className="h-6 w-6 text-blue-500" />
+                      <div className={`h-12 w-12 rounded-lg bg-gradient-to-br flex items-center justify-center flex-shrink-0 ${
+                        offer.status === 'Draft' ? 'from-slate-50 to-gray-50' :
+                        offer.status === 'Sent' ? 'from-blue-50 to-cyan-50' :
+                        offer.status === 'Approved' ? 'from-green-50 to-emerald-50' :
+                        offer.status === 'Rejected' ? 'from-red-50 to-rose-50' :
+                        offer.status === 'Expired' ? 'from-orange-50 to-amber-50' :
+                        offer.status === 'Converted' ? 'from-purple-50 to-violet-50' :
+                        'from-blue-50 to-cyan-50'
+                      }`}>
+                        <FileText className={`h-6 w-6 ${
+                          offer.status === 'Draft' ? 'text-slate-500' :
+                          offer.status === 'Sent' ? 'text-blue-500' :
+                          offer.status === 'Approved' ? 'text-green-500' :
+                          offer.status === 'Rejected' ? 'text-red-500' :
+                          offer.status === 'Expired' ? 'text-orange-500' :
+                          offer.status === 'Converted' ? 'text-purple-500' :
+                          'text-blue-500'
+                        }`} />
                       </div>
 
                       {/* Offer Details */}
