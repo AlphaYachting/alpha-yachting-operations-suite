@@ -121,16 +121,16 @@ export default function Leads() {
     return matchesSearch && matchesStatus;
   });
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
   const statusIcons = {
     'Pending': { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
     'Contacted': { icon: Phone, color: 'text-blue-500', bg: 'bg-blue-50' },
     'Converted': { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
     'Lost': { icon: XCircle, color: 'text-slate-500', bg: 'bg-slate-50' }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -174,25 +174,13 @@ export default function Leads() {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex gap-4">
+          <div className="flex items-center justify-between">
             <Input
               placeholder="Search leads..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1" />
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Statuses</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Contacted">Contacted</SelectItem>
-                <SelectItem value="Converted">Converted</SelectItem>
-                <SelectItem value="Lost">Lost</SelectItem>
-              </SelectContent>
-            </Select>
+              className="flex-1 mr-4" />
+            <span className="text-sm text-slate-600 whitespace-nowrap">All Statuses</span>
           </div>
         </CardContent>
       </Card>
@@ -232,49 +220,49 @@ export default function Leads() {
                   }
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location, Created Date */}
+                    {/* Row 2: Created Date First, then Contact, Boat, Location */}
                     <div className="flex items-center gap-3 text-sm text-slate-600 flex-wrap">
-                      {lead.phone &&
-                  <div className="flex items-center gap-1">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{lead.phone}</span>
-                        </div>
-                  }
-                      {lead.email &&
-                  <>
+                      {lead.created_date && (
+                        <span className="text-slate-500">
+                          {format(parseISO(lead.created_date), 'MMM d, yyyy')}
+                        </span>
+                      )}
+                      {lead.phone && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3.5 w-3.5 text-slate-400" />
+                            <span>{lead.phone}</span>
+                          </div>
+                        </>
+                      )}
+                      {lead.email && (
+                        <>
                           <span>•</span>
                           <div className="flex items-center gap-1">
                             <Mail className="h-3.5 w-3.5 text-slate-400" />
                             <span className="truncate">{lead.email}</span>
                           </div>
                         </>
-                  }
-                      {lead.boat_name &&
-                  <>
+                      )}
+                      {lead.boat_name && (
+                        <>
                           <span>•</span>
                           <div className="flex items-center gap-1">
                             <Anchor className="h-3.5 w-3.5 text-slate-400" />
                             <span>{lead.boat_name}</span>
                           </div>
                         </>
-                  }
-                      {lead.location &&
-                  <>
+                      )}
+                      {lead.location && (
+                        <>
                           <span>•</span>
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3.5 w-3.5 text-slate-400" />
                             <span>{lead.location}</span>
                           </div>
                         </>
-                  }
-                      {lead.created_date &&
-                  <>
-                          <span>•</span>
-                          <span className="text-slate-500">
-                            Created {format(parseISO(lead.created_date), 'MMM d, yyyy')}
-                          </span>
-                        </>
-                  }
+                      )}
                     </div>
 
                     {/* Row 3: Description Preview */}
