@@ -393,6 +393,17 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
       doc.text(titleLines, xPos + 2, rowY);
     }
     let descY = rowY + (titleLines.length * 4) + 1.5;
+    
+    // Add note for optional items
+    if (item.is_optional) {
+      doc.setFont(fontFamily, 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(120, 53, 15);
+      doc.text('(Not included in total)', xPos + 2, descY);
+      descY += 4;
+      doc.setFont(fontFamily, 'normal');
+      doc.setTextColor(85, 85, 85);
+    }
 
     if (item.description) {
       doc.setFont(fontFamily, 'normal');
