@@ -43,7 +43,7 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
   // Calculate totals - VAT is calculated once at document level, not per line item
   const vatRate = document.vat_rate || 0;
   const subtotal = document.subtotal || 0;
-  const taxTotal = document.tax_amount || (subtotal * (vatRate / 100));
+  const taxTotal = subtotal * (vatRate / 100);
 
   const outstanding = isInvoice ? (document.total || 0) - (document.paid_amount || 0) : 0;
 
