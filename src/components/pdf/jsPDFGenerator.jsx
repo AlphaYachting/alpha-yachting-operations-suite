@@ -373,10 +373,25 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     doc.text((idx + 1).toString(), xPos + colWidths[0] / 2, rowY, { align: 'center' });
     xPos += colWidths[0];
     
-    // Description
+    // Description with optional flag
     doc.setFont(fontFamily, 'bold');
     doc.setFontSize(9);
-    doc.text(titleLines, xPos + 2, rowY);
+    
+    // Add "OPTIONAL" badge if item is optional
+    if (item.is_optional) {
+      doc.setFillColor(250, 204, 21);
+      doc.setDrawColor(245, 158, 11);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(xPos + 2, rowY - 3, 20, 5, 1, 1, 'FD');
+      doc.setFontSize(7);
+      doc.setTextColor(120, 53, 15);
+      doc.text('OPTIONAL', xPos + 12, rowY, { align: 'center' });
+      doc.setFontSize(9);
+      doc.setTextColor(51, 51, 51);
+      doc.text(titleLines, xPos + 25, rowY);
+    } else {
+      doc.text(titleLines, xPos + 2, rowY);
+    }
     let descY = rowY + (titleLines.length * 4) + 1.5;
 
     if (item.description) {
