@@ -42,7 +42,8 @@ export default function CustomerHeader({ jobCount = 0, welcomeMessage, customerN
             <img 
               src={logoUrl}
               alt="Alpha Yachting"
-              className="h-12 object-contain"
+              className="object-contain flex-shrink-0"
+              style={{ height: 48 }}
             />
           </div>
         </div>

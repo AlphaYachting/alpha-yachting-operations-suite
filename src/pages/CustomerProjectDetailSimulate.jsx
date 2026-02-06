@@ -179,7 +179,8 @@ export default function CustomerProjectDetailSimulate() {
               <img 
                 src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"
                 alt="Alpha Yachting"
-                className="h-12 object-contain"
+                className="object-contain flex-shrink-0"
+                style={{ height: 48 }}
               />
             </div>
           </div>
