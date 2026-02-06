@@ -63,7 +63,7 @@ export default function CustomerProjectDetail() {
         for (const wo of wos) {
           // Get photos with customer_visible flag
           const woPhotos = await base44.entities.WorkOrderPhoto.filter({ work_order_id: wo.id });
-          allPhotos.push(...woPhotos.filter(p => p.customer_visible));
+          allPhotos.push(...woPhotos.filter(p => p.is_customer_visible));
 
           // Get non-internal comments
           const woComments = await base44.entities.WorkOrderComment.filter({ work_order_id: wo.id });
@@ -190,13 +190,13 @@ export default function CustomerProjectDetail() {
                         </span>
                       </div>
                       <img
-                        src={item.photo_url}
-                        alt={item.description || 'Project photo'}
+                        src={item.file_url}
+                        alt={item.caption || 'Project photo'}
                         className="w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => setSelectedPhoto(item)}
                       />
-                      {item.description && (
-                        <p className="text-slate-600 mt-3">{item.description}</p>
+                      {item.caption && (
+                        <p className="text-slate-600 mt-3">{item.caption}</p>
                       )}
                       {item.category && (
                         <Badge variant="outline" className="mt-2">{item.category}</Badge>
@@ -230,12 +230,12 @@ export default function CustomerProjectDetail() {
           >
             <div className="max-w-5xl w-full">
               <img
-                src={selectedPhoto.photo_url}
-                alt={selectedPhoto.description || 'Project photo'}
+                src={selectedPhoto.file_url}
+                alt={selectedPhoto.caption || 'Project photo'}
                 className="w-full rounded-lg"
               />
-              {selectedPhoto.description && (
-                <p className="text-white mt-4 text-center">{selectedPhoto.description}</p>
+              {selectedPhoto.caption && (
+                <p className="text-white mt-4 text-center">{selectedPhoto.caption}</p>
               )}
             </div>
           </div>
