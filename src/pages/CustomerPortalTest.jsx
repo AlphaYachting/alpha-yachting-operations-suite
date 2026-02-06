@@ -35,11 +35,7 @@ export default function CustomerPortalTest() {
     return boats.filter(b => b.customer_id === customerId);
   };
 
-  const openCustomerPortal = (customer) => {
-    // Open customer portal in new window with simulated customer context
-    const url = createPageUrl('CustomerPortalSimulate') + '?customerId=' + customer.id;
-    window.open(url, '_blank');
-  };
+
 
   const filteredCustomers = customers.filter(c => {
     const searchLower = searchTerm.toLowerCase();
@@ -105,13 +101,12 @@ export default function CustomerPortalTest() {
                       </p>
                     </div>
                   </div>
-                  <Button
-                    onClick={() => openCustomerPortal(customer)}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Portal
-                  </Button>
+                  <Link to={createPageUrl('CustomerPortalSimulate') + '?customerId=' + customer.id}>
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Portal
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
