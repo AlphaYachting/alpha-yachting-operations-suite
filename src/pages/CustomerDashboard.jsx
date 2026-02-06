@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import CustomerHeader from '@/components/customer/CustomerHeader';
-import CustomerWelcome from '@/components/customer/CustomerWelcome';
 import CustomerJobList from '@/components/customer/CustomerJobList';
 
 export default function CustomerDashboard() {
