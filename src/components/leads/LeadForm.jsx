@@ -162,7 +162,7 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
                   </SelectItem>
                 ))
               ) : (
-                <SelectItem value={null} disabled>No customers available</SelectItem>
+                <SelectItem value="no-customers" disabled>No customers available</SelectItem>
               )}
             </SelectContent>
           </Select>
