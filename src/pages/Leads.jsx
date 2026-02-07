@@ -44,9 +44,18 @@ const inquiryTypeColors = {
   'Other': 'bg-slate-100 text-slate-700 border-slate-200'
 };
 
+const statusIconMap = {
+  'Pending': { icon: Clock, bg: 'bg-amber-100', color: 'text-amber-600' },
+  'Contacted': { icon: Phone, bg: 'bg-blue-100', color: 'text-blue-600' },
+  'Converted': { icon: CheckCircle2, bg: 'bg-emerald-100', color: 'text-emerald-600' },
+  'Lost': { icon: XCircle, bg: 'bg-slate-100', color: 'text-slate-500' }
+};
+
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -70,12 +79,16 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations] = await Promise.all([
+      const [allLeads, allLocations, allCustomers, allBoats] = await Promise.all([
       base44.entities.Lead.list('-created_date'),
-      base44.entities.Location.list()]
+      base44.entities.Location.list(),
+      base44.entities.Customer.list(),
+      base44.entities.Boat.list()]
       );
       setLeads(allLeads);
       setLocations(allLocations);
+      setCustomers(allCustomers);
+      setBoats(allBoats);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -197,14 +210,18 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) =>
+        filteredLeads.map((lead) => {
+          const statusInfo = statusIconMap[lead.status] || statusIconMap['Pending'];
+          const StatusIcon = statusInfo.icon;
+
+          return (
         <Card key={lead.id} className="hover:shadow-sm transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
-                  {/* Phone Icon */}
+                  {/* Status Icon */}
                   <div className="flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
-                      <Phone className="h-5 w-5 text-amber-600" />
+                    <div className={`h-10 w-10 rounded-full ${statusInfo.bg} flex items-center justify-center`}>
+                      <StatusIcon className={`h-5 w-5 ${statusInfo.color}`} />
                     </div>
                   </div>
 
@@ -270,10 +287,15 @@ export default function Leads() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <Button size="sm" variant="ghost" className="h-9 w-9 p-0" asChild>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-8 w-8 p-0 hover:bg-slate-100" 
+                      asChild
+                    >
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 text-slate-600" />
                       </Link>
                     </Button>
                     <Button
@@ -282,25 +304,25 @@ export default function Leads() {
                         setConvertingLead(lead);
                         setShowConvertDialog(true);
                       }}
-                      className="bg-emerald-600 hover:bg-emerald-700 h-9 px-3 text-sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 h-8 px-3 text-xs font-medium"
                     >
                       Convert
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-9 w-9 p-0"
+                      className="h-8 w-8 p-0 hover:bg-slate-100"
                       onClick={() => {
                         setEditingLead(lead);
                         setShowForm(true);
                       }}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-4 w-4 text-slate-600" />
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-9 w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="h-8 w-8 p-0 text-red-600 hover:bg-red-50"
                       onClick={() => handleDeleteLead(lead.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -309,7 +331,8 @@ export default function Leads() {
                 </div>
               </CardContent>
             </Card>
-        )
+          );
+        })
         }
       </div>
 
@@ -322,6 +345,8 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
+            customers={customers}
+            boats={boats}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
