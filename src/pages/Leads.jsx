@@ -191,7 +191,12 @@ export default function Leads() {
         filteredLeads.map((lead) =>
         <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  {/* Phone Icon */}
+                  <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <Phone className="h-6 w-6 text-amber-500" />
+                  </div>
+
                   <div className="flex-1 min-w-0 space-y-1.5">
                     {/* Row 1: Name, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2">
