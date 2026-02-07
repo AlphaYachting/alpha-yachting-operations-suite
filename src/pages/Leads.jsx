@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye, Clock, XCircle } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
@@ -121,13 +121,6 @@ export default function Leads() {
     return matchesSearch && matchesStatus;
   });
 
-  const statusIcons = {
-    'Pending': { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-    'Contacted': { icon: Phone, color: 'text-blue-500', bg: 'bg-blue-50' },
-    'Converted': { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    'Lost': { icon: XCircle, color: 'text-slate-500', bg: 'bg-slate-50' }
-  };
-
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -135,12 +128,15 @@ export default function Leads() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage customer inquiries and opportunities</p>
+        </div>
         <Button onClick={() => {
           setEditingLead(null);
           setShowForm(true);
-        }} className="bg-blue-600 hover:bg-blue-700" size="sm">
-          <Plus className="h-4 w-4 mr-1" />
+        }} className="bg-blue-600 hover:bg-blue-700">
+          <Plus className="h-4 w-4 mr-2" />
           New Lead
         </Button>
       </div>
@@ -149,19 +145,11 @@ export default function Leads() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         {['Pending', 'Contacted', 'Converted', 'Lost'].map((status) => {
           const count = leads.filter((l) => l.status === status).length;
-          const IconComponent = statusIcons[status].icon;
           return (
             <Card key={status}>
               <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-0.5">{status}</p>
-                    <p className="text-2xl font-bold text-slate-900">{count}</p>
-                  </div>
-                  <div className={`h-10 w-10 rounded-full ${statusIcons[status].bg} flex items-center justify-center`}>
-                    <IconComponent className={`h-5 w-5 ${statusIcons[status].color}`} />
-                  </div>
-                </div>
+                <p className="text-xs text-slate-500 mb-0.5">{status}</p>
+                <p className="text-xl font-bold text-slate-900">{count}</p>
               </CardContent>
             </Card>);
 
@@ -170,20 +158,20 @@ export default function Leads() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-3">
-          <div className="flex gap-3 flex-wrap">
+        <CardContent className="p-4">
+          <div className="flex gap-3 flex-wrap items-center">
             <Input
-              placeholder="Search by name, phone, email..."
+              placeholder="Search leads..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 min-w-xs" />
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-44">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Status</SelectItem>
+                <SelectItem value="All">All Statuses</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Contacted">Contacted</SelectItem>
                 <SelectItem value="Converted">Converted</SelectItem>
@@ -203,32 +191,23 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) => {
-          const StatusIcon = statusIcons[lead.status]?.icon || Phone;
-          const statusColor = statusIcons[lead.status]?.color || 'text-amber-500';
-          const statusBg = statusIcons[lead.status]?.bg || 'bg-amber-50';
-          
-          return (
+        filteredLeads.map((lead) =>
         <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
-                <div className="flex items-start gap-3">
-                  {/* Status Icon */}
-                  <div className={`h-12 w-12 rounded-full ${statusBg} flex items-center justify-center flex-shrink-0`}>
-                    <StatusIcon className={`h-6 w-6 ${statusColor}`} />
-                  </div>
-
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
-                    {/* Row 1: Name, Priority, Inquiry Type */}
+                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2">
                       <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
-                      {lead.priority &&
-                  <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
-                          {lead.priority}
-                        </Badge>
-                  }
                       {lead.inquiry_type &&
                   <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
                           {lead.inquiry_type}
+                        </Badge>
+                  }
+                      <LeadStatusChange lead={lead} onStatusChange={loadData} />
+                      {lead.priority &&
+                  <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
+                          {lead.priority}
                         </Badge>
                   }
                     </div>
@@ -270,18 +249,17 @@ export default function Leads() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
                   size="sm"
                   variant="outline"
                   asChild
-                  className="h-8 w-8 p-0">
+                  className="h-7 w-7 p-0">
 
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3 w-3" />
                       </Link>
                     </Button>
-                    <LeadStatusChange lead={lead} onStatusChange={loadData} />
                     {lead.status === 'Pending' &&
                 <Button
                   size="sm"
@@ -289,7 +267,7 @@ export default function Leads() {
                     setConvertingLead(lead);
                     setShowConvertDialog(true);
                   }}
-                  className="bg-emerald-600 hover:bg-emerald-700 h-8 px-3 text-xs">
+                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
 
                         Convert
                       </Button>
@@ -301,24 +279,23 @@ export default function Leads() {
                     setEditingLead(lead);
                     setShowForm(true);
                   }}
-                  className="h-8 w-8 p-0">
+                  className="h-7 w-7 p-0">
 
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-3 w-3" />
                     </Button>
                     <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleDeleteLead(lead.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0">
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
 
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          );
-        })
+        )
         }
       </div>
 
