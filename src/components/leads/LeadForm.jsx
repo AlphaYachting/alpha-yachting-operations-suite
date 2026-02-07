@@ -341,6 +341,22 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
             </SelectContent>
           </Select>
         </div>
+
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Pending">Pending</SelectItem>
+              <SelectItem value="Contacted">Contacted</SelectItem>
+              <SelectItem value="Converted">Converted</SelectItem>
+              <SelectItem value="Rejected">Rejected</SelectItem>
+              <SelectItem value="Lost">Lost</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-2">
