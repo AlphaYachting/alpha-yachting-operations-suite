@@ -203,23 +203,32 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) =>
+        filteredLeads.map((lead) => {
+          const StatusIcon = statusIcons[lead.status]?.icon || Phone;
+          const statusColor = statusIcons[lead.status]?.color || 'text-amber-500';
+          const statusBg = statusIcons[lead.status]?.bg || 'bg-amber-50';
+          
+          return (
         <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  {/* Status Icon */}
+                  <div className={`h-12 w-12 rounded-full ${statusBg} flex items-center justify-center flex-shrink-0`}>
+                    <StatusIcon className={`h-6 w-6 ${statusColor}`} />
+                  </div>
+
                   <div className="flex-1 min-w-0 space-y-1.5">
-                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
+                    {/* Row 1: Name, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2">
                       <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
-                      {lead.inquiry_type &&
-                  <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
-                          {lead.inquiry_type}
-                        </Badge>
-                  }
-                      <LeadStatusChange lead={lead} onStatusChange={loadData} />
                       {lead.priority &&
                   <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
                           {lead.priority}
+                        </Badge>
+                  }
+                      {lead.inquiry_type &&
+                  <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
+                          {lead.inquiry_type}
                         </Badge>
                   }
                     </div>
@@ -261,17 +270,18 @@ export default function Leads() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <Button
                   size="sm"
                   variant="outline"
                   asChild
-                  className="h-7 w-7 p-0">
+                  className="h-8 w-8 p-0">
 
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-4 w-4" />
                       </Link>
                     </Button>
+                    <LeadStatusChange lead={lead} onStatusChange={loadData} />
                     {lead.status === 'Pending' &&
                 <Button
                   size="sm"
@@ -279,7 +289,7 @@ export default function Leads() {
                     setConvertingLead(lead);
                     setShowConvertDialog(true);
                   }}
-                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
+                  className="bg-emerald-600 hover:bg-emerald-700 h-8 px-3 text-xs">
 
                         Convert
                       </Button>
@@ -291,17 +301,17 @@ export default function Leads() {
                     setEditingLead(lead);
                     setShowForm(true);
                   }}
-                  className="h-7 w-7 p-0">
+                  className="h-8 w-8 p-0">
 
-                      <Edit className="h-3 w-3" />
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleDeleteLead(lead.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0">
 
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
