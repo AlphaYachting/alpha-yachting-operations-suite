@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye, Clock, XCircle } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
@@ -134,61 +134,47 @@ export default function Leads() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
-          <p className="text-slate-500 mt-1">Manage customer inquiries and opportunities</p>
-        </div>
+        <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
         <Button onClick={() => {
           setEditingLead(null);
           setShowForm(true);
-        }} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="h-4 w-4 mr-2" />
+        }} className="bg-blue-600 hover:bg-blue-700" size="sm">
+          <Plus className="h-4 w-4 mr-1" />
           New Lead
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { status: 'Pending', icon: Clock, color: 'text-amber-500' },
-          { status: 'Contacted', icon: Phone, color: 'text-blue-500' },
-          { status: 'Converted', icon: CheckCircle2, color: 'text-emerald-500' },
-          { status: 'Lost', icon: XCircle, color: 'text-slate-500' }
-        ].map(({ status, icon: Icon, color }) => {
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {['Pending', 'Contacted', 'Converted', 'Lost'].map((status) => {
           const count = leads.filter((l) => l.status === status).length;
           return (
             <Card key={status}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-slate-500 mb-1">{status}</p>
-                    <p className="text-3xl font-bold text-slate-900">{count}</p>
-                  </div>
-                  <div className={`h-12 w-12 rounded-full bg-${status === 'Pending' ? 'amber' : status === 'Contacted' ? 'blue' : status === 'Converted' ? 'emerald' : 'slate'}-50 flex items-center justify-center`}>
-                    <Icon className={`h-6 w-6 ${color}`} />
-                  </div>
-                </div>
+              <CardContent className="p-3">
+                <p className="text-xs text-slate-500 mb-0.5">{status}</p>
+                <p className="text-xl font-bold text-slate-900">{count}</p>
               </CardContent>
             </Card>);
+
         })}
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           <div className="flex gap-3 flex-wrap">
             <Input
-              placeholder="Search leads..."
+              placeholder="Search by name, phone, email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 min-w-[200px]" />
+              className="flex-1 min-w-xs" />
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Statuses" />
+              <SelectTrigger className="w-40">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Statuses</SelectItem>
+                <SelectItem value="All">All Status</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Contacted">Contacted</SelectItem>
                 <SelectItem value="Converted">Converted</SelectItem>
@@ -200,7 +186,7 @@ export default function Leads() {
       </Card>
 
       {/* Leads List */}
-      <div className="space-y-1.5">
+      <div className="space-y-3">
         {filteredLeads.length === 0 ?
         <Card>
             <CardContent className="p-6 text-center">
@@ -209,104 +195,100 @@ export default function Leads() {
           </Card> :
 
         filteredLeads.map((lead) =>
-        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
-              <CardContent className="p-2.5 px-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
-                      {lead.inquiry_type &&
-                  <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
+        <Card key={lead.id} className="hover:shadow-sm transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    {/* Row 1: Name, Inquiry Type, Status, Priority */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-base font-semibold text-slate-900">{lead.name}</h3>
+                      {lead.inquiry_type && (
+                        <Badge variant="outline" className={`text-xs ${inquiryTypeColors[lead.inquiry_type]}`}>
                           {lead.inquiry_type}
                         </Badge>
-                  }
+                      )}
                       <LeadStatusChange lead={lead} onStatusChange={loadData} />
-                      {lead.priority &&
-                  <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
+                      {lead.priority && (
+                        <Badge className={`${priorityColors[lead.priority]} text-xs`}>
                           {lead.priority}
                         </Badge>
-                  }
+                      )}
                     </div>
 
                     {/* Row 2: Contact, Boat, Location */}
-                    <div className="flex items-center gap-4 text-xs text-slate-600">
-                      {lead.phone &&
-                  <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-base">{lead.phone}</span>
-                        </div>
-                  }
-                      {lead.email &&
-                  <div className="flex items-center gap-1 min-w-0">
-                          <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-base truncate">{lead.email}</span>
-                        </div>
-                  }
-                      {lead.boat_name &&
-                  <div className="flex items-center gap-1">
-                          <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                    <div className="flex items-center gap-2 text-sm text-slate-600 flex-wrap">
+                      {lead.phone && (
+                        <>
+                          <Phone className="h-3.5 w-3.5 text-slate-400" />
+                          <span>{lead.phone}</span>
+                        </>
+                      )}
+                      {lead.email && (
+                        <>
+                          <span>•</span>
+                          <Mail className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="truncate">{lead.email}</span>
+                        </>
+                      )}
+                      {lead.boat_name && (
+                        <>
+                          <span>•</span>
+                          <Anchor className="h-3.5 w-3.5 text-slate-400" />
                           <span>{lead.boat_name}</span>
-                        </div>
-                  }
-                      {lead.location &&
-                  <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                        </>
+                      )}
+                      {lead.location && (
+                        <>
+                          <span>•</span>
+                          <MapPin className="h-3.5 w-3.5 text-slate-400" />
                           <span>{lead.location}</span>
-                        </div>
-                  }
+                        </>
+                      )}
                     </div>
 
-                    {/* Row 3: Description Preview */}
-                    {lead.description &&
-                <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                        <span className="text-sm line-clamp-2">{lead.description}</span>
-                      </div>
-                }
+                    {/* Row 3: Description */}
+                    {lead.description && (
+                      <p className="text-sm text-slate-600 line-clamp-1">
+                        {lead.description}
+                      </p>
+                    )}
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <Button
-                  size="sm"
-                  variant="outline"
-                  asChild
-                  className="h-7 w-7 p-0">
-
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" asChild>
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-4 w-4" />
                       </Link>
                     </Button>
-                    {lead.status === 'Pending' &&
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setConvertingLead(lead);
-                    setShowConvertDialog(true);
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
-
-                        Convert
-                      </Button>
-                }
                     <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditingLead(lead);
-                    setShowForm(true);
-                  }}
-                  className="h-7 w-7 p-0">
-
-                      <Edit className="h-3 w-3" />
+                      size="sm"
+                      onClick={() => {
+                        setConvertingLead(lead);
+                        setShowConvertDialog(true);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 h-8 px-3 text-xs"
+                    >
+                      Convert
                     </Button>
                     <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDeleteLead(lead.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
-
-                      <Trash2 className="h-3 w-3" />
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={() => {
+                        setEditingLead(lead);
+                        setShowForm(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDeleteLead(lead.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
