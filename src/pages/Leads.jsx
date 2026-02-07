@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye, Clock, XCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
@@ -121,6 +121,13 @@ export default function Leads() {
     return matchesSearch && matchesStatus;
   });
 
+  const statusIcons = {
+    'Pending': { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+    'Contacted': { icon: Phone, color: 'text-blue-500', bg: 'bg-blue-50' },
+    'Converted': { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    'Lost': { icon: XCircle, color: 'text-slate-500', bg: 'bg-slate-50' }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -142,14 +149,22 @@ export default function Leads() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {['Pending', 'Contacted', 'Converted', 'Lost'].map((status) => {
           const count = leads.filter((l) => l.status === status).length;
+          const IconComponent = statusIcons[status].icon;
           return (
             <Card key={status}>
-              <CardContent className="p-3">
-                <p className="text-xs text-slate-500 mb-0.5">{status}</p>
-                <p className="text-xl font-bold text-slate-900">{count}</p>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 mb-1">{status}</p>
+                    <p className="text-3xl font-bold text-slate-900">{count}</p>
+                  </div>
+                  <div className={`h-12 w-12 rounded-full ${statusIcons[status].bg} flex items-center justify-center`}>
+                    <IconComponent className={`h-6 w-6 ${statusIcons[status].color}`} />
+                  </div>
+                </div>
               </CardContent>
             </Card>);
 
@@ -183,7 +198,7 @@ export default function Leads() {
       </Card>
 
       {/* Leads List */}
-      <div className="space-y-1.5">
+      <div className="space-y-3">
         {filteredLeads.length === 0 ?
         <Card>
             <CardContent className="p-6 text-center">
@@ -191,50 +206,62 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) =>
+        filteredLeads.map((lead) => {
+          const StatusIcon = statusIcons[lead.status]?.icon || Phone;
+          const statusColor = statusIcons[lead.status]?.color || 'text-amber-500';
+          const statusBg = statusIcons[lead.status]?.bg || 'bg-amber-50';
+          
+          return (
         <Card key={lead.id} className="hover:border-slate-300 transition-colors">
-              <CardContent className="p-2.5 px-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
-                      {lead.inquiry_type &&
-                  <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
-                          {lead.inquiry_type}
+              <CardContent className="p-4">
+                <div className="flex items-start gap-4">
+                  {/* Status Icon */}
+                  <div className={`h-14 w-14 rounded-full ${statusBg} flex items-center justify-center flex-shrink-0`}>
+                    <StatusIcon className={`h-7 w-7 ${statusColor}`} />
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-2">
+                    {/* Row 1: Name, Status Badge, Priority, Inquiry Type */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-slate-900 text-lg font-semibold">{lead.name}</h3>
+                      <Badge className={`${statusColors[lead.status]} text-xs px-2 py-0.5`}>
+                        {lead.status}
+                      </Badge>
+                      {lead.priority &&
+                  <Badge className={`${priorityColors[lead.priority]} text-xs px-2 py-0.5`}>
+                          {lead.priority}
                         </Badge>
                   }
-                      <LeadStatusChange lead={lead} onStatusChange={loadData} />
-                      {lead.priority &&
-                  <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
-                          {lead.priority}
+                      {lead.inquiry_type &&
+                  <Badge variant="outline" className={`text-xs px-2 py-0.5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
+                          {lead.inquiry_type}
                         </Badge>
                   }
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location */}
-                    <div className="flex items-center gap-4 text-xs text-slate-600">
+                    {/* Row 2: Contact Info */}
+                    <div className="flex items-center gap-4 text-sm text-slate-600 flex-wrap">
                       {lead.phone &&
-                  <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-base">{lead.phone}</span>
+                  <div className="flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                          <span>{lead.phone}</span>
                         </div>
                   }
                       {lead.email &&
-                  <div className="flex items-center gap-1 min-w-0">
-                          <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-base truncate">{lead.email}</span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                          <Mail className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                          <span className="truncate">{lead.email}</span>
                         </div>
                   }
                       {lead.boat_name &&
-                  <div className="flex items-center gap-1">
-                          <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                  <div className="flex items-center gap-1.5">
+                          <Anchor className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                           <span>{lead.boat_name}</span>
                         </div>
                   }
                       {lead.location &&
-                  <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                  <div className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                           <span>{lead.location}</span>
                         </div>
                   }
@@ -242,36 +269,34 @@ export default function Leads() {
 
                     {/* Row 3: Description Preview */}
                     {lead.description &&
-                <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                        <span className="text-sm line-clamp-2">{lead.description}</span>
+                <div className="text-sm text-slate-600 line-clamp-1">
+                        {lead.description}
                       </div>
                 }
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <Button
                   size="sm"
                   variant="outline"
                   asChild
-                  className="h-7 w-7 p-0">
+                  className="h-9 w-9 p-0">
 
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-4 w-4" />
                       </Link>
                     </Button>
-                    {lead.status === 'Pending' &&
-                <Button
+                    <Button
                   size="sm"
                   onClick={() => {
                     setConvertingLead(lead);
                     setShowConvertDialog(true);
                   }}
-                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
+                  className="bg-emerald-600 hover:bg-emerald-700 h-9 px-3 text-sm">
 
                         Convert
                       </Button>
-                }
                     <Button
                   size="sm"
                   variant="outline"
@@ -279,23 +304,24 @@ export default function Leads() {
                     setEditingLead(lead);
                     setShowForm(true);
                   }}
-                  className="h-7 w-7 p-0">
+                  className="h-9 w-9 p-0">
 
-                      <Edit className="h-3 w-3" />
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleDeleteLead(lead.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-9 w-9 p-0">
 
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-        )
+          );
+        })
         }
       </div>
 
