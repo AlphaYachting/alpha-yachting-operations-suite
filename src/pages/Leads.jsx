@@ -199,7 +199,7 @@ export default function Leads() {
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0 space-y-2">
-                    {/* Row 1: Name, Inquiry Type, Status, Priority */}
+                    {/* Row 1: Name and Badges */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-base font-semibold text-slate-900">{lead.name}</h3>
                       {lead.inquiry_type && (
@@ -215,7 +215,7 @@ export default function Leads() {
                       )}
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location */}
+                    {/* Row 2: Contact Info */}
                     <div className="flex items-center gap-2 text-sm text-slate-600 flex-wrap">
                       {lead.phone && (
                         <>
