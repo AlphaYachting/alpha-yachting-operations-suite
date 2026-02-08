@@ -71,7 +71,9 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         downpayment_amount: documentData.downpayment_amount || 0,
         payment_schedule: documentData.payment_schedule || '',
         retention_of_title_enabled: documentData.retention_of_title_enabled !== false,
-        retention_of_title_text: documentData.retention_of_title_text || ''
+        retention_of_title_text: documentData.retention_of_title_text || '',
+        safety_compliance_clause: documentData.safety_compliance_clause || '',
+        show_marina_fees_notice: documentData.show_marina_fees_notice || false
       };
       const pdfDoc = await generatePDFWithJsPDF(completeDocumentData, lineItems, templateData, payments);
       
@@ -101,7 +103,9 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         downpayment_amount: documentData.downpayment_amount || 0,
         payment_schedule: documentData.payment_schedule || '',
         retention_of_title_enabled: documentData.retention_of_title_enabled !== false,
-        retention_of_title_text: documentData.retention_of_title_text || ''
+        retention_of_title_text: documentData.retention_of_title_text || '',
+        safety_compliance_clause: documentData.safety_compliance_clause || '',
+        show_marina_fees_notice: documentData.show_marina_fees_notice || false
       };
       const pdfDoc = await generatePDFWithJsPDF(completeDocumentData, lineItems, templateData, payments);
       
