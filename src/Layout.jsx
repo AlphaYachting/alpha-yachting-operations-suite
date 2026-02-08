@@ -59,6 +59,7 @@ const navItems = [
   { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
   { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates', adminOnly: true },
   { name: 'Offers', icon: FileText, page: 'Offers' },
+  { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates', adminOnly: true },
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
   { name: 'Customer Portal Test', icon: Users, page: 'CustomerPortalTest', adminOnly: true },

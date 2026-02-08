@@ -104,6 +104,8 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
+import OfferTemplates from './pages/OfferTemplates';
+import OfferTemplateDetail from './pages/OfferTemplateDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -165,6 +167,8 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
+    "OfferTemplates": OfferTemplates,
+    "OfferTemplateDetail": OfferTemplateDetail,
 }
 
 export const pagesConfig = {
