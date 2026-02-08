@@ -10,10 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, User } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 
 export default function LeadForm({ lead, locations, customers, boats, onSave, onCancel }) {
   const [isExistingCustomer, setIsExistingCustomer] = useState(!!lead?.customer_id);
+  const [allUsers, setAllUsers] = useState([]);
   const [formData, setFormData] = useState({
     customer_id: lead?.customer_id || '',
     name: lead?.name || '',
@@ -30,7 +32,8 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
     notes: lead?.notes || '',
     description: lead?.description || '',
     priority: lead?.priority || 'Medium',
-    status: lead?.status || 'Pending'
+    status: lead?.status || 'Pending',
+    assigned_to_user_id: lead?.assigned_to_user_id || ''
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -38,8 +41,18 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
   const [useExistingBoat, setUseExistingBoat] = useState(false);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
 
-  // Load customer boats on initialization if editing a lead with customer_id
+  // Load users and customer boats on initialization
   React.useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const users = await base44.entities.User.list();
+        setAllUsers(users);
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    };
+    loadUsers();
+
     if (lead?.customer_id && boats) {
       const custBoats = boats.filter(b => b.customer_id === lead.customer_id);
       setCustomerBoats(custBoats);
@@ -138,6 +151,27 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
+
+      {/* Assignee Selection */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          <span>Assign To</span>
+        </Label>
+        <Select value={formData.assigned_to_user_id || ''} onValueChange={(value) => setFormData({ ...formData, assigned_to_user_id: value || '' })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select user (optional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={null}>Unassigned</SelectItem>
+            {allUsers.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.full_name || user.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       {/* Lead Type Toggle */}
       <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
