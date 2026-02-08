@@ -49,6 +49,7 @@ const inquiryTypeColors = {
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
