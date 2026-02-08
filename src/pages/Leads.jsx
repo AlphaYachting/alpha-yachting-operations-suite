@@ -49,7 +49,7 @@ export default function Leads() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('Open');
 
   // Apply filter from dashboard
   useEffect(() => {
@@ -109,19 +109,6 @@ export default function Leads() {
     }
   };
 
-  const getLeadAgingLevel = (lead) => {
-    const movementTimestamp = lead.last_contacted_at || lead.updated_date || lead.created_date;
-    if (!movementTimestamp) return 'none';
-    
-    const now = new Date();
-    const lastActivity = new Date(movementTimestamp);
-    const ageDays = Math.floor((now - lastActivity) / (1000 * 60 * 60 * 24));
-    
-    if (ageDays > 7) return 'danger';
-    if (ageDays > 3) return 'warn';
-    return 'none';
-  };
-
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch =
     lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -129,7 +116,10 @@ export default function Leads() {
     lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.boat_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === 'All' || lead.status === statusFilter;
+    const matchesStatus = 
+      statusFilter === 'All' ? true :
+      statusFilter === 'Open' ? (lead.status === 'Pending' || lead.status === 'Contacted') :
+      lead.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -181,6 +171,7 @@ export default function Leads() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="Open">Open (Active)</SelectItem>
                 <SelectItem value="All">All Status</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Contacted">Contacted</SelectItem>
@@ -201,14 +192,8 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) => {
-          const agingLevel = getLeadAgingLevel(lead);
-          const borderClass = agingLevel === 'danger' ? 'border-red-400 border-2' : 
-                              agingLevel === 'warn' ? 'border-yellow-400 border-2' : 
-                              'hover:border-slate-300';
-          
-          return (
-        <Card key={lead.id} className={`${borderClass} transition-colors`}>
+        filteredLeads.map((lead) =>
+        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
@@ -230,13 +215,6 @@ export default function Leads() {
 
                     {/* Row 2: Contact, Boat, Location */}
                     <div className="flex items-center gap-4 text-xs text-slate-600">
-                      {lead.created_date &&
-                  <div className="flex items-center gap-1">
-                          <span className="text-xs text-slate-500">
-                            {format(parseISO(lead.created_date), 'MMM d, yyyy')}
-                          </span>
-                        </div>
-                  }
                       {lead.phone &&
                   <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
@@ -318,8 +296,7 @@ export default function Leads() {
                 </div>
               </CardContent>
             </Card>
-          );
-        })
+        )
         }
       </div>
 
