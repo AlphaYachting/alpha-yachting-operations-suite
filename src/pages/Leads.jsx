@@ -47,8 +47,6 @@ const inquiryTypeColors = {
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -72,16 +70,12 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations, allCustomers, allBoats] = await Promise.all([
-        base44.entities.Lead.list('-created_date'),
-        base44.entities.Location.list(),
-        base44.entities.Customer.list(),
-        base44.entities.Boat.list()
-      ]);
+      const [allLeads, allLocations] = await Promise.all([
+      base44.entities.Lead.list('-created_date'),
+      base44.entities.Location.list()]
+      );
       setLeads(allLeads);
       setLocations(allLocations);
-      setCustomers(allCustomers);
-      setBoats(allBoats);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -199,7 +193,7 @@ export default function Leads() {
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
-                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
+                    {/* Row 1: Name, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2">
                       <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
                       {lead.inquiry_type &&
@@ -207,7 +201,6 @@ export default function Leads() {
                           {lead.inquiry_type}
                         </Badge>
                   }
-                      <LeadStatusChange lead={lead} onStatusChange={loadData} />
                       {lead.priority &&
                   <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
                           {lead.priority}
@@ -253,6 +246,7 @@ export default function Leads() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <LeadStatusChange lead={lead} onStatusChange={loadData} />
                     <Button
                   size="sm"
                   variant="outline"
@@ -311,8 +305,6 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
-            customers={customers}
-            boats={boats}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
