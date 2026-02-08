@@ -73,6 +73,7 @@ export default function LeadDetail() {
   const [tasks, setTasks] = useState([]);
   const [taskComments, setTaskComments] = useState({});
   const [location, setLocation] = useState(null);
+  const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -124,6 +125,15 @@ export default function LeadDetail() {
         commentsByTask[comment.lead_task_id].push(comment);
       });
       setTaskComments(commentsByTask);
+
+      // Load created offers
+      if (leadRecord.created_offer_ids && leadRecord.created_offer_ids.length > 0) {
+        const offerPromises = leadRecord.created_offer_ids.map(offerId =>
+          base44.entities.Offer.filter({ id: offerId })
+        );
+        const offerResults = await Promise.all(offerPromises);
+        setOffers(offerResults.flat().filter(o => o));
+      }
 
       if (leadRecord.location_id) {
         const [locData] = await base44.entities.Location.filter({ id: leadRecord.location_id });
@@ -343,6 +353,41 @@ export default function LeadDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Created Offers */}
+      {offers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Created Offers ({offers.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {offers.map((offer) => (
+                <Link
+                  key={offer.id}
+                  to={createPageUrl('OfferDetail') + `?id=${offer.id}`}
+                  className="block p-3 border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-slate-900">{offer.title}</p>
+                      <p className="text-xs text-slate-500">{offer.offer_number}</p>
+                    </div>
+                    <Badge className={
+                      offer.status === 'Draft' ? 'bg-slate-100 text-slate-700' :
+                      offer.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
+                      offer.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
+                      'bg-slate-100 text-slate-500'
+                    }>
+                      {offer.status}
+                    </Badge>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Lead Details */}
       <Card>
