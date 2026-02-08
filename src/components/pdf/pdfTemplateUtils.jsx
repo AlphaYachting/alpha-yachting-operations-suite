@@ -454,6 +454,30 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
           white-space: pre-line;
         }
 
+        .safety-compliance {
+          margin-bottom: 15px;
+          padding: 12px;
+          background-color: #f0fdf4;
+          border-left: 4px solid #16a34a;
+          border-radius: 3px;
+          font-size: 9pt;
+          line-height: 1.3;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        .safety-title {
+          font-size: 10pt;
+          font-weight: bold;
+          margin-bottom: 6px;
+          color: #14532d;
+        }
+
+        .safety-text {
+          color: #14532d;
+          white-space: pre-line;
+        }
+
         /* Footer */
         .footer {
           margin-top: ${paragraphSpacing * 2}pt;
@@ -647,6 +671,14 @@ ${document.public_notes}</div>
           <div class="ownership-notice">
             <div class="ownership-title">⚠️ Retention of Title / Eigentumsvorbehalt</div>
             <div class="ownership-text">${document.retention_of_title_text || 'All delivered goods and services remain the property of Alpha Yachting until full payment has been received.'}</div>
+          </div>
+        ` : ''}
+
+        <!-- Safety & Environmental Compliance (Offers Only) -->
+        ${!isInvoice && document.safety_compliance_clause ? `
+          <div class="safety-compliance">
+            <div class="safety-title">${document.language === 'English' ? 'Safety & Environmental Compliance' : 'Sicherheits- & Umwelthinweis'}</div>
+            <div class="safety-text">${document.safety_compliance_clause}</div>
           </div>
         ` : ''}
 
