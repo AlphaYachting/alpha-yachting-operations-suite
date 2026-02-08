@@ -77,6 +77,7 @@ export default function OfferDetail() {
    payment_schedule: '',
    retention_of_title_enabled: true,
    retention_of_title_text: '',
+   show_marina_fees_notice: false,
   });
   const [tasks, setTasks] = useState([]);
   const [showAIDialog, setShowAIDialog] = useState(false);
@@ -470,6 +471,7 @@ Requirements:
       payment_schedule: formData.payment_schedule,
       retention_of_title_enabled: formData.retention_of_title_enabled,
       retention_of_title_text: formData.retention_of_title_text,
+      show_marina_fees_notice: formData.show_marina_fees_notice,
       vat_rate: vatRate,
       subtotal: subtotal,
       tax_amount: taxTotal,

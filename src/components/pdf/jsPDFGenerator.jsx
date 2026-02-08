@@ -8,7 +8,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   }
   
   const isInvoice = document.document_type === 'Invoice';
-  const currency = document.currency === 'EUR' ? '€' : document.currency;
+  const currency = document.currency === 'EUR' ? '€ ' : document.currency + ' ';
 
   // Page setup
   const pageFormat = template.page_format || 'A4';
@@ -557,7 +557,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     doc.setFont(fontFamily, 'bold');
-    doc.text('⚠️ Retention of Title / Eigentumsvorbehalt', margins.left, yPos);
+    doc.text('Retention of Title / Eigentumsvorbehalt', margins.left, yPos);
     
     doc.setFont(fontFamily, 'normal');
     doc.setFontSize(9);
@@ -566,6 +566,45 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     doc.text(ownershipLines, margins.left, yPos + 6);
     
     yPos += 8 + (ownershipLines.length * 4);
+  }
+
+  // Safety & Environmental Compliance for Offers
+  if (!isInvoice && document.safety_compliance_clause) {
+    checkPageBreak(25);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(fontFamily, 'bold');
+    const safetyTitle = document.language === 'English' ? 'Safety & Environmental Compliance' : 'Sicherheits- & Umwelthinweis';
+    doc.text(safetyTitle, margins.left, yPos);
+    
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    const safetyLines = doc.splitTextToSize(document.safety_compliance_clause, contentWidth);
+    doc.text(safetyLines, margins.left, yPos + 6);
+    
+    yPos += 8 + (safetyLines.length * 4);
+  }
+
+  // Marina Working Fees Notice for Offers
+  if (!isInvoice && document.show_marina_fees_notice) {
+    checkPageBreak(25);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(fontFamily, 'bold');
+    const marinaTitle = document.language === 'English' ? 'Notice Regarding Marina Working Fees' : 'Hinweis zu Marina-Arbeitskosten';
+    doc.text(marinaTitle, margins.left, yPos);
+    
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    const marinaNoticeText = document.language === 'English' 
+      ? 'Please note that marina working fees may apply depending on the location and scope of work. These fees will be communicated separately if applicable.'
+      : 'Bitte beachten Sie, dass je nach Standort und Arbeitsumfang Marina-Arbeitsgebühren anfallen können. Diese Gebühren werden separat mitgeteilt, falls zutreffend.';
+    const marinaLines = doc.splitTextToSize(marinaNoticeText, contentWidth);
+    doc.text(marinaLines, margins.left, yPos + 6);
+    
+    yPos += 8 + (marinaLines.length * 4);
   }
 
   // Notes
