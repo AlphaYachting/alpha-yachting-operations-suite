@@ -271,42 +271,40 @@ export default function Leads() {
                       </Link>
                     </Button>
                     {lead.status === 'Pending' &&
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setConvertingLead(lead);
-                    setShowConvertDialog(true);
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
-
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setConvertingLead(lead);
+                          setShowConvertDialog(true);
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
                         Convert
                       </Button>
-                }
+                    }
                     <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditingLead(lead);
-                    setShowForm(true);
-                  }}
-                  className="h-7 w-7 p-0">
-
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingLead(lead);
+                        setShowForm(true);
+                      }}
+                      className="h-7 w-7 p-0">
                       <Edit className="h-3 w-3" />
                     </Button>
                     <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDeleteLead(lead.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
-
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteLead(lead.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
                       <Trash2 className="h-3 w-3" />
                     </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-        )
-        }
+                    </div>
+                    </div>
+                    </CardContent>
+                    </Card>
+                    );
+                    })
+                    )}
       </div>
 
       {/* Lead Form Dialog */}
