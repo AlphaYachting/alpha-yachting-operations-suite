@@ -76,6 +76,9 @@ export default function LeadDetail() {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [allUsers, setAllUsers] = useState([]);
+  const [assignedUser, setAssignedUser] = useState(null);
+  const [savingAssignment, setSavingAssignment] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [selectedTaskForComment, setSelectedTaskForComment] = useState(null);
@@ -85,6 +88,7 @@ export default function LeadDetail() {
 
   useEffect(() => {
     loadCurrentUser();
+    loadAllUsers();
     if (leadId) {
       loadLeadDetails();
     }
@@ -96,6 +100,15 @@ export default function LeadDetail() {
       setCurrentUser(user);
     } catch (error) {
       console.error('Error loading user:', error);
+    }
+  };
+
+  const loadAllUsers = async () => {
+    try {
+      const users = await base44.entities.User.list();
+      setAllUsers(users);
+    } catch (error) {
+      console.error('Error loading users:', error);
     }
   };
 
@@ -115,6 +128,15 @@ export default function LeadDetail() {
       const leadRecord = leadData[0];
       setLead(leadRecord);
       setTasks(allTasks);
+
+      // Load assigned user if present
+      if (leadRecord.assigned_to_user_id) {
+        const users = await base44.entities.User.list();
+        const assignee = users.find(u => u.id === leadRecord.assigned_to_user_id);
+        setAssignedUser(assignee);
+      } else {
+        setAssignedUser(null);
+      }
 
       // Group comments by task
       const commentsByTask = {};
@@ -246,6 +268,41 @@ export default function LeadDetail() {
       alert('Error creating offer');
     } finally {
       setCreatingOffer(false);
+    }
+  };
+
+  const handleAssignmentChange = async (newUserId) => {
+    if (!lead) return;
+    
+    const previousUserId = lead.assigned_to_user_id;
+    
+    // Don't do anything if assignment hasn't changed
+    if (previousUserId === newUserId) return;
+    
+    try {
+      setSavingAssignment(true);
+      
+      // Update lead
+      await base44.entities.Lead.update(lead.id, {
+        assigned_to_user_id: newUserId || null
+      });
+      
+      // Send notification only if assigned to a new user (not unassigned)
+      if (newUserId) {
+        const { notifyLeadAssignment } = await import('@/components/notifications/notificationUtils');
+        const assignee = allUsers.find(u => u.id === newUserId);
+        if (assignee) {
+          await notifyLeadAssignment(lead, assignee);
+        }
+      }
+      
+      // Reload lead details
+      await loadLeadDetails();
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+      alert('Failed to update assignment');
+    } finally {
+      setSavingAssignment(false);
     }
   };
 
@@ -395,6 +452,40 @@ export default function LeadDetail() {
           <CardTitle className="text-lg font-semibold">Lead Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Assignee Section */}
+          <div className="pb-4 border-b border-slate-200">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <Label className="text-sm font-medium text-slate-700 mb-2 block">Assigned To</Label>
+                <Select
+                  value={lead.assigned_to_user_id || ''}
+                  onValueChange={handleAssignmentChange}
+                  disabled={savingAssignment}
+                >
+                  <SelectTrigger className="w-full max-w-xs">
+                    <SelectValue placeholder="Unassigned - select user...">
+                      {assignedUser ? assignedUser.full_name || assignedUser.email : 'Unassigned'}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={null}>Unassigned</SelectItem>
+                    {allUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.full_name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {assignedUser && (
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <User className="h-4 w-4 text-slate-400" />
+                  <span>{assignedUser.email}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           {lead.description && (
             <div>
               <p className="text-sm font-medium text-slate-700 mb-1">Description</p>

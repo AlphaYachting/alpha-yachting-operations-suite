@@ -181,3 +181,51 @@ export async function notifyTaskStatusChange(task, workOrder, technicians, oldSt
     }
   }
 }
+
+export async function notifyLeadAssignment(lead, assignedUser) {
+  if (!assignedUser || !assignedUser.email) return;
+
+  const leadIdentifier = lead.name || 'Unknown Lead';
+  const leadDetails = lead.boat_name ? ` (${lead.boat_name})` : '';
+  
+  try {
+    const appUrl = 'https://preview-sandbox--b5d6997ad3a5f562c7aad0549632426f.base44.app';
+    
+    await base44.integrations.Core.SendEmail({
+      to: assignedUser.email,
+      subject: `[Alpha Yachting] New Lead Assigned`,
+      body: `
+        <h2>New Lead Assigned to You</h2>
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <p><strong>Lead:</strong> ${leadIdentifier}${leadDetails}</p>
+          <p><strong>Inquiry Type:</strong> ${lead.inquiry_type || 'Not specified'}</p>
+          <p><strong>Priority:</strong> ${lead.priority || 'Medium'}</p>
+          <p><strong>Status:</strong> ${lead.status || 'Pending'}</p>
+          ${lead.description ? `<p><strong>Description:</strong><br>${lead.description}</p>` : ''}
+          <p style="margin-top: 20px;">
+            <a href="${appUrl}/LeadDetail?id=${lead.id}" 
+               style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              View Lead Details
+            </a>
+          </p>
+        </div>
+        <br>
+        <p style="color: #666; font-size: 12px;">This is an automated notification from Alpha Yachting Service Management.</p>
+      `
+    });
+
+    // Also create in-app notification
+    await base44.entities.Notification.create({
+      user_email: assignedUser.email,
+      type: 'work_order_assignment',
+      title: 'New Lead Assigned',
+      message: `Lead "${leadIdentifier}${leadDetails}" has been assigned to you`,
+      related_work_order_id: null,
+      related_task_id: null,
+      is_read: false,
+      email_sent: true
+    });
+  } catch (error) {
+    console.error('Failed to send lead assignment notification:', error);
+  }
+}
