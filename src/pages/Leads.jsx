@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye, Clock, X } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
@@ -139,18 +139,62 @@ export default function Leads() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        {['Pending', 'Contacted', 'Converted', 'Lost'].map((status) => {
-          const count = leads.filter((l) => l.status === status).length;
-          return (
-            <Card key={status}>
-              <CardContent className="p-3">
-                <p className="text-xs text-slate-500 mb-0.5">{status}</p>
-                <p className="text-xl font-bold text-slate-900">{count}</p>
-              </CardContent>
-            </Card>);
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-amber-700 font-medium">Pending</p>
+                <p className="text-2xl font-bold text-amber-900">{leads.filter(l => l.status === 'Pending').length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        })}
+        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Phone className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-blue-700 font-medium">Contacted</p>
+                <p className="text-2xl font-bold text-blue-900">{leads.filter(l => l.status === 'Contacted').length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm text-emerald-700 font-medium">Converted</p>
+                <p className="text-2xl font-bold text-emerald-900">{leads.filter(l => l.status === 'Converted').length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-slate-100 rounded-lg">
+                <X className="h-5 w-5 text-slate-600" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-700 font-medium">Lost</p>
+                <p className="text-2xl font-bold text-slate-900">{leads.filter(l => l.status === 'Lost').length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -200,7 +244,10 @@ export default function Leads() {
                       lead.status === 'Converted' ? 'bg-emerald-50 text-emerald-600' :
                       'bg-slate-100 text-slate-500'
                     }`}>
-                      <Phone className="h-5 w-5" />
+                      {lead.status === 'Pending' ? <Clock className="h-5 w-5" /> :
+                       lead.status === 'Contacted' ? <Phone className="h-5 w-5" /> :
+                       lead.status === 'Converted' ? <CheckCircle2 className="h-5 w-5" /> :
+                       <X className="h-5 w-5" />}
                     </div>
                   </div>
 
