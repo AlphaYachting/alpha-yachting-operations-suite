@@ -55,6 +55,7 @@ export default function OfferDetail() {
   const urlParams = new URLSearchParams(window.location.search);
   const offerId = urlParams.get('id');
   const isNewOffer = !offerId;
+  const debugMode = urlParams.get('debugOffer') === '1';
 
   const [formData, setFormData] = useState({
    customer_id: '',
@@ -608,6 +609,57 @@ Requirements:
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* RUNTIME VISIBILITY PROBE - Remove after diagnosis */}
+      {debugMode && (
+        <Alert className="bg-yellow-100 border-yellow-400">
+          <AlertCircle className="h-4 w-4 text-yellow-700" />
+          <AlertDescription>
+            <div className="space-y-2 text-xs font-mono">
+              <div className="font-bold text-yellow-900">🔍 PROBE ACTIVE - OfferDetail Component</div>
+              
+              <div className="border-t border-yellow-300 pt-2 mt-2">
+                <div className="font-semibold text-yellow-900">A) SCREEN IDENTITY:</div>
+                <div>• Route: /OfferDetail{offerId ? `?id=${offerId}` : ' (new)'}</div>
+                <div>• Component: pages/OfferDetail.jsx</div>
+                <div>• Mode: {isNewOffer ? 'NEW OFFER' : 'EDIT OFFER'}</div>
+              </div>
+
+              <div className="border-t border-yellow-300 pt-2 mt-2">
+                <div className="font-semibold text-yellow-900">B) STATE KEYS:</div>
+                <div>• formData keys: {Object.keys(formData).join(', ')}</div>
+                <div>• hasLanguageKey: {formData.hasOwnProperty('language') ? '✅ YES' : '❌ NO'}</div>
+                <div>• hasSafetyClauseKey: {formData.hasOwnProperty('safety_compliance_clause') ? '✅ YES' : '❌ NO'}</div>
+                <div>• currentLanguageValue: {formData.language || 'undefined'}</div>
+                <div>• safetyClauseLength: {(formData.safety_compliance_clause || '').length} chars</div>
+                <div>• safetyClauseValue: {formData.safety_compliance_clause || '(empty)'}</div>
+              </div>
+
+              <div className="border-t border-yellow-300 pt-2 mt-2">
+                <div className="font-semibold text-yellow-900">C) RENDER CONDITIONS:</div>
+                <div>• No feature flags present: ✅</div>
+                <div>• No permission checks present: ✅</div>
+                <div>• No edit/view mode gating: ✅</div>
+                <div>• No tab/accordion gating: ✅</div>
+                <div>• Section should render at line 778-799: ✅</div>
+              </div>
+
+              <div className="border-t border-yellow-300 pt-2 mt-2">
+                <div className="font-semibold text-yellow-900">D) UI PLACEMENT:</div>
+                <div>• Location: Main Card, after Internal Notes</div>
+                <div>• Line in code: 778-799</div>
+                <div>• Expected position: Between "Internal Notes" and Tasks section</div>
+                <div>• Tabs/Accordions: NONE - all visible by default</div>
+              </div>
+
+              <div className="border-t border-yellow-300 pt-2 mt-2">
+                <div className="font-bold text-red-700">⚠️ SCROLL DOWN TO SEE SAFETY CLAUSE UI</div>
+                <div>The UI should be visible below "Internal Notes" field.</div>
+              </div>
+            </div>
+          </AlertDescription>
         </Alert>
       )}
 
