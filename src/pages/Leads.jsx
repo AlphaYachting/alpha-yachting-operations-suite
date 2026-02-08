@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye, Clock, XCircle } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
@@ -139,25 +139,17 @@ export default function Leads() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Pending', icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
-          { label: 'Contacted', icon: Phone, color: 'text-blue-500', bg: 'bg-blue-50' },
-          { label: 'Converted', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-          { label: 'Lost', icon: XCircle, color: 'text-slate-400', bg: 'bg-slate-50' }
-        ].map(({ label, icon: Icon, color }) => {
-          const count = leads.filter((l) => l.status === label).length;
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {['Pending', 'Contacted', 'Converted', 'Lost'].map((status) => {
+          const count = leads.filter((l) => l.status === status).length;
           return (
-            <Card key={label}>
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-500 mb-1">{label}</p>
-                  <p className="text-2xl font-bold text-slate-900">{count}</p>
-                </div>
-                <Icon className={`h-8 w-8 ${color} opacity-80`} />
+            <Card key={status}>
+              <CardContent className="p-3">
+                <p className="text-xs text-slate-500 mb-0.5">{status}</p>
+                <p className="text-xl font-bold text-slate-900">{count}</p>
               </CardContent>
-            </Card>
-          );
+            </Card>);
+
         })}
       </div>
 
@@ -200,9 +192,21 @@ export default function Leads() {
         <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
+                  {/* Status Icon */}
+                  <div className="flex-shrink-0 pt-0.5">
+                    <div className={`h-11 w-11 rounded-lg flex items-center justify-center ${
+                      lead.status === 'Pending' ? 'bg-amber-50 text-amber-600' :
+                      lead.status === 'Contacted' ? 'bg-blue-50 text-blue-600' :
+                      lead.status === 'Converted' ? 'bg-emerald-50 text-emerald-600' :
+                      'bg-slate-100 text-slate-500'
+                    }`}>
+                      <Phone className="h-5 w-5" />
+                    </div>
+                  </div>
+
                   <div className="flex-1 min-w-0 space-y-1.5">
                     {/* Row 1: Name, Status, Priority, Inquiry Type */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
                       {lead.inquiry_type &&
                   <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
@@ -254,47 +258,50 @@ export default function Leads() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                     <Button
-                  size="sm"
-                  variant="outline"
-                  asChild
-                  className="h-7 w-7 p-0">
-
+                      size="sm"
+                      variant="outline"
+                      asChild
+                      className="h-9 w-9 p-0 border-slate-200 shadow-sm bg-white hover:bg-slate-50 rounded-md"
+                    >
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-3 w-3" />
+                        <Eye className="h-4 w-4 text-slate-700" />
                       </Link>
                     </Button>
-                    {lead.status === 'Pending' &&
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setConvertingLead(lead);
-                    setShowConvertDialog(true);
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
 
+                    {lead.status === 'Pending' && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setConvertingLead(lead);
+                          setShowConvertDialog(true);
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9 px-3 font-medium rounded-md"
+                      >
                         Convert
                       </Button>
-                }
-                    <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setEditingLead(lead);
-                    setShowForm(true);
-                  }}
-                  className="h-7 w-7 p-0">
+                    )}
 
-                      <Edit className="h-3 w-3" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingLead(lead);
+                        setShowForm(true);
+                      }}
+                      className="h-9 w-9 p-0 border-slate-200 shadow-sm bg-white hover:bg-slate-50 rounded-md"
+                    >
+                      <Edit className="h-4 w-4 text-slate-700" />
                     </Button>
-                    <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDeleteLead(lead.id)}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
 
-                      <Trash2 className="h-3 w-3" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeleteLead(lead.id)}
+                      className="h-9 w-9 p-0 border-slate-200 shadow-sm bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-100 rounded-md"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
                 </div>
