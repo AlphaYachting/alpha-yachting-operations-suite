@@ -276,7 +276,6 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
               value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Contact person name"
-              disabled={isExistingCustomer && formData.customer_id}
             />
           </div>
         )}

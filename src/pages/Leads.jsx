@@ -47,6 +47,8 @@ const inquiryTypeColors = {
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -70,12 +72,16 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations] = await Promise.all([
+      const [allLeads, allLocations, allCustomers, allBoats] = await Promise.all([
       base44.entities.Lead.list('-created_date'),
-      base44.entities.Location.list()]
+      base44.entities.Location.list(),
+      base44.entities.Customer.list(),
+      base44.entities.Boat.list()]
       );
       setLeads(allLeads);
       setLocations(allLocations);
+      setCustomers(allCustomers);
+      setBoats(allBoats);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -88,21 +94,7 @@ export default function Leads() {
       if (editingLead) {
         await base44.entities.Lead.update(editingLead.id, formData);
       } else {
-        const newLead = await base44.entities.Lead.create(formData);
-        
-        // Send assignment notification if assigned during creation
-        if (formData.assigned_to_user_id) {
-          try {
-            const { notifyLeadAssignment } = await import('@/components/notifications/notificationUtils');
-            const users = await base44.entities.User.list();
-            const assignee = users.find(u => u.id === formData.assigned_to_user_id);
-            if (assignee) {
-              await notifyLeadAssignment(newLead, assignee);
-            }
-          } catch (notifyError) {
-            console.error('Error sending assignment notification:', notifyError);
-          }
-        }
+        await base44.entities.Lead.create(formData);
       }
       await loadData();
       setShowForm(false);
@@ -319,6 +311,8 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
+            customers={customers}
+            boats={boats}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
