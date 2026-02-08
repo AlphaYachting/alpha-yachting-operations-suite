@@ -669,7 +669,7 @@ ${document.public_notes}</div>
         <!-- Retention of Title (Offers Only) -->
         ${!isInvoice && document.retention_of_title_enabled ? `
           <div class="ownership-notice">
-            <div class="ownership-title">⚠️ Retention of Title / Eigentumsvorbehalt</div>
+            <div class="ownership-title">Retention of Title / Eigentumsvorbehalt</div>
             <div class="ownership-text">${document.retention_of_title_text || 'All delivered goods and services remain the property of Alpha Yachting until full payment has been received.'}</div>
           </div>
         ` : ''}
