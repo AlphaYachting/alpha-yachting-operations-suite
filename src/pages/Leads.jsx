@@ -49,7 +49,7 @@ export default function Leads() {
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Open');
+  const [statusFilter, setStatusFilter] = useState('All');
 
   // Apply filter from dashboard
   useEffect(() => {
@@ -88,7 +88,21 @@ export default function Leads() {
       if (editingLead) {
         await base44.entities.Lead.update(editingLead.id, formData);
       } else {
-        await base44.entities.Lead.create(formData);
+        const newLead = await base44.entities.Lead.create(formData);
+        
+        // Send assignment notification if assigned during creation
+        if (formData.assigned_to_user_id) {
+          try {
+            const { notifyLeadAssignment } = await import('@/components/notifications/notificationUtils');
+            const users = await base44.entities.User.list();
+            const assignee = users.find(u => u.id === formData.assigned_to_user_id);
+            if (assignee) {
+              await notifyLeadAssignment(newLead, assignee);
+            }
+          } catch (notifyError) {
+            console.error('Error sending assignment notification:', notifyError);
+          }
+        }
       }
       await loadData();
       setShowForm(false);
@@ -116,10 +130,7 @@ export default function Leads() {
     lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.boat_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = 
-      statusFilter === 'All' ? true :
-      statusFilter === 'Open' ? (lead.status === 'Pending' || lead.status === 'Contacted') :
-      lead.status === statusFilter;
+    const matchesStatus = statusFilter === 'All' || lead.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -171,7 +182,6 @@ export default function Leads() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Open">Open (Active)</SelectItem>
                 <SelectItem value="All">All Status</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Contacted">Contacted</SelectItem>
