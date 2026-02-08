@@ -78,6 +78,8 @@ import MobileHeaderEditor from './pages/MobileHeaderEditor';
 import NotificationPreferences from './pages/NotificationPreferences';
 import NotificationSimulator from './pages/NotificationSimulator';
 import OfferDetail from './pages/OfferDetail';
+import OfferTemplateDetail from './pages/OfferTemplateDetail';
+import OfferTemplates from './pages/OfferTemplates';
 import Offers from './pages/Offers';
 import PDFExportDebugger from './pages/PDFExportDebugger';
 import PDFLayoutEditor from './pages/PDFLayoutEditor';
@@ -104,8 +106,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import OfferTemplates from './pages/OfferTemplates';
-import OfferTemplateDetail from './pages/OfferTemplateDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -141,6 +141,8 @@ export const PAGES = {
     "NotificationPreferences": NotificationPreferences,
     "NotificationSimulator": NotificationSimulator,
     "OfferDetail": OfferDetail,
+    "OfferTemplateDetail": OfferTemplateDetail,
+    "OfferTemplates": OfferTemplates,
     "Offers": Offers,
     "PDFExportDebugger": PDFExportDebugger,
     "PDFLayoutEditor": PDFLayoutEditor,
@@ -167,8 +169,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "OfferTemplates": OfferTemplates,
-    "OfferTemplateDetail": OfferTemplateDetail,
 }
 
 export const pagesConfig = {

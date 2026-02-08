@@ -41,6 +41,7 @@ import {
   FileText,
   AlertCircle,
   Loader2,
+  Briefcase,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import OfferTaskEditor from '@/components/offers/OfferTaskEditor';
@@ -82,6 +83,7 @@ export default function OfferDetail() {
   const [tasks, setTasks] = useState([]);
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [template, setTemplate] = useState(null);
@@ -434,6 +436,99 @@ Requirements:
     }
   };
 
+  const handleCreateProject = async () => {
+    if (!offerId || formData.status !== 'Approved') return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      // Pre-flight validation
+      if (!formData.customer_id || !formData.title) {
+        throw new Error('Invalid offer data');
+      }
+      if (formData.converted_job_id) {
+        throw new Error('Already converted to project');
+      }
+      if (tasks.length === 0) {
+        throw new Error('No tasks to convert');
+      }
+
+      // Generate job number
+      const jobs = await base44.entities.Job.list();
+      const jobNumber = `JOB-${String(jobs.length + 1).padStart(5, '0')}`;
+
+      // Create Job (Project)
+      const job = await base44.entities.Job.create({
+        job_number: jobNumber,
+        customer_id: formData.customer_id,
+        boat_id: formData.boat_id || null,
+        title: formData.title,
+        description: formData.description || '',
+        status: 'Approved',
+        service_category: 'General Service',
+        quote_amount: formData.total_amount,
+        quote_approved: true,
+        quote_approved_date: new Date().toISOString().split('T')[0],
+        intake_source: 'Email',
+        intake_date: new Date().toISOString(),
+      });
+
+      // Update Offer with job link
+      await base44.entities.Offer.update(offerId, {
+        status: 'Converted',
+        converted_job_id: job.id,
+      });
+
+      // Generate work order number
+      const workOrders = await base44.entities.WorkOrder.list();
+      const woNumber = `WO-${String(workOrders.length + 1).padStart(5, '0')}`;
+
+      // Create WorkOrder
+      const workOrder = await base44.entities.WorkOrder.create({
+        work_order_number: woNumber,
+        job_id: job.id,
+        offer_id: offerId,
+        title: formData.title,
+        description: formData.description || '',
+        status: 'Draft',
+        scheduled_date: new Date().toISOString().split('T')[0],
+        internal_notes: `Created from Offer #${formData.offer_number}`,
+      });
+
+      // Create Tasks with EXACT text from OfferTasks
+      if (tasks.length > 0) {
+        await base44.entities.Task.bulkCreate(
+          tasks
+            .filter(task => !task.is_optional)
+            .map((task, idx) => ({
+              work_order_id: workOrder.id,
+              title: task.title,
+              description: task.description || '',
+              sequence_order: task.sequence_order ?? idx,
+              status: 'Not Started',
+              estimated_minutes: task.unit_type === 'Hour' ? task.quantity * 60 : null,
+              notes: task.notes || '',
+            }))
+        );
+      }
+
+      queryClient.invalidateQueries(['offer', offerId]);
+      queryClient.invalidateQueries(['offers']);
+      queryClient.invalidateQueries(['jobs']);
+      
+      setShowCreateProjectDialog(false);
+      toast.success('Project created successfully');
+      navigate(createPageUrl('JobDetail') + `?id=${job.id}`);
+    } catch (err) {
+      console.error('Create project error:', err);
+      setError(err.message);
+      toast.error(err.message || 'Failed to create project');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filteredBoats = boats.filter(b => b.customer_id === formData.customer_id);
   const filteredJobs = jobs.filter(j => j.customer_id === formData.customer_id);
 
@@ -582,7 +677,27 @@ Requirements:
               lineItems={getPDFLineItems()}
             />
           )}
-          {formData.status === 'Approved' && !formData.converted_work_order_id && formData.job_id && (
+          {formData.converted_job_id ? (
+            <Button
+              onClick={() => navigate(createPageUrl('JobDetail') + `?id=${formData.converted_job_id}`)}
+              variant="outline"
+              className="border-green-600 text-green-600 hover:bg-green-50"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              View Project
+            </Button>
+          ) : (
+            formData.status === 'Approved' && !formData.converted_work_order_id && (
+              <Button
+                onClick={() => setShowCreateProjectDialog(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Briefcase className="h-4 w-4 mr-2" />
+                Create Project
+              </Button>
+            )
+          )}
+          {formData.status === 'Approved' && !formData.converted_work_order_id && formData.job_id && !formData.converted_job_id && (
             <Button
               onClick={() => setShowConvertDialog(true)}
               className="bg-purple-600 hover:bg-purple-700"
@@ -979,6 +1094,51 @@ Requirements:
                 <>
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   Convert to Work Order
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Project Confirmation Dialog */}
+      <Dialog open={showCreateProjectDialog} onOpenChange={setShowCreateProjectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Project from Offer?</DialogTitle>
+            <DialogDescription>
+              This will create a new project with a work order containing all tasks from this offer.
+              Task text will be copied exactly as written. The offer status will be updated to "Converted".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-4">
+            <p className="text-sm text-blue-800">
+              <strong>Creating:</strong>
+            </p>
+            <ul className="text-sm text-blue-700 mt-2 space-y-1 ml-4 list-disc">
+              <li>1 Project ({formData.title})</li>
+              <li>1 Work Order with {tasks.filter(t => !t.is_optional).length} tasks</li>
+              <li>Tasks copied with exact text from offer</li>
+            </ul>
+          </div>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setShowCreateProjectDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateProject}
+              disabled={saving}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Create Project
                 </>
               )}
             </Button>
