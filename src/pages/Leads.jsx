@@ -45,7 +45,12 @@ const inquiryTypeColors = {
 };
 
 const getLeadAgingLevel = (lead) => {
-  const movementTime = lead.last_contacted_at || lead.created_date;
+  const movementTime = 
+    lead.last_activity_at || 
+    lead.status_updated_at || 
+    lead.updated_date || 
+    lead.created_date;
+  
   if (!movementTime) return 'none';
   const ageDays = Math.floor((new Date() - new Date(movementTime)) / 86400000);
   if (ageDays > 5) return 'danger';
@@ -190,18 +195,15 @@ export default function Leads() {
 
       {/* Leads List */}
       <div className="space-y-1.5">
-        {filteredLeads.length === 0 ? (
+        {filteredLeads.length === 0 ?
         <Card>
             <CardContent className="p-6 text-center">
               <p className="text-slate-500 text-sm">No leads found</p>
             </CardContent>
-          </Card>
-        ) : (
-        filteredLeads.map((lead) => {
-          const agingLevel = getLeadAgingLevel(lead);
-          const borderClass = agingLevel === 'danger' ? 'border-red-400 border-2' : agingLevel === 'warn' ? 'border-yellow-400 border-2' : 'hover:border-slate-300';
-          return (
-        <Card key={lead.id} className={borderClass + ' transition-colors'}>
+          </Card> :
+
+        filteredLeads.map((lead) =>
+        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
@@ -304,9 +306,8 @@ export default function Leads() {
                 </div>
               </CardContent>
             </Card>
-        );
-        })
-        )}
+        )
+        }
       </div>
 
       {/* Lead Form Dialog */}
