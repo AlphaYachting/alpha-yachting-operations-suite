@@ -20,6 +20,7 @@ import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
 import LeadTaskList from '@/components/leads/LeadTaskList';
 import LeadStatusChange from '@/components/leads/LeadStatusChange';
+import { getLeadAgingLevel } from '@/components/leads/leadAgingUtils';
 
 const statusColors = {
   'Pending': 'bg-amber-100 text-amber-700',
@@ -42,20 +43,6 @@ const inquiryTypeColors = {
   'Maintenance': 'bg-teal-100 text-teal-700 border-teal-200',
   'Emergency': 'bg-red-100 text-red-700 border-red-200',
   'Other': 'bg-slate-100 text-slate-700 border-slate-200'
-};
-
-const getLeadAgingLevel = (lead) => {
-  const movementTime = 
-    lead.last_activity_at || 
-    lead.status_updated_at || 
-    lead.updated_date || 
-    lead.created_date;
-  
-  if (!movementTime) return 'none';
-  const ageDays = Math.floor((new Date() - new Date(movementTime)) / 86400000);
-  if (ageDays > 5) return 'danger';
-  if (ageDays > 3) return 'warn';
-  return 'none';
 };
 
 export default function Leads() {
