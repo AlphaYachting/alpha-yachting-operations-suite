@@ -20,6 +20,7 @@ import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
 import LeadTaskList from '@/components/leads/LeadTaskList';
 import LeadStatusChange from '@/components/leads/LeadStatusChange';
+import { getLeadAgingLevel } from '@/components/leads/leadAgingUtils';
 
 const statusColors = {
   'Pending': 'bg-amber-100 text-amber-700',
