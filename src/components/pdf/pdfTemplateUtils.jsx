@@ -443,10 +443,12 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
         }
 
         .ownership-title {
+          font-family: ${fontFamily}, sans-serif;
           font-size: 10pt;
           font-weight: bold;
           margin-bottom: 6px;
           color: #7f1d1d;
+          letter-spacing: normal;
         }
 
         .ownership-text {
