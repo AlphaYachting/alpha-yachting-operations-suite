@@ -109,6 +109,19 @@ export default function Leads() {
     }
   };
 
+  const getLeadAgingLevel = (lead) => {
+    const movementTimestamp = lead.last_contacted_at || lead.updated_date || lead.created_date;
+    if (!movementTimestamp) return 'none';
+    
+    const now = new Date();
+    const lastActivity = new Date(movementTimestamp);
+    const ageDays = Math.floor((now - lastActivity) / (1000 * 60 * 60 * 24));
+    
+    if (ageDays > 7) return 'danger';
+    if (ageDays > 3) return 'warn';
+    return 'none';
+  };
+
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch =
     lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -188,12 +201,18 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) =>
-        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
+        filteredLeads.map((lead) => {
+          const agingLevel = getLeadAgingLevel(lead);
+          const borderClass = agingLevel === 'danger' ? 'border-red-400 border-2' : 
+                              agingLevel === 'warn' ? 'border-yellow-400 border-2' : 
+                              'hover:border-slate-300';
+          
+          return (
+        <Card key={lead.id} className={`${borderClass} transition-colors`}>
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
-                    {/* Row 1: Name, Priority, Inquiry Type */}
+                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2">
                       <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
                       {lead.inquiry_type &&
@@ -201,6 +220,7 @@ export default function Leads() {
                           {lead.inquiry_type}
                         </Badge>
                   }
+                      <LeadStatusChange lead={lead} onStatusChange={loadData} />
                       {lead.priority &&
                   <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
                           {lead.priority}
@@ -210,6 +230,13 @@ export default function Leads() {
 
                     {/* Row 2: Contact, Boat, Location */}
                     <div className="flex items-center gap-4 text-xs text-slate-600">
+                      {lead.created_date &&
+                  <div className="flex items-center gap-1">
+                          <span className="text-xs text-slate-500">
+                            {format(parseISO(lead.created_date), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                  }
                       {lead.phone &&
                   <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
@@ -246,7 +273,6 @@ export default function Leads() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <LeadStatusChange lead={lead} onStatusChange={loadData} />
                     <Button
                   size="sm"
                   variant="outline"
@@ -292,7 +318,8 @@ export default function Leads() {
                 </div>
               </CardContent>
             </Card>
-        )
+          );
+        })
         }
       </div>
 
