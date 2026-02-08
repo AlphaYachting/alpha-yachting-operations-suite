@@ -68,6 +68,7 @@ export default function OfferDetail() {
    vat_rate: 0,
    notes: '',
    customer_notes: '',
+   safety_compliance_clause: '',
    total_amount: 0,
    payment_terms_type: 'Full',
    downpayment_percent: 0,
@@ -132,6 +133,7 @@ export default function OfferDetail() {
         description: offer.description || '',
         notes: offer.notes || '',
         customer_notes: offer.customer_notes || '',
+        safety_compliance_clause: offer.safety_compliance_clause || '',
         payment_schedule: offer.payment_schedule || '',
         retention_of_title_text: offer.retention_of_title_text || '',
         valid_until: offer.valid_until || '',
@@ -207,6 +209,53 @@ export default function OfferDetail() {
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleGenerateSafetyClause = async () => {
+    if (!formData.title) {
+      toast.error('Please add an offer title first');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const tasksText = tasks.map(t => `${t.title} (${t.quantity} ${t.unit_type})`).join(', ');
+      
+      const languageCode = formData.language === 'German' ? 'DE' : 'EN';
+      const languageInstruction = languageCode === 'DE' 
+        ? 'Respond in German.' 
+        : 'Respond in English.';
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are generating a professional safety and environmental compliance clause for a yacht service offer.
+
+${languageInstruction}
+
+Offer title: ${formData.title}
+Offer description: ${formData.description || 'N/A'}
+Services: ${tasksText || 'N/A'}
+
+Generate a 2-5 sentence compliance clause that mentions:
+- Trained and qualified personnel
+- Safety measures during work
+- Environmental precautions
+- Adherence to manufacturer instructions and technical guidelines
+
+Requirements:
+- Professional and calm tone
+- No legal guarantees or warranties
+- No specific timelines or deadlines
+- Generic and applicable to yacht maintenance/service work`,
+      });
+
+      updateField('safety_compliance_clause', response);
+      toast.success('Safety clause generated');
+    } catch (error) {
+      console.error('Error generating clause:', error);
+      toast.error('Failed to generate clause');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSaveAsTemplate = async () => {
@@ -723,6 +772,29 @@ export default function OfferDetail() {
                   onChange={(e) => updateField('notes', e.target.value)}
                   placeholder="Internal notes"
                   rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Safety & Environmental Compliance</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleGenerateSafetyClause}
+                    disabled={saving}
+                    className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Generate Clause
+                  </Button>
+                </div>
+                <Textarea
+                  value={formData.safety_compliance_clause || ''}
+                  onChange={(e) => updateField('safety_compliance_clause', e.target.value)}
+                  placeholder="Safety and environmental compliance statement"
+                  rows={3}
                 />
               </div>
             </CardContent>
