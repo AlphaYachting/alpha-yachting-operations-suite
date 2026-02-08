@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import TemplateSelector from '@/components/offers/TemplateSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -53,7 +54,9 @@ export default function Offers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [monthFilter, setMonthFilter] = useState('all');
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: offers = [], isLoading: offersLoading } = useQuery({
     queryKey: ['offers'],
@@ -143,6 +146,15 @@ export default function Offers() {
     }
   };
 
+  const handleSelectTemplate = (template, lineItems) => {
+    // Store template data in sessionStorage for OfferDetail to pick up
+    sessionStorage.setItem('offerTemplate', JSON.stringify({
+      template,
+      lineItems
+    }));
+    navigate(createPageUrl('OfferDetail'));
+  };
+
   const getCustomer = (customerId) => {
     return customers.find(c => c.id === customerId);
   };
@@ -200,13 +212,30 @@ export default function Offers() {
           <h1 className="text-3xl font-bold text-slate-900">Offers</h1>
           <p className="text-slate-600 mt-1">Create and manage service offers</p>
         </div>
-        <Link to={createPageUrl('OfferDetail')}>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="h-4 w-4 mr-2" />
-            New Offer
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowTemplateSelector(true)}
+            className="border-blue-600 text-blue-600 hover:bg-blue-50"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            From Template
           </Button>
-        </Link>
+          <Link to={createPageUrl('OfferDetail')}>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="h-4 w-4 mr-2" />
+              New Offer
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Template Selector Modal */}
+      <TemplateSelector
+        open={showTemplateSelector}
+        onOpenChange={setShowTemplateSelector}
+        onSelectTemplate={handleSelectTemplate}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
