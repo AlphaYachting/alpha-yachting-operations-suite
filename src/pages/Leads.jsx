@@ -44,23 +44,10 @@ const inquiryTypeColors = {
   'Other': 'bg-slate-100 text-slate-700 border-slate-200'
 };
 
-const getLeadAgingLevel = (lead) => {
-  const movementTime = 
-    lead.last_activity_at || 
-    lead.status_updated_at || 
-    lead.updated_date || 
-    lead.created_date;
-  
-  if (!movementTime) return 'none';
-  const ageDays = Math.floor((new Date() - new Date(movementTime)) / 86400000);
-  if (ageDays > 5) return 'danger';
-  if (ageDays > 3) return 'warn';
-  return 'none';
-};
-
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -84,12 +71,14 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations] = await Promise.all([
+      const [allLeads, allLocations, allCustomers] = await Promise.all([
       base44.entities.Lead.list('-created_date'),
-      base44.entities.Location.list()]
+      base44.entities.Location.list(),
+      base44.entities.Customer.list()]
       );
       setLeads(allLeads);
       setLocations(allLocations);
+      setCustomers(allCustomers);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -195,18 +184,15 @@ export default function Leads() {
 
       {/* Leads List */}
       <div className="space-y-1.5">
-         {filteredLeads.length === 0 ? (
-         <Card>
-             <CardContent className="p-6 text-center">
-               <p className="text-slate-500 text-sm">No leads found</p>
-             </CardContent>
-           </Card>
-         ) : (
-         filteredLeads.map((lead) => {
-           const agingLevel = getLeadAgingLevel(lead);
-           const borderClass = agingLevel === 'danger' ? 'border-red-400 border-2' : agingLevel === 'warn' ? 'border-yellow-400 border-2' : 'hover:border-slate-300';
-           return (
-           <Card key={lead.id} className={`${borderClass} transition-colors`}>
+        {filteredLeads.length === 0 ?
+        <Card>
+            <CardContent className="p-6 text-center">
+              <p className="text-slate-500 text-sm">No leads found</p>
+            </CardContent>
+          </Card> :
+
+        filteredLeads.map((lead) =>
+        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
@@ -226,8 +212,8 @@ export default function Leads() {
                   }
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location, Created Date */}
-                    <div className="flex items-center gap-4 text-xs text-slate-600 flex-wrap">
+                    {/* Row 2: Contact, Boat, Location */}
+                    <div className="flex items-center gap-4 text-xs text-slate-600">
                       {lead.phone &&
                   <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
@@ -247,19 +233,14 @@ export default function Leads() {
                         </div>
                   }
                       {lead.location &&
-                      <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
                           <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span>{lead.location}</span>
                         </div>
-                      }
-                      {lead.created_date &&
-                      <div className="text-slate-500 text-xs ml-auto">
-                        Created {format(parseISO(lead.created_date), 'MMM d, yyyy')}
-                      </div>
-                      }
-                      </div>
+                  }
+                    </div>
 
-                      {/* Row 3: Description Preview */}
+                    {/* Row 3: Description Preview */}
                     {lead.description &&
                 <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
                         <span className="text-sm line-clamp-2">{lead.description}</span>
@@ -313,11 +294,10 @@ export default function Leads() {
                   </div>
                 </div>
               </CardContent>
-              </Card>
-              );
-              })
-              )}
-              </div>
+            </Card>
+        )
+        }
+      </div>
 
       {/* Lead Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
@@ -328,6 +308,8 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
+            customers={customers}
+            boats={[]}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
