@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye, Clock, X } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
@@ -47,6 +47,8 @@ const inquiryTypeColors = {
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -70,12 +72,16 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations] = await Promise.all([
-      base44.entities.Lead.list('-created_date'),
-      base44.entities.Location.list()]
-      );
+      const [allLeads, allLocations, allCustomers, allBoats] = await Promise.all([
+        base44.entities.Lead.list('-created_date'),
+        base44.entities.Location.list(),
+        base44.entities.Customer.list(),
+        base44.entities.Boat.list()
+      ]);
       setLeads(allLeads);
       setLocations(allLocations);
+      setCustomers(allCustomers);
+      setBoats(allBoats);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -139,62 +145,18 @@ export default function Leads() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Clock className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-amber-700 font-medium">Pending</p>
-                <p className="text-2xl font-bold text-amber-900">{leads.filter(l => l.status === 'Pending').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {['Pending', 'Contacted', 'Converted', 'Lost'].map((status) => {
+          const count = leads.filter((l) => l.status === status).length;
+          return (
+            <Card key={status}>
+              <CardContent className="p-3">
+                <p className="text-xs text-slate-500 mb-0.5">{status}</p>
+                <p className="text-xl font-bold text-slate-900">{count}</p>
+              </CardContent>
+            </Card>);
 
-        <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Phone className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-blue-700 font-medium">Contacted</p>
-                <p className="text-2xl font-bold text-blue-900">{leads.filter(l => l.status === 'Contacted').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm text-emerald-700 font-medium">Converted</p>
-                <p className="text-2xl font-bold text-emerald-900">{leads.filter(l => l.status === 'Converted').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-slate-50 to-gray-50 border-slate-200">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <X className="h-5 w-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-700 font-medium">Lost</p>
-                <p className="text-2xl font-bold text-slate-900">{leads.filter(l => l.status === 'Lost').length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        })}
       </div>
 
       {/* Filters */}
@@ -236,24 +198,9 @@ export default function Leads() {
         <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
-                  {/* Status Icon */}
-                  <div className="flex-shrink-0 pt-0.5">
-                    <div className={`h-11 w-11 rounded-lg flex items-center justify-center ${
-                      lead.status === 'Pending' ? 'bg-amber-50 text-amber-600' :
-                      lead.status === 'Contacted' ? 'bg-blue-50 text-blue-600' :
-                      lead.status === 'Converted' ? 'bg-emerald-50 text-emerald-600' :
-                      'bg-slate-100 text-slate-500'
-                    }`}>
-                      {lead.status === 'Pending' ? <Clock className="h-5 w-5" /> :
-                       lead.status === 'Contacted' ? <Phone className="h-5 w-5" /> :
-                       lead.status === 'Converted' ? <CheckCircle2 className="h-5 w-5" /> :
-                       <X className="h-5 w-5" />}
-                    </div>
-                  </div>
-
                   <div className="flex-1 min-w-0 space-y-1.5">
                     {/* Row 1: Name, Status, Priority, Inquiry Type */}
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
                       <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
                       {lead.inquiry_type &&
                   <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
@@ -305,50 +252,47 @@ export default function Leads() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
-                      size="sm"
-                      variant="outline"
-                      asChild
-                      className="h-9 w-9 p-0 border-slate-200 shadow-sm bg-white hover:bg-slate-50 rounded-md"
-                    >
+                  size="sm"
+                  variant="outline"
+                  asChild
+                  className="h-7 w-7 p-0">
+
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
-                        <Eye className="h-4 w-4 text-slate-700" />
+                        <Eye className="h-3 w-3" />
                       </Link>
                     </Button>
+                    {lead.status === 'Pending' &&
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setConvertingLead(lead);
+                    setShowConvertDialog(true);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 h-7 px-2 text-xs">
 
-                    {lead.status === 'Pending' && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setConvertingLead(lead);
-                          setShowConvertDialog(true);
-                        }}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9 px-3 font-medium rounded-md"
-                      >
                         Convert
                       </Button>
-                    )}
-
+                }
                     <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setEditingLead(lead);
-                        setShowForm(true);
-                      }}
-                      className="h-9 w-9 p-0 border-slate-200 shadow-sm bg-white hover:bg-slate-50 rounded-md"
-                    >
-                      <Edit className="h-4 w-4 text-slate-700" />
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingLead(lead);
+                    setShowForm(true);
+                  }}
+                  className="h-7 w-7 p-0">
+
+                      <Edit className="h-3 w-3" />
                     </Button>
-
                     <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDeleteLead(lead.id)}
-                      className="h-9 w-9 p-0 border-slate-200 shadow-sm bg-white hover:bg-red-50 hover:text-red-600 hover:border-red-100 rounded-md"
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDeleteLead(lead.id)}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0">
+
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
@@ -367,6 +311,8 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
+            customers={customers}
+            boats={boats}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
