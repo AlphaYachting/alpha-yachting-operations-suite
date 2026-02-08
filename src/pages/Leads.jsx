@@ -73,12 +73,14 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations] = await Promise.all([
+      const [allLeads, allLocations, allCustomers] = await Promise.all([
       base44.entities.Lead.list('-created_date'),
-      base44.entities.Location.list()]
+      base44.entities.Location.list(),
+      base44.entities.Customer.list()]
       );
       setLeads(allLeads);
       setLocations(allLocations);
+      setCustomers(allCustomers);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
