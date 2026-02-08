@@ -191,14 +191,17 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) =>
-        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
-              <CardContent className="p-2.5 px-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
+        filteredLeads.map((lead) => {
+          const agingLevel = getLeadAgingLevel(lead);
+          const borderClass = agingLevel === 'danger' ? 'border-red-400 border-2' : agingLevel === 'warn' ? 'border-yellow-400 border-2' : 'hover:border-slate-300';
+          return (
+        <Card key={lead.id} className={`${borderClass} transition-colors`}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0 space-y-2.5">
+                    {/* Row 1: Name, Priority, Inquiry Type */}
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-slate-900 text-lg font-semibold truncate">{lead.name}</h3>
                       {lead.inquiry_type &&
                   <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
                           {lead.inquiry_type}
@@ -212,32 +215,42 @@ export default function Leads() {
                   }
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location */}
-                    <div className="flex items-center gap-4 text-xs text-slate-600">
-                      {lead.phone &&
-                  <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-base">{lead.phone}</span>
-                        </div>
-                  }
-                      {lead.email &&
-                  <div className="flex items-center gap-1 min-w-0">
-                          <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-base truncate">{lead.email}</span>
-                        </div>
-                  }
-                      {lead.boat_name &&
-                  <div className="flex items-center gap-1">
-                          <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span>{lead.boat_name}</span>
-                        </div>
-                  }
-                      {lead.location &&
-                  <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span>{lead.location}</span>
-                        </div>
-                  }
+                    {/* Row 2: Contact, Boat, Location, Created Date */}
+                    <div className="text-sm text-slate-600 space-y-1">
+                      <div className="flex items-center flex-wrap gap-2">
+                        {lead.phone &&
+                    <div className="flex items-center gap-1">
+                            <Phone className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                            <span>{lead.phone}</span>
+                          </div>
+                    }
+                        {lead.email && lead.phone && <span className="text-slate-400">·</span>}
+                        {lead.email &&
+                    <div className="flex items-center gap-1 min-w-0">
+                            <Mail className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{lead.email}</span>
+                          </div>
+                    }
+                        {lead.boat_name && (lead.email || lead.phone) && <span className="text-slate-400">·</span>}
+                        {lead.boat_name &&
+                    <div className="flex items-center gap-1">
+                            <Anchor className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                            <span>{lead.boat_name}</span>
+                          </div>
+                    }
+                        {lead.location && (lead.boat_name || lead.email || lead.phone) && <span className="text-slate-400">·</span>}
+                        {lead.location &&
+                    <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                            <span>{lead.location}</span>
+                          </div>
+                    }
+                      </div>
+                      {lead.created_date &&
+                      <div className="text-slate-500 text-xs">
+                        Created {format(parseISO(lead.created_date), 'MMM d, yyyy')}
+                      </div>
+                      }
                     </div>
 
                     {/* Row 3: Description Preview */}
@@ -248,8 +261,9 @@ export default function Leads() {
                 }
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  {/* Actions + Status */}
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <LeadStatusChange lead={lead} onStatusChange={loadData} />
                     <Button
                   size="sm"
                   variant="outline"
@@ -295,7 +309,8 @@ export default function Leads() {
                 </div>
               </CardContent>
             </Card>
-        )
+        );
+        })
         }
       </div>
 
