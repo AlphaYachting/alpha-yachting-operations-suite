@@ -195,13 +195,13 @@ export default function Leads() {
 
       {/* Leads List */}
       <div className="space-y-1.5">
-        {filteredLeads.length === 0 ?
+        {filteredLeads.length === 0 ? (
         <Card>
             <CardContent className="p-6 text-center">
               <p className="text-slate-500 text-sm">No leads found</p>
             </CardContent>
-          </Card> :
-
+          </Card>
+        ) : (
         filteredLeads.map((lead) => {
           const agingLevel = getLeadAgingLevel(lead);
           const borderClass = agingLevel === 'danger' ? 'border-red-400 border-2' : agingLevel === 'warn' ? 'border-yellow-400 border-2' : 'hover:border-slate-300';
@@ -317,6 +317,7 @@ export default function Leads() {
         );
         })
         )}
+       </div>
       </div>
 
       {/* Lead Form Dialog */}
