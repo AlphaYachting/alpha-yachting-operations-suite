@@ -24,11 +24,18 @@ Deno.serve(async (req) => {
 
     const lead = leads[0];
 
+    // Check if lead has customer_id (required for Offer)
+    if (!lead.customer_id) {
+      return Response.json({ 
+        error: 'Lead must be converted to customer first. Customer ID is required to create an offer.' 
+      }, { status: 400 });
+    }
+
     // Prepare offer data from lead
     const offerData = {
       lead_id: lead.id,
-      customer_id: lead.customer_id || null,
-      boat_id: lead.converted_boat_id || null,
+      customer_id: lead.customer_id,
+      boat_id: lead.converted_boat_id || undefined,
       title: `Offer for ${lead.name}${lead.boat_name ? ' - ' + lead.boat_name : ''}`,
       description: lead.description || lead.notes || '',
       status: 'Draft',
