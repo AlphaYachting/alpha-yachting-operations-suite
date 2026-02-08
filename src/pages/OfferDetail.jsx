@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -157,8 +158,105 @@ export default function OfferDetail() {
     setFormData(prev => ({ ...prev, total_amount: total }));
   }, [tasks]);
 
+  // Load template data if coming from template selector
+  useEffect(() => {
+    if (!offerId) {
+      const templateData = sessionStorage.getItem('offerTemplate');
+      if (templateData) {
+        try {
+          const { template, lineItems } = JSON.parse(templateData);
+          
+          // Prefill form with template data
+          setFormData(prev => ({
+            ...prev,
+            title: template.title || '',
+            description: template.description || '',
+            customer_notes: template.customer_notes || '',
+            language: template.language || 'German',
+            vat_rate: template.vat_rate || 0,
+            payment_terms_type: template.payment_terms_type || 'Full',
+            downpayment_percent: template.downpayment_percent || null,
+            payment_schedule: template.payment_schedule || '',
+          }));
+
+          // Prefill tasks with template line items
+          const prefillTasks = lineItems.map((item, index) => ({
+            id: `temp-${Date.now()}-${index}`,
+            sequence_order: item.sequence_order || index,
+            title: item.title,
+            description: item.description || '',
+            unit_type: item.unit_type || 'Hour',
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || 0,
+            total_amount: (item.quantity || 1) * (item.unit_price || 0),
+            is_optional: item.is_optional || false,
+            notes: item.notes || '',
+          }));
+          setTasks(prefillTasks);
+
+          // Clear template data from session
+          sessionStorage.removeItem('offerTemplate');
+          
+          toast.success('Template loaded successfully');
+        } catch (error) {
+          console.error('Error loading template:', error);
+        }
+      }
+    }
+  }, [offerId]);
+
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!formData.title) {
+      toast.error('Please add an offer title before saving as template');
+      return;
+    }
+
+    const templateName = prompt('Enter template name:');
+    if (!templateName) return;
+
+    try {
+      setSaving(true);
+
+      // Create template
+      const newTemplate = await base44.entities.OfferTemplate.create({
+        template_name: templateName,
+        title: formData.title,
+        description: formData.description || '',
+        customer_notes: formData.customer_notes || '',
+        language: formData.language || 'German',
+        vat_rate: formData.vat_rate || 0,
+        payment_terms_type: formData.payment_terms_type || 'Full',
+        downpayment_percent: formData.downpayment_percent || null,
+        payment_schedule: formData.payment_schedule || '',
+      });
+
+      // Create template line items from tasks
+      const lineItemPromises = tasks.map((task, index) =>
+        base44.entities.OfferTemplateLineItem.create({
+          template_id: newTemplate.id,
+          sequence_order: task.sequence_order ?? index,
+          title: task.title,
+          description: task.description || '',
+          unit_type: task.unit_type || 'Hour',
+          quantity: task.quantity || 1,
+          unit_price: task.unit_price || 0,
+          is_optional: task.is_optional || false,
+          notes: task.notes || '',
+        })
+      );
+      await Promise.all(lineItemPromises);
+
+      toast.success(`Template "${templateName}" created successfully`);
+    } catch (error) {
+      console.error('Error saving template:', error);
+      toast.error('Failed to save template');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -438,6 +536,16 @@ export default function OfferDetail() {
             >
               <FileText className="h-4 w-4 mr-2" />
               Convert to Work Order
+            </Button>
+          )}
+          {(offerId || tasks.length > 0) && (
+            <Button
+              onClick={handleSaveAsTemplate}
+              disabled={saving}
+              variant="outline"
+              className="border-purple-600 text-purple-600 hover:bg-purple-50"
+            >
+              Save as Template
             </Button>
           )}
           <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
