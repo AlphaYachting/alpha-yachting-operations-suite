@@ -3,7 +3,7 @@
 
 function buildPDFHTML(document, lineItems, template, payments = []) {
   const isInvoice = document.document_type === 'Invoice';
-  const currency = document.currency === 'EUR' ? '€' : document.currency;
+  const currency = document.currency === 'EUR' ? '€ ' : document.currency + ' ';
 
   const margins = {
     top: template.margin_top_mm || 20,
