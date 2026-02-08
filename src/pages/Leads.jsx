@@ -186,15 +186,18 @@ export default function Leads() {
 
       {/* Leads List */}
       <div className="space-y-1.5">
-        {filteredLeads.length === 0 ?
-        <Card>
+        {filteredLeads.length === 0 ? (
+          <Card>
             <CardContent className="p-6 text-center">
               <p className="text-slate-500 text-sm">No leads found</p>
             </CardContent>
-          </Card> :
-
-        filteredLeads.map((lead) =>
-        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
+          </Card>
+        ) : (
+          filteredLeads.map((lead) => {
+            const agingLevel = getLeadAgingLevel(lead);
+            const agingBorder = agingLevel === 'danger' ? 'border-red-300' : agingLevel === 'warn' ? 'border-yellow-300' : '';
+            return (
+              <Card key={lead.id} className={`hover:border-slate-300 transition-colors ${agingBorder ? 'border-2 ' + agingBorder : ''}`}>
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
