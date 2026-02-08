@@ -14,13 +14,14 @@ import {
   SelectTrigger,
   SelectValue } from
 '@/components/ui/select';
-import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye, Calendar } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Plus, Edit, Trash2, CheckCircle2, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import LeadForm from '@/components/leads/LeadForm';
 import LeadConversionDialog from '@/components/leads/LeadConversionDialog';
 import LeadTaskList from '@/components/leads/LeadTaskList';
 import LeadStatusChange from '@/components/leads/LeadStatusChange';
 import { getLeadAgingLevel } from '@/components/leads/leadAgingUtils';
+import { Calendar } from 'lucide-react';
 
 const statusColors = {
   'Pending': 'bg-amber-100 text-amber-700',
@@ -48,7 +49,6 @@ const inquiryTypeColors = {
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -72,14 +72,12 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations, allCustomers] = await Promise.all([
+      const [allLeads, allLocations] = await Promise.all([
       base44.entities.Lead.list('-created_date'),
-      base44.entities.Location.list(),
-      base44.entities.Customer.list()]
+      base44.entities.Location.list()]
       );
       setLeads(allLeads);
       setLocations(allLocations);
-      setCustomers(allCustomers);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -192,15 +190,12 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) => {
-          const agingLevel = getLeadAgingLevel(lead);
-          const agingBorder = agingLevel === 'danger' ? 'border-red-300' : agingLevel === 'warn' ? 'border-yellow-300' : '';
-          return (
-        <Card key={lead.id} className={`hover:border-slate-300 transition-colors ${agingBorder ? 'border-2 ' + agingBorder : ''}`}>
+        filteredLeads.map((lead) =>
+        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
-                    {/* Row 1: Name, Priority, Inquiry Type */}
+                    {/* Row 1: Name, Status, Priority, Inquiry Type */}
                     <div className="flex items-center gap-2">
                       <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
                       {lead.inquiry_type &&
@@ -208,6 +203,7 @@ export default function Leads() {
                           {lead.inquiry_type}
                         </Badge>
                   }
+                      <LeadStatusChange lead={lead} onStatusChange={loadData} />
                       {lead.priority &&
                   <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
                           {lead.priority}
@@ -215,8 +211,8 @@ export default function Leads() {
                   }
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location, Created Date */}
-                    <div className="flex items-center gap-4 text-xs text-slate-600 flex-wrap">
+                    {/* Row 2: Contact, Boat, Location */}
+                    <div className="flex items-center gap-4 text-xs text-slate-600">
                       {lead.phone &&
                   <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
@@ -241,12 +237,6 @@ export default function Leads() {
                           <span>{lead.location}</span>
                         </div>
                   }
-                      {lead.created_date &&
-                  <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                          <span className="text-xs">{format(new Date(lead.created_date), 'MMM dd')}</span>
-                        </div>
-                  }
                     </div>
 
                     {/* Row 3: Description Preview */}
@@ -259,7 +249,6 @@ export default function Leads() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <LeadStatusChange lead={lead} onStatusChange={loadData} />
                     <Button
                   size="sm"
                   variant="outline"
@@ -304,9 +293,9 @@ export default function Leads() {
                   </div>
                 </div>
               </CardContent>
-              </Card>
-              );
-              })
+            </Card>
+        )
+        }
       </div>
 
       {/* Lead Form Dialog */}
@@ -318,7 +307,6 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
-            customers={customers}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
