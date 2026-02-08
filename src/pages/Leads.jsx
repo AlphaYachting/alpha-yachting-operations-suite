@@ -314,8 +314,9 @@ export default function Leads() {
                 </div>
               </CardContent>
             </Card>
-        )
-        }
+        );
+        })
+        )}
       </div>
 
       {/* Lead Form Dialog */}
