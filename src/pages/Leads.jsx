@@ -202,8 +202,11 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) =>
-        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
+        filteredLeads.map((lead) => {
+          const agingLevel = getLeadAgingLevel(lead);
+          const borderClass = agingLevel === 'danger' ? 'border-red-400 border-2' : agingLevel === 'warn' ? 'border-yellow-400 border-2' : 'hover:border-slate-300';
+          return (
+          <Card key={lead.id} className={`${borderClass} transition-colors`}>
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
