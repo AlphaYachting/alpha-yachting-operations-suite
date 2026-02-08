@@ -300,11 +300,12 @@ export default function Leads() {
                     </Button>
                     </div>
                     </div>
-                    </CardContent>
-                    </Card>
-                    );
-                    })
-                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       {/* Lead Form Dialog */}
