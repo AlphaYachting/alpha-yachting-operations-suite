@@ -18,14 +18,15 @@ export default function LeadStatusChange({ lead, onStatusChange }) {
 
     // Validation: Pending → Contacted requires tasks
     if (lead.status === 'Pending' && newStatus === 'Contacted') {
+      setLoading(true);
       try {
-        setLoading(true);
         const tasks = await base44.entities.LeadTask.filter({ lead_id: lead.id });
 
         if (tasks.length === 0) {
           toast.error('Generate AI tasks first', {
             description: 'Click "Tasks & Notes" and generate tasks before contacting the lead.',
           });
+          setLoading(false);
           return;
         }
 
@@ -37,21 +38,22 @@ export default function LeadStatusChange({ lead, onStatusChange }) {
           toast.error('Start working on tasks first', {
             description: `${tasks.length} task(s) created, but none have been started yet.`,
           });
+          setLoading(false);
           return;
         }
       } catch (error) {
         console.error('Error checking tasks:', error);
-      } finally {
         setLoading(false);
+        return;
       }
     }
 
     // Update lead status
+    setLoading(true);
     try {
-      setLoading(true);
       await base44.entities.Lead.update(lead.id, { status: newStatus });
-      onStatusChange();
       toast.success(`Lead moved to ${newStatus}`);
+      await onStatusChange();
     } catch (error) {
       console.error('Error updating lead status:', error);
       toast.error('Failed to update lead status');
