@@ -252,20 +252,20 @@ export default function Leads() {
 
                     {/* Row 3: Description Preview */}
                     {lead.description &&
-                <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                      <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
                         <span className="text-sm line-clamp-2">{lead.description}</span>
                       </div>
-                }
-                  </div>
+                    }
+                    </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <LeadStatusChange lead={lead} onStatusChange={loadData} />
                     <Button
-                  size="sm"
-                  variant="outline"
-                  asChild
-                  className="h-7 w-7 p-0">
-
+                      size="sm"
+                      variant="outline"
+                      asChild
+                      className="h-7 w-7 p-0">
                       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
                         <Eye className="h-3 w-3" />
                       </Link>
