@@ -316,6 +316,7 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
+            customers={customers}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
