@@ -3,7 +3,7 @@
 
 export function buildPDFHTML(document, lineItems, template, payments = []) {
   const isInvoice = document.document_type === 'Invoice';
-  const currency = document.currency === 'EUR' ? '€' : document.currency;
+  const currency = document.currency === 'EUR' ? '€ ' : document.currency + ' ';
 
   // Configuration
   const margins = {
@@ -414,10 +414,12 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
         }
 
         .payment-terms-title {
+          font-family: ${fontFamily}, sans-serif;
           font-size: 10pt;
           font-weight: bold;
           margin-bottom: 6px;
           color: #92400e;
+          letter-spacing: normal;
         }
 
         .downpayment-info {
@@ -469,10 +471,12 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
         }
 
         .safety-title {
+          font-family: ${fontFamily}, sans-serif;
           font-size: 10pt;
           font-weight: bold;
           margin-bottom: 6px;
           color: #14532d;
+          letter-spacing: normal;
         }
 
         .safety-text {
