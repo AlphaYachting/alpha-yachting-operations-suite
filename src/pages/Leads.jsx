@@ -219,30 +219,36 @@ export default function Leads() {
                      {/* Row 2: Contact, Boat, Location, Created Date */}
                      <div className="flex items-center gap-4 text-xs text-slate-600 flex-wrap">
                       {lead.phone &&
-                  <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span className="text-base">{lead.phone}</span>
                         </div>
-                  }
+                      }
                       {lead.email &&
-                  <div className="flex items-center gap-1 min-w-0">
+                        <div className="flex items-center gap-1 min-w-0">
                           <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span className="text-base truncate">{lead.email}</span>
                         </div>
-                  }
+                      }
                       {lead.boat_name &&
-                  <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1">
                           <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span>{lead.boat_name}</span>
                         </div>
-                  }
+                      }
                       {lead.location &&
-                  <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1">
                           <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span>{lead.location}</span>
                         </div>
-                  }
-                    </div>
+                      }
+                      {lead.created_date &&
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                          <span className="text-xs">{format(new Date(lead.created_date), 'MMM dd')}</span>
+                        </div>
+                      }
+                      </div>
 
                     {/* Row 3: Description Preview */}
                     {lead.description &&
