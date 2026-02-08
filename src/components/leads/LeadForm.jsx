@@ -62,6 +62,35 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
     }
   }, [lead?.customer_id, boats]);
 
+  // Update formData when lead prop changes (edit mode)
+  React.useEffect(() => {
+    if (lead) {
+      const [firstName, lastName] = (lead.name || '').split(' ').length > 1 
+        ? (lead.name || '').split(' ', 2)
+        : [lead.firstName || '', lead.lastName || ''];
+      
+      setFormData({
+        customer_id: lead.customer_id || '',
+        name: lead.name || '',
+        firstName: lead.firstName || firstName || '',
+        lastName: lead.lastName || lastName || '',
+        phone: lead.phone || '',
+        email: lead.email || '',
+        boat_name: lead.boat_name || '',
+        boat_details: lead.boat_details || '',
+        location: lead.location || '',
+        location_id: lead.location_id || '',
+        contact_method: lead.contact_method || 'Phone',
+        inquiry_type: lead.inquiry_type || 'Service Inquiry',
+        notes: lead.notes || '',
+        description: lead.description || '',
+        priority: lead.priority || 'Medium',
+        status: lead.status || 'Pending',
+        assigned_to_user_id: lead.assigned_to_user_id || ''
+      });
+    }
+  }, [lead?.id]);
+
   // Auto-fill contact details when existing customer is selected
   const handleCustomerSelect = (customerId) => {
     const customer = customers?.find(c => c.id === customerId);
