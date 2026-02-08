@@ -44,17 +44,6 @@ const inquiryTypeColors = {
   'Other': 'bg-slate-100 text-slate-700 border-slate-200'
 };
 
-// Helper: Get aging level for visual indicator
-const getLeadAgingLevel = (lead) => {
-  const movementTime = lead.last_contacted_at || lead.created_date;
-  if (!movementTime) return 'none';
-  
-  const ageDays = Math.floor((new Date() - new Date(movementTime)) / 86400000);
-  if (ageDays > 5) return 'danger';
-  if (ageDays > 2) return 'warn';
-  return 'none';
-};
-
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -192,18 +181,16 @@ export default function Leads() {
 
       {/* Leads List */}
       <div className="space-y-1.5">
-        {filteredLeads.length === 0 ?
+        {filteredLeads.length === 0 ? (
         <Card>
             <CardContent className="p-6 text-center">
               <p className="text-slate-500 text-sm">No leads found</p>
             </CardContent>
-          </Card> :
-
+          </Card>
+        ) : (
         filteredLeads.map((lead) => {
           const agingLevel = getLeadAgingLevel(lead);
-          let borderClass = 'hover:border-slate-300';
-          if (agingLevel === 'danger') borderClass = 'border-red-400 border-2';
-          else if (agingLevel === 'warn') borderClass = 'border-yellow-400 border-2';
+          const borderClass = agingLevel === 'danger' ? 'border-red-400 border-2' : agingLevel === 'warn' ? 'border-yellow-400 border-2' : 'hover:border-slate-300';
           return (
         <Card key={lead.id} className={borderClass + ' transition-colors'}>
               <CardContent className="p-2.5 px-3">
@@ -311,10 +298,11 @@ export default function Leads() {
                     </Button>
                   </div>
                 </div>
-                </CardContent>
-                </Card>
-                );
-                })
+              </CardContent>
+            </Card>
+        );
+        })
+        )}
       </div>
 
       {/* Lead Form Dialog */}
