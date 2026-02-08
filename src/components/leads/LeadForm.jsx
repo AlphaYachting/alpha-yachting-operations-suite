@@ -17,6 +17,8 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
   const [formData, setFormData] = useState({
     customer_id: lead?.customer_id || '',
     name: lead?.name || '',
+    firstName: lead?.firstName || '',
+    lastName: lead?.lastName || '',
     phone: lead?.phone || '',
     email: lead?.email || '',
     boat_name: lead?.boat_name || '',
@@ -34,6 +36,7 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
   const [saving, setSaving] = useState(false);
   const [customerBoats, setCustomerBoats] = useState([]);
   const [useExistingBoat, setUseExistingBoat] = useState(false);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
 
   // Load customer boats on initialization if editing a lead with customer_id
   React.useEffect(() => {
@@ -91,10 +94,26 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
     e.preventDefault();
     setError('');
 
-    if (!formData.name?.trim()) {
-      setError('Name is required');
-      return;
+    // Validation for new prospects
+    if (!isExistingCustomer) {
+      if (!formData.firstName?.trim()) {
+        setError('First name is required');
+        return;
+      }
+      if (!formData.lastName?.trim()) {
+        setError('Last name is required');
+        return;
+      }
+      // Build full name from firstName + lastName for legacy compatibility
+      formData.name = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+    } else {
+      // Existing customer validation
+      if (!formData.name?.trim()) {
+        setError('Name is required');
+        return;
+      }
     }
+
     if (!formData.phone?.trim()) {
       setError('Phone number is required');
       return;
@@ -150,35 +169,83 @@ export default function LeadForm({ lead, locations, customers, boats, onSave, on
       {isExistingCustomer && (
         <div className="space-y-2">
           <Label>Select Customer *</Label>
-          <Select value={formData.customer_id || ''} onValueChange={handleCustomerSelect}>
+          <Select 
+            value={formData.customer_id || ''} 
+            onValueChange={handleCustomerSelect}
+            onOpenChange={(open) => { if (!open) setCustomerSearchTerm(''); }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Choose existing customer..." />
             </SelectTrigger>
             <SelectContent>
-              {customers && customers.length > 0 ? (
-                customers.map(c => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()} - {c.email}
+              <div className="px-2 py-2 border-b sticky top-0 bg-white z-10">
+                <Input
+                  placeholder="Search customers..."
+                  value={customerSearchTerm}
+                  onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                  className="h-8"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+              {(() => {
+                const filtered = customers?.filter(c => {
+                  if (!customerSearchTerm || customerSearchTerm.length < 3) return true;
+                  const search = customerSearchTerm.toLowerCase();
+                  const name = (c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()).toLowerCase();
+                  const email = (c.email || '').toLowerCase();
+                  const phone = (c.phone || '').toLowerCase();
+                  return name.includes(search) || email.includes(search) || phone.includes(search);
+                }) || [];
+                
+                return filtered.length > 0 ? (
+                  filtered.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()} - {c.email}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-match" disabled>
+                    {customerSearchTerm.length >= 3 ? 'No customers match search' : 'No customers available'}
                   </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="no-customers" disabled>No customers available</SelectItem>
-              )}
+                );
+              })()}
             </SelectContent>
           </Select>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Name *</Label>
-          <Input
-            value={formData.name || ''}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Contact person name"
-            disabled={isExistingCustomer && formData.customer_id}
-          />
-        </div>
+        {!isExistingCustomer ? (
+          <>
+            <div className="space-y-2">
+              <Label>First Name *</Label>
+              <Input
+                value={formData.firstName || ''}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                placeholder="First name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Last Name *</Label>
+              <Input
+                value={formData.lastName || ''}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                placeholder="Last name"
+              />
+            </div>
+          </>
+        ) : (
+          <div className="space-y-2">
+            <Label>Name *</Label>
+            <Input
+              value={formData.name || ''}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Contact person name"
+              disabled={isExistingCustomer && formData.customer_id}
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label>Phone *</Label>
