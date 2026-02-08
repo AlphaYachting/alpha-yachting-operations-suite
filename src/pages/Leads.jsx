@@ -44,11 +44,20 @@ const inquiryTypeColors = {
   'Other': 'bg-slate-100 text-slate-700 border-slate-200'
 };
 
+// Helper: Get aging level for visual indicator
+const getLeadAgingLevel = (lead) => {
+  const movementTime = lead.last_contacted_at || lead.created_date;
+  if (!movementTime) return 'none';
+  
+  const ageDays = Math.floor((new Date() - new Date(movementTime)) / 86400000);
+  if (ageDays > 5) return 'danger';
+  if (ageDays > 2) return 'warn';
+  return 'none';
+};
+
 export default function Leads() {
   const [leads, setLeads] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [boats, setBoats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -72,16 +81,12 @@ export default function Leads() {
 
   const loadData = async () => {
     try {
-      const [allLeads, allLocations, allCustomers, allBoats] = await Promise.all([
+      const [allLeads, allLocations] = await Promise.all([
       base44.entities.Lead.list('-created_date'),
-      base44.entities.Location.list(),
-      base44.entities.Customer.list(),
-      base44.entities.Boat.list()]
+      base44.entities.Location.list()]
       );
       setLeads(allLeads);
       setLocations(allLocations);
-      setCustomers(allCustomers);
-      setBoats(allBoats);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -194,8 +199,11 @@ export default function Leads() {
             </CardContent>
           </Card> :
 
-        filteredLeads.map((lead) =>
-        <Card key={lead.id} className="hover:border-slate-300 transition-colors">
+        filteredLeads.map((lead) => {
+          const agingLevel = getLeadAgingLevel(lead);
+          const borderClass = agingLevel === 'danger' ? 'border-red-400 border-2' : agingLevel === 'warn' ? 'border-yellow-400 border-2' : 'hover:border-slate-300';
+          return (
+        <Card key={lead.id} className={`${borderClass} transition-colors`}>
               <CardContent className="p-2.5 px-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0 space-y-1.5">
@@ -215,32 +223,37 @@ export default function Leads() {
                   }
                     </div>
 
-                    {/* Row 2: Contact, Boat, Location */}
-                    <div className="flex items-center gap-4 text-xs text-slate-600">
+                    {/* Row 2: Contact, Boat, Location, Created Date */}
+                    <div className="flex items-center gap-4 text-xs text-slate-600 flex-wrap">
                       {lead.phone &&
-                  <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                           <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span className="text-base">{lead.phone}</span>
                         </div>
-                  }
+                    }
                       {lead.email &&
-                  <div className="flex items-center gap-1 min-w-0">
+                    <div className="flex items-center gap-1 min-w-0">
                           <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span className="text-base truncate">{lead.email}</span>
                         </div>
-                  }
+                    }
                       {lead.boat_name &&
-                  <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                           <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span>{lead.boat_name}</span>
                         </div>
-                  }
+                    }
                       {lead.location &&
-                  <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                           <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
                           <span>{lead.location}</span>
                         </div>
-                  }
+                    }
+                      {lead.created_date &&
+                    <div className="text-slate-500 text-xs ml-auto">
+                          Created {format(parseISO(lead.created_date), 'MMM d, yyyy')}
+                        </div>
+                    }
                     </div>
 
                     {/* Row 3: Description Preview */}
@@ -296,10 +309,10 @@ export default function Leads() {
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-        )
-        }
+                </CardContent>
+                </Card>
+                );
+                })
       </div>
 
       {/* Lead Form Dialog */}
@@ -311,8 +324,6 @@ export default function Leads() {
           <LeadForm
             lead={editingLead}
             locations={locations}
-            customers={customers}
-            boats={boats}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);
