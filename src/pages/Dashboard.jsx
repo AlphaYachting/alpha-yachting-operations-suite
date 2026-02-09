@@ -20,8 +20,7 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2,
-  RefreshCw
+  BarChart2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,7 +48,7 @@ import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfD
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
-import LeadForm from '@/components/leads/LeadForm';
+import LeadForm from '@/components/leadsV2/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
 
@@ -77,7 +76,6 @@ export default function Dashboard() {
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -113,7 +111,7 @@ export default function Dashboard() {
       setNotes(notesData);
 
       // Load or calculate KPIs (max 2x per day)
-      await loadKPIs(false);
+      await loadKPIs();
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -121,7 +119,7 @@ export default function Dashboard() {
     }
   };
 
-  const loadKPIs = async (forceRefresh = false) => {
+  const loadKPIs = async () => {
     try {
       const now = new Date();
       const todayDate = format(now, 'yyyy-MM-dd');
@@ -131,15 +129,10 @@ export default function Dashboard() {
       // Check if cache exists for current period
       const existingCache = await base44.entities.KPICache.filter({ cache_key: cacheKey });
 
-      if (existingCache.length > 0 && !forceRefresh) {
+      if (existingCache.length > 0) {
         // Use cached values
         setKpis(existingCache[0]);
         return;
-      }
-
-      // If force refresh, delete old cache
-      if (forceRefresh && existingCache.length > 0) {
-        await base44.entities.KPICache.delete(existingCache[0].id);
       }
 
       // Calculate KPIs (simple count queries only)
@@ -378,20 +371,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleRefreshDashboard = async () => {
-    setRefreshing(true);
-    try {
-      await loadDashboardData();
-      await loadKPIs(true);
-      toast.success('Dashboard refreshed');
-    } catch (error) {
-      console.error('Error refreshing dashboard:', error);
-      toast.error('Failed to refresh dashboard');
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   const activeNotes = notes.filter(n => !n.completed);
   const getReferenceName = (note) => {
     if (note.reference_type === 'Job') {
@@ -430,16 +409,6 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={handleRefreshDashboard}
-            disabled={refreshing}
-            className="border-slate-300"
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
           <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
@@ -1136,7 +1105,10 @@ export default function Dashboard() {
             <DialogTitle>Create New Lead</DialogTitle>
           </DialogHeader>
           <LeadForm
+            customers={customers}
             locations={locations}
+            users={[]}
+            boats={boats}
             onSave={async (leadData) => {
               const newLead = await base44.entities.Lead.create(leadData);
               setLeads([newLead, ...leads]);
