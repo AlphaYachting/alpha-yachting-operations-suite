@@ -1280,14 +1280,18 @@ export default function WorkOrderDetail() {
               customers={customer ? [customer] : []}
               boats={boat ? [boat] : []}
               onSave={async (formData, selectedTemplateId, suggestedTasks) => {
+                console.log('WorkOrderDetail onSave called with:', formData);
                 try {
+                  console.log('Updating work order:', workOrderId);
                   await base44.entities.WorkOrder.update(workOrderId, formData);
+                  console.log('Update successful, reloading details');
                   await loadWorkOrderDetails();
                   setShowEditWorkOrder(false);
                   toast.success('Work order saved successfully');
                 } catch (error) {
                   console.error('Error updating work order:', error);
                   toast.error('Failed to save work order: ' + (error.message || 'Unknown error'));
+                  throw error;
                 }
               }}
               onCancel={() => setShowEditWorkOrder(false)}
