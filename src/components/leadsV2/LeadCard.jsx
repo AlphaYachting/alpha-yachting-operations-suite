@@ -117,7 +117,7 @@ export default function LeadCard({
               asChild
               className="h-7 w-7 p-0"
             >
-              <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}`}>
+              <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}&from=v2`}>
                 <Eye className="h-3 w-3" />
               </Link>
             </Button>
