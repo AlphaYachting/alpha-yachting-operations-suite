@@ -119,8 +119,8 @@ export default function LeadForm({
       }
     }
 
-    if (!formData.phone || !formData.email) {
-      setError('Phone and email are required');
+    if (!formData.phone) {
+      setError('Phone number is required');
       return;
     }
 
@@ -230,7 +230,7 @@ export default function LeadForm({
           </div>
           <div>
             <Label htmlFor="email" className="text-xs">
-              Email *
+              Email
             </Label>
             <Input
               id="email"
