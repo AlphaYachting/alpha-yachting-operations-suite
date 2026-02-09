@@ -60,9 +60,53 @@ export function useLeadData() {
   }, []);
 
   const updateLeadStatus = async (leadId, newStatus) => {
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead) throw new Error('Lead not found');
+
     try {
-      await base44.entities.Lead.update(leadId, { status: newStatus });
-      await fetchLeadsOnly();
+      // Handle conversion to customer
+      if (newStatus === 'Converted') {
+        // Parse name into first/last
+        const nameParts = (lead.name || '').trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        // Create Customer
+        const customerData = {
+          first_name: firstName,
+          last_name: lastName,
+          email: lead.email || '',
+          phone: lead.phone || '',
+          notes: lead.notes || '',
+        };
+        const newCustomer = await base44.entities.Customer.create(customerData);
+
+        // Create Boat if boat_name exists
+        let newBoat = null;
+        if (lead.boat_name) {
+          const boatData = {
+            customer_id: newCustomer.id,
+            vessel_name: lead.boat_name,
+            current_location_id: lead.location_id || null,
+            known_issues: lead.boat_details || '',
+          };
+          newBoat = await base44.entities.Boat.create(boatData);
+        }
+
+        // Update Lead with conversion data
+        await base44.entities.Lead.update(leadId, {
+          status: 'Converted',
+          converted_customer_id: newCustomer.id,
+          converted_boat_id: newBoat?.id || null,
+          converted_at: new Date().toISOString(),
+          customer_id: newCustomer.id,
+        });
+      } else {
+        // Simple status update
+        await base44.entities.Lead.update(leadId, { status: newStatus });
+      }
+
+      await fetchAllData();
     } catch (err) {
       console.error('Error updating lead status:', err);
       throw err;
