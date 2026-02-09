@@ -62,6 +62,7 @@ export default function OfferDetail() {
    customer_id: '',
    boat_id: '',
    job_id: '',
+   location_id: '',
    title: '',
    description: '',
    language: 'German',
@@ -113,6 +114,11 @@ export default function OfferDetail() {
   const { data: jobs = [] } = useQuery({
     queryKey: ['jobs'],
     queryFn: () => base44.entities.Job.list(),
+  });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => base44.entities.Location.filter({ status: 'Active' }),
   });
 
   const { data: pdfTemplate } = useQuery({
@@ -532,6 +538,10 @@ Requirements:
   const filteredBoats = boats.filter(b => b.customer_id === formData.customer_id);
   const filteredJobs = jobs.filter(j => j.customer_id === formData.customer_id);
 
+  // Get selected location and check if marina fees apply
+  const selectedLocation = locations.find(l => l.id === formData.location_id);
+  const marinaFeesApply = selectedLocation?.marina_fee_enabled && selectedLocation?.location_type === 'Marina';
+
   // Prepare PDF document data
   const getPDFDocument = () => {
     const customer = customers.find(c => c.id === formData.customer_id);
@@ -838,21 +848,55 @@ Requirements:
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Related Job</Label>
-                <Select value={formData.job_id} onValueChange={(v) => updateField('job_id', v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select job (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredJobs.map(j => (
-                      <SelectItem key={j.id} value={j.id}>
-                        {j.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Related Job</Label>
+                  <Select value={formData.job_id} onValueChange={(v) => updateField('job_id', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select job (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredJobs.map(j => (
+                        <SelectItem key={j.id} value={j.id}>
+                          {j.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Work Location</Label>
+                  <Select value={formData.location_id} onValueChange={(v) => updateField('location_id', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select location (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map(l => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {l.name} {l.marina_fee_enabled && '⚓'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
+              {marinaFeesApply && (
+                <Alert className="bg-blue-50 border-blue-200">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-sm text-blue-800">
+                    <strong>Marina Fees Apply:</strong> {selectedLocation.name} charges {
+                      selectedLocation.marina_fee_type === 'percent_commission' 
+                        ? `${selectedLocation.marina_fee_amount}% commission` 
+                        : selectedLocation.marina_fee_type === 'per_day'
+                        ? `${selectedLocation.marina_fee_amount} ${selectedLocation.marina_fee_currency}/day`
+                        : selectedLocation.marina_fee_type === 'per_person_per_day'
+                        ? `${selectedLocation.marina_fee_amount} ${selectedLocation.marina_fee_currency}/person/day`
+                        : `${selectedLocation.marina_fee_amount} ${selectedLocation.marina_fee_currency} (fixed)`
+                    }. {selectedLocation.marina_fee_description}
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <div className="space-y-2">
                 <Label>Title *</Label>
