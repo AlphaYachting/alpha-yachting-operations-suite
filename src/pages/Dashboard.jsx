@@ -48,7 +48,7 @@ import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfD
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
-import LeadForm from '@/components/leadsV2/LeadForm';
+import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
 
@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
   const [kpis, setKpis] = useState(null);
+  const [users, setUsers] = useState([]);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
@@ -90,7 +91,7 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData, usersData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
@@ -98,7 +99,8 @@ export default function Dashboard() {
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
-        base44.entities.Note.list('-created_date', 50)
+        base44.entities.Note.list('-created_date', 50),
+        base44.entities.User.list()
       ]);
 
       setWorkOrders(woData);
@@ -109,6 +111,7 @@ export default function Dashboard() {
       setLeads(leadsData);
       setOffers(offersData);
       setNotes(notesData);
+      setUsers(usersData);
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
@@ -1105,10 +1108,7 @@ export default function Dashboard() {
             <DialogTitle>Create New Lead</DialogTitle>
           </DialogHeader>
           <LeadForm
-            customers={customers}
             locations={locations}
-            users={[]}
-            boats={boats}
             onSave={async (leadData) => {
               const newLead = await base44.entities.Lead.create(leadData);
               setLeads([newLead, ...leads]);
