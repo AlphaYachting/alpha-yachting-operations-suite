@@ -1,3 +1,9 @@
+# ROLLBACK SNAPSHOT - components/leadsV2/LeadCard.jsx AFTER RESTORE
+
+Date: 2026-02-09
+Purpose: Restored missing UI elements (created date, aging borders, status change, button outlines)
+
+```jsx
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -181,3 +187,4 @@ export default function LeadCard({
     </Card>
   );
 }
+``

@@ -1,3 +1,9 @@
+# ROLLBACK SNAPSHOT - components/leadsV2/LeadCard.jsx BEFORE RESTORE
+
+Date: 2026-02-09
+Purpose: Restore missing UI elements (created date, aging borders, status change, button outlines)
+
+```jsx
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,13 +62,8 @@ export default function LeadCard({
     'Lost': 'text-slate-400'
   }[lead.status] || 'text-slate-400';
 
-  // Aging border classes
-  const agingBorderClass =
-    agingLevel === 'danger' ? 'border-red-300 border-2' : 
-    agingLevel === 'warn' ? 'border-yellow-300 border-2' : '';
-
   return (
-    <Card className={`shadow-sm hover:shadow-md transition-shadow ${agingBorderClass}`}>
+    <Card className="shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Status Icon */}
@@ -117,15 +118,6 @@ export default function LeadCard({
                   </span>
                 </>
               )}
-              {lead.created_date && (
-                <>
-                  {(lead.phone || lead.email || lead.boat_name || lead.location) && <span>•</span>}
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {format(new Date(lead.created_date), 'MMM dd')}
-                  </span>
-                </>
-              )}
             </div>
 
             {/* Description */}
@@ -135,25 +127,21 @@ export default function LeadCard({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <LeadStatusChange
-              lead={lead}
-              onStatusChange={onStatusChange}
-            />
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               asChild
-              className="h-7 w-7 p-0"
+              className="h-8 w-8 p-0"
             >
               <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}&from=v2`}>
-                <Eye className="h-3 w-3" />
+                <Eye className="h-4 w-4 text-slate-600" />
               </Link>
             </Button>
             {lead.status === 'Pending' && (
               <Button
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 px-2 text-xs"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white h-8"
                 onClick={() => onStatusChange(lead.id, 'Converted')}
               >
                 Convert
@@ -161,19 +149,19 @@ export default function LeadCard({
             )}
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => onEdit(lead)}
-              className="h-7 w-7 p-0"
+              className="h-8 w-8 p-0"
             >
-              <Edit className="h-3 w-3" />
+              <Edit className="h-4 w-4 text-slate-600" />
             </Button>
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => onDelete(lead.id)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -181,3 +169,4 @@ export default function LeadCard({
     </Card>
   );
 }
+``
