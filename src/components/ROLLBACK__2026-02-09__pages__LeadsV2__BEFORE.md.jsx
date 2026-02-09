@@ -1,3 +1,9 @@
+# ROLLBACK SNAPSHOT - pages/LeadsV2.jsx BEFORE
+
+Date: 2026-02-09
+Purpose: Style-only changes to match new design screenshot
+
+```jsx
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Clock, PhoneCall, CheckCircle2, XCircle, Search } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useLeadData, getAgingLevel } from '@/components/leadsV2/useLeadData';
 import LeadsList from '@/components/leadsV2/LeadsList';
 import LeadForm from '@/components/leadsV2/LeadForm';
@@ -71,66 +77,54 @@ export default function LeadsV2() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
-          <p className="text-slate-500 text-sm mt-1">Manage customer inquiries and opportunities</p>
-        </div>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">Leads (V2)</h1>
         <Button
           onClick={() => {
             setEditingLead(null);
             setShowForm(true);
           }}
-          className="bg-blue-600 hover:bg-blue-700 shadow-sm"
+          className="bg-blue-600 hover:bg-blue-700"
+          size="sm"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 mr-1" />
           New Lead
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         {[
-          { label: 'Pending', value: stats.pending, icon: Clock, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
-          { label: 'Contacted', value: stats.contacted, icon: PhoneCall, iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
-          { label: 'Converted', value: stats.converted, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-          { label: 'Lost', value: stats.lost, icon: XCircle, iconBg: 'bg-slate-50', iconColor: 'text-slate-400' },
+          { label: 'Pending', value: stats.pending },
+          { label: 'Contacted', value: stats.contacted },
+          { label: 'Converted', value: stats.converted },
+          { label: 'Lost', value: stats.lost },
         ].map((stat) => (
-          <Card key={stat.label} className="shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">{stat.label}</p>
-                  <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-                </div>
-                <div className={`${stat.iconBg} rounded-full p-3`}>
-                  <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
-                </div>
-              </div>
+          <Card key={stat.label}>
+            <CardContent className="p-3">
+              <p className="text-xs text-slate-500 mb-0.5">{stat.label}</p>
+              <p className="text-xl font-bold text-slate-900">{stat.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Filters */}
-      <Card className="shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex gap-3 flex-wrap items-center">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search leads..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+      <Card>
+        <CardContent className="p-3">
+          <div className="flex gap-3 flex-wrap">
+            <Input
+              placeholder="Search by name, phone, email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 min-w-xs"
+            />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="All Statuses" />
+              <SelectTrigger className="w-40">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All">All Statuses</SelectItem>
+                <SelectItem value="All">All Status</SelectItem>
                 <SelectItem value="Pending">Pending</SelectItem>
                 <SelectItem value="Contacted">Contacted</SelectItem>
                 <SelectItem value="Converted">Converted</SelectItem>
@@ -176,3 +170,4 @@ export default function LeadsV2() {
     </div>
   );
 }
+``

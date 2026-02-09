@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, Anchor, MapPin, Calendar, Edit, Trash2, Eye } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Calendar, Edit, Trash2, Eye, Ship } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -40,102 +40,122 @@ export default function LeadCard({
   onStatusChange,
   onViewDetail,
 }) {
-  const agingBorderClass =
-    agingLevel === 'danger' ? 'border-red-300 border-2' : agingLevel === 'warn' ? 'border-yellow-300 border-2' : '';
+  const iconBgColor = {
+    'Pending': 'bg-amber-50',
+    'Contacted': 'bg-blue-50',
+    'Converted': 'bg-emerald-50',
+    'Rejected': 'bg-red-50',
+    'Lost': 'bg-slate-50'
+  }[lead.status] || 'bg-slate-50';
+
+  const iconColor = {
+    'Pending': 'text-amber-600',
+    'Contacted': 'text-blue-600',
+    'Converted': 'text-emerald-600',
+    'Rejected': 'text-red-600',
+    'Lost': 'text-slate-400'
+  }[lead.status] || 'text-slate-400';
 
   return (
-    <Card className={`hover:border-slate-300 transition-colors ${agingBorderClass}`}>
-      <CardContent className="p-2.5 px-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0 space-y-1.5">
-            {/* Name + Priority + Inquiry */}
-            <div className="flex items-center gap-2">
-              <h3 className="text-slate-900 text-base font-semibold truncate">{lead.name}</h3>
-              {lead.inquiry_type && (
-                <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
-                  {lead.inquiry_type}
-                </Badge>
-              )}
+    <Card className="shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-4">
+          {/* Status Icon */}
+          <div className={`${iconBgColor} rounded-lg p-3 flex-shrink-0`}>
+            <Phone className={`h-5 w-5 ${iconColor}`} />
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 min-w-0">
+            {/* Name + Badges */}
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <h3 className="text-base font-semibold text-slate-900">{lead.name}</h3>
+              <Badge className={statusColors[lead.status]}>
+                {lead.status}
+              </Badge>
               {lead.priority && (
-                <Badge className={`${priorityColors[lead.priority]} text-xs px-1.5 py-0 h-5`}>
+                <Badge className={priorityColors[lead.priority]}>
                   {lead.priority}
                 </Badge>
               )}
+              {lead.inquiry_type && (
+                <Badge variant="outline" className={`border ${inquiryTypeColors[lead.inquiry_type] || inquiryTypeColors['Other']}`}>
+                  {lead.inquiry_type}
+                </Badge>
+              )}
             </div>
 
-            {/* Contact info + Boat + Location + Created Date */}
-            <div className="flex items-center gap-4 text-xs text-slate-600 flex-wrap">
-              {lead.phone && (
-                <div className="flex items-center gap-1">
-                  <Phone className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                  <span>{lead.phone}</span>
-                </div>
-              )}
+            {/* Contact Line with bullet separators */}
+            <div className="flex items-center gap-2 text-sm text-slate-600 mb-2 flex-wrap">
+              {lead.phone && <span>{lead.phone}</span>}
               {lead.email && (
-                <div className="flex items-center gap-1 min-w-0">
-                  <Mail className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                <>
+                  {lead.phone && <span>•</span>}
                   <span className="truncate">{lead.email}</span>
-                </div>
+                </>
               )}
               {lead.boat_name && (
-                <div className="flex items-center gap-1">
-                  <Anchor className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                  <span>{lead.boat_name}</span>
-                </div>
+                <>
+                  {(lead.phone || lead.email) && <span>•</span>}
+                  <span className="flex items-center gap-1">
+                    <Ship className="h-3 w-3" />
+                    {lead.boat_name}
+                  </span>
+                </>
               )}
               {lead.location && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                  <span>{lead.location}</span>
-                </div>
-              )}
-              {lead.created_date && (
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                  <span>{format(new Date(lead.created_date), 'MMM dd')}</span>
-                </div>
+                <>
+                  {(lead.phone || lead.email || lead.boat_name) && <span>•</span>}
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {lead.location}
+                  </span>
+                </>
               )}
             </div>
 
-            {/* Description preview */}
+            {/* Description */}
             {lead.description && (
-              <div className="text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                <span className="text-sm line-clamp-2">{lead.description}</span>
-              </div>
+              <p className="text-sm text-slate-600 line-clamp-1">{lead.description}</p>
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <LeadStatusChange
-              lead={lead}
-              onStatusChange={onStatusChange}
-            />
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               asChild
-              className="h-7 w-7 p-0"
+              className="h-8 w-8 p-0"
             >
               <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}&from=v2`}>
-                <Eye className="h-3 w-3" />
+                <Eye className="h-4 w-4 text-slate-600" />
               </Link>
             </Button>
+            {lead.status === 'Pending' && (
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+                onClick={() => onStatusChange(lead.id, 'Converted')}
+              >
+                Convert
+              </Button>
+            )}
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => onEdit(lead)}
-              className="h-7 w-7 p-0"
+              className="h-8 w-8 p-0"
             >
-              <Edit className="h-3 w-3" />
+              <Edit className="h-4 w-4 text-slate-600" />
             </Button>
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => onDelete(lead.id)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>
