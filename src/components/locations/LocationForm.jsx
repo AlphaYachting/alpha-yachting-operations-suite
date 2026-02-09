@@ -27,7 +27,12 @@ export default function LocationForm({ location, onSave, onCancel }) {
     contact_phone: location?.contact_phone || '',
     opening_hours: location?.opening_hours || '',
     is_partner: location?.is_partner || false,
-    status: location?.status || 'Active'
+    status: location?.status || 'Active',
+    marina_fee_enabled: location?.marina_fee_enabled || false,
+    marina_fee_type: location?.marina_fee_type || 'per_day',
+    marina_fee_amount: location?.marina_fee_amount ?? null,
+    marina_fee_currency: location?.marina_fee_currency || 'EUR',
+    marina_fee_description: location?.marina_fee_description || ''
   });
   const [saving, setSaving] = useState(false);
 
@@ -210,6 +215,79 @@ export default function LocationForm({ location, onSave, onCancel }) {
           checked={formData.is_partner}
           onCheckedChange={(v) => updateField('is_partner', v)}
         />
+      </div>
+
+      {/* Marina Fees / Working Permit */}
+      <div className="space-y-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-base font-semibold">Marina Fees / Working Permit</Label>
+            <p className="text-sm text-slate-500">Configure fees for working at this location</p>
+          </div>
+          <Switch
+            checked={formData.marina_fee_enabled}
+            onCheckedChange={(v) => updateField('marina_fee_enabled', v)}
+          />
+        </div>
+
+        {formData.marina_fee_enabled && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fee Type</Label>
+                <Select value={formData.marina_fee_type} onValueChange={(v) => updateField('marina_fee_type', v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="per_day">Per Day</SelectItem>
+                    <SelectItem value="per_person_per_day">Per Person Per Day</SelectItem>
+                    <SelectItem value="percent_commission">Percent Commission</SelectItem>
+                    <SelectItem value="fixed_amount">Fixed Amount</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Amount</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.marina_fee_amount ?? ''}
+                    onChange={(e) => updateField('marina_fee_amount', e.target.value ? parseFloat(e.target.value) : null)}
+                    placeholder={formData.marina_fee_type === 'percent_commission' ? '10' : '50.00'}
+                  />
+                  {formData.marina_fee_type !== 'percent_commission' && (
+                    <Select value={formData.marina_fee_currency} onValueChange={(v) => updateField('marina_fee_currency', v)}>
+                      <SelectTrigger className="w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="GBP">GBP</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {formData.marina_fee_type === 'percent_commission' && (
+                    <div className="flex items-center px-3 border border-slate-200 rounded-md bg-white text-slate-500">%</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description / Notes</Label>
+              <Textarea
+                value={formData.marina_fee_description}
+                onChange={(e) => updateField('marina_fee_description', e.target.value)}
+                placeholder="Additional details about fees, permits, or special conditions..."
+                rows={2}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Actions */}
