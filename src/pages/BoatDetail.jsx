@@ -241,6 +241,44 @@ export default function BoatDetail() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
+          {/* Active Projects */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-blue-600" />
+                Active Projects
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {jobs.filter(job => !['Completed', 'Invoiced', 'Cancelled'].includes(job.status)).length === 0 ? (
+                <p className="text-slate-500 text-sm">No active projects.</p>
+              ) : (
+                <div className="space-y-2">
+                  {jobs.filter(job => !['Completed', 'Invoiced', 'Cancelled'].includes(job.status)).map(job => (
+                    <Link
+                      key={job.id}
+                      to={createPageUrl('JobDetail') + `?id=${job.id}`}
+                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-900">{job.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge>{job.status}</Badge>
+                          {job.requested_date && (
+                            <span className="text-xs text-slate-500 flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(job.requested_date), 'MMM d, yyyy')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Primary Image */}
           {boat.photo_url && (
             <Card>
