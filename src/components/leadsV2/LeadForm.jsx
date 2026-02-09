@@ -15,11 +15,15 @@ export default function LeadForm({
   lead,
   customers,
   locations,
+  users,
+  boats,
   onSave,
   onCancel,
 }) {
   const [formData, setFormData] = useState({
     name: '',
+    first_name: '',
+    last_name: '',
     phone: '',
     email: '',
     boat_name: '',
@@ -32,15 +36,20 @@ export default function LeadForm({
     notes: '',
     description: '',
     customer_id: '',
+    assigned_to_user_id: '',
+    boat_id: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [customerBoats, setCustomerBoats] = useState([]);
 
   useEffect(() => {
     if (lead) {
       setFormData({
         id: lead.id,
         name: lead.name || '',
+        first_name: '',
+        last_name: '',
         phone: lead.phone || '',
         email: lead.email || '',
         boat_name: lead.boat_name || '',
@@ -53,9 +62,20 @@ export default function LeadForm({
         notes: lead.notes || '',
         description: lead.description || '',
         customer_id: lead.customer_id || '',
+        assigned_to_user_id: lead.assigned_to_user_id || '',
+        boat_id: '',
       });
     }
   }, [lead]);
+
+  useEffect(() => {
+    if (formData.customer_id && boats) {
+      const filtered = boats.filter(b => b.customer_id === formData.customer_id);
+      setCustomerBoats(filtered);
+    } else {
+      setCustomerBoats([]);
+    }
+  }, [formData.customer_id, boats]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -63,6 +83,18 @@ export default function LeadForm({
   };
 
   const handleSelectChange = (name, value) => {
+    if (name === 'boat_id' && value) {
+      const selectedBoat = boats.find(b => b.id === value);
+      if (selectedBoat) {
+        setFormData((prev) => ({ 
+          ...prev, 
+          [name]: value,
+          boat_name: selectedBoat.vessel_name,
+          boat_details: `${selectedBoat.vessel_type || ''} ${selectedBoat.manufacturer || ''} ${selectedBoat.model || ''}`.trim()
+        }));
+        return;
+      }
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -70,14 +102,31 @@ export default function LeadForm({
     e.preventDefault();
     setError(null);
 
-    if (!formData.name || !formData.phone || !formData.email) {
-      setError('Name, phone, and email are required');
+    const dataToSave = { ...formData };
+
+    // If no customer selected, combine first_name + last_name into name
+    if (!formData.customer_id) {
+      if (!formData.first_name || !formData.last_name) {
+        setError('First name and last name are required');
+        return;
+      }
+      dataToSave.name = `${formData.first_name.trim()} ${formData.last_name.trim()}`;
+    } else {
+      // Customer selected, name already exists
+      if (!formData.name) {
+        setError('Name is required');
+        return;
+      }
+    }
+
+    if (!formData.phone || !formData.email) {
+      setError('Phone and email are required');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await onSave(formData);
+      await onSave(dataToSave);
     } catch (err) {
       setError(err.message || 'Error saving lead');
       console.error('Error saving lead:', err);
@@ -96,23 +145,74 @@ export default function LeadForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">{error}</div>}
 
+      {/* Assignment */}
+      <div>
+        <Label htmlFor="assigned_to_user_id" className="text-xs">
+          Assign To
+        </Label>
+        <Select value={formData.assigned_to_user_id} onValueChange={(value) => handleSelectChange('assigned_to_user_id', value)}>
+          <SelectTrigger className="text-sm">
+            <SelectValue placeholder="Assign to team member" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={null}>Unassigned</SelectItem>
+            {users && users.map((user) => (
+              <SelectItem key={user.id} value={user.id}>
+                {user.full_name || user.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Contact Info */}
       <div className="space-y-3">
         <h3 className="font-semibold text-sm text-slate-900">Contact Information</h3>
 
-        <div>
-          <Label htmlFor="name" className="text-xs">
-            Name *
-          </Label>
-          <Input
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            placeholder="Contact person name"
-            className="text-sm"
-          />
-        </div>
+        {formData.customer_id ? (
+          <div>
+            <Label htmlFor="name" className="text-xs">
+              Name *
+            </Label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              placeholder="Contact person name"
+              className="text-sm"
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="first_name" className="text-xs">
+                First Name *
+              </Label>
+              <Input
+                id="first_name"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleInputChange}
+                placeholder="First name"
+                className="text-sm"
+              />
+            </div>
+            <div>
+              <Label htmlFor="last_name" className="text-xs">
+                Last Name *
+              </Label>
+              <Input
+                id="last_name"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleInputChange}
+                placeholder="Last name"
+                className="text-sm"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -173,6 +273,27 @@ export default function LeadForm({
       {/* Boat Info */}
       <div className="space-y-3">
         <h3 className="font-semibold text-sm text-slate-900">Boat Information</h3>
+
+        {formData.customer_id && customerBoats.length > 0 && (
+          <div>
+            <Label htmlFor="boat_id" className="text-xs">
+              Select Customer's Boat (Optional)
+            </Label>
+            <Select value={formData.boat_id} onValueChange={(value) => handleSelectChange('boat_id', value)}>
+              <SelectTrigger className="text-sm">
+                <SelectValue placeholder="Select a boat" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={null}>None</SelectItem>
+                {customerBoats.map((boat) => (
+                  <SelectItem key={boat.id} value={boat.id}>
+                    {boat.vessel_name} ({boat.vessel_type})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div>
           <Label htmlFor="boat_name" className="text-xs">

@@ -16,7 +16,7 @@ import LeadsList from '@/components/leadsV2/LeadsList';
 import LeadForm from '@/components/leadsV2/LeadForm';
 
 export default function LeadsV2() {
-  const { leads, customers, locations, isLoading, updateLeadStatus, saveLead, deleteLead, refetchAll } = useLeadData();
+  const { leads, customers, locations, users, boats, isLoading, updateLeadStatus, saveLead, deleteLead, refetchAll } = useLeadData();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -165,6 +165,8 @@ export default function LeadsV2() {
             lead={editingLead}
             customers={customers}
             locations={locations}
+            users={users}
+            boats={boats}
             onSave={handleSaveLead}
             onCancel={() => {
               setShowForm(false);

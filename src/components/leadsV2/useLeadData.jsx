@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { notifyLeadAssignment } from '@/components/notifications/notificationUtils';
 
 export function getAgingLevel(lead) {
   if (!lead.created_date) return 'none';
@@ -16,6 +17,8 @@ export function useLeadData() {
   const [leads, setLeads] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [boats, setBoats] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -23,14 +26,18 @@ export function useLeadData() {
     try {
       setIsLoading(true);
       setError(null);
-      const [allLeads, allCustomers, allLocations] = await Promise.all([
+      const [allLeads, allCustomers, allLocations, allUsers, allBoats] = await Promise.all([
         base44.entities.Lead.list('-created_date'),
         base44.entities.Customer.list(),
         base44.entities.Location.list(),
+        base44.entities.User.list(),
+        base44.entities.Boat.list(),
       ]);
       setLeads(allLeads);
       setCustomers(allCustomers);
       setLocations(allLocations);
+      setUsers(allUsers);
+      setBoats(allBoats);
     } catch (err) {
       setError(err.message);
       console.error('Error loading lead data:', err);
@@ -64,14 +71,29 @@ export function useLeadData() {
 
   const saveLead = async (leadData) => {
     try {
+      const oldLead = leadData.id ? leads.find(l => l.id === leadData.id) : null;
+      const previousAssignedUserId = oldLead?.assigned_to_user_id;
+      const newAssignedUserId = leadData.assigned_to_user_id;
+
+      let savedLead;
       if (leadData.id) {
         // Edit existing
         await base44.entities.Lead.update(leadData.id, leadData);
+        savedLead = { ...leadData };
       } else {
         // Create new
-        await base44.entities.Lead.create(leadData);
+        savedLead = await base44.entities.Lead.create(leadData);
       }
+
       await fetchLeadsOnly();
+
+      // Trigger notification if assignment changed
+      if (newAssignedUserId && newAssignedUserId !== previousAssignedUserId) {
+        const assignedUser = users.find(u => u.id === newAssignedUserId);
+        if (assignedUser) {
+          await notifyLeadAssignment(savedLead, assignedUser);
+        }
+      }
     } catch (err) {
       console.error('Error saving lead:', err);
       throw err;
@@ -92,6 +114,8 @@ export function useLeadData() {
     leads,
     customers,
     locations,
+    users,
+    boats,
     isLoading,
     error,
     refetchLeads: fetchLeadsOnly,
