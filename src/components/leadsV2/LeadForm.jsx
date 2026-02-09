@@ -42,6 +42,7 @@ export default function LeadForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [customerBoats, setCustomerBoats] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState('');
 
   useEffect(() => {
     if (lead) {
@@ -107,17 +108,12 @@ export default function LeadForm({
     // If no customer selected, combine first_name + last_name into name
     if (!formData.customer_id) {
       if (!formData.first_name || !formData.last_name) {
-        setError('First name and last name are required');
+        setError('First name and last name are required when no existing customer is selected');
         return;
       }
       dataToSave.name = `${formData.first_name.trim()} ${formData.last_name.trim()}`;
-    } else {
-      // Customer selected, name already exists
-      if (!formData.name) {
-        setError('Name is required');
-        return;
-      }
     }
+    // If customer selected, name is not required from user (pre-filled)
 
     if (!formData.phone) {
       setError('Phone number is required');
@@ -141,6 +137,15 @@ export default function LeadForm({
     return contact ? `${name} — ${contact}` : name;
   };
 
+  const filteredCustomers = customers.filter((customer) => {
+    if (!customerSearch) return true;
+    const searchLower = customerSearch.toLowerCase();
+    const fullName = `${customer.first_name || ''} ${customer.last_name || ''}`.toLowerCase();
+    const firstName = (customer.first_name || '').toLowerCase();
+    const lastName = (customer.last_name || '').toLowerCase();
+    return fullName.includes(searchLower) || firstName.includes(searchLower) || lastName.includes(searchLower);
+  });
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded text-sm">{error}</div>}
@@ -161,6 +166,48 @@ export default function LeadForm({
                 {user.full_name || user.email}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Existing Customer */}
+      <div>
+        <Label htmlFor="customer_id" className="text-xs">
+          Existing Customer (Optional)
+        </Label>
+        <Select 
+          value={formData.customer_id} 
+          onValueChange={(value) => {
+            handleSelectChange('customer_id', value);
+            setCustomerSearch('');
+          }}
+        >
+          <SelectTrigger className="text-sm">
+            <SelectValue placeholder="Select a customer" />
+          </SelectTrigger>
+          <SelectContent>
+            <div className="px-2 py-1.5 sticky top-0 bg-white border-b">
+              <Input
+                placeholder="Search by name..."
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="h-8 text-sm"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+            <SelectItem value={null}>No Customer</SelectItem>
+            {filteredCustomers.length > 0 ? (
+              filteredCustomers.map((customer) => (
+                <SelectItem key={customer.id} value={customer.id}>
+                  {getCustomerLabel(customer)}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem disabled value="no-matches">
+                No matching customers
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -242,31 +289,6 @@ export default function LeadForm({
               className="text-sm"
             />
           </div>
-        </div>
-
-        <div>
-          <Label htmlFor="customer_id" className="text-xs">
-            Existing Customer (Optional)
-          </Label>
-          <Select value={formData.customer_id} onValueChange={(value) => handleSelectChange('customer_id', value)}>
-            <SelectTrigger className="text-sm">
-              <SelectValue placeholder="Select a customer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={null}>No Customer</SelectItem>
-              {customers.length > 0 ? (
-                customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {getCustomerLabel(customer)}
-                  </SelectItem>
-                ))
-              ) : (
-                <SelectItem disabled value="no-customers">
-                  No customers available
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
