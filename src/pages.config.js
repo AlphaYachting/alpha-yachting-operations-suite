@@ -73,6 +73,7 @@ import JobDetail from './pages/JobDetail';
 import Jobs from './pages/Jobs';
 import LeadDetail from './pages/LeadDetail';
 import Leads from './pages/Leads';
+import LeadsV2 from './pages/LeadsV2';
 import Locations from './pages/Locations';
 import MobileHeaderEditor from './pages/MobileHeaderEditor';
 import NotificationPreferences from './pages/NotificationPreferences';
@@ -106,7 +107,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import LeadsV2 from './pages/LeadsV2';
 import __Layout from './Layout.jsx';
 
 
@@ -137,6 +137,7 @@ export const PAGES = {
     "Jobs": Jobs,
     "LeadDetail": LeadDetail,
     "Leads": Leads,
+    "LeadsV2": LeadsV2,
     "Locations": Locations,
     "MobileHeaderEditor": MobileHeaderEditor,
     "NotificationPreferences": NotificationPreferences,
@@ -170,7 +171,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "LeadsV2": LeadsV2,
 }
 
 export const pagesConfig = {
