@@ -1279,7 +1279,7 @@ export default function WorkOrderDetail() {
               technicians={technicians}
               customers={customer ? [customer] : []}
               boats={boat ? [boat] : []}
-              onSave={async (formData) => {
+              onSave={async (formData, selectedTemplateId, suggestedTasks) => {
                 try {
                   await base44.entities.WorkOrder.update(workOrderId, formData);
                   await loadWorkOrderDetails();
