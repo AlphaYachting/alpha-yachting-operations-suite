@@ -63,6 +63,7 @@ export default function ProjectDetail() {
    const [location, setLocation] = useState(null);
    const [workOrders, setWorkOrders] = useState([]);
    const [tasks, setTasks] = useState([]);
+   const [teamOrders, setTeamOrders] = useState([]);
    const [loading, setLoading] = useState(true);
    const [showEditDialog, setShowEditDialog] = useState(false);
    const [allCustomers, setAllCustomers] = useState([]);
@@ -81,14 +82,15 @@ export default function ProjectDetail() {
 
    const loadProjectData = async () => {
      try {
-       const [projectsData, allWOs, allTasks, customers, boats, locations, technicians] = await Promise.all([
+       const [projectsData, allWOs, allTasks, customers, boats, locations, technicians, allTeamOrders] = await Promise.all([
          base44.entities.Job.list(),
          base44.entities.WorkOrder.list(),
          base44.entities.Task.list(),
          base44.entities.Customer.list(),
          base44.entities.Boat.list(),
          base44.entities.Location.list(),
-         base44.entities.Technician.list()
+         base44.entities.Technician.list(),
+         base44.entities.TeamOrder.list()
        ]);
 
        const currentProject = projectsData.find(j => j.id === projectId);
@@ -109,6 +111,9 @@ export default function ProjectDetail() {
          const woIds = projectWOs.map(wo => wo.id);
          const projectTasks = allTasks.filter(task => woIds.includes(task.work_order_id));
          setTasks(projectTasks);
+
+         const projectTeamOrders = allTeamOrders.filter(to => woIds.includes(to.work_order_id));
+         setTeamOrders(projectTeamOrders);
        }
      } catch (error) {
        console.error('Error loading project data:', error);
@@ -329,6 +334,38 @@ export default function ProjectDetail() {
                     const hours = parseFloat(wo.estimated_duration_hours);
                     return sum + (isNaN(hours) ? 0 : hours);
                   }, 0).toFixed(1)} h
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500">Budget</p>
+                <p className="font-medium text-slate-900">
+                  {project.quote_amount ? `€${project.quote_amount.toFixed(2)}` : '—'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                <Briefcase className="h-5 w-5 text-orange-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500">Team Order</p>
+                <p className="font-medium text-slate-900">
+                  {teamOrders.length > 0 ? `Yes (${teamOrders.length})` : 'No'}
                 </p>
               </div>
             </div>
