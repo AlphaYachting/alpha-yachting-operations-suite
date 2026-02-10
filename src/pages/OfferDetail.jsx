@@ -58,8 +58,11 @@ export default function OfferDetail() {
   const isNewOffer = !offerId;
   const debugMode = urlParams.get('debugOffer') === '1';
 
+  // Check if customer is pre-selected via URL
+  const preselectedCustomerId = urlParams.get('customer');
+
   const [formData, setFormData] = useState({
-   customer_id: '',
+   customer_id: preselectedCustomerId || '',
    boat_id: '',
    job_id: '',
    location_id: '',
