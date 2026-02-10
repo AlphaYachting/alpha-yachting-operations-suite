@@ -1189,6 +1189,20 @@ Requirements:
             updateField={updateField}
             totalAmount={formData.total_amount}
           />
+
+          {/* Bottom Save Button */}
+          <Card>
+            <CardContent className="pt-6">
+              <Button 
+                onClick={handleSave} 
+                disabled={saving} 
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {saving ? 'Saving...' : 'Save Offer'}
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Summary Sidebar */}
