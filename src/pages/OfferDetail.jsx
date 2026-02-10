@@ -354,10 +354,22 @@ Requirements:
       return;
     }
 
+    // Get selected marina/location name
+    const selectedLocation = locations.find(l => l.id === formData.location_id);
+    const marinaName = selectedLocation?.name;
+
+    // Build description based on marina context
+    let description = '';
+    if (marinaName) {
+      description = `Commission/fee charged by ${marinaName}. This position reflects marina-specific commission settings.`;
+    } else {
+      description = 'Commission/fee charged by the selected marina. This position reflects marina-specific commission settings.';
+    }
+
     // Add new Marina Commission item
     const newTask = {
       title: 'Marina Commission',
-      description: '',
+      description,
       unit_type: 'Lump Sum',
       quantity: 1,
       unit_price: 0,
