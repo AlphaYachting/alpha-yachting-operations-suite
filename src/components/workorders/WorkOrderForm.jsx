@@ -36,6 +36,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [suggestedTasks, setSuggestedTasks] = useState([]);
 
@@ -51,18 +52,27 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     setSaving(true);
     
     try {
       // Validate required fields
+      const errors = {};
       if (!formData.job_id) {
-        throw new Error('Please select a parent project');
+        errors.job_id = 'Required';
       }
       if (!formData.title?.trim()) {
-        throw new Error('Work order title is required');
+        errors.title = 'Required';
       }
       if (!formData.scheduled_date) {
-        throw new Error('Start date is required');
+        errors.scheduled_date = 'Required';
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
+        setError('Please fill all required fields.');
+        setSaving(false);
+        return;
       }
       
       console.log('Submitting work order:', { formData, selectedTemplateId, suggestedTasks });
@@ -133,7 +143,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
        <div className="space-y-2">
          <Label>Parent Project *</Label>
          <Select value={formData.job_id || ''} onValueChange={(v) => updateField('job_id', v)}>
-           <SelectTrigger>
+           <SelectTrigger className={fieldErrors.job_id ? 'border-red-500' : ''}>
              <SelectValue placeholder="Select project" />
           </SelectTrigger>
           <SelectContent>
@@ -144,6 +154,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             ))}
           </SelectContent>
         </Select>
+        {fieldErrors.job_id && <p className="text-xs text-red-600">{fieldErrors.job_id}</p>}
       </div>
 
       {/* Title */}
@@ -153,8 +164,10 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
           value={formData.title}
           onChange={(e) => updateField('title', e.target.value)}
           placeholder="What work will be done in this visit"
+          className={fieldErrors.title ? 'border-red-500' : ''}
           required
         />
+        {fieldErrors.title && <p className="text-xs text-red-600">{fieldErrors.title}</p>}
       </div>
 
       {/* Description & AI Suggestions */}
@@ -191,9 +204,22 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             type="date"
             value={formData.scheduled_date}
             onChange={(e) => updateField('scheduled_date', e.target.value)}
+            className={fieldErrors.scheduled_date ? 'border-red-500' : ''}
             required
           />
+          {fieldErrors.scheduled_date && <p className="text-xs text-red-600">{fieldErrors.scheduled_date}</p>}
         </div>
+        <div className="space-y-2">
+          <Label>Start Time</Label>
+          <Input
+            type="time"
+            value={formData.scheduled_start_time}
+            onChange={(e) => updateField('scheduled_start_time', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>End Date (for multi-day work)</Label>
           <Input
@@ -201,17 +227,6 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             value={formData.scheduled_end_date}
             onChange={(e) => updateField('scheduled_end_date', e.target.value)}
             min={formData.scheduled_date}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label>Start Time</Label>
-          <Input
-            type="time"
-            value={formData.scheduled_start_time}
-            onChange={(e) => updateField('scheduled_start_time', e.target.value)}
           />
         </div>
         <div className="space-y-2">
@@ -222,15 +237,23 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             onChange={(e) => updateField('scheduled_end_time', e.target.value)}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Est. Duration (hours)</Label>
-          <Input
-            type="number"
-            step="0.5"
-            value={formData.estimated_duration_hours}
-            onChange={(e) => updateField('estimated_duration_hours', parseFloat(e.target.value) || '')}
-            placeholder="0"
-          />
+          <Label>Time Duration</Label>
+          <Select 
+            value={formData.estimated_duration_hours?.toString() || ''} 
+            onValueChange={(v) => updateField('estimated_duration_hours', parseFloat(v))}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select duration" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0.25">15 min</SelectItem>
+              <SelectItem value="0.5">30 min</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
