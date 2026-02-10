@@ -175,10 +175,18 @@ export default function CustomerDetail() {
             <p className="text-slate-500 mt-1">Customer Details</p>
           </div>
         </div>
-        <Button onClick={() => setShowEditForm(true)}>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Customer
-        </Button>
+        <div className="flex gap-2">
+          <Link to={createPageUrl('OfferDetail') + `?customer=${customerId}`}>
+            <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
+              <FileText className="h-4 w-4 mr-2" />
+              Create Offer
+            </Button>
+          </Link>
+          <Button onClick={() => setShowEditForm(true)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Customer
+          </Button>
+        </div>
       </div>
 
       {/* Customer Info Card */}
