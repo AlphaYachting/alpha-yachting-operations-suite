@@ -490,12 +490,22 @@ export default function ProjectDetail() {
                           </p>
                         )}
                         <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <User className="h-4 w-4" />
                             <span className="font-medium">Assigned to:</span>
-                            <Badge className={getAssignedTechNames(wo) === '—' ? 'bg-slate-100 text-slate-500' : 'bg-blue-100 text-blue-700 font-semibold'}>
-                              {getAssignedTechNames(wo)}
-                            </Badge>
+                            {(!wo.assigned_technicians || wo.assigned_technicians.length === 0) ? (
+                              <Badge className="bg-slate-100 text-slate-500">Not assigned</Badge>
+                            ) : (
+                              wo.assigned_technicians.map(techId => {
+                                const tech = allTechnicians.find(t => t.id === techId);
+                                const techName = tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
+                                return (
+                                  <Badge key={techId} className="bg-blue-100 text-blue-700 font-semibold">
+                                    {techName}
+                                  </Badge>
+                                );
+                              })
+                            )}
                           </div>
                           <p className="flex items-center gap-1">
                             <Clock className="h-4 w-4" />
