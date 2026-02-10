@@ -127,7 +127,8 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                         <Card 
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          className={`p-4 ${snapshot.isDragging ? 'shadow-lg' : ''}`}
+                          data-task-index={index}
+                          className={`p-4 ${snapshot.isDragging ? 'shadow-lg' : ''} transition-all`}
                         >
                           <div className="flex items-start gap-4">
                             <div 

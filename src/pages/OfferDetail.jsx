@@ -334,6 +334,42 @@ Requirements:
     }
   };
 
+  const handleAddMarinaCommission = () => {
+    // Check if Marina Commission already exists
+    const existingIndex = tasks.findIndex(t => 
+      t.title && t.title.toLowerCase() === 'marina commission'
+    );
+
+    if (existingIndex !== -1) {
+      toast.info('Marina Commission already exists in this offer');
+      // Scroll to existing item (using DOM manipulation)
+      const element = document.querySelector(`[data-task-index="${existingIndex}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('ring-2', 'ring-blue-500');
+        setTimeout(() => {
+          element.classList.remove('ring-2', 'ring-blue-500');
+        }, 2000);
+      }
+      return;
+    }
+
+    // Add new Marina Commission item
+    const newTask = {
+      title: 'Marina Commission',
+      description: '',
+      unit_type: 'Lump Sum',
+      quantity: 1,
+      unit_price: 0,
+      total_amount: 0,
+      is_optional: false,
+      notes: '',
+    };
+
+    setTasks([...tasks, newTask]);
+    toast.success('Marina Commission added');
+  };
+
   const handleSaveAsTemplate = async () => {
     if (!formData.title) {
       toast.error('Please add an offer title before saving as template');
@@ -1108,15 +1144,26 @@ Requirements:
                   <CardTitle>Tasks</CardTitle>
                   <CardDescription>Define the work items for this offer</CardDescription>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAIDialog(true)}
-                  className="text-purple-600 border-purple-300 hover:bg-purple-50"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  AI Generate
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddMarinaCommission}
+                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Marina Commission
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAIDialog(true)}
+                    className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    AI Generate
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
