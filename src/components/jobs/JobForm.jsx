@@ -93,10 +93,7 @@ export default function JobForm({ job, customers, boats, locations, technicians,
       setError('Job title is required');
       return;
     }
-    if (!formData.estimated_hours && !formData.quote_amount) {
-      setError('Please provide either Estimated Hours or Quote Amount');
-      return;
-    }
+
 
     setSaving(true);
     try {
@@ -454,30 +451,22 @@ export default function JobForm({ job, customers, boats, locations, technicians,
           />
         </div>
         <div className="space-y-2">
-          <Label>Estimated Hours</Label>
+          <Label>Estimated Hours (optional)</Label>
           <Input
             type="number"
             step="0.5"
             value={formData.estimated_hours}
             onChange={(e) => updateField('estimated_hours', parseFloat(e.target.value) || '')}
-            onBlur={() => setIsEstimatedHoursTouched(true)}
-            className={cn(
-              isEstimatedHoursTouched && !formData.estimated_hours && !formData.quote_amount && "border-red-500"
-            )}
             placeholder="0"
           />
         </div>
         <div className="space-y-2">
-          <Label>Quote Amount (€)</Label>
+          <Label>Quote Amount (€, optional)</Label>
           <Input
             type="number"
             step="0.01"
             value={formData.quote_amount}
             onChange={(e) => updateField('quote_amount', parseFloat(e.target.value) || '')}
-            onBlur={() => setIsQuoteAmountTouched(true)}
-            className={cn(
-              isQuoteAmountTouched && !formData.quote_amount && !formData.estimated_hours && "border-red-500"
-            )}
             placeholder="0.00"
           />
         </div>
