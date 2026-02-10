@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { format, isPast, isToday, parseISO, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
+import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 
 const statusColors = {
   New: 'bg-slate-100 text-slate-700',
@@ -67,6 +68,10 @@ export default function ProjectDetail() {
    const [allCustomers, setAllCustomers] = useState([]);
    const [allBoats, setAllBoats] = useState([]);
    const [allLocations, setAllLocations] = useState([]);
+   const [allTechnicians, setAllTechnicians] = useState([]);
+   const [leadTechnician, setLeadTechnician] = useState(null);
+   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
+   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
 
    useEffect(() => {
      if (projectId) {
@@ -76,13 +81,14 @@ export default function ProjectDetail() {
 
    const loadProjectData = async () => {
      try {
-       const [projectsData, allWOs, allTasks, customers, boats, locations] = await Promise.all([
+       const [projectsData, allWOs, allTasks, customers, boats, locations, technicians] = await Promise.all([
          base44.entities.Job.list(),
          base44.entities.WorkOrder.list(),
          base44.entities.Task.list(),
          base44.entities.Customer.list(),
          base44.entities.Boat.list(),
-         base44.entities.Location.list()
+         base44.entities.Location.list(),
+         base44.entities.Technician.list()
        ]);
 
        const currentProject = projectsData.find(j => j.id === projectId);
@@ -91,9 +97,11 @@ export default function ProjectDetail() {
          setCustomer(customers.find(c => c.id === currentProject.customer_id));
          setBoat(boats.find(b => b.id === currentProject.boat_id));
          setLocation(locations.find(l => l.id === currentProject.location_id));
+         setLeadTechnician(technicians.find(t => t.id === currentProject.lead_technician_id));
          setAllCustomers(customers);
          setAllBoats(boats);
          setAllLocations(locations);
+         setAllTechnicians(technicians);
 
          const projectWOs = allWOs.filter(wo => wo.job_id === projectId);
          setWorkOrders(projectWOs);
@@ -123,6 +131,29 @@ export default function ProjectDetail() {
       console.error('Error updating project:', error);
       toast.error('Failed to update project');
     }
+  };
+
+  const handleSaveWorkOrder = async (woData) => {
+    try {
+      await base44.entities.WorkOrder.update(editingWorkOrder.id, woData);
+      setShowWorkOrderDialog(false);
+      setEditingWorkOrder(null);
+      toast.success('Work order updated');
+      await loadProjectData();
+    } catch (error) {
+      console.error('Error updating work order:', error);
+      toast.error('Failed to update work order');
+    }
+  };
+
+  const getAssignedTechNames = (wo) => {
+    if (!wo.assigned_technicians || wo.assigned_technicians.length === 0) return '—';
+    return wo.assigned_technicians
+      .map(techId => {
+        const tech = allTechnicians.find(t => t.id === techId);
+        return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
+      })
+      .join(', ');
   };
 
   if (loading) {
@@ -258,6 +289,22 @@ export default function ProjectDetail() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <User className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500">Lead Technician</p>
+                <p className="font-medium text-slate-900 truncate">
+                  {leadTechnician ? `${leadTechnician.first_name} ${leadTechnician.last_name}` : '—'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
@@ -381,12 +428,29 @@ export default function ProjectDetail() {
                             {wo.scheduled_start_time && ` at ${wo.scheduled_start_time}`}
                           </p>
                         )}
+                        <p className="text-sm text-slate-600 mt-2 flex items-center gap-1">
+                          <User className="h-4 w-4" />
+                          <span className="font-medium">Assigned to:</span> {getAssignedTechNames(wo)}
+                        </p>
                       </div>
-                      <Button asChild variant="outline" size="sm">
-                        <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}>
-                          View Details
-                        </Link>
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setEditingWorkOrder(wo);
+                            setShowWorkOrderDialog(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button asChild variant="outline" size="sm">
+                          <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}>
+                            View Details
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   
@@ -451,9 +515,33 @@ export default function ProjectDetail() {
             customers={allCustomers}
             boats={allBoats}
             locations={allLocations}
+            technicians={allTechnicians}
             onSave={handleSaveProject}
             onCancel={() => setShowEditDialog(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Work Order Dialog */}
+      <Dialog open={showWorkOrderDialog} onOpenChange={setShowWorkOrderDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Work Order</DialogTitle>
+          </DialogHeader>
+          {editingWorkOrder && (
+            <WorkOrderForm
+              workOrder={editingWorkOrder}
+              jobs={[project]}
+              technicians={allTechnicians}
+              customers={allCustomers}
+              boats={allBoats}
+              onSave={handleSaveWorkOrder}
+              onCancel={() => {
+                setShowWorkOrderDialog(false);
+                setEditingWorkOrder(null);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
