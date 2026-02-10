@@ -23,10 +23,6 @@ import {
 import { base44 } from '@/api/base44Client';
 
 export default function JobForm({ job, customers, boats, locations, technicians, onSave, onCancel }) {
-  // Debug: Log technicians data
-  console.log('[JobForm] Technicians received:', technicians?.length || 0, technicians);
-  console.log('[JobForm] Active technicians:', technicians?.filter(t => t.status === 'Active').length || 0);
-  
   const [formData, setFormData] = useState({
     customer_id: job?.customer_id || '',
     boat_id: job?.boat_id || '',
@@ -308,15 +304,12 @@ export default function JobForm({ job, customers, boats, locations, technicians,
               <SelectValue placeholder="Not assigned" />
             </SelectTrigger>
             <SelectContent>
-              {!technicians || technicians.length === 0 ? (
-                <div className="px-2 py-1.5 text-sm text-slate-500">No technicians available</div>
-              ) : (
-                technicians.filter(t => t.status === 'Active').map(tech => (
-                  <SelectItem key={tech.id} value={tech.id}>
-                    {tech.first_name} {tech.last_name}
-                  </SelectItem>
-                ))
-              )}
+              {technicians?.map(tech => (
+                <SelectItem key={tech.id} value={tech.id}>
+                  {tech.first_name} {tech.last_name}
+                  {tech.status === 'Inactive' && ' (Inactive)'}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
