@@ -315,6 +315,25 @@ export default function ProjectDetail() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-slate-500">Total Planned Hours</p>
+                <p className="font-medium text-slate-900">
+                  {workOrders.reduce((sum, wo) => {
+                    const hours = parseFloat(wo.estimated_duration_hours);
+                    return sum + (isNaN(hours) ? 0 : hours);
+                  }, 0).toFixed(1)} h
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Project Details */}
@@ -428,10 +447,19 @@ export default function ProjectDetail() {
                             {wo.scheduled_start_time && ` at ${wo.scheduled_start_time}`}
                           </p>
                         )}
-                        <p className="text-sm text-slate-600 mt-2 flex items-center gap-1">
-                          <User className="h-4 w-4" />
-                          <span className="font-medium">Assigned to:</span> {getAssignedTechNames(wo)}
-                        </p>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
+                          <p className="flex items-center gap-1">
+                            <User className="h-4 w-4" />
+                            <span className="font-medium">Assigned to:</span> {getAssignedTechNames(wo)}
+                          </p>
+                          <p className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            <span className="font-medium">Planned:</span> {(() => {
+                              const hours = parseFloat(wo.estimated_duration_hours);
+                              return isNaN(hours) ? '0 h' : `${hours} h`;
+                            })()}
+                          </p>
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <Button 
