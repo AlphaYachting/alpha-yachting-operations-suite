@@ -68,23 +68,9 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         errors.scheduled_date = 'Required';
       }
 
-      // Validate time fields - must be 15-minute steps
-      if (formData.scheduled_start_time) {
-        const [hours, minutes] = formData.scheduled_start_time.split(':').map(Number);
-        if (![0, 15, 30, 45].includes(minutes)) {
-          errors.scheduled_start_time = 'Time must be in 15-minute steps (:00, :15, :30, :45)';
-        }
-      }
-      if (formData.scheduled_end_time) {
-        const [hours, minutes] = formData.scheduled_end_time.split(':').map(Number);
-        if (![0, 15, 30, 45].includes(minutes)) {
-          errors.scheduled_end_time = 'Time must be in 15-minute steps (:00, :15, :30, :45)';
-        }
-      }
-
       if (Object.keys(errors).length > 0) {
         setFieldErrors(errors);
-        setError('Please correct highlighted fields.');
+        setError('Please fill all required fields.');
         setSaving(false);
         return;
       }
@@ -230,9 +216,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             step="900"
             value={formData.scheduled_start_time}
             onChange={(e) => updateField('scheduled_start_time', e.target.value)}
-            className={fieldErrors.scheduled_start_time ? 'border-red-500' : ''}
           />
-          {fieldErrors.scheduled_start_time && <p className="text-xs text-red-600">{fieldErrors.scheduled_start_time}</p>}
         </div>
       </div>
 
@@ -254,9 +238,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             step="900"
             value={formData.scheduled_end_time}
             onChange={(e) => updateField('scheduled_end_time', e.target.value)}
-            className={fieldErrors.scheduled_end_time ? 'border-red-500' : ''}
           />
-          {fieldErrors.scheduled_end_time && <p className="text-xs text-red-600">{fieldErrors.scheduled_end_time}</p>}
         </div>
       </div>
 
