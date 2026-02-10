@@ -20,7 +20,7 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -111,7 +111,7 @@ export default function Dashboard() {
       setNotes(notesData);
 
       // Load or calculate KPIs (max 2x per day)
-      await loadKPIs();
+      await loadKPIs(false);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -119,20 +119,26 @@ export default function Dashboard() {
     }
   };
 
-  const loadKPIs = async () => {
+  const loadKPIs = async (forceRefresh = false) => {
     try {
       const now = new Date();
       const todayDate = format(now, 'yyyy-MM-dd');
       const currentPeriod = now.getHours() < 12 ? 'morning' : 'afternoon';
       const cacheKey = `kpi_${todayDate}_${currentPeriod}`;
 
-      // Check if cache exists for current period
-      const existingCache = await base44.entities.KPICache.filter({ cache_key: cacheKey });
+      // Check if cache exists for current period (skip if force refresh)
+      if (!forceRefresh) {
+        const existingCache = await base44.entities.KPICache.filter({ cache_key: cacheKey });
 
-      if (existingCache.length > 0) {
-        // Use cached values
-        setKpis(existingCache[0]);
-        return;
+        if (existingCache.length > 0) {
+          // Use cached values
+          setKpis(existingCache[0]);
+          return;
+        }
+      } else {
+        // Delete existing cache entries for today to force recalculation
+        const existingCache = await base44.entities.KPICache.filter({ cache_key: cacheKey });
+        await Promise.all(existingCache.map(cache => base44.entities.KPICache.delete(cache.id)));
       }
 
       // Calculate KPIs (simple count queries only)
@@ -409,15 +415,6 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            size="sm"
-            variant="outline"
-            onClick={loadDashboardData}
-            className="text-slate-600 hover:text-slate-900"
-          >
-            <BarChart2 className="h-4 w-4 mr-1" />
-            Refresh
-          </Button>
           <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
