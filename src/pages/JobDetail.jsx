@@ -489,8 +489,8 @@ export default function ProjectDetail() {
                             {wo.scheduled_start_time && ` at ${wo.scheduled_start_time}`}
                           </p>
                         )}
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="mt-2 space-y-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap text-sm text-slate-600">
                             <User className="h-4 w-4" />
                             <span className="font-medium">Assigned to:</span>
                             {(!wo.assigned_technicians || wo.assigned_technicians.length === 0) ? (
@@ -499,15 +499,20 @@ export default function ProjectDetail() {
                               wo.assigned_technicians.map(techId => {
                                 const tech = allTechnicians.find(t => t.id === techId);
                                 const techName = tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
+                                const techColor = tech?.color || '#3b82f6';
                                 return (
-                                  <Badge key={techId} className="bg-blue-100 text-blue-700 font-semibold">
+                                  <Badge 
+                                    key={techId} 
+                                    className="font-semibold text-white"
+                                    style={{ backgroundColor: techColor }}
+                                  >
                                     {techName}
                                   </Badge>
                                 );
                               })
                             )}
                           </div>
-                          <p className="flex items-center gap-1">
+                          <p className="flex items-center gap-1 text-sm text-slate-600">
                             <Clock className="h-4 w-4" />
                             <span className="font-medium">Planned:</span> {(() => {
                               const hours = parseFloat(wo.estimated_duration_hours);
