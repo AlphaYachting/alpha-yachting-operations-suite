@@ -86,6 +86,7 @@ export default function Projects() {
    const [customers, setCustomers] = useState([]);
    const [boats, setBoats] = useState([]);
    const [locations, setLocations] = useState([]);
+   const [technicians, setTechnicians] = useState([]);
    const [workOrders, setWorkOrders] = useState([]);
    const [tasks, setTasks] = useState([]);
    const [loading, setLoading] = useState(true);
@@ -238,19 +239,22 @@ export default function Projects() {
     console.log('[Jobs] Loading form data...');
     try {
       // Load all in parallel - no delays needed, we have reasonable limits
-      const [customersData, boatsData, locationsData] = await Promise.all([
+      const [customersData, boatsData, locationsData, techniciansData] = await Promise.all([
         base44.entities.Customer.list('-created_date', 50),
         base44.entities.Boat.list('-created_date', 50),
-        base44.entities.Location.list()
+        base44.entities.Location.list(),
+        base44.entities.Technician.list()
       ]);
 
       setCustomers(customersData);
       setBoats(boatsData);
       setLocations(locationsData);
+      setTechnicians(techniciansData);
       console.log('[Jobs] Form data loaded:', { 
         customers: customersData.length, 
         boats: boatsData.length, 
-        locations: locationsData.length 
+        locations: locationsData.length,
+        technicians: techniciansData.length 
       });
     } catch (error) {
       console.error('[Jobs] CRITICAL ERROR loading form data:', error);
@@ -710,6 +714,7 @@ export default function Projects() {
               customers={customers}
               boats={boats}
               locations={locations}
+              technicians={technicians}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditingProject(null); setSearchParams({}); }}
               saving={saving}

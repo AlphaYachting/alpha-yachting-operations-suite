@@ -29,7 +29,6 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
      scheduled_end_time: workOrder?.scheduled_end_time || '',
     estimated_duration_hours: workOrder?.estimated_duration_hours || '',
     assigned_technicians: workOrder?.assigned_technicians || [],
-    lead_technician_id: workOrder?.lead_technician_id || '',
     status: workOrder?.status || 'Draft',
     safety_notes: workOrder?.safety_notes || '',
     internal_notes: workOrder?.internal_notes || '',
@@ -236,42 +235,25 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       </div>
 
       {/* Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Status</Label>
-          <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Draft">Draft</SelectItem>
-              <SelectItem value="Scheduled">Scheduled</SelectItem>
-              <SelectItem value="Dispatched">Dispatched</SelectItem>
-              <SelectItem value="In Transit">In Transit</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="Paused">Paused</SelectItem>
-              <SelectItem value="Waiting for Parts">Waiting for Parts</SelectItem>
-              <SelectItem value="Waiting for Approval">Waiting for Approval</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-              <SelectItem value="Cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Lead Technician</Label>
-          <Select value={formData.lead_technician_id} onValueChange={(v) => updateField('lead_technician_id', v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select lead" />
-            </SelectTrigger>
-            <SelectContent>
-              {activeTechnicians.map(tech => (
-                <SelectItem key={tech.id} value={tech.id}>
-                  {tech.first_name} {tech.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-2">
+        <Label>Status</Label>
+        <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Draft">Draft</SelectItem>
+            <SelectItem value="Scheduled">Scheduled</SelectItem>
+            <SelectItem value="Dispatched">Dispatched</SelectItem>
+            <SelectItem value="In Transit">In Transit</SelectItem>
+            <SelectItem value="In Progress">In Progress</SelectItem>
+            <SelectItem value="Paused">Paused</SelectItem>
+            <SelectItem value="Waiting for Parts">Waiting for Parts</SelectItem>
+            <SelectItem value="Waiting for Approval">Waiting for Approval</SelectItem>
+            <SelectItem value="Completed">Completed</SelectItem>
+            <SelectItem value="Cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Technician Assignment */}

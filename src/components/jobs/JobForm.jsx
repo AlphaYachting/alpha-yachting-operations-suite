@@ -22,11 +22,12 @@ import {
 } from '@/components/ui/dialog';
 import { base44 } from '@/api/base44Client';
 
-export default function JobForm({ job, customers, boats, locations, onSave, onCancel }) {
+export default function JobForm({ job, customers, boats, locations, technicians, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     customer_id: job?.customer_id || '',
     boat_id: job?.boat_id || '',
     location_id: job?.location_id || '',
+    lead_technician_id: job?.lead_technician_id || '',
     title: job?.title || '',
     description: job?.description || '',
     job_type: job?.job_type || 'Mobile Service',
@@ -268,31 +269,48 @@ export default function JobForm({ job, customers, boats, locations, onSave, onCa
         </div>
       </div>
 
-      {/* Location */}
-      <div className="space-y-2">
-        <Label>Location</Label>
-        <div className="flex gap-2">
-          <Select value={formData.location_id} onValueChange={(v) => updateField('location_id', v)}>
+      {/* Location & Lead Technician */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Location</Label>
+          <div className="flex gap-2">
+            <Select value={formData.location_id} onValueChange={(v) => updateField('location_id', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select location (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {allLocations.map(location => (
+                  <SelectItem key={location.id} value={location.id}>
+                    {location.name} - {location.region}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="icon"
+              onClick={() => setShowLocationDialog(true)}
+              title="Add new location"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Lead Technician</Label>
+          <Select value={formData.lead_technician_id} onValueChange={(v) => updateField('lead_technician_id', v)}>
             <SelectTrigger>
-              <SelectValue placeholder="Select location (optional)" />
+              <SelectValue placeholder="Not assigned" />
             </SelectTrigger>
             <SelectContent>
-              {allLocations.map(location => (
-                <SelectItem key={location.id} value={location.id}>
-                  {location.name} - {location.region}
+              {technicians?.filter(t => t.status === 'Active').map(tech => (
+                <SelectItem key={tech.id} value={tech.id}>
+                  {tech.first_name} {tech.last_name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="icon"
-            onClick={() => setShowLocationDialog(true)}
-            title="Add new location"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
