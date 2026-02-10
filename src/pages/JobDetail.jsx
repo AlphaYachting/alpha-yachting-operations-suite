@@ -375,8 +375,13 @@ export default function ProjectDetail() {
               </p>
             </div>
             <div>
-              <p className="text-sm text-slate-500">Estimated Hours</p>
-              <p className="font-medium">{project.estimated_hours || 'N/A'}</p>
+              <p className="text-sm text-slate-500">Total Planned Hours (from Workorders)</p>
+              <p className="font-medium">
+                {workOrders.reduce((sum, wo) => {
+                  const hours = parseFloat(wo.estimated_duration_hours);
+                  return sum + (isNaN(hours) ? 0 : hours);
+                }, 0).toFixed(1)} h
+              </p>
             </div>
             {project.quote_amount && (
               <div>
