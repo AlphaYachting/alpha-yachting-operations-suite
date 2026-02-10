@@ -224,6 +224,69 @@ export default function OfferDetail() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleGenerateProjectIntroduction = async () => {
+    if (!formData.title) {
+      toast.error('Please add an offer title first');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const customer = customers.find(c => c.id === formData.customer_id);
+      const boat = boats.find(b => b.id === formData.boat_id);
+      const location = locations.find(l => l.id === formData.location_id);
+
+      const customerName = customer ? (customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim()) : '';
+      const boatInfo = boat ? `${boat.vessel_name}${boat.manufacturer ? ` (${boat.manufacturer}${boat.model ? ` ${boat.model}` : ''})` : ''}` : '';
+      const locationInfo = location ? location.name : '';
+
+      const tasksText = tasks.map(t => 
+        `- ${t.title}${t.description ? `: ${t.description}` : ''} (${t.quantity} ${t.unit_type})`
+      ).join('\n');
+
+      const languageInstruction = {
+        'German': 'Respond in German.',
+        'English': 'Respond in English.',
+        'Italian': 'Respond in Italian.',
+        'Slovenian': 'Respond in Slovenian.',
+        'Croatian': 'Respond in Croatian.'
+      }[formData.language] || 'Respond in English.';
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are writing a professional project introduction for a yacht service offer.
+
+${languageInstruction}
+
+Generate a customer-facing project description (2-4 paragraphs) that introduces the scope of work.
+
+Context:
+- Customer: ${customerName || 'N/A'}
+- Boat: ${boatInfo || 'N/A'}
+- Location: ${locationInfo || 'N/A'}
+- Project title: ${formData.title}
+
+Services included:
+${tasksText || 'N/A'}
+
+Requirements:
+- Professional and welcoming tone
+- Briefly introduce the project scope and key services
+- Mention the boat and customer context if available
+- Keep it concise and clear (2-4 paragraphs)
+- Focus on what will be done, not legal terms
+- Do not mention prices or timelines`,
+      });
+
+      updateField('description', response);
+      toast.success('Project introduction generated');
+    } catch (error) {
+      console.error('Error generating introduction:', error);
+      toast.error('Failed to generate introduction');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleGenerateSafetyClause = async () => {
     if (!formData.title) {
       toast.error('Please add an offer title first');
@@ -911,11 +974,26 @@ Requirements:
               </div>
 
               <div className="space-y-2">
-                <Label>Description</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Project Introduction</Label>
+                  {offerId && tasks.length > 0 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleGenerateProjectIntroduction}
+                      disabled={saving}
+                      className="text-purple-600 border-purple-300 hover:bg-purple-50"
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      {saving ? 'Generating...' : 'Generate project description (AI)'}
+                    </Button>
+                  )}
+                </div>
                 <Textarea
                   value={formData.description || ''}
                   onChange={(e) => updateField('description', e.target.value)}
-                  placeholder="Offer description"
+                  placeholder="Project introduction and description"
                   rows={3}
                 />
               </div>
