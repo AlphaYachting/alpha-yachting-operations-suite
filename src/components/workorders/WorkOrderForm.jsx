@@ -196,8 +196,8 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         )}
       </div>
 
-      {/* Schedule - Start Block */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Schedule - Compact Single Row */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
         <div className="space-y-2">
           <Label>Start Date *</Label>
           <Input
@@ -218,10 +218,6 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             onChange={(e) => updateField('scheduled_start_time', e.target.value)}
           />
         </div>
-      </div>
-
-      {/* Schedule - End Block */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>End Date</Label>
           <Input
@@ -240,10 +236,6 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             onChange={(e) => updateField('scheduled_end_time', e.target.value)}
           />
         </div>
-      </div>
-
-      {/* Duration - Free Input */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Est. Duration (hours)</Label>
           <Input
