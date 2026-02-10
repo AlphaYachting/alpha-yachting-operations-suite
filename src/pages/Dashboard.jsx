@@ -416,6 +416,19 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-2">
           <Button 
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              setLoading(true);
+              await loadKPIs(true);
+              await loadDashboardData();
+            }}
+            className="text-slate-600 hover:text-slate-900"
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Refresh
+          </Button>
+          <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
