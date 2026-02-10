@@ -197,53 +197,57 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       </div>
 
       {/* Schedule - Compact Single Row */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-        <div className="space-y-2">
-          <Label>Start Date *</Label>
+      <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1.5fr_1fr_1.2fr] gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs">Start Date *</Label>
           <Input
             type="date"
             value={formData.scheduled_date}
             onChange={(e) => updateField('scheduled_date', e.target.value)}
-            className={fieldErrors.scheduled_date ? 'border-red-500' : ''}
+            className={fieldErrors.scheduled_date ? 'border-red-500 h-9' : 'h-9'}
             required
           />
           {fieldErrors.scheduled_date && <p className="text-xs text-red-600">{fieldErrors.scheduled_date}</p>}
         </div>
-        <div className="space-y-2">
-          <Label>Start Time</Label>
+        <div className="space-y-1">
+          <Label className="text-xs">Start Time</Label>
           <Input
             type="time"
             step="900"
             value={formData.scheduled_start_time}
             onChange={(e) => updateField('scheduled_start_time', e.target.value)}
+            className="h-9"
           />
         </div>
-        <div className="space-y-2">
-          <Label>End Date</Label>
+        <div className="space-y-1">
+          <Label className="text-xs">End Date</Label>
           <Input
             type="date"
             value={formData.scheduled_end_date}
             onChange={(e) => updateField('scheduled_end_date', e.target.value)}
             min={formData.scheduled_date}
+            className="h-9"
           />
         </div>
-        <div className="space-y-2">
-          <Label>End Time</Label>
+        <div className="space-y-1">
+          <Label className="text-xs">End Time</Label>
           <Input
             type="time"
             step="900"
             value={formData.scheduled_end_time}
             onChange={(e) => updateField('scheduled_end_time', e.target.value)}
+            className="h-9"
           />
         </div>
-        <div className="space-y-2">
-          <Label>Est. Duration (hours)</Label>
+        <div className="space-y-1">
+          <Label className="text-xs whitespace-nowrap">Est. Duration (h)</Label>
           <Input
             type="number"
             step="0.25"
             value={formData.estimated_duration_hours}
             onChange={(e) => updateField('estimated_duration_hours', parseFloat(e.target.value) || '')}
             placeholder="0"
+            className="h-9"
           />
         </div>
       </div>
