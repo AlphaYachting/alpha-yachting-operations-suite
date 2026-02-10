@@ -196,7 +196,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         )}
       </div>
 
-      {/* Schedule */}
+      {/* Schedule - Start Block */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Start Date *</Label>
@@ -213,15 +213,17 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
           <Label>Start Time</Label>
           <Input
             type="time"
+            step="900"
             value={formData.scheduled_start_time}
             onChange={(e) => updateField('scheduled_start_time', e.target.value)}
           />
         </div>
       </div>
 
+      {/* Schedule - End Block */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>End Date (for multi-day work)</Label>
+          <Label>End Date</Label>
           <Input
             type="date"
             value={formData.scheduled_end_date}
@@ -233,27 +235,24 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
           <Label>End Time</Label>
           <Input
             type="time"
+            step="900"
             value={formData.scheduled_end_time}
             onChange={(e) => updateField('scheduled_end_time', e.target.value)}
           />
         </div>
       </div>
 
+      {/* Duration - Free Input */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Time Duration</Label>
-          <Select 
-            value={formData.estimated_duration_hours?.toString() || ''} 
-            onValueChange={(v) => updateField('estimated_duration_hours', parseFloat(v))}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select duration" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0.25">15 min</SelectItem>
-              <SelectItem value="0.5">30 min</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label>Est. Duration (hours)</Label>
+          <Input
+            type="number"
+            step="0.25"
+            value={formData.estimated_duration_hours}
+            onChange={(e) => updateField('estimated_duration_hours', parseFloat(e.target.value) || '')}
+            placeholder="0"
+          />
         </div>
       </div>
 
