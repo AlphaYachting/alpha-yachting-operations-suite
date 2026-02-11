@@ -52,6 +52,11 @@ export default function ProjectIntelligence() {
   const [applyingPlan, setApplyingPlan] = useState(false);
   const [planApplyResults, setPlanApplyResults] = useState(null);
 
+  // Cohesion audit state
+  const [cohesionProjectId, setCohesionProjectId] = useState('');
+  const [cohesionAnalyzing, setCohesionAnalyzing] = useState(false);
+  const [cohesionResults, setCohesionResults] = useState(null);
+
   // Load config from user profile on mount
   useEffect(() => {
     loadConfig();
@@ -855,6 +860,204 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
       workorderCount: changes.filter(c => c.type === 'workorder_dates').length,
       changes
     };
+  };
+
+  const analyzeCohesion = async () => {
+    if (!cohesionProjectId) {
+      toast.error('Please select a project');
+      return;
+    }
+
+    try {
+      setCohesionAnalyzing(true);
+      toast.info('Analyzing workorder cohesion...');
+
+      // Load project data
+      const job = await base44.entities.Job.get(cohesionProjectId);
+      const workOrders = await base44.entities.WorkOrder.filter({ job_id: cohesionProjectId });
+      const allTasks = await base44.entities.Task.filter({
+        work_order_id: workOrders.map(wo => wo.id)
+      });
+
+      // Helper: Extract keywords from task title/description
+      const extractKeywords = (text) => {
+        if (!text) return [];
+        const normalized = text.toLowerCase();
+        const keywords = [];
+        
+        // Service area keywords
+        const areas = {
+          electrical: ['battery', 'electric', 'power', 'voltage', 'wiring', 'circuit', 'alternator', 'charger'],
+          mechanical: ['engine', 'motor', 'transmission', 'propeller', 'shaft', 'bearing', 'pump', 'valve'],
+          electronics: ['navigation', 'radar', 'autopilot', 'gps', 'chart', 'display', 'sensor', 'instrument'],
+          plumbing: ['water', 'tank', 'pipe', 'hose', 'toilet', 'sink', 'bilge', 'drain', 'seacock'],
+          rigging: ['sail', 'mast', 'boom', 'rigging', 'shroud', 'stay', 'halyard', 'sheet', 'winch'],
+          hvac: ['heating', 'cooling', 'air', 'ventilation', 'fan', 'climate'],
+          grp: ['gelcoat', 'fiberglass', 'hull', 'deck', 'repair', 'polish', 'paint'],
+          sealing: ['seal', 'caulk', 'gasket', 'waterproof', 'leak']
+        };
+
+        for (const [area, terms] of Object.entries(areas)) {
+          if (terms.some(term => normalized.includes(term))) {
+            keywords.push(area);
+          }
+        }
+
+        return [...new Set(keywords)];
+      };
+
+      // Analyze each workorder
+      const cohesionAnalysis = [];
+
+      for (const wo of workOrders) {
+        const tasks = allTasks.filter(t => t.work_order_id === wo.id);
+        
+        if (tasks.length === 0) {
+          continue;
+        }
+
+        // Extract keywords for each task
+        const taskClusters = tasks.map(task => ({
+          id: task.id,
+          title: task.title,
+          keywords: extractKeywords(`${task.title} ${task.description || ''}`)
+        }));
+
+        // Determine dominant clusters
+        const keywordFreq = {};
+        taskClusters.forEach(tc => {
+          tc.keywords.forEach(kw => {
+            keywordFreq[kw] = (keywordFreq[kw] || 0) + 1;
+          });
+        });
+
+        const clusters = Object.entries(keywordFreq)
+          .sort((a, b) => b[1] - a[1])
+          .map(([keyword, count]) => ({ keyword, count }));
+
+        const dominantCluster = clusters[0]?.keyword;
+        const clusterCount = clusters.length;
+
+        // Cohesion rating
+        let cohesionRating;
+        if (clusterCount === 0) {
+          cohesionRating = 'Good'; // No specific keywords, assume general work
+        } else if (clusterCount === 1 || (clusters[0]?.count / tasks.length) > 0.7) {
+          cohesionRating = 'Good';
+        } else if (clusterCount <= 3) {
+          cohesionRating = 'Mixed';
+        } else {
+          cohesionRating = 'Poor';
+        }
+
+        // Generate suggestions
+        const suggestions = [];
+
+        if (cohesionRating !== 'Good') {
+          // Find outlier tasks
+          taskClusters.forEach(tc => {
+            if (tc.keywords.length === 0) return;
+
+            const isOutlier = dominantCluster && !tc.keywords.includes(dominantCluster);
+            
+            if (isOutlier) {
+              // Find best matching workorder
+              let bestMatch = null;
+              let bestScore = 0;
+
+              for (const otherWo of workOrders) {
+                if (otherWo.id === wo.id) continue;
+
+                const otherTasks = allTasks.filter(t => t.work_order_id === otherWo.id);
+                const otherKeywords = otherTasks.flatMap(t => 
+                  extractKeywords(`${t.title} ${t.description || ''}`)
+                );
+
+                const matchScore = tc.keywords.filter(kw => otherKeywords.includes(kw)).length;
+                
+                if (matchScore > bestScore) {
+                  bestScore = matchScore;
+                  bestMatch = otherWo;
+                }
+              }
+
+              if (bestMatch) {
+                suggestions.push({
+                  type: 'move',
+                  task_id: tc.id,
+                  task_title: tc.title,
+                  source_workorder_id: wo.id,
+                  source_workorder_title: wo.title,
+                  target_workorder_id: bestMatch.id,
+                  target_workorder_title: bestMatch.title,
+                  reason: `Task keywords (${tc.keywords.join(', ')}) better match "${bestMatch.title}" than current workorder`,
+                  confidence: bestScore >= 2 ? 'High' : 'Medium'
+                });
+              } else {
+                suggestions.push({
+                  type: 'split',
+                  task_id: tc.id,
+                  task_title: tc.title,
+                  source_workorder_id: wo.id,
+                  source_workorder_title: wo.title,
+                  target_workorder_id: null,
+                  target_workorder_title: `New workorder for ${tc.keywords[0] || 'specialized'} work`,
+                  reason: `Task belongs to distinct service area (${tc.keywords.join(', ')}) not covered by other workorders`,
+                  confidence: 'Medium'
+                });
+              }
+            }
+          });
+
+          // Suggest cluster split if multiple strong clusters
+          if (clusterCount >= 3) {
+            const minorityClusters = clusters.slice(1, 3);
+            minorityClusters.forEach(cluster => {
+              const clusterTasks = taskClusters.filter(tc => tc.keywords.includes(cluster.keyword));
+              if (clusterTasks.length >= 2) {
+                suggestions.push({
+                  type: 'split_cluster',
+                  task_ids: clusterTasks.map(tc => tc.id),
+                  task_titles: clusterTasks.map(tc => tc.title).join(', '),
+                  source_workorder_id: wo.id,
+                  source_workorder_title: wo.title,
+                  target_workorder_id: null,
+                  target_workorder_title: `New workorder for ${cluster.keyword} tasks`,
+                  reason: `${clusterTasks.length} tasks form a distinct ${cluster.keyword} cluster within this workorder`,
+                  confidence: 'Medium'
+                });
+              }
+            });
+          }
+        }
+
+        cohesionAnalysis.push({
+          workorder_id: wo.id,
+          workorder_title: wo.title,
+          task_count: tasks.length,
+          tasks: taskClusters,
+          dominant_cluster: dominantCluster,
+          clusters,
+          cohesion_rating: cohesionRating,
+          suggestions
+        });
+      }
+
+      setCohesionResults({
+        project_id: cohesionProjectId,
+        project_title: job.title,
+        service_category: job.service_category,
+        analysis: cohesionAnalysis,
+        total_suggestions: cohesionAnalysis.reduce((sum, a) => sum + a.suggestions.length, 0)
+      });
+
+      toast.success(`Cohesion analysis complete: ${cohesionAnalysis.length} workorders analyzed`);
+    } catch (error) {
+      console.error('Error analyzing cohesion:', error);
+      toast.error('Failed to analyze cohesion');
+    } finally {
+      setCohesionAnalyzing(false);
+    }
   };
 
   const handleApplyPlanningDraft = async () => {
@@ -1947,6 +2150,199 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cohesion Audit Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Layers className="h-5 w-5 text-purple-600" />
+            Workorder Cohesion Audit (Draft)
+          </CardTitle>
+          <CardDescription>
+            Analyze whether tasks within workorders are logically grouped. Suggests reassignments (draft only, no changes applied).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-3">
+            <Select value={cohesionProjectId} onValueChange={setCohesionProjectId}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select project to analyze" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableProjects.map(proj => (
+                  <SelectItem key={proj.id} value={proj.id}>
+                    {proj.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button 
+              onClick={analyzeCohesion}
+              disabled={!cohesionProjectId || cohesionAnalyzing}
+            >
+              {cohesionAnalyzing ? 'Analyzing...' : 'Analyze Cohesion'}
+            </Button>
+          </div>
+
+          {cohesionResults && (
+            <div className="border-t pt-4 space-y-4">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-purple-900 mb-2">
+                  Project: {cohesionResults.project_title}
+                </h3>
+                <div className="text-xs text-slate-600 space-y-1">
+                  <p>• Service Category: {cohesionResults.service_category || 'Not specified'}</p>
+                  <p>• Workorders Analyzed: {cohesionResults.analysis.length}</p>
+                  <p>• Total Suggestions: {cohesionResults.total_suggestions}</p>
+                </div>
+              </div>
+
+              {cohesionResults.analysis.map(wo => (
+                <Card key={wo.workorder_id} className="bg-slate-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h4 className="text-sm font-semibold text-slate-900 mb-1">
+                          {wo.workorder_title}
+                        </h4>
+                        <p className="text-xs text-slate-600">
+                          {wo.task_count} task(s)
+                        </p>
+                      </div>
+                      <div className={`px-3 py-1 rounded text-xs font-semibold ${
+                        wo.cohesion_rating === 'Good' ? 'bg-green-100 text-green-800' :
+                        wo.cohesion_rating === 'Mixed' ? 'bg-amber-100 text-amber-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {wo.cohesion_rating} Cohesion
+                      </div>
+                    </div>
+
+                    {/* Tasks */}
+                    <div className="mb-3">
+                      <p className="text-xs font-medium text-slate-500 mb-2">Tasks:</p>
+                      <div className="space-y-1">
+                        {wo.tasks.map(task => (
+                          <div key={task.id} className="text-xs text-slate-700 flex items-start gap-2">
+                            <span>•</span>
+                            <span className="flex-1">
+                              {task.title}
+                              {task.keywords.length > 0 && (
+                                <span className="text-slate-500 ml-2">
+                                  [{task.keywords.join(', ')}]
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Clusters */}
+                    {wo.clusters.length > 0 && (
+                      <div className="mb-3 pb-3 border-b">
+                        <p className="text-xs font-medium text-slate-500 mb-2">Service Area Clusters:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {wo.clusters.map(cluster => (
+                            <span key={cluster.keyword} className="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded">
+                              {cluster.keyword} ({cluster.count})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Suggestions */}
+                    {wo.suggestions.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-slate-900 mb-2">
+                          Suggested Actions ({wo.suggestions.length}):
+                        </p>
+                        <div className="space-y-2">
+                          {wo.suggestions.map((sugg, idx) => (
+                            <div key={idx} className="bg-white border border-slate-200 rounded p-3">
+                              {sugg.type === 'move' && (
+                                <>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <ArrowRight className="h-3 w-3 text-blue-600" />
+                                    <span className="text-xs font-semibold text-slate-900">
+                                      Move Task
+                                    </span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      sugg.confidence === 'High' ? 'bg-green-100 text-green-800' :
+                                      sugg.confidence === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                                      'bg-slate-100 text-slate-800'
+                                    }`}>
+                                      {sugg.confidence}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-700 mb-1">
+                                    Task: <span className="font-medium">{sugg.task_title}</span>
+                                  </p>
+                                  <p className="text-xs text-slate-700 mb-1">
+                                    Move to: <span className="font-medium">{sugg.target_workorder_title}</span>
+                                  </p>
+                                  <p className="text-xs text-slate-500 italic">
+                                    Reason: {sugg.reason}
+                                  </p>
+                                </>
+                              )}
+                              {(sugg.type === 'split' || sugg.type === 'split_cluster') && (
+                                <>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <AlertCircle className="h-3 w-3 text-purple-600" />
+                                    <span className="text-xs font-semibold text-slate-900">
+                                      {sugg.type === 'split_cluster' ? 'Split Cluster' : 'Create New Workorder'}
+                                    </span>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      sugg.confidence === 'High' ? 'bg-green-100 text-green-800' :
+                                      sugg.confidence === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                                      'bg-slate-100 text-slate-800'
+                                    }`}>
+                                      {sugg.confidence}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-700 mb-1">
+                                    {sugg.type === 'split_cluster' ? (
+                                      <>Tasks: <span className="font-medium">{sugg.task_titles}</span></>
+                                    ) : (
+                                      <>Task: <span className="font-medium">{sugg.task_title}</span></>
+                                    )}
+                                  </p>
+                                  <p className="text-xs text-slate-700 mb-1">
+                                    Suggested: <span className="font-medium">{sugg.target_workorder_title}</span>
+                                  </p>
+                                  <p className="text-xs text-slate-500 italic">
+                                    Reason: {sugg.reason}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {wo.suggestions.length === 0 && wo.cohesion_rating === 'Good' && (
+                      <div className="text-xs text-green-600 italic">
+                        ✓ Tasks are well-organized, no changes suggested
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-amber-800">
+                  <strong>Draft Mode:</strong> These are suggestions only. No tasks or workorders have been modified. 
+                  Review suggestions and manually reorganize as needed.
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Planning Input Modal */}
       <Dialog open={planningModalOpen} onOpenChange={setPlanningModalOpen}>
