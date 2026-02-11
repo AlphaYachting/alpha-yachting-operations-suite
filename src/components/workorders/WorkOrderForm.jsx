@@ -252,8 +252,8 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
                 setSelectedBoatId('');
                 setFormData(prev => ({ ...prev, job_id: '' }));
               }}>
-                <SelectTrigger className={!selectedCustomerId ? 'border-red-300 bg-red-50' : ''}>
-                  <SelectValue placeholder="⚠️ Select customer (required)" />
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer (required)" />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredCustomers.slice(0, 50).map(customer => (
@@ -272,8 +272,8 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
                 Boat <span className="text-red-600">*</span>
               </Label>
               <Select value={selectedBoatId} onValueChange={setSelectedBoatId}>
-                <SelectTrigger className={!selectedBoatId ? 'border-red-300 bg-red-50' : ''}>
-                  <SelectValue placeholder="⚠️ Select boat (required)" />
+                <SelectTrigger>
+                  <SelectValue placeholder="Select boat (required)" />
                 </SelectTrigger>
                 <SelectContent>
                   {customerBoats.map(boat => (
@@ -293,8 +293,8 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
               </Label>
               {customerProjects.length > 0 ? (
                 <Select value={formData.job_id} onValueChange={(v) => updateField('job_id', v)}>
-                  <SelectTrigger className={!formData.job_id || fieldErrors.job_id ? 'border-red-300 bg-red-50' : ''}>
-                    <SelectValue placeholder="⚠️ Select existing project (required)" />
+                  <SelectTrigger className={fieldErrors.job_id ? 'border-red-300 bg-red-50' : ''}>
+                    <SelectValue placeholder="Select existing project (required)" />
                   </SelectTrigger>
                   <SelectContent>
                     {customerProjects.map(project => (
@@ -341,8 +341,8 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         <Input
           value={formData.title}
           onChange={(e) => updateField('title', e.target.value)}
-          placeholder="⚠️ What work will be done in this visit (required)"
-          className={!formData.title.trim() || fieldErrors.title ? 'border-red-300 bg-red-50' : ''}
+          placeholder="What work will be done in this visit (required)"
+          className={fieldErrors.title ? 'border-red-300 bg-red-50' : ''}
         />
         {fieldErrors.title && <p className="text-xs text-red-600">{fieldErrors.title}</p>}
       </div>
@@ -407,7 +407,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             type="date"
             value={formData.scheduled_date}
             onChange={(e) => updateField('scheduled_date', e.target.value)}
-            className={!formData.scheduled_date || fieldErrors.scheduled_date ? 'border-red-300 bg-red-50 h-9' : 'h-9'}
+            className={fieldErrors.scheduled_date ? 'border-red-300 bg-red-50 h-9' : 'h-9'}
           />
           {fieldErrors.scheduled_date && <p className="text-xs text-red-600">{fieldErrors.scheduled_date}</p>}
         </div>
