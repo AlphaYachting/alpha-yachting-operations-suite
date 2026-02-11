@@ -335,13 +335,14 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
 
       {/* Title */}
       <div className="space-y-2">
-        <Label>Work Order Title *</Label>
+        <Label className="text-sm font-semibold">
+          Work Order Title <span className="text-red-600">*</span>
+        </Label>
         <Input
           value={formData.title}
           onChange={(e) => updateField('title', e.target.value)}
-          placeholder="What work will be done in this visit"
-          className={fieldErrors.title ? 'border-red-500' : ''}
-          required
+          placeholder="⚠️ What work will be done in this visit (required)"
+          className={!formData.title.trim() || fieldErrors.title ? 'border-red-300 bg-red-50' : ''}
         />
         {fieldErrors.title && <p className="text-xs text-red-600">{fieldErrors.title}</p>}
       </div>
@@ -399,13 +400,14 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       {/* Schedule - Compact Single Row */}
       <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1.5fr_1fr_1.2fr] gap-2">
         <div className="space-y-1">
-          <Label className="text-xs">Start Date *</Label>
+          <Label className="text-xs font-semibold">
+            Start Date <span className="text-red-600">*</span>
+          </Label>
           <Input
             type="date"
             value={formData.scheduled_date}
             onChange={(e) => updateField('scheduled_date', e.target.value)}
-            className={fieldErrors.scheduled_date ? 'border-red-500 h-9' : 'h-9'}
-            required
+            className={!formData.scheduled_date || fieldErrors.scheduled_date ? 'border-red-300 bg-red-50 h-9' : 'h-9'}
           />
           {fieldErrors.scheduled_date && <p className="text-xs text-red-600">{fieldErrors.scheduled_date}</p>}
         </div>
