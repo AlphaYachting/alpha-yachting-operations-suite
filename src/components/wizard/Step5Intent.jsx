@@ -1,0 +1,102 @@
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { FileText, Briefcase, Compass, Ship } from 'lucide-react';
+import { useWizard } from './WizardContext';
+
+export function Step5Intent() {
+  const { wizardData, updateWizardData, setStep } = useWizard();
+
+  const intents = [
+    {
+      value: 'offer',
+      label: 'Create Offer',
+      description: 'Generate a price quote/proposal',
+      icon: FileText,
+      color: 'text-blue-600'
+    },
+    {
+      value: 'job',
+      label: 'Create Project',
+      description: 'Create a full project with work orders',
+      icon: Briefcase,
+      color: 'text-green-600'
+    },
+    {
+      value: 'offer+job',
+      label: 'Offer + Project',
+      description: 'Create offer first, then convert to project',
+      icon: Briefcase,
+      color: 'text-purple-600'
+    },
+    {
+      value: 'inspection',
+      label: 'Initial Inspection',
+      description: 'Schedule an inspection work order',
+      icon: Compass,
+      color: 'text-orange-600'
+    },
+    {
+      value: 'boat_only',
+      label: 'Register Boat Only',
+      description: 'Just add a new boat to customer',
+      icon: Ship,
+      color: 'text-cyan-600'
+    }
+  ];
+
+  const handleNext = () => {
+    if (!wizardData.intent) {
+      alert('Please select an intent');
+      return;
+    }
+    // Skip to appropriate next step based on intent
+    if (wizardData.intent === 'boat_only') {
+      setStep(10); // Go straight to review
+    } else {
+      setStep(6); // Go to details
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>What would you like to create?</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup value={wizardData.intent || ''} onValueChange={(value) => updateWizardData('intent', value)}>
+            <div className="space-y-3">
+              {intents.map((intent) => {
+                const Icon = intent.icon;
+                return (
+                  <div key={intent.value} className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <RadioGroupItem value={intent.value} id={`intent-${intent.value}`} />
+                    <Label htmlFor={`intent-${intent.value}`} className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon className={`h-4 w-4 ${intent.color}`} />
+                        <span className="font-medium">{intent.label}</span>
+                      </div>
+                      <p className="text-sm text-slate-500">{intent.description}</p>
+                    </Label>
+                  </div>
+                );
+              })}
+            </div>
+          </RadioGroup>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-between gap-2">
+        <Button variant="outline" onClick={() => setStep(4)}>
+          ← Back
+        </Button>
+        <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
+          Next →
+        </Button>
+      </div>
+    </div>
+  );
+}

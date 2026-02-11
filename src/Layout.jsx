@@ -48,6 +48,7 @@ const navItems = [
         { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
         { name: 'Leads', icon: Phone, page: 'LeadsV2' },
         { name: 'Customers', icon: Users, page: 'Customers' },
+        { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard' },
         { name: 'Boats', icon: Ship, page: 'Boats' },
         { name: 'Locations', icon: MapPin, page: 'Locations' },
   { name: 'Projects', icon: Briefcase, page: 'Jobs' },
