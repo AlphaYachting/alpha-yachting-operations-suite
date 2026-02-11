@@ -38,13 +38,13 @@ function WizardContent() {
 
     // Step 6-7: Offer or Job details
     if (step === 6) return true; // Always visible (conditional content inside)
-    if (step === 7) return wizardData.intent.includes('offer'); // Line items only for offers
+    if (step === 7) return wizardData.intent && wizardData.intent.includes('offer'); // Line items only for offers
 
     // Step 8: Technician (if WO created)
-    if (step === 8) return wizardData.intent === 'inspection' || (wizardData.intent.includes('job') && wizardData.workOrder?.createFirst !== false);
+    if (step === 8) return wizardData.intent === 'inspection' || (wizardData.intent && wizardData.intent.includes('job') && wizardData.workOrder?.createFirst !== false);
 
     // Step 9: External Partner (optional, always visible)
-    if (step === 9) return wizardData.intent === 'inspection' || wizardData.intent.includes('job');
+    if (step === 9) return wizardData.intent === 'inspection' || (wizardData.intent && wizardData.intent.includes('job'));
 
     // Step 10: Always review
     if (step === 10) return true;
