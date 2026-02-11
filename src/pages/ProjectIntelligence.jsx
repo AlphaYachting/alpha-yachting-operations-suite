@@ -68,6 +68,8 @@ export default function ProjectIntelligence() {
   const [namingApplyConfirm, setNamingApplyConfirm] = useState('');
   const [applyingNaming, setApplyingNaming] = useState(false);
   const [namingApplyResults, setNamingApplyResults] = useState(null);
+  const [namingResolved, setNamingResolved] = useState(false);
+  const [generatingReassignments, setGeneratingReassignments] = useState(false);
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -882,7 +884,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
 
     try {
       setCohesionAnalyzing(true);
-      toast.info('Analyzing workorder cohesion...');
+      toast.info('Step 1: Analyzing workorder naming...');
 
       // Load project data
       const job = await base44.entities.Job.get(cohesionProjectId);
@@ -918,7 +920,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         return [...new Set(keywords)];
       };
 
-      // Analyze each workorder
+      // Analyze each workorder (clustering only, NO reassignment suggestions yet)
       const cohesionAnalysis = [];
 
       for (const wo of workOrders) {
@@ -953,94 +955,13 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         // Cohesion rating
         let cohesionRating;
         if (clusterCount === 0) {
-          cohesionRating = 'Good'; // No specific keywords, assume general work
+          cohesionRating = 'Good';
         } else if (clusterCount === 1 || (clusters[0]?.count / tasks.length) > 0.7) {
           cohesionRating = 'Good';
         } else if (clusterCount <= 3) {
           cohesionRating = 'Mixed';
         } else {
           cohesionRating = 'Poor';
-        }
-
-        // Generate suggestions
-        const suggestions = [];
-
-        if (cohesionRating !== 'Good') {
-          // Find outlier tasks
-          taskClusters.forEach(tc => {
-            if (tc.keywords.length === 0) return;
-
-            const isOutlier = dominantCluster && !tc.keywords.includes(dominantCluster);
-            
-            if (isOutlier) {
-              // Find best matching workorder
-              let bestMatch = null;
-              let bestScore = 0;
-
-              for (const otherWo of workOrders) {
-                if (otherWo.id === wo.id) continue;
-
-                const otherTasks = allTasks.filter(t => t.work_order_id === otherWo.id);
-                const otherKeywords = otherTasks.flatMap(t => 
-                  extractKeywords(`${t.title} ${t.description || ''}`)
-                );
-
-                const matchScore = tc.keywords.filter(kw => otherKeywords.includes(kw)).length;
-                
-                if (matchScore > bestScore) {
-                  bestScore = matchScore;
-                  bestMatch = otherWo;
-                }
-              }
-
-              if (bestMatch) {
-                suggestions.push({
-                  type: 'move',
-                  task_id: tc.id,
-                  task_title: tc.title,
-                  source_workorder_id: wo.id,
-                  source_workorder_title: wo.title,
-                  target_workorder_id: bestMatch.id,
-                  target_workorder_title: bestMatch.title,
-                  reason: `Task keywords (${tc.keywords.join(', ')}) better match "${bestMatch.title}" than current workorder`,
-                  confidence: bestScore >= 2 ? 'High' : 'Medium'
-                });
-              } else {
-                suggestions.push({
-                  type: 'split',
-                  task_id: tc.id,
-                  task_title: tc.title,
-                  source_workorder_id: wo.id,
-                  source_workorder_title: wo.title,
-                  target_workorder_id: null,
-                  target_workorder_title: `New workorder for ${tc.keywords[0] || 'specialized'} work`,
-                  reason: `Task belongs to distinct service area (${tc.keywords.join(', ')}) not covered by other workorders`,
-                  confidence: 'Medium'
-                });
-              }
-            }
-          });
-
-          // Suggest cluster split if multiple strong clusters
-          if (clusterCount >= 3) {
-            const minorityClusters = clusters.slice(1, 3);
-            minorityClusters.forEach(cluster => {
-              const clusterTasks = taskClusters.filter(tc => tc.keywords.includes(cluster.keyword));
-              if (clusterTasks.length >= 2) {
-                suggestions.push({
-                  type: 'split_cluster',
-                  task_ids: clusterTasks.map(tc => tc.id),
-                  task_titles: clusterTasks.map(tc => tc.title).join(', '),
-                  source_workorder_id: wo.id,
-                  source_workorder_title: wo.title,
-                  target_workorder_id: null,
-                  target_workorder_title: `New workorder for ${cluster.keyword} tasks`,
-                  reason: `${clusterTasks.length} tasks form a distinct ${cluster.keyword} cluster within this workorder`,
-                  confidence: 'Medium'
-                });
-              }
-            });
-          }
         }
 
         cohesionAnalysis.push({
@@ -1050,8 +971,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           tasks: taskClusters,
           dominant_cluster: dominantCluster,
           clusters,
-          cohesion_rating: cohesionRating,
-          suggestions
+          cohesion_rating: cohesionRating
         });
       }
 
@@ -1059,15 +979,15 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         project_id: cohesionProjectId,
         project_title: job.title,
         service_category: job.service_category,
-        analysis: cohesionAnalysis,
-        total_suggestions: cohesionAnalysis.reduce((sum, a) => sum + a.suggestions.length, 0)
+        analysis: cohesionAnalysis
       });
 
       // Generate naming review suggestions
       const namingReview = generateNamingReview(cohesionAnalysis, job);
       setNamingReviewResults(namingReview);
+      setNamingResolved(false);
 
-      toast.success(`Cohesion analysis complete: ${cohesionAnalysis.length} workorders analyzed`);
+      toast.success('Step 1 complete: Review workorder naming before proceeding');
       setSelectedCohesionSuggestions(new Set());
       setCohesionConfidenceFilter('all');
     } catch (error) {
@@ -1261,7 +1181,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
     try {
       setApplyingNaming(true);
       setNamingApplyModalOpen(false);
-      toast.info('Applying workorder renames...');
+      toast.info('Step 2: Applying workorder renames...');
 
       const summary = getNamingSelectionSummary();
       const results = {
@@ -1289,7 +1209,10 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
       setNamingApplyConfirm('');
 
       if (results.applied.length > 0) {
-        toast.success(`Renamed ${results.applied.length} workorder(s)`);
+        toast.success(`Renamed ${results.applied.length} workorder(s) — preparing for step 3`);
+        // Mark naming as resolved and auto-trigger reassignment generation
+        setNamingResolved(true);
+        setTimeout(() => generateReassignmentSuggestions(), 1000);
       }
       if (results.failed.length > 0) {
         toast.error(`${results.failed.length} rename(s) failed`);
@@ -1299,6 +1222,200 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
       toast.error('Failed to apply naming suggestions');
     } finally {
       setApplyingNaming(false);
+    }
+  };
+
+  const handleSkipNaming = () => {
+    setNamingResolved(true);
+    setSelectedNamingSuggestions(new Set());
+    toast.info('Naming step skipped — generating reassignment suggestions');
+    generateReassignmentSuggestions();
+  };
+
+  const generateReassignmentSuggestions = async () => {
+    if (!cohesionProjectId || !cohesionResults) {
+      toast.error('No cohesion data available');
+      return;
+    }
+
+    try {
+      setGeneratingReassignments(true);
+      toast.info('Step 3: Generating task reassignment suggestions...');
+
+      // Reload workorders to get updated titles
+      const workOrders = await base44.entities.WorkOrder.filter({ job_id: cohesionProjectId });
+      const allTasks = await base44.entities.Task.filter({
+        work_order_id: workOrders.map(wo => wo.id)
+      });
+
+      const extractKeywords = (text) => {
+        if (!text) return [];
+        const normalized = text.toLowerCase();
+        const keywords = [];
+        
+        const areas = {
+          electrical: ['battery', 'electric', 'power', 'voltage', 'wiring', 'circuit', 'alternator', 'charger'],
+          mechanical: ['engine', 'motor', 'transmission', 'propeller', 'shaft', 'bearing', 'pump', 'valve'],
+          electronics: ['navigation', 'radar', 'autopilot', 'gps', 'chart', 'display', 'sensor', 'instrument'],
+          plumbing: ['water', 'tank', 'pipe', 'hose', 'toilet', 'sink', 'bilge', 'drain', 'seacock'],
+          rigging: ['sail', 'mast', 'boom', 'rigging', 'shroud', 'stay', 'halyard', 'sheet', 'winch'],
+          hvac: ['heating', 'cooling', 'air', 'ventilation', 'fan', 'climate'],
+          grp: ['gelcoat', 'fiberglass', 'hull', 'deck', 'repair', 'polish', 'paint'],
+          sealing: ['seal', 'caulk', 'gasket', 'waterproof', 'leak']
+        };
+
+        for (const [area, terms] of Object.entries(areas)) {
+          if (terms.some(term => normalized.includes(term))) {
+            keywords.push(area);
+          }
+        }
+
+        return [...new Set(keywords)];
+      };
+
+      // Re-analyze with updated workorder titles
+      const updatedAnalysis = [];
+
+      for (const wo of workOrders) {
+        const tasks = allTasks.filter(t => t.work_order_id === wo.id);
+        
+        if (tasks.length === 0) continue;
+
+        const taskClusters = tasks.map(task => ({
+          id: task.id,
+          title: task.title,
+          keywords: extractKeywords(`${task.title} ${task.description || ''}`)
+        }));
+
+        const keywordFreq = {};
+        taskClusters.forEach(tc => {
+          tc.keywords.forEach(kw => {
+            keywordFreq[kw] = (keywordFreq[kw] || 0) + 1;
+          });
+        });
+
+        const clusters = Object.entries(keywordFreq)
+          .sort((a, b) => b[1] - a[1])
+          .map(([keyword, count]) => ({ keyword, count }));
+
+        const dominantCluster = clusters[0]?.keyword;
+        const clusterCount = clusters.length;
+
+        let cohesionRating;
+        if (clusterCount === 0) {
+          cohesionRating = 'Good';
+        } else if (clusterCount === 1 || (clusters[0]?.count / tasks.length) > 0.7) {
+          cohesionRating = 'Good';
+        } else if (clusterCount <= 3) {
+          cohesionRating = 'Mixed';
+        } else {
+          cohesionRating = 'Poor';
+        }
+
+        // NOW generate reassignment suggestions
+        const suggestions = [];
+
+        if (cohesionRating !== 'Good') {
+          taskClusters.forEach(tc => {
+            if (tc.keywords.length === 0) return;
+
+            const isOutlier = dominantCluster && !tc.keywords.includes(dominantCluster);
+            
+            if (isOutlier) {
+              let bestMatch = null;
+              let bestScore = 0;
+
+              for (const otherWo of workOrders) {
+                if (otherWo.id === wo.id) continue;
+
+                const otherTasks = allTasks.filter(t => t.work_order_id === otherWo.id);
+                const otherKeywords = otherTasks.flatMap(t => 
+                  extractKeywords(`${t.title} ${t.description || ''}`)
+                );
+
+                const matchScore = tc.keywords.filter(kw => otherKeywords.includes(kw)).length;
+                
+                if (matchScore > bestScore) {
+                  bestScore = matchScore;
+                  bestMatch = otherWo;
+                }
+              }
+
+              if (bestMatch) {
+                suggestions.push({
+                  type: 'move',
+                  task_id: tc.id,
+                  task_title: tc.title,
+                  source_workorder_id: wo.id,
+                  source_workorder_title: wo.title,
+                  target_workorder_id: bestMatch.id,
+                  target_workorder_title: bestMatch.title,
+                  reason: `Task keywords (${tc.keywords.join(', ')}) better match "${bestMatch.title}" than current workorder`,
+                  confidence: bestScore >= 2 ? 'High' : 'Medium'
+                });
+              } else {
+                suggestions.push({
+                  type: 'split',
+                  task_id: tc.id,
+                  task_title: tc.title,
+                  source_workorder_id: wo.id,
+                  source_workorder_title: wo.title,
+                  target_workorder_id: null,
+                  target_workorder_title: `New workorder for ${tc.keywords[0] || 'specialized'} work`,
+                  reason: `Task belongs to distinct service area (${tc.keywords.join(', ')}) not covered by other workorders`,
+                  confidence: 'Medium'
+                });
+              }
+            }
+          });
+
+          if (clusterCount >= 3) {
+            const minorityClusters = clusters.slice(1, 3);
+            minorityClusters.forEach(cluster => {
+              const clusterTasks = taskClusters.filter(tc => tc.keywords.includes(cluster.keyword));
+              if (clusterTasks.length >= 2) {
+                suggestions.push({
+                  type: 'split_cluster',
+                  task_ids: clusterTasks.map(tc => tc.id),
+                  task_titles: clusterTasks.map(tc => tc.title).join(', '),
+                  source_workorder_id: wo.id,
+                  source_workorder_title: wo.title,
+                  target_workorder_id: null,
+                  target_workorder_title: `New workorder for ${cluster.keyword} tasks`,
+                  reason: `${clusterTasks.length} tasks form a distinct ${cluster.keyword} cluster within this workorder`,
+                  confidence: 'Medium'
+                });
+              }
+            });
+          }
+        }
+
+        updatedAnalysis.push({
+          workorder_id: wo.id,
+          workorder_title: wo.title,
+          task_count: tasks.length,
+          tasks: taskClusters,
+          dominant_cluster: dominantCluster,
+          clusters,
+          cohesion_rating: cohesionRating,
+          suggestions
+        });
+      }
+
+      setCohesionResults({
+        project_id: cohesionProjectId,
+        project_title: cohesionResults.project_title,
+        service_category: cohesionResults.service_category,
+        analysis: updatedAnalysis,
+        total_suggestions: updatedAnalysis.reduce((sum, a) => sum + a.suggestions.length, 0)
+      });
+
+      toast.success(`Step 3 complete: ${updatedAnalysis.reduce((sum, a) => sum + a.suggestions.length, 0)} reassignment suggestions generated`);
+    } catch (error) {
+      console.error('Error generating reassignments:', error);
+      toast.error('Failed to generate reassignments');
+    } finally {
+      setGeneratingReassignments(false);
     }
   };
 
@@ -2471,15 +2588,23 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5 text-purple-600" />
-            Workorder Cohesion Audit (Draft)
+            Workorder Cohesion Workflow (Sequential)
           </CardTitle>
           <CardDescription>
-            Analyze whether tasks within workorders are logically grouped. Suggests reassignments (draft only, no changes applied).
+            Step 1: Review naming → Step 2: Apply/Skip → Step 3: Generate reassignments → Step 4: Apply moves
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-3">
-            <Select value={cohesionProjectId} onValueChange={setCohesionProjectId}>
+            <Select value={cohesionProjectId} onValueChange={(val) => {
+              setCohesionProjectId(val);
+              // Reset workflow when project changes
+              setNamingReviewResults(null);
+              setNamingResolved(false);
+              setCohesionResults(null);
+              setNamingApplyResults(null);
+              setCohesionApplyResults(null);
+            }}>
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Select project to analyze" />
               </SelectTrigger>
@@ -2495,11 +2620,50 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
               onClick={analyzeCohesion}
               disabled={!cohesionProjectId || cohesionAnalyzing}
             >
-              {cohesionAnalyzing ? 'Analyzing...' : 'Analyze Cohesion'}
+              {cohesionAnalyzing ? 'Analyzing...' : 'Start Workflow'}
             </Button>
           </div>
 
-          {cohesionResults && (
+          {/* Sequential Workflow Status */}
+          {namingReviewResults && (
+            <div className="border-t pt-4">
+              <div className="bg-slate-100 rounded-lg p-4 mb-4">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3">Workflow Status</h3>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-slate-700">Step 1: Naming Review Generated</span>
+                  </div>
+                  {namingResolved ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-slate-700">Step 2: Naming Resolved</span>
+                      </div>
+                      {cohesionResults?.total_suggestions > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="text-slate-700">Step 3: Reassignment Suggestions Ready</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-slate-400" />
+                          <span className="text-slate-500">Step 3: Generating reassignments...</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <span className="text-slate-700">Step 2: Pending — Apply or skip naming changes</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {cohesionResults && namingResolved && (
             <div className="border-t pt-4 space-y-4">
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-purple-900 mb-2">
@@ -2508,7 +2672,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                 <div className="text-xs text-slate-600 space-y-1">
                   <p>• Service Category: {cohesionResults.service_category || 'Not specified'}</p>
                   <p>• Workorders Analyzed: {cohesionResults.analysis.length}</p>
-                  <p>• Total Suggestions: {cohesionResults.total_suggestions}</p>
+                  <p>• Task Reassignment Suggestions: {cohesionResults.total_suggestions || 0}</p>
                 </div>
               </div>
 
@@ -2898,11 +3062,36 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
               );
             })()}
 
+            {/* Skip Naming Button */}
+            {!namingResolved && namingReviewResults?.suggestions.length === 0 && (
+              <div className="border-t pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={handleSkipNaming}
+                  className="w-full"
+                >
+                  No Naming Changes Needed — Proceed to Reassignments
+                </Button>
+              </div>
+            )}
+
+            {!namingResolved && selectedNamingSuggestions.size === 0 && namingReviewResults?.suggestions.length > 0 && (
+              <div className="border-t pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={handleSkipNaming}
+                  className="w-full"
+                >
+                  Skip Naming Changes — Proceed to Reassignments
+                </Button>
+              </div>
+            )}
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-blue-900">
-                <strong>Draft Mode:</strong> Select workorder title changes with checkboxes to apply renames. 
-                No changes are applied until you confirm.
+                <strong>Sequential Workflow:</strong> Apply or skip naming changes to proceed to task reassignment suggestions. 
+                No reassignments will be generated until naming step is resolved.
               </p>
             </div>
           </CardContent>
