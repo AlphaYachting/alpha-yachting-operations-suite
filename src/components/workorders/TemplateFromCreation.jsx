@@ -78,38 +78,38 @@ export default function TemplateFromCreation({ onTemplateChange, selectedTemplat
   }
 
   return (
-    <div className="space-y-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+    <div className="space-y-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
       <div>
-        <Label className="text-base font-semibold mb-3 block">Creation Mode</Label>
+        <Label className="text-sm font-semibold mb-2 block">Creation Mode</Label>
         <RadioGroup value={creationMode} onValueChange={handleModeChange}>
-          <div className="flex items-center gap-3 p-3 rounded border border-slate-200 cursor-pointer hover:bg-white transition-colors">
+          <div className="flex items-center gap-2 p-2 rounded border border-slate-200 cursor-pointer hover:bg-white transition-colors">
             <RadioGroupItem value="empty" id="mode-empty" />
             <label htmlFor="mode-empty" className="flex-1 cursor-pointer">
-              <p className="font-medium text-slate-900">Create Empty Work Order</p>
-              <p className="text-sm text-slate-500">Add tasks manually or apply templates later</p>
+              <p className="text-sm font-medium text-slate-900">Empty Work Order</p>
+              <p className="text-xs text-slate-500">Add tasks manually or use AI</p>
             </label>
           </div>
-          <div className="flex items-center gap-3 p-3 rounded border border-slate-200 cursor-pointer hover:bg-white transition-colors">
+          <div className="flex items-center gap-2 p-2 rounded border border-slate-200 cursor-pointer hover:bg-white transition-colors">
             <RadioGroupItem value="template" id="mode-template" />
             <label htmlFor="mode-template" className="flex-1 cursor-pointer">
-              <p className="font-medium text-slate-900">Create from Task Template</p>
-              <p className="text-sm text-slate-500">Auto-create title and tasks from a template</p>
+              <p className="text-sm font-medium text-slate-900">From Task Template</p>
+              <p className="text-xs text-slate-500">Pre-filled tasks from template</p>
             </label>
           </div>
         </RadioGroup>
       </div>
 
       {creationMode === 'template' && (
-        <div className="space-y-4 pt-2 border-t border-slate-200">
+        <div className="space-y-3 pt-2 border-t border-slate-200">
           {templates.length === 0 ? (
-            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+              <AlertCircle className="h-3 w-3 flex-shrink-0" />
               No active templates available. Create one first.
             </div>
           ) : (
             <>
               <div className="space-y-2">
-                <Label>Select Template</Label>
+                <Label className="text-sm">Select Template</Label>
                 <Select value={localSelectedId} onValueChange={handleTemplateSelect}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a task template" />
@@ -126,18 +126,18 @@ export default function TemplateFromCreation({ onTemplateChange, selectedTemplat
 
               {templateItems.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-sm">
-                    Template Preview ({templateItems.length} tasks)
+                  <Label className="text-xs text-slate-600">
+                    Preview ({templateItems.length} tasks)
                   </Label>
-                  <div className="space-y-2 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded p-3">
+                  <div className="space-y-1 max-h-40 overflow-y-auto bg-white border border-slate-200 rounded p-2">
                     {templateItems.map((item, idx) => (
-                      <div key={item.id} className="flex items-start gap-2 text-sm pb-2 border-b border-slate-100 last:border-b-0">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                      <div key={item.id} className="flex items-start gap-1.5 text-xs py-1 border-b border-slate-100 last:border-b-0">
+                        <CheckCircle2 className="h-3 w-3 text-emerald-500 mt-0.5 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-900">{item.title}</p>
+                          <p className="font-medium text-slate-900 text-xs">{item.title}</p>
                           {item.default_estimated_hours && (
-                            <p className="text-xs text-slate-500">
-                              Est: {item.default_estimated_hours}h
+                            <p className="text-[10px] text-slate-500">
+                              {item.default_estimated_hours}h
                               {item.default_role && ` • ${item.default_role}`}
                             </p>
                           )}
