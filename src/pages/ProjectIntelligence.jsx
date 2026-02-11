@@ -70,6 +70,7 @@ export default function ProjectIntelligence() {
   const [namingApplyResults, setNamingApplyResults] = useState(null);
   const [namingResolved, setNamingResolved] = useState(false);
   const [generatingReassignments, setGeneratingReassignments] = useState(false);
+  const [taskInclusionFilter, setTaskInclusionFilter] = useState('not_completed');
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -156,7 +157,8 @@ export default function ProjectIntelligence() {
             project_id: job?.id,
             project_title: job?.title,
             workorder_id: wo?.id,
-            workorder_title: wo?.title
+            workorder_title: wo?.title,
+            task_status: task.status
           });
         } else {
           // Map service category to skill (simplified matching)
@@ -184,7 +186,8 @@ export default function ProjectIntelligence() {
               project_id: job?.id,
               project_title: job?.title,
               workorder_id: wo?.id,
-              workorder_title: wo?.title
+              workorder_title: wo?.title,
+              task_status: task.status
             });
           } else if (requiredSkill) {
             findings.skill.missing.push({
@@ -195,7 +198,8 @@ export default function ProjectIntelligence() {
               project_id: job?.id,
               project_title: job?.title,
               workorder_id: wo?.id,
-              workorder_title: wo?.title
+              workorder_title: wo?.title,
+              task_status: task.status
             });
           } else {
             findings.skill.undetermined.push({
@@ -206,7 +210,8 @@ export default function ProjectIntelligence() {
               project_id: job?.id,
               project_title: job?.title,
               workorder_id: wo?.id,
-              workorder_title: wo?.title
+              workorder_title: wo?.title,
+              task_status: task.status
             });
           }
         }
@@ -226,7 +231,8 @@ export default function ProjectIntelligence() {
             project_id: job?.id,
             project_title: job?.title,
             workorder_id: wo?.id,
-            workorder_title: wo?.title
+            workorder_title: wo?.title,
+            task_status: task.status
           });
         } else {
           findings.time.complete.push({
@@ -237,7 +243,8 @@ export default function ProjectIntelligence() {
             project_id: job?.id,
             project_title: job?.title,
             workorder_id: wo?.id,
-            workorder_title: wo?.title
+            workorder_title: wo?.title,
+            task_status: task.status
           });
         }
 
@@ -253,7 +260,8 @@ export default function ProjectIntelligence() {
               project_id: job?.id,
               project_title: job?.title,
               workorder_id: wo?.id,
-              workorder_title: wo?.title
+              workorder_title: wo?.title,
+              task_status: task.status
             });
           }
         }
@@ -408,8 +416,19 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
 
       const generatedSuggestions = [];
 
+      // Apply task inclusion filter
+      const shouldIncludeTask = (finding) => {
+        if (!finding.task_status) return true; // Include if status unknown
+        
+        if (taskInclusionFilter === 'all') return true;
+        if (taskInclusionFilter === 'not_started') return finding.task_status === 'Not Started';
+        if (taskInclusionFilter === 'not_completed') return finding.task_status !== 'Completed';
+        
+        return true;
+      };
+
       // A) TIME IMPROVEMENTS
-      for (const finding of auditResults.findings.time.missing) {
+      for (const finding of auditResults.findings.time.missing.filter(shouldIncludeTask)) {
         generatedSuggestions.push({
           id: `time-missing-${finding.id}`,
           scope_level: 'Task',
@@ -425,7 +444,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         });
       }
 
-      for (const finding of auditResults.findings.time.outlier) {
+      for (const finding of auditResults.findings.time.outlier.filter(shouldIncludeTask)) {
         generatedSuggestions.push({
           id: `time-outlier-${finding.id}`,
           scope_level: 'Task',
@@ -1596,15 +1615,34 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
               <FileSearch className="h-4 w-4 mr-2" />
               {auditRunning ? 'Running Audit...' : 'Run Audit (Read-only)'}
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={handleRunSuggestions}
-              disabled={suggestionsRunning || !auditResults}
-              className="justify-start"
-            >
-              <Lightbulb className="h-4 w-4 mr-2" />
-              {suggestionsRunning ? 'Generating...' : 'Run Suggestions (Draft)'}
-            </Button>
+            <div className="space-y-2">
+              <div>
+                <Label htmlFor="task-filter" className="text-xs text-slate-600">Include tasks (for time suggestions):</Label>
+                <Select 
+                  value={taskInclusionFilter} 
+                  onValueChange={setTaskInclusionFilter}
+                  disabled={suggestionsRunning || !auditResults}
+                >
+                  <SelectTrigger id="task-filter" className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="not_completed">Not completed only</SelectItem>
+                    <SelectItem value="not_started">Not started only</SelectItem>
+                    <SelectItem value="all">All tasks</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleRunSuggestions}
+                disabled={suggestionsRunning || !auditResults}
+                className="justify-start w-full"
+              >
+                <Lightbulb className="h-4 w-4 mr-2" />
+                {suggestionsRunning ? 'Generating...' : 'Run Suggestions (Draft)'}
+              </Button>
+            </div>
             <Button 
               variant="outline" 
               onClick={() => setPlanningModalOpen(true)}
