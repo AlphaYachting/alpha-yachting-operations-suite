@@ -353,7 +353,7 @@ export default function JobForm({ job, customers, boats, locations, technicians,
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Service Category</Label>
+          <Label>Primary Scope (Optional)</Label>
           <Select value={formData.service_category} onValueChange={(v) => updateField('service_category', v)}>
             <SelectTrigger>
               <SelectValue />
