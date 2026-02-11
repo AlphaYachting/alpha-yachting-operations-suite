@@ -458,8 +458,70 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
       const extractActionVerb = (title) => {
         if (!title) return null;
         const normalized = title.toLowerCase();
-        const actionVerbs = ['check', 'inspect', 'test', 'replace', 'install', 'repair', 'service', 'maintain', 'clean', 'adjust'];
+        const actionVerbs = ['check', 'inspect', 'test', 'replace', 'install', 'repair', 'service', 'maintain', 'clean', 'adjust', 'overhaul'];
         return actionVerbs.find(verb => normalized.includes(verb)) || null;
+      };
+
+      // Marine Surveyor Expert Review Layer
+      const applyExpertReview = (title, statisticalMedianMinutes) => {
+        if (!title || !statisticalMedianMinutes) {
+          return { adjustmentMinutes: 0, reason: 'No expert adjustment applied', applied: false };
+        }
+
+        const normalized = title.toLowerCase();
+        let adjustmentMinutes = 0;
+        const reasons = [];
+
+        // 1. Task type complexity multipliers
+        const taskType = extractActionVerb(title);
+        if (taskType === 'overhaul') {
+          adjustmentMinutes += statisticalMedianMinutes * 0.25; // +25%
+          reasons.push('Overhaul complexity');
+        } else if (taskType === 'install') {
+          adjustmentMinutes += statisticalMedianMinutes * 0.15; // +15%
+          reasons.push('Installation complexity');
+        } else if (taskType === 'replace') {
+          adjustmentMinutes += statisticalMedianMinutes * 0.10; // +10%
+          reasons.push('Replacement task');
+        }
+
+        // 2. Subsystem criticality
+        const criticalSystems = ['engine', 'steering', 'bilge', 'fuel', 'electrical', 'navigation', 'safety'];
+        const hasCriticalSystem = criticalSystems.some(sys => normalized.includes(sys));
+        if (hasCriticalSystem) {
+          adjustmentMinutes += 15; // +15 min fixed
+          reasons.push('Safety-critical system');
+        }
+
+        // 3. Access complexity
+        const complexAccess = ['bilge', 'under deck', 'inside mast', 'behind panel', 'engine room'];
+        const hasComplexAccess = complexAccess.some(access => normalized.includes(access));
+        if (hasComplexAccess) {
+          adjustmentMinutes += 20; // +20 min fixed
+          reasons.push('Complex access');
+        }
+
+        // 4. Sealing/waterproofing tasks (marine-specific)
+        if (normalized.includes('seal') || normalized.includes('waterproof') || normalized.includes('gasket')) {
+          adjustmentMinutes += 10; // +10 min fixed
+          reasons.push('Sealing work required');
+        }
+
+        // 5. Rigging tasks (height work)
+        if (normalized.includes('rigging') || normalized.includes('mast') || normalized.includes('sail')) {
+          adjustmentMinutes += 25; // +25 min fixed
+          reasons.push('Height work');
+        }
+
+        if (reasons.length === 0) {
+          return { adjustmentMinutes: 0, reason: 'No expert adjustment applied', applied: false };
+        }
+
+        return {
+          adjustmentMinutes: Math.round(adjustmentMinutes),
+          reason: reasons.join(' + '),
+          applied: true
+        };
       };
 
       // Pre-process all tasks with time data
@@ -569,16 +631,29 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
 
         if (stats && stats.count >= 5) {
           status = 'Missing time';
-          const medianHours = (stats.median / 60).toFixed(1);
+          
+          // Apply expert review
+          const expertReview = applyExpertReview(finding.title, stats.median);
+          const adjustedMedian = stats.median + expertReview.adjustmentMinutes;
+          
+          const statisticalHours = (stats.median / 60).toFixed(1);
+          const adjustedHours = (adjustedMedian / 60).toFixed(1);
+          const adjustmentHours = (expertReview.adjustmentMinutes / 60).toFixed(1);
           const p25Hours = (stats.p25 / 60).toFixed(1);
           const p75Hours = (stats.p75 / 60).toFixed(1);
-          suggested_time = `${medianHours}h`;
+          
+          suggested_time = expertReview.applied ? `${adjustedHours}h` : `${statisticalHours}h`;
           expected_band = `${p25Hours}h – ${p75Hours}h`;
           n_similar = stats.count;
           match_level = matchResult.level;
           keywords = matchResult.keywords;
           confidence = matchResult.confidence;
-          suggestionText = `Missing time — Expected: ${expected_band} (median ${medianHours}h) — Matched by: ${match_level} — Keywords: ${keywords} — Similar tasks: n=${n_similar}`;
+          
+          if (expertReview.applied) {
+            suggestionText = `Missing time — Statistical baseline: ${statisticalHours}h (n=${n_similar}) — Expert review: ${expertReview.reason} — Adjustment: +${adjustmentHours}h — Recommended planning baseline: ${adjustedHours}h — Matched by: ${match_level} — Keywords: ${keywords}`;
+          } else {
+            suggestionText = `Missing time — Expected: ${expected_band} (median ${statisticalHours}h) — ${expertReview.reason} — Matched by: ${match_level} — Keywords: ${keywords} — Similar tasks: n=${n_similar}`;
+          }
         } else {
           status = 'Manual review';
           n_similar = stats?.count || 0;
@@ -634,13 +709,37 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
 
         if (currentMinutes < stats.p25) {
           status = 'Too low';
-          suggested_time = `${medianHours}h`;
-          suggestionText = `Current: ${currentHours}h — Too low — Expected: ${expected_band} (median ${medianHours}h) — Matched by: ${match_level} — Keywords: ${keywords} — Similar tasks: n=${n_similar}`;
+          
+          // Apply expert review
+          const expertReview = applyExpertReview(finding.title, stats.median);
+          const adjustedMedian = stats.median + expertReview.adjustmentMinutes;
+          const adjustedHours = (adjustedMedian / 60).toFixed(1);
+          const adjustmentHours = (expertReview.adjustmentMinutes / 60).toFixed(1);
+          
+          if (expertReview.applied) {
+            suggested_time = `${adjustedHours}h`;
+            suggestionText = `Current: ${currentHours}h — Too low — Statistical baseline: ${medianHours}h (n=${n_similar}) — Expert review: ${expertReview.reason} — Adjustment: +${adjustmentHours}h — Recommended planning baseline: ${adjustedHours}h — Matched by: ${match_level} — Keywords: ${keywords}`;
+          } else {
+            suggested_time = `${medianHours}h`;
+            suggestionText = `Current: ${currentHours}h — Too low — Expected: ${expected_band} (median ${medianHours}h) — ${expertReview.reason} — Matched by: ${match_level} — Keywords: ${keywords} — Similar tasks: n=${n_similar}`;
+          }
           confidence = matchResult.confidence;
         } else if (currentMinutes > stats.p75) {
           status = 'Too high';
-          suggested_time = 'Review recommended';
-          suggestionText = `Current: ${currentHours}h — Too high — Expected: ${expected_band} (median ${medianHours}h) — Matched by: ${match_level} — Keywords: ${keywords} — Similar tasks: n=${n_similar}`;
+          
+          // Apply expert review for context
+          const expertReview = applyExpertReview(finding.title, stats.median);
+          const adjustedMedian = stats.median + expertReview.adjustmentMinutes;
+          const adjustedHours = (adjustedMedian / 60).toFixed(1);
+          const adjustmentHours = (expertReview.adjustmentMinutes / 60).toFixed(1);
+          
+          if (expertReview.applied) {
+            suggested_time = 'Review recommended';
+            suggestionText = `Current: ${currentHours}h — Too high — Statistical baseline: ${medianHours}h (n=${n_similar}) — Expert review: ${expertReview.reason} — Adjustment: +${adjustmentHours}h — Expected planning baseline: ${adjustedHours}h — Matched by: ${match_level} — Keywords: ${keywords}`;
+          } else {
+            suggested_time = 'Review recommended';
+            suggestionText = `Current: ${currentHours}h — Too high — Expected: ${expected_band} (median ${medianHours}h) — ${expertReview.reason} — Matched by: ${match_level} — Keywords: ${keywords} — Similar tasks: n=${n_similar}`;
+          }
           confidence = matchResult.confidence;
         } else {
           status = 'OK';
