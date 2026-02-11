@@ -23,6 +23,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
      job_id: workOrder?.job_id || preselectedJobId || '',
      title: workOrder?.title || '',
      description: workOrder?.description || '',
+     service_area: workOrder?.service_area || '',
      scheduled_date: workOrder?.scheduled_date || '',
      scheduled_end_date: workOrder?.scheduled_end_date || '',
      scheduled_start_time: workOrder?.scheduled_start_time || '08:00',
@@ -168,6 +169,30 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
           required
         />
         {fieldErrors.title && <p className="text-xs text-red-600">{fieldErrors.title}</p>}
+      </div>
+
+      {/* Service Area */}
+      <div className="space-y-2">
+        <Label>Service Area *</Label>
+        <Select value={formData.service_area} onValueChange={(v) => updateField('service_area', v)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select service area" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="General Service">General Service</SelectItem>
+            <SelectItem value="Mechanical">Mechanical</SelectItem>
+            <SelectItem value="Electrical">Electrical</SelectItem>
+            <SelectItem value="Electronics">Electronics</SelectItem>
+            <SelectItem value="GRP/Bodywork">GRP/Bodywork</SelectItem>
+            <SelectItem value="Sealing">Sealing</SelectItem>
+            <SelectItem value="HVAC">HVAC</SelectItem>
+            <SelectItem value="Rigging">Rigging</SelectItem>
+            <SelectItem value="Plumbing">Plumbing</SelectItem>
+            <SelectItem value="Installation">Installation</SelectItem>
+            <SelectItem value="Diagnostics">Diagnostics</SelectItem>
+            <SelectItem value="Other">Other</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Description & AI Suggestions */}
