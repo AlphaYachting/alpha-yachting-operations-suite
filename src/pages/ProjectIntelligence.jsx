@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Brain, FileSearch, Lightbulb, TrendingUp, Save, Settings, AlertCircle, Clock, Users, GitBranch, CheckCircle, XCircle } from 'lucide-react';
+import { Brain, FileSearch, Lightbulb, TrendingUp, Save, Settings, AlertCircle, Clock, Users, GitBranch, CheckCircle, XCircle, Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -38,10 +38,19 @@ export default function ProjectIntelligence() {
   const [confirmChecked, setConfirmChecked] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applyResults, setApplyResults] = useState(null);
+  
+  // Planning state
+  const [planningModalOpen, setPlanningModalOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [targetCompletionDate, setTargetCompletionDate] = useState('');
+  const [planRunning, setPlanRunning] = useState(false);
+  const [planDraft, setPlanDraft] = useState(null);
+  const [availableProjects, setAvailableProjects] = useState([]);
 
   // Load config from user profile on mount
   useEffect(() => {
     loadConfig();
+    loadAvailableProjects();
   }, []);
 
   const loadConfig = async () => {
@@ -577,6 +586,187 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
     return { selected, byScope, byType };
   };
 
+  const loadAvailableProjects = async () => {
+    try {
+      const jobs = await base44.entities.Job.list('-created_date', 100);
+      setAvailableProjects(jobs.filter(j => j.status !== 'Completed' && j.status !== 'Cancelled'));
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    }
+  };
+
+  const handleGeneratePlan = async () => {
+    if (!selectedProjectId) {
+      toast.error('Please select a project');
+      return;
+    }
+    if (!targetCompletionDate) {
+      toast.error('Please enter a target completion date');
+      return;
+    }
+
+    try {
+      setPlanRunning(true);
+      toast.info('Generating plan draft...');
+
+      // Load project-scoped data
+      const [project, workOrders, tasks, technicians] = await Promise.all([
+        base44.entities.Job.filter({ id: selectedProjectId }),
+        base44.entities.WorkOrder.filter({ job_id: selectedProjectId }),
+        Promise.all([]).then(async () => {
+          const wos = await base44.entities.WorkOrder.filter({ job_id: selectedProjectId });
+          if (wos.length === 0) return [];
+          const allTasks = await base44.entities.Task.list('-created_date', 5000);
+          return allTasks.filter(t => wos.some(wo => wo.id === t.work_order_id));
+        }),
+        base44.entities.Technician.list()
+      ]);
+
+      if (project.length === 0) {
+        toast.error('Project not found');
+        return;
+      }
+
+      const projectData = project[0];
+      const activeTechSkills = new Set(
+        technicians
+          .filter(t => t.status === 'Active' && t.skills)
+          .flatMap(t => t.skills)
+      );
+
+      // Map service category to skill
+      const categoryToSkill = {
+        'Mechanical': 'Mechanics',
+        'Electrical': 'Electronics',
+        'Electronics': 'Electronics',
+        'GRP/Bodywork': 'GRP/Gelcoat',
+        'Sealing': 'Sealing',
+        'HVAC': 'HVAC',
+        'Rigging': 'Rigging',
+        'Plumbing': 'Plumbing',
+        'Installation': 'Installations',
+        'Diagnostics': 'Diagnostics'
+      };
+
+      // A) Calculate planned times with reserves
+      const orderedWorkOrders = [];
+      let totalPlannedMinutes = 0;
+
+      for (const wo of workOrders) {
+        const woTasks = tasks.filter(t => t.work_order_id === wo.id);
+        let woPlannedMinutes = 0;
+        const requiredSkills = new Set();
+        const externalRoles = new Set();
+
+        for (const task of woTasks) {
+          const baseMinutes = task.estimated_minutes || 0;
+          woPlannedMinutes += baseMinutes;
+
+          // Determine skill requirements
+          const serviceCategory = projectData.service_category;
+          const requiredSkill = categoryToSkill[serviceCategory];
+          
+          if (requiredSkill) {
+            if (activeTechSkills.has(requiredSkill)) {
+              requiredSkills.add(requiredSkill);
+            } else {
+              externalRoles.add(`External ${requiredSkill}`);
+            }
+          }
+        }
+
+        // Apply reserve buffer
+        const reserveMultiplier = 1 + (config.reserve_percent_default / 100);
+        const woPlannedWithReserve = Math.ceil(woPlannedMinutes * reserveMultiplier);
+        totalPlannedMinutes += woPlannedWithReserve;
+
+        // B) Assign order heuristic (preparation → core → finishing)
+        const orderHeuristic = (() => {
+          const title = wo.title.toLowerCase();
+          if (title.includes('prep') || title.includes('setup')) return 1;
+          if (title.includes('finish') || title.includes('final') || title.includes('cleanup')) return 3;
+          return 2;
+        })();
+
+        orderedWorkOrders.push({
+          id: wo.id,
+          title: wo.title,
+          order: orderHeuristic,
+          plannedMinutes: woPlannedMinutes,
+          plannedWithReserve: woPlannedWithReserve,
+          reserveMinutes: woPlannedWithReserve - woPlannedMinutes,
+          requiredSkills: Array.from(requiredSkills),
+          externalRoles: Array.from(externalRoles),
+          taskCount: woTasks.length
+        });
+      }
+
+      // Sort by heuristic order
+      orderedWorkOrders.sort((a, b) => a.order - b.order);
+
+      // D) Build timeline (simple sequential estimate)
+      const totalDays = Math.ceil(totalPlannedMinutes / (8 * 60)); // 8-hour workdays
+      const startDate = new Date();
+      const estimatedEndDate = new Date(startDate);
+      estimatedEndDate.setDate(estimatedEndDate.getDate() + totalDays);
+
+      const targetDate = new Date(targetCompletionDate);
+      const isFeasible = estimatedEndDate <= targetDate;
+
+      // Assign start/end windows to each work order
+      let currentOffset = 0;
+      for (const wo of orderedWorkOrders) {
+        const woDays = Math.ceil(wo.plannedWithReserve / (8 * 60));
+        wo.startWindow = new Date(startDate);
+        wo.startWindow.setDate(wo.startWindow.getDate() + Math.floor(currentOffset));
+        wo.endWindow = new Date(wo.startWindow);
+        wo.endWindow.setDate(wo.endWindow.getDate() + woDays);
+        currentOffset += woDays;
+      }
+
+      // Build risk notes
+      const riskNotes = [];
+      const totalExternalRoles = new Set();
+      orderedWorkOrders.forEach(wo => wo.externalRoles.forEach(r => totalExternalRoles.add(r)));
+      
+      if (totalExternalRoles.size > 0) {
+        riskNotes.push(`Requires ${totalExternalRoles.size} external professional type(s): ${Array.from(totalExternalRoles).join(', ')}`);
+      }
+      
+      const reservePercent = ((totalPlannedMinutes - orderedWorkOrders.reduce((sum, wo) => sum + wo.plannedMinutes, 0)) / totalPlannedMinutes * 100).toFixed(1);
+      if (parseFloat(reservePercent) < config.reserve_percent_default * 0.5) {
+        riskNotes.push('Tight reserve margins - less than 50% of configured default');
+      }
+
+      if (!isFeasible) {
+        const shortfallDays = Math.ceil((estimatedEndDate - targetDate) / (1000 * 60 * 60 * 24));
+        riskNotes.push(`Target deadline not achievable - requires ${shortfallDays} additional day(s)`);
+      }
+
+      setPlanDraft({
+        projectId: selectedProjectId,
+        projectTitle: projectData.title,
+        targetDate: targetCompletionDate,
+        overview: {
+          totalPlannedMinutes,
+          totalDays,
+          estimatedEndDate: estimatedEndDate.toISOString().split('T')[0],
+          isFeasible
+        },
+        orderedWorkOrders,
+        riskNotes
+      });
+
+      setPlanningModalOpen(false);
+      toast.success('Plan draft generated');
+    } catch (error) {
+      console.error('Error generating plan:', error);
+      toast.error('Failed to generate plan');
+    } finally {
+      setPlanRunning(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -616,7 +806,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
             </Button>
             <Button 
               variant="outline" 
-              disabled={!isWriteAllowed}
+              onClick={() => setPlanningModalOpen(true)}
               className="justify-start"
             >
               <TrendingUp className="h-4 w-4 mr-2" />
@@ -1192,6 +1382,234 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           </CardContent>
         </Card>
       )}
+
+      {/* Planning Draft */}
+      {planDraft && (
+        <Card className="border-blue-200">
+          <CardHeader>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2 mb-4">
+              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-blue-900">
+                <strong>This is a planning draft.</strong> No changes have been applied to any project, work order, or task data.
+              </p>
+            </div>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-600" />
+              Plan Draft: {planDraft.projectTitle}
+            </CardTitle>
+            <CardDescription>
+              Target completion: {new Date(planDraft.targetDate).toLocaleDateString()} • 
+              Status: {planDraft.overview.isFeasible ? 
+                <span className="text-green-600 font-semibold"> Feasible</span> : 
+                <span className="text-red-600 font-semibold"> Not Achievable</span>
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Overview */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900 mb-3">Plan Overview</h3>
+              <div className="grid md:grid-cols-3 gap-4">
+                <Card className="bg-slate-50">
+                  <CardContent className="p-3">
+                    <p className="text-xs text-slate-500 uppercase">Total Planned Time</p>
+                    <p className="text-lg font-bold text-slate-900">
+                      {Math.ceil(planDraft.overview.totalPlannedMinutes / 60)}h
+                    </p>
+                    <p className="text-xs text-slate-600">(incl. {config.reserve_percent_default}% reserve)</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-blue-50">
+                  <CardContent className="p-3">
+                    <p className="text-xs text-blue-700 uppercase">Estimated Duration</p>
+                    <p className="text-lg font-bold text-blue-900">{planDraft.overview.totalDays} days</p>
+                    <p className="text-xs text-blue-600">Sequential estimate</p>
+                  </CardContent>
+                </Card>
+                <Card className={planDraft.overview.isFeasible ? 'bg-green-50' : 'bg-red-50'}>
+                  <CardContent className="p-3">
+                    <p className={`text-xs uppercase ${planDraft.overview.isFeasible ? 'text-green-700' : 'text-red-700'}`}>
+                      Estimated End Date
+                    </p>
+                    <p className={`text-lg font-bold ${planDraft.overview.isFeasible ? 'text-green-900' : 'text-red-900'}`}>
+                      {new Date(planDraft.overview.estimatedEndDate).toLocaleDateString()}
+                    </p>
+                    <p className={`text-xs ${planDraft.overview.isFeasible ? 'text-green-600' : 'text-red-600'}`}>
+                      {planDraft.overview.isFeasible ? 'On track' : 'Exceeds target'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Ordered Work Orders */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                Ordered Work Orders ({planDraft.orderedWorkOrders.length})
+              </h3>
+              <div className="space-y-2">
+                {planDraft.orderedWorkOrders.map((wo, idx) => (
+                  <Card key={wo.id} className="bg-slate-50">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-slate-500 bg-slate-200 rounded px-2 py-0.5">
+                              #{idx + 1}
+                            </span>
+                            <span className="text-sm font-semibold text-slate-900">{wo.title}</span>
+                          </div>
+                          <p className="text-xs text-slate-600">{wo.taskCount} task(s)</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-slate-900">
+                            {Math.ceil(wo.plannedWithReserve / 60)}h
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            (+{Math.ceil(wo.reserveMinutes / 60)}h reserve)
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <p className="text-slate-500 font-medium mb-1">Required Skills:</p>
+                          {wo.requiredSkills.length > 0 ? (
+                            <ul className="text-slate-700 space-y-0.5">
+                              {wo.requiredSkills.map(skill => (
+                                <li key={skill} className="flex items-center gap-1">
+                                  <CheckCircle className="h-3 w-3 text-green-600" />
+                                  {skill} (internal)
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-slate-400 italic">None identified</p>
+                          )}
+                          {wo.externalRoles.length > 0 && (
+                            <ul className="text-amber-700 space-y-0.5 mt-1">
+                              {wo.externalRoles.map(role => (
+                                <li key={role} className="flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3 text-amber-600" />
+                                  {role}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-slate-500 font-medium mb-1">Estimated Window:</p>
+                          <p className="text-slate-700">
+                            {new Date(wo.startWindow).toLocaleDateString()} → {new Date(wo.endWindow).toLocaleDateString()}
+                          </p>
+                          <p className="text-slate-400 italic mt-0.5">
+                            (~{Math.ceil(wo.plannedWithReserve / (8 * 60))} day(s))
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Risk & Constraint Notes */}
+            {planDraft.riskNotes.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-red-900 mb-2">
+                  Risk & Constraint Notes
+                </h3>
+                <div className="space-y-2">
+                  {planDraft.riskNotes.map((note, idx) => (
+                    <div key={idx} className="p-2 bg-red-50 rounded border border-red-200 text-xs flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-red-900">{note}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setPlanDraft(null)}>
+                Discard Draft
+              </Button>
+              <Button disabled className="bg-slate-400">
+                Apply Parts of Plan (Coming Soon)
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Planning Input Modal */}
+      <Dialog open={planningModalOpen} onOpenChange={setPlanningModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Generate Plan Draft</DialogTitle>
+            <DialogDescription>
+              Select a project and enter a target completion date to generate a realistic planning draft.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="project-select">Select Project</Label>
+              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                <SelectTrigger id="project-select" className="mt-1">
+                  <SelectValue placeholder="Choose a project..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableProjects.length === 0 ? (
+                    <SelectItem value="none" disabled>No projects available</SelectItem>
+                  ) : (
+                    availableProjects.map(project => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.title} ({project.status})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="target-date">Target Completion Date</Label>
+              <Input
+                id="target-date"
+                type="date"
+                value={targetCompletionDate}
+                onChange={(e) => setTargetCompletionDate(e.target.value)}
+                className="mt-1"
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Plan will check if this deadline is achievable with current time estimates and reserves.
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-900">
+                <strong>Draft Mode:</strong> This will generate a planning proposal. No data will be modified.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlanningModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGeneratePlan}
+              disabled={planRunning || !selectedProjectId || !targetCompletionDate}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {planRunning ? 'Generating...' : 'Generate Plan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Modal */}
       <Dialog open={applyModalOpen} onOpenChange={setApplyModalOpen}>
