@@ -2855,6 +2855,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                             )}
                           </div>
                         </div>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
