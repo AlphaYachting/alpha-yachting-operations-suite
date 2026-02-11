@@ -16,7 +16,8 @@ import {
   Receipt,
   AlertCircle,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +30,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import CustomerForm from '@/components/customers/CustomerForm';
+import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const statusColors = {
   Active: 'bg-emerald-100 text-emerald-700',
@@ -68,6 +71,8 @@ export default function CustomerDetail() {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showWorkOrderForm, setShowWorkOrderForm] = useState(false);
+  const [technicians, setTechnicians] = useState([]);
 
   useEffect(() => {
     if (customerId) {
@@ -79,11 +84,12 @@ export default function CustomerDetail() {
     try {
       setLoading(true);
       
-      const [customerData, boatsData, jobsData, offersData] = await Promise.all([
+      const [customerData, boatsData, jobsData, offersData, techData] = await Promise.all([
         base44.entities.Customer.filter({ id: customerId }),
         base44.entities.Boat.filter({ customer_id: customerId }),
         base44.entities.Job.filter({ customer_id: customerId }),
-        base44.entities.Offer.filter({ customer_id: customerId })
+        base44.entities.Offer.filter({ customer_id: customerId }),
+        base44.entities.Technician.list()
       ]);
 
       if (customerData.length === 0) {
@@ -96,6 +102,7 @@ export default function CustomerDetail() {
       setBoats(boatsData);
       setJobs(jobsData);
       setOffers(offersData);
+      setTechnicians(techData);
 
       // Load work orders for all jobs
       const jobIds = jobsData.map(j => j.id);
@@ -176,6 +183,14 @@ export default function CustomerDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="border-indigo-600 text-indigo-600 hover:bg-indigo-50"
+            onClick={() => setShowWorkOrderForm(true)}
+          >
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Create Work Order
+          </Button>
           <Link to={createPageUrl('OfferDetail') + `?customer=${customerId}`}>
             <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
               <FileText className="h-4 w-4 mr-2" />
@@ -538,6 +553,83 @@ export default function CustomerDetail() {
             customer={customer}
             onSave={handleSave}
             onCancel={() => setShowEditForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Work Order Dialog */}
+      <Dialog open={showWorkOrderForm} onOpenChange={setShowWorkOrderForm}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Work Order</DialogTitle>
+          </DialogHeader>
+          <WorkOrderForm
+            jobs={jobs}
+            technicians={technicians}
+            customers={[customer]}
+            boats={boats}
+            preselectedCustomerId={customerId}
+            onSave={async (workOrderData, templateId, suggestedTasks) => {
+              const { work_order_number } = await base44.functions.invoke('generateWorkOrderNumber', {});
+              const newWo = await base44.entities.WorkOrder.create({ 
+                ...workOrderData, 
+                work_order_number 
+              });
+
+              // Handle template tasks
+              if (templateId) {
+                const templateItems = await base44.entities.TaskTemplateItem.filter(
+                  { template_list_id: templateId },
+                  'sort_order'
+                );
+                if (templateItems.length > 0) {
+                  const user = await base44.auth.me();
+                  await Promise.all(
+                    templateItems.map((item, idx) =>
+                      base44.entities.Task.create({
+                        work_order_id: newWo.id,
+                        title: item.title,
+                        description: item.description || '',
+                        estimated_minutes: item.default_estimated_hours ? Math.round(item.default_estimated_hours * 60) : null,
+                        sequence_order: idx,
+                        status: 'Not Started',
+                        notes: item.required_tools_note || '',
+                        requires_approval: item.requires_customer_approval || false
+                      })
+                    )
+                  );
+                  await base44.entities.WorkOrderTemplateUsage.create({
+                    work_order_id: newWo.id,
+                    template_list_id: templateId,
+                    applied_at: new Date().toISOString(),
+                    applied_by: user.email,
+                    mode: 'full',
+                    selected_item_ids: templateItems.map(t => t.id)
+                  });
+                }
+              }
+
+              // Handle AI-suggested tasks
+              if (suggestedTasks && suggestedTasks.length > 0) {
+                await Promise.all(
+                  suggestedTasks.map((task, idx) =>
+                    base44.entities.Task.create({
+                      work_order_id: newWo.id,
+                      title: task.title,
+                      description: task.description || '',
+                      estimated_minutes: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
+                      sequence_order: idx,
+                      status: 'Not Started'
+                    })
+                  )
+                );
+              }
+
+              setShowWorkOrderForm(false);
+              toast.success('Work order created');
+              await loadData();
+            }}
+            onCancel={() => setShowWorkOrderForm(false)}
           />
         </DialogContent>
       </Dialog>
