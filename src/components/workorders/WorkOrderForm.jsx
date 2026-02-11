@@ -19,8 +19,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Plus } from 'lucide-react';
+import { AlertCircle, Plus, Check, ChevronsUpDown } from 'lucide-react';
 import TemplateFromCreation from './TemplateFromCreation';
 import AITaskSuggestions from './AITaskSuggestions';
 
@@ -61,9 +73,9 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     }
     return '';
   });
-  const [customerSearch, setCustomerSearch] = useState('');
   const [showNewProjectForm, setShowNewProjectForm] = useState(false);
   const [newProjectData, setNewProjectData] = useState({ title: '', description: '' });
+  const [customerPopoverOpen, setCustomerPopoverOpen] = useState(false);
 
   const getProjectLabel = (project) => {
     const customer = customers.find(c => c.id === project.customer_id);
@@ -90,14 +102,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     return jobs.filter(j => j.customer_id === selectedCustomerId && !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
   }, [selectedCustomerId, jobs]);
 
-  const filteredCustomers = useMemo(() => {
-    if (!customerSearch.trim()) return customers;
-    const search = customerSearch.toLowerCase();
-    return customers.filter(c => 
-      getCustomerDisplayName(c).toLowerCase().includes(search) ||
-      c.email?.toLowerCase().includes(search)
-    );
-  }, [customers, customerSearch]);
+
 
   const isProjectPrefilled = !!preselectedJobId;
 
@@ -224,46 +229,71 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
 
       {/* Creation Mode - Only show for new work orders */}
       {!workOrder && (
-        <TemplateFromCreation
-          onTemplateChange={setSelectedTemplateId}
-          selectedTemplateId={selectedTemplateId}
-          setTitle={(title) => updateField('title', title)}
-        />
+        <div className="pb-2">
+          <TemplateFromCreation
+            onTemplateChange={setSelectedTemplateId}
+            selectedTemplateId={selectedTemplateId}
+            setTitle={(title) => updateField('title', title)}
+          />
+        </div>
       )}
 
       {/* Customer Selection - Only if not prefilled */}
       {!isProjectPrefilled && (
-        <div className="space-y-2 p-4 bg-slate-50 rounded-lg border border-slate-200">
-          <h3 className="text-sm font-semibold text-slate-900">Customer Context</h3>
+        <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <h3 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Customer Context</h3>
           
           <div className="space-y-2">
             <Label className="text-sm font-semibold">
               Customer <span className="text-red-600">*</span>
             </Label>
-            <div className="space-y-2">
-              <Input
-                placeholder="Search customer by name or email..."
-                value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
-                className="mb-2"
-              />
-              <Select value={selectedCustomerId} onValueChange={(id) => {
-                setSelectedCustomerId(id);
-                setSelectedBoatId('');
-                setFormData(prev => ({ ...prev, job_id: '' }));
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer (required)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredCustomers.slice(0, 50).map(customer => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {getCustomerDisplayName(customer)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Popover open={customerPopoverOpen} onOpenChange={setCustomerPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={customerPopoverOpen}
+                  className="w-full justify-between"
+                >
+                  {selectedCustomerId
+                    ? getCustomerDisplayName(customers.find((c) => c.id === selectedCustomerId))
+                    : "Search customer by name or email..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0">
+                <Command>
+                  <CommandInput placeholder="Search customer..." />
+                  <CommandEmpty>No customer found.</CommandEmpty>
+                  <CommandGroup className="max-h-[300px] overflow-auto">
+                    {customers.map((customer) => (
+                      <CommandItem
+                        key={customer.id}
+                        value={`${getCustomerDisplayName(customer)} ${customer.email || ''}`}
+                        onSelect={() => {
+                          setSelectedCustomerId(customer.id);
+                          setSelectedBoatId('');
+                          setFormData(prev => ({ ...prev, job_id: '' }));
+                          setCustomerPopoverOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={`mr-2 h-4 w-4 ${
+                            selectedCustomerId === customer.id ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{getCustomerDisplayName(customer)}</span>
+                          {customer.email && (
+                            <span className="text-xs text-slate-500">{customer.email}</span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {selectedCustomerId && (
