@@ -73,8 +73,9 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
   };
 
   const getCustomerDisplayName = (customer) => {
+    if (!customer) return 'Unknown';
     if (customer.company_name) return customer.company_name;
-    return `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+    return `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown';
   };
 
   const activeTechnicians = technicians.filter(t => t.status === 'Active');
