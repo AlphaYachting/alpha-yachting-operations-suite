@@ -71,6 +71,7 @@ export default function ProjectIntelligence() {
   const [namingResolved, setNamingResolved] = useState(false);
   const [generatingReassignments, setGeneratingReassignments] = useState(false);
   const [taskInclusionFilter, setTaskInclusionFilter] = useState('not_completed');
+  const [showOnlyIssues, setShowOnlyIssues] = useState(true);
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -442,41 +443,51 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         categoryBaselines[finding.service_category].push(finding.time_minutes);
       });
 
-      // Compute medians
-      const computeMedian = (values) => {
+      // Compute percentiles
+      const computePercentile = (values, p) => {
         if (values.length === 0) return null;
         const sorted = [...values].sort((a, b) => a - b);
-        const mid = Math.floor(sorted.length / 2);
-        return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+        const index = (p / 100) * (sorted.length - 1);
+        const lower = Math.floor(index);
+        const upper = Math.ceil(index);
+        if (lower === upper) return sorted[lower];
+        return sorted[lower] * (upper - index) + sorted[upper] * (index - lower);
       };
 
-      const categoryMedians = {};
+      const computeMedian = (values) => computePercentile(values, 50);
+
+      const categoryStats = {};
       Object.entries(categoryBaselines).forEach(([category, times]) => {
-        categoryMedians[category] = {
+        categoryStats[category] = {
           median: computeMedian(times),
+          p25: computePercentile(times, 25),
+          p75: computePercentile(times, 75),
           count: times.length
         };
       });
 
-      // A) TIME IMPROVEMENTS
+      // A) TIME IMPROVEMENTS - Missing time
       for (const finding of auditResults.findings.time.missing.filter(shouldIncludeTask)) {
         const category = finding.service_category || 'General Service';
-        const baseline = categoryMedians[category];
+        const stats = categoryStats[category];
 
-        let suggestionText;
-        let confidence;
+        let status, suggestionText, confidence, suggested_time, expected_band, n_similar;
 
-        if (baseline && baseline.count >= 3) {
-          const medianHours = (baseline.median / 60).toFixed(1);
-          suggestionText = `Minimum required time: ${medianHours}h — Based on: ${baseline.count} similar tasks (median ${medianHours}h)`;
+        if (stats && stats.count >= 5) {
+          status = 'Missing time';
+          const medianHours = (stats.median / 60).toFixed(1);
+          const p25Hours = (stats.p25 / 60).toFixed(1);
+          const p75Hours = (stats.p75 / 60).toFixed(1);
+          suggested_time = `${medianHours}h`;
+          expected_band = `${p25Hours}h – ${p75Hours}h`;
+          n_similar = stats.count;
+          suggestionText = `Missing time — Expected: ${expected_band} (median ${medianHours}h) — Based on ${n_similar} similar tasks`;
           confidence = 'High';
-        } else if (baseline && baseline.count > 0) {
-          const medianHours = (baseline.median / 60).toFixed(1);
-          suggestionText = `Estimated time: ${medianHours}h — Based on: ${baseline.count} similar task(s) (limited data)`;
-          confidence = 'Medium';
         } else {
-          suggestionText = 'Insufficient comparison data — Manual review recommended';
+          status = 'Manual review';
+          suggestionText = 'Insufficient comparison data (< 5 similar tasks) — Manual review recommended';
           confidence = 'Low';
+          n_similar = stats?.count || 0;
         }
 
         generatedSuggestions.push({
@@ -491,36 +502,54 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           project_title: finding.project_title,
           workorder_id: finding.workorder_id,
           workorder_title: finding.workorder_title,
-          confidence
+          confidence,
+          status,
+          suggested_time,
+          expected_band,
+          n_similar,
+          current_time: null
         });
       }
 
-      for (const finding of auditResults.findings.time.outlier.filter(shouldIncludeTask)) {
+      // B) TIME IMPROVEMENTS - Existing time (check if within expected band)
+      for (const finding of auditResults.findings.time.complete.filter(shouldIncludeTask)) {
         const category = finding.service_category || 'General Service';
-        const baseline = categoryMedians[category];
-        const currentHours = (finding.current_time_minutes / 60).toFixed(1);
+        const stats = categoryStats[category];
+        const currentMinutes = finding.time_minutes;
 
-        let suggestionText;
-        let confidence;
+        if (!stats || stats.count < 5) continue;
 
-        if (baseline && baseline.count >= 3) {
-          const medianHours = (baseline.median / 60).toFixed(1);
-          const threshold70 = baseline.median * 0.7;
-          
-          if (finding.current_time_minutes < threshold70) {
-            suggestionText = `Current: ${currentHours}h — Minimum realistic time: ${medianHours}h — Based on: ${baseline.count} similar tasks (median ${medianHours}h)`;
+        const currentHours = (currentMinutes / 60).toFixed(1);
+        const medianHours = (stats.median / 60).toFixed(1);
+        const p25Hours = (stats.p25 / 60).toFixed(1);
+        const p75Hours = (stats.p75 / 60).toFixed(1);
+        
+        let status, suggestionText, confidence, suggested_time;
+        const expected_band = `${p25Hours}h – ${p75Hours}h`;
+        const n_similar = stats.count;
+
+        if (currentMinutes < stats.p25) {
+          status = 'Too low';
+          suggested_time = `${medianHours}h`;
+          suggestionText = `Current: ${currentHours}h — Too low — Expected: ${expected_band} (median ${medianHours}h) — Based on ${n_similar} similar tasks`;
+          confidence = 'High';
+        } else if (currentMinutes > stats.p75) {
+          status = 'Too high';
+          suggested_time = 'Review recommended';
+          suggestionText = `Current: ${currentHours}h — Too high — Expected: ${expected_band} (median ${medianHours}h) — Based on ${n_similar} similar tasks`;
+          confidence = 'High';
+        } else {
+          status = 'OK';
+          if (!showOnlyIssues) {
+            suggestionText = `Current: ${currentHours}h — Within expected range ${expected_band}`;
             confidence = 'High';
           } else {
-            suggestionText = `Review time estimate (${currentHours}h exceeds ${config.time_outlier_threshold}h threshold)`;
-            confidence = 'Medium';
+            continue; // Skip OK items if showOnlyIssues is true
           }
-        } else {
-          suggestionText = `Review time estimate (${currentHours}h exceeds ${config.time_outlier_threshold}h threshold)`;
-          confidence = 'Low';
         }
 
         generatedSuggestions.push({
-          id: `time-outlier-${finding.id}`,
+          id: `time-check-${finding.id}`,
           scope_level: 'Task',
           entity_id: finding.id,
           entity_name: finding.title,
@@ -531,7 +560,12 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           project_title: finding.project_title,
           workorder_id: finding.workorder_id,
           workorder_title: finding.workorder_title,
-          confidence
+          confidence,
+          status,
+          suggested_time,
+          expected_band,
+          n_similar,
+          current_time: `${currentHours}h`
         });
       }
 
@@ -1707,6 +1741,19 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                     <SelectItem value="all">All tasks</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="show-issues-only"
+                  checked={showOnlyIssues}
+                  onChange={(e) => setShowOnlyIssues(e.target.checked)}
+                  disabled={suggestionsRunning || !auditResults}
+                  className="h-3.5 w-3.5 rounded border-slate-300"
+                />
+                <Label htmlFor="show-issues-only" className="text-xs text-slate-600 cursor-pointer">
+                  Show only issues (recommended)
+                </Label>
               </div>
               <Button 
                 variant="outline" 
