@@ -26,6 +26,9 @@ export default function ProjectIntelligence() {
   const [saving, setSaving] = useState(false);
   const [auditRunning, setAuditRunning] = useState(false);
   const [auditResults, setAuditResults] = useState(null);
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [aiAnswer, setAiAnswer] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -248,6 +251,75 @@ export default function ProjectIntelligence() {
       toast.error('Audit failed');
     } finally {
       setAuditRunning(false);
+    }
+  };
+
+  const handleAskAI = async () => {
+    if (!aiQuestion.trim()) {
+      toast.error('Please enter a question');
+      return;
+    }
+
+    if (!auditResults) {
+      toast.error('No audit results available');
+      return;
+    }
+
+    try {
+      setAiLoading(true);
+      
+      // Construct system prompt using config
+      const systemPrompt = `${config.analysis_prompt_template || 'You are an analysis assistant for project management audit data.'}
+
+STRICT RULES:
+- Answer ONLY based on the provided audit data
+- Do NOT access external data or databases
+- Do NOT invent missing information
+- Do NOT propose automatic changes
+- Use phrases like "Based on the audit results..."
+- If data is missing, clearly state: "This cannot be determined from current audit data."
+- Reference specific numbers and counts from the audit
+
+AUDIT CONTEXT:
+Summary:
+- Total Projects: ${auditResults.summary.total_projects}
+- Total Work Orders: ${auditResults.summary.total_workorders}
+- Total Tasks: ${auditResults.summary.total_tasks}
+- Skill Coverage: ${auditResults.summary.skill_covered} covered, ${auditResults.summary.skill_missing} missing, ${auditResults.summary.skill_undetermined} undetermined
+- Time Completeness: ${auditResults.summary.time_complete} complete, ${auditResults.summary.time_missing} missing, ${auditResults.summary.time_outlier} outliers
+- Structure: ${auditResults.summary.structure_consistent} consistent, ${auditResults.summary.structure_inconsistent} inconsistent
+
+Configuration Parameters:
+- Reserve Percent: ${config.reserve_percent_default}%
+- Skill Match Strictness: ${config.skill_match_strictness}
+- Time Outlier Threshold: ${config.time_outlier_threshold}
+
+Detailed Findings Available:
+- ${auditResults.findings.skill.missing.length} tasks with missing skills
+- ${auditResults.findings.time.missing.length} tasks with missing time data
+- ${auditResults.findings.structure.inconsistent.length} structural issues
+
+Sample Missing Skills (first 5):
+${auditResults.findings.skill.missing.slice(0, 5).map(f => `- ${f.title}: ${f.reason}`).join('\n')}
+
+Sample Time Issues (first 5):
+${auditResults.findings.time.missing.slice(0, 5).map(f => `- ${f.title}: ${f.reason}`).join('\n')}
+
+Sample Structural Issues (first 5):
+${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title}: ${f.reason}`).join('\n')}`;
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `${systemPrompt}\n\nUser Question: ${aiQuestion}`,
+        add_context_from_internet: false
+      });
+
+      setAiAnswer(response);
+      toast.success('AI analysis complete');
+    } catch (error) {
+      console.error('Error calling AI:', error);
+      toast.error('AI analysis failed');
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -532,6 +604,57 @@ export default function ProjectIntelligence() {
                 </div>
               </div>
             )}
+
+            {/* AI Q&A Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                <Brain className="h-4 w-4 text-blue-600" />
+                Ask AI about this Audit
+              </h3>
+              <p className="text-xs text-slate-500 mb-3">
+                Ask questions about the audit results. AI answers are based only on the data shown above.
+              </p>
+              
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g., Which missing professions are most common?"
+                    value={aiQuestion}
+                    onChange={(e) => setAiQuestion(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAskAI()}
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={handleAskAI}
+                    disabled={aiLoading || !aiQuestion.trim()}
+                  >
+                    <Brain className="h-4 w-4 mr-2" />
+                    {aiLoading ? 'Analyzing...' : 'Ask'}
+                  </Button>
+                </div>
+
+                {aiAnswer && (
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardContent className="p-4">
+                      <p className="text-xs text-blue-700 uppercase mb-2">AI Analysis</p>
+                      <div className="text-sm text-slate-900 whitespace-pre-wrap">
+                        {aiAnswer}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="text-xs text-slate-500 space-y-1">
+                  <p className="font-medium">Example questions:</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    <li>Which missing professions occur most often?</li>
+                    <li>Which projects have the highest number of uncovered tasks?</li>
+                    <li>Where are time estimates most frequently missing?</li>
+                    <li>Which task categories show unrealistic low time estimates?</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
