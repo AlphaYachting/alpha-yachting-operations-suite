@@ -63,6 +63,11 @@ export default function ProjectIntelligence() {
   const [applyingCohesion, setApplyingCohesion] = useState(false);
   const [cohesionApplyResults, setCohesionApplyResults] = useState(null);
   const [namingReviewResults, setNamingReviewResults] = useState(null);
+  const [selectedNamingSuggestions, setSelectedNamingSuggestions] = useState(new Set());
+  const [namingApplyModalOpen, setNamingApplyModalOpen] = useState(false);
+  const [namingApplyConfirm, setNamingApplyConfirm] = useState('');
+  const [applyingNaming, setApplyingNaming] = useState(false);
+  const [namingApplyResults, setNamingApplyResults] = useState(null);
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -1211,6 +1216,90 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
       suggestions,
       total_suggestions: suggestions.length
     };
+  };
+
+  const toggleNamingSuggestion = (workorderId) => {
+    setSelectedNamingSuggestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(workorderId)) {
+        newSet.delete(workorderId);
+      } else {
+        newSet.add(workorderId);
+      }
+      return newSet;
+    });
+  };
+
+  const getNamingSelectionSummary = () => {
+    if (!namingReviewResults || selectedNamingSuggestions.size === 0) return null;
+
+    const changes = [];
+    namingReviewResults.suggestions.forEach(sugg => {
+      if (selectedNamingSuggestions.has(sugg.workorder_id) && sugg.suggested_title) {
+        changes.push({
+          workorder_id: sugg.workorder_id,
+          current_title: sugg.current_title,
+          new_title: sugg.suggested_title,
+          confidence: sugg.confidence
+        });
+      }
+    });
+
+    return {
+      totalSelected: selectedNamingSuggestions.size,
+      changeCount: changes.length,
+      changes
+    };
+  };
+
+  const handleApplyNamingSuggestions = async () => {
+    if (namingApplyConfirm !== 'CONFIRM') {
+      toast.error('Please type CONFIRM to proceed');
+      return;
+    }
+
+    try {
+      setApplyingNaming(true);
+      setNamingApplyModalOpen(false);
+      toast.info('Applying workorder renames...');
+
+      const summary = getNamingSelectionSummary();
+      const results = {
+        applied: [],
+        failed: []
+      };
+
+      // Batch WorkOrder updates
+      for (const change of summary.changes) {
+        try {
+          await base44.entities.WorkOrder.update(change.workorder_id, {
+            title: change.new_title
+          });
+          results.applied.push(change);
+        } catch (err) {
+          results.failed.push({
+            ...change,
+            error: err.message
+          });
+        }
+      }
+
+      setNamingApplyResults(results);
+      setSelectedNamingSuggestions(new Set());
+      setNamingApplyConfirm('');
+
+      if (results.applied.length > 0) {
+        toast.success(`Renamed ${results.applied.length} workorder(s)`);
+      }
+      if (results.failed.length > 0) {
+        toast.error(`${results.failed.length} rename(s) failed`);
+      }
+    } catch (error) {
+      console.error('Error applying naming suggestions:', error);
+      toast.error('Failed to apply naming suggestions');
+    } finally {
+      setApplyingNaming(false);
+    }
   };
 
   const handleApplyCohesionSuggestions = async () => {
@@ -2700,21 +2789,30 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                 {namingReviewResults.suggestions.map(sugg => (
                   <Card key={sugg.workorder_id} className="bg-slate-50">
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <p className="text-xs text-slate-500 mb-1">Current Title:</p>
-                          <p className="text-sm font-medium text-slate-900 mb-3">
-                            {sugg.current_title}
-                          </p>
-                          
-                          {sugg.suggested_title && (
-                            <>
-                              <p className="text-xs text-indigo-700 mb-1">Suggested Title:</p>
-                              <p className="text-sm font-semibold text-indigo-900 mb-2">
-                                {sugg.suggested_title}
-                              </p>
-                            </>
-                          )}
+                      <div className="flex items-start gap-3 mb-3">
+                        {sugg.suggested_title && (
+                          <input
+                            type="checkbox"
+                            checked={selectedNamingSuggestions.has(sugg.workorder_id)}
+                            onChange={() => toggleNamingSuggestion(sugg.workorder_id)}
+                            className="mt-1 h-4 w-4 rounded border-slate-300"
+                          />
+                        )}
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">Current Title:</p>
+                            <p className="text-sm font-medium text-slate-900 mb-3">
+                              {sugg.current_title}
+                            </p>
+                            
+                            {sugg.suggested_title && (
+                              <>
+                                <p className="text-xs text-indigo-700 mb-1">Suggested Title:</p>
+                                <p className="text-sm font-semibold text-indigo-900 mb-2">
+                                  {sugg.suggested_title}
+                                </p>
+                              </>
+                            )}
+                          </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <span className={`text-xs px-2 py-1 rounded font-semibold ${
@@ -2761,21 +2859,189 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
               </div>
             )}
 
+            {/* Selection Summary and Apply */}
+            {selectedNamingSuggestions.size > 0 && (() => {
+              const summary = getNamingSelectionSummary();
+              return (
+                <div className="border-t pt-4">
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-3">
+                    <h4 className="text-sm font-semibold text-indigo-900 mb-2">
+                      {summary.totalSelected} Workorder(s) Selected for Rename
+                    </h4>
+                    <div className="text-xs text-slate-600 space-y-1">
+                      <p>• {summary.changeCount} title change(s) will be applied</p>
+                      <p className="text-amber-700">Note: Category updates not supported (field does not exist on WorkOrder)</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedNamingSuggestions(new Set())}
+                    >
+                      Clear Selection
+                    </Button>
+                    {summary.changeCount > 0 && (
+                      <Button 
+                        onClick={() => setNamingApplyModalOpen(true)}
+                        disabled={applyingNaming}
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Apply {summary.changeCount} Rename(s)
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-blue-900">
-                <strong>Draft Mode:</strong> These are naming suggestions only. No workorder titles have been changed. 
-                Use this review to understand workorder structure before applying task reassignments.
+                <strong>Draft Mode:</strong> Select workorder title changes with checkboxes to apply renames. 
+                No changes are applied until you confirm.
               </p>
-            </div>
-
-            <div className="text-xs text-slate-500 italic text-center pt-2">
-              Note: Apply functionality for workorder renames will be added in a future step. 
-              For now, use this as guidance to understand current workorder organization.
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Naming Apply Results */}
+      {namingApplyResults && (
+        <Card className="border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Workorder Rename Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {namingApplyResults.applied.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-green-900 mb-2">
+                  Successfully Renamed ({namingApplyResults.applied.length})
+                </h3>
+                <div className="space-y-2">
+                  {namingApplyResults.applied.map((change, idx) => (
+                    <div key={idx} className="p-2 bg-green-50 rounded border border-green-200 text-xs">
+                      <p className="text-slate-600 mb-1">{change.current_title}</p>
+                      <p className="flex items-center gap-2">
+                        <ArrowRight className="h-3 w-3 text-green-600" />
+                        <span className="font-semibold text-green-900">{change.new_title}</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {namingApplyResults.failed.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-red-900 mb-2">
+                  Failed ({namingApplyResults.failed.length})
+                </h3>
+                <div className="space-y-2">
+                  {namingApplyResults.failed.map((item, idx) => (
+                    <div key={idx} className="p-2 bg-red-50 rounded border border-red-200">
+                      <p className="text-xs font-medium text-slate-900">{item.current_title}</p>
+                      <p className="text-xs text-red-700">{item.error}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Naming Apply Confirmation Modal */}
+      <Dialog open={namingApplyModalOpen} onOpenChange={setNamingApplyModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Confirm Workorder Renames</DialogTitle>
+            <DialogDescription>
+              You are about to rename workorders. This will modify live data.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Warning Banner */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-900">Warning</p>
+                <p className="text-xs text-red-700 mt-1">
+                  These changes will update workorder titles. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            {/* Changes List */}
+            {(() => {
+              const summary = getNamingSelectionSummary();
+              if (!summary) return null;
+
+              return (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Title Changes ({summary.changeCount})
+                  </h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {summary.changes.map((change, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded border border-slate-200">
+                        <p className="text-xs text-slate-600 mb-2">{change.current_title}</p>
+                        <div className="flex items-center gap-2">
+                          <ArrowRight className="h-4 w-4 text-indigo-600" />
+                          <p className="text-sm font-semibold text-indigo-900">{change.new_title}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Scope Summary */}
+                  <div className="bg-slate-100 rounded p-3 text-xs">
+                    <p className="font-medium text-slate-900 mb-1">Scope:</p>
+                    <div className="text-slate-600">
+                      <p>• {summary.changeCount} workorder(s) will be renamed</p>
+                      <p>• Project: {namingReviewResults.project_title}</p>
+                      <p>• No tasks, dates, or assignments will be modified</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Confirmation Input */}
+            <div className="pt-4 border-t">
+              <Label htmlFor="naming-confirm-input">Type CONFIRM to proceed</Label>
+              <Input
+                id="naming-confirm-input"
+                type="text"
+                value={namingApplyConfirm}
+                onChange={(e) => setNamingApplyConfirm(e.target.value)}
+                placeholder="CONFIRM"
+                className="mt-1 font-mono"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setNamingApplyModalOpen(false);
+              setNamingApplyConfirm('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApplyNamingSuggestions}
+              disabled={namingApplyConfirm !== 'CONFIRM' || applyingNaming}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {applyingNaming ? 'Applying...' : 'Confirm & Rename'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Cohesion Apply Results */}
       {cohesionApplyResults && (
