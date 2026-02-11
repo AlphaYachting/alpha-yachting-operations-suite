@@ -2530,19 +2530,22 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                                     </>
                                   )}
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                                </div>
+                                </div>
+                                );
+                                })}
+                                </div>
+                                </div>
+                                )}
 
-                    {wo.suggestions.length === 0 && wo.cohesion_rating === 'Good' && (
-                      <div className="text-xs text-green-600 italic">
-                        ✓ Tasks are well-organized, no changes suggested
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                                {wo.suggestions.length === 0 && wo.cohesion_rating === 'Good' && (
+                                <div className="text-xs text-green-600 italic">
+                                ✓ Tasks are well-organized, no changes suggested
+                                </div>
+                                )}
+                                </CardContent>
+                                </Card>
+                                ))}
 
               {/* Selection Summary and Apply */}
               {selectedCohesionSuggestions.size > 0 && (() => {
