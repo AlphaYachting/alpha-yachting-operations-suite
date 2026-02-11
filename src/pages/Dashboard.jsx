@@ -20,7 +20,7 @@ import {
   Plus,
   StickyNote,
   X,
-  RefreshCw
+  BarChart2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -111,7 +111,7 @@ export default function Dashboard() {
       setNotes(notesData);
 
       // Load or calculate KPIs (max 2x per day)
-      await loadKPIs(false);
+      await loadKPIs();
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -119,26 +119,20 @@ export default function Dashboard() {
     }
   };
 
-  const loadKPIs = async (forceRefresh = false) => {
+  const loadKPIs = async () => {
     try {
       const now = new Date();
       const todayDate = format(now, 'yyyy-MM-dd');
       const currentPeriod = now.getHours() < 12 ? 'morning' : 'afternoon';
       const cacheKey = `kpi_${todayDate}_${currentPeriod}`;
 
-      // Check if cache exists for current period (skip if force refresh)
-      if (!forceRefresh) {
-        const existingCache = await base44.entities.KPICache.filter({ cache_key: cacheKey });
+      // Check if cache exists for current period
+      const existingCache = await base44.entities.KPICache.filter({ cache_key: cacheKey });
 
-        if (existingCache.length > 0) {
-          // Use cached values
-          setKpis(existingCache[0]);
-          return;
-        }
-      } else {
-        // Delete existing cache entries for today to force recalculation
-        const existingCache = await base44.entities.KPICache.filter({ cache_key: cacheKey });
-        await Promise.all(existingCache.map(cache => base44.entities.KPICache.delete(cache.id)));
+      if (existingCache.length > 0) {
+        // Use cached values
+        setKpis(existingCache[0]);
+        return;
       }
 
       // Calculate KPIs (simple count queries only)
@@ -415,19 +409,6 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              setLoading(true);
-              await loadKPIs(true);
-              await loadDashboardData();
-            }}
-            className="text-slate-600 hover:text-slate-900"
-          >
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Refresh
-          </Button>
           <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
@@ -1102,10 +1083,10 @@ export default function Dashboard() {
             customers={customers}
             boats={boats}
             onSave={async (workOrderData) => {
-              const woNumber = `WO${Date.now().toString().slice(-6)}`;
+              const { work_order_number } = await base44.functions.invoke('generateWorkOrderNumber', {});
               const newWo = await base44.entities.WorkOrder.create({ 
                 ...workOrderData, 
-                work_order_number: woNumber 
+                work_order_number 
               });
               setWorkOrders([newWo, ...workOrders]);
               setShowWorkOrderDialog(false);
