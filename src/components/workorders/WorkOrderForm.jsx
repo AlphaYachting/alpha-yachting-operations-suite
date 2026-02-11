@@ -13,12 +13,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Plus } from 'lucide-react';
 import TemplateFromCreation from './TemplateFromCreation';
 import AITaskSuggestions from './AITaskSuggestions';
 
-export default function WorkOrderForm({ workOrder, jobs, technicians, customers, boats, preselectedJobId, onSave, onCancel }) {
+export default function WorkOrderForm({ workOrder, jobs, technicians, customers, boats, preselectedJobId, preselectedCustomerId, onSave, onCancel }) {
   const [formData, setFormData] = useState({
      job_id: workOrder?.job_id || preselectedJobId || '',
      title: workOrder?.title || '',
@@ -40,6 +46,24 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
   const [fieldErrors, setFieldErrors] = useState({});
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [suggestedTasks, setSuggestedTasks] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(() => {
+    if (preselectedCustomerId) return preselectedCustomerId;
+    if (preselectedJobId) {
+      const job = jobs.find(j => j.id === preselectedJobId);
+      return job?.customer_id || '';
+    }
+    return '';
+  });
+  const [selectedBoatId, setSelectedBoatId] = useState(() => {
+    if (preselectedJobId) {
+      const job = jobs.find(j => j.id === preselectedJobId);
+      return job?.boat_id || '';
+    }
+    return '';
+  });
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showNewProjectForm, setShowNewProjectForm] = useState(false);
+  const [newProjectData, setNewProjectData] = useState({ title: '', description: '' });
 
   const getProjectLabel = (project) => {
     const customer = customers.find(c => c.id === project.customer_id);
@@ -48,7 +72,73 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     return `${project.title} (${customerName} - ${boat?.vessel_name || 'Unknown'})`;
   };
 
+  const getCustomerDisplayName = (customer) => {
+    if (customer.company_name) return customer.company_name;
+    return `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
+  };
+
   const activeTechnicians = technicians.filter(t => t.status === 'Active');
+
+  const customerBoats = useMemo(() => {
+    if (!selectedCustomerId) return [];
+    return boats.filter(b => b.customer_id === selectedCustomerId);
+  }, [selectedCustomerId, boats]);
+
+  const customerProjects = useMemo(() => {
+    if (!selectedCustomerId) return [];
+    return jobs.filter(j => j.customer_id === selectedCustomerId && !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
+  }, [selectedCustomerId, jobs]);
+
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return customers;
+    const search = customerSearch.toLowerCase();
+    return customers.filter(c => 
+      getCustomerDisplayName(c).toLowerCase().includes(search) ||
+      c.email?.toLowerCase().includes(search)
+    );
+  }, [customers, customerSearch]);
+
+  const isProjectPrefilled = !!preselectedJobId;
+
+  const handleCreateNewProject = async () => {
+    if (!newProjectData.title?.trim()) {
+      toast.error('Project title is required');
+      return;
+    }
+    if (!selectedCustomerId) {
+      toast.error('Customer must be selected');
+      return;
+    }
+    if (!selectedBoatId) {
+      toast.error('Boat must be selected');
+      return;
+    }
+
+    try {
+      const projectNumber = `P${Date.now().toString().slice(-6)}`;
+      const newProject = await base44.entities.Job.create({
+        customer_id: selectedCustomerId,
+        boat_id: selectedBoatId,
+        title: newProjectData.title,
+        description: newProjectData.description || '',
+        job_number: projectNumber,
+        job_type: 'Mobile Service',
+        service_category: 'General Service',
+        priority: 'Normal',
+        status: 'New',
+        intake_source: 'Website',
+        intake_date: new Date().toISOString()
+      });
+      
+      setFormData(prev => ({ ...prev, job_id: newProject.id }));
+      setShowNewProjectForm(false);
+      setNewProjectData({ title: '', description: '' });
+      toast.success('Project created');
+    } catch (err) {
+      console.error('Error creating project:', err);
+      toast.error('Failed to create project');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -140,23 +230,101 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         />
       )}
 
-      {/* Project Selection */}
-       <div className="space-y-2">
-         <Label>Parent Project *</Label>
-         <Select value={formData.job_id || ''} onValueChange={(v) => updateField('job_id', v)}>
-           <SelectTrigger className={fieldErrors.job_id ? 'border-red-500' : ''}>
-             <SelectValue placeholder="Select project" />
-          </SelectTrigger>
-          <SelectContent>
-            {jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status)).map(project => (
-              <SelectItem key={project.id} value={project.id}>
-                {getProjectLabel(project)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {fieldErrors.job_id && <p className="text-xs text-red-600">{fieldErrors.job_id}</p>}
-      </div>
+      {/* Customer Selection - Only if not prefilled */}
+      {!isProjectPrefilled && (
+        <div className="space-y-2 p-4 bg-slate-50 rounded-lg border border-slate-200">
+          <h3 className="text-sm font-semibold text-slate-900">Customer Context</h3>
+          
+          <div className="space-y-2">
+            <Label>Customer *</Label>
+            <div className="space-y-2">
+              <Input
+                placeholder="Search customer by name or email..."
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="mb-2"
+              />
+              <Select value={selectedCustomerId} onValueChange={(id) => {
+                setSelectedCustomerId(id);
+                setSelectedBoatId('');
+                setFormData(prev => ({ ...prev, job_id: '' }));
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select customer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredCustomers.slice(0, 50).map(customer => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {getCustomerDisplayName(customer)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {selectedCustomerId && (
+            <div className="space-y-2">
+              <Label>Boat *</Label>
+              <Select value={selectedBoatId} onValueChange={setSelectedBoatId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select boat" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customerBoats.map(boat => (
+                    <SelectItem key={boat.id} value={boat.id}>
+                      {boat.vessel_name} {boat.model && `(${boat.model})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {selectedCustomerId && selectedBoatId && (
+            <div className="space-y-2">
+              <Label>Project *</Label>
+              {customerProjects.length > 0 ? (
+                <Select value={formData.job_id} onValueChange={(v) => updateField('job_id', v)}>
+                  <SelectTrigger className={fieldErrors.job_id ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Select existing project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customerProjects.map(project => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-xs text-slate-500 italic">No active projects for this customer</p>
+              )}
+              
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={() => setShowNewProjectForm(true)}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create New Project
+              </Button>
+              {fieldErrors.job_id && <p className="text-xs text-red-600">{fieldErrors.job_id}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Project Selection - Read-only if prefilled */}
+      {isProjectPrefilled && (
+        <div className="space-y-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <Label>Parent Project (Pre-selected)</Label>
+          <div className="text-sm font-medium text-slate-900">
+            {jobs.find(j => j.id === preselectedJobId)?.title || 'Unknown Project'}
+          </div>
+        </div>
+      )}
 
       {/* Title */}
       <div className="space-y-2">
@@ -381,6 +549,47 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
           {saving ? 'Saving...' : (workOrder ? 'Update Work Order' : 'Create Work Order')}
         </Button>
       </div>
+
+      {/* Inline New Project Form */}
+      <Dialog open={showNewProjectForm} onOpenChange={setShowNewProjectForm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Project Title *</Label>
+              <Input
+                value={newProjectData.title}
+                onChange={(e) => setNewProjectData({ ...newProjectData, title: e.target.value })}
+                placeholder="e.g., Annual Service, Engine Repair..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={newProjectData.description}
+                onChange={(e) => setNewProjectData({ ...newProjectData, description: e.target.value })}
+                placeholder="Optional project description..."
+                rows={3}
+              />
+            </div>
+            <div className="text-xs text-slate-500 space-y-1">
+              <p>Will be created for:</p>
+              <p>• Customer: {getCustomerDisplayName(customers.find(c => c.id === selectedCustomerId))}</p>
+              <p>• Boat: {boats.find(b => b.id === selectedBoatId)?.vessel_name}</p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowNewProjectForm(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateNewProject}>
+              Create & Select
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }
