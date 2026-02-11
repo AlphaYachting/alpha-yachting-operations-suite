@@ -232,7 +232,8 @@ export default function ProjectIntelligence() {
             project_title: job?.title,
             workorder_id: wo?.id,
             workorder_title: wo?.title,
-            task_status: task.status
+            task_status: task.status,
+            service_category: job?.service_category
           });
         } else {
           findings.time.complete.push({
@@ -244,7 +245,9 @@ export default function ProjectIntelligence() {
             project_title: job?.title,
             workorder_id: wo?.id,
             workorder_title: wo?.title,
-            task_status: task.status
+            task_status: task.status,
+            service_category: job?.service_category,
+            time_minutes: task.estimated_minutes || task.actual_minutes
           });
         }
 
@@ -261,7 +264,9 @@ export default function ProjectIntelligence() {
               project_title: job?.title,
               workorder_id: wo?.id,
               workorder_title: wo?.title,
-              task_status: task.status
+              task_status: task.status,
+              service_category: job?.service_category,
+              current_time_minutes: timeValue
             });
           }
         }
@@ -418,7 +423,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
 
       // Apply task inclusion filter
       const shouldIncludeTask = (finding) => {
-        if (!finding.task_status) return true; // Include if status unknown
+        if (!finding.task_status) return true;
         
         if (taskInclusionFilter === 'all') return true;
         if (taskInclusionFilter === 'not_started') return finding.task_status === 'Not Started';
@@ -427,36 +432,106 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         return true;
       };
 
+      // Build similarity baselines (by service_category)
+      const categoryBaselines = {};
+      auditResults.findings.time.complete.forEach(finding => {
+        if (!finding.service_category || !finding.time_minutes) return;
+        if (!categoryBaselines[finding.service_category]) {
+          categoryBaselines[finding.service_category] = [];
+        }
+        categoryBaselines[finding.service_category].push(finding.time_minutes);
+      });
+
+      // Compute medians
+      const computeMedian = (values) => {
+        if (values.length === 0) return null;
+        const sorted = [...values].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+      };
+
+      const categoryMedians = {};
+      Object.entries(categoryBaselines).forEach(([category, times]) => {
+        categoryMedians[category] = {
+          median: computeMedian(times),
+          count: times.length
+        };
+      });
+
       // A) TIME IMPROVEMENTS
       for (const finding of auditResults.findings.time.missing.filter(shouldIncludeTask)) {
+        const category = finding.service_category || 'General Service';
+        const baseline = categoryMedians[category];
+
+        let suggestionText;
+        let confidence;
+
+        if (baseline && baseline.count >= 3) {
+          const medianHours = (baseline.median / 60).toFixed(1);
+          suggestionText = `Minimum required time: ${medianHours}h — Based on: ${baseline.count} similar tasks (median ${medianHours}h)`;
+          confidence = 'High';
+        } else if (baseline && baseline.count > 0) {
+          const medianHours = (baseline.median / 60).toFixed(1);
+          suggestionText = `Estimated time: ${medianHours}h — Based on: ${baseline.count} similar task(s) (limited data)`;
+          confidence = 'Medium';
+        } else {
+          suggestionText = 'Insufficient comparison data — Manual review recommended';
+          confidence = 'Low';
+        }
+
         generatedSuggestions.push({
           id: `time-missing-${finding.id}`,
           scope_level: 'Task',
           entity_id: finding.id,
           entity_name: finding.title,
           suggestion_type: 'time',
-          suggestion_text: 'Add estimated time (suggest range: 30-120 minutes based on task type)',
+          suggestion_text: suggestionText,
           reason: finding.reason,
           project_id: finding.project_id,
           project_title: finding.project_title,
           workorder_id: finding.workorder_id,
-          workorder_title: finding.workorder_title
+          workorder_title: finding.workorder_title,
+          confidence
         });
       }
 
       for (const finding of auditResults.findings.time.outlier.filter(shouldIncludeTask)) {
+        const category = finding.service_category || 'General Service';
+        const baseline = categoryMedians[category];
+        const currentHours = (finding.current_time_minutes / 60).toFixed(1);
+
+        let suggestionText;
+        let confidence;
+
+        if (baseline && baseline.count >= 3) {
+          const medianHours = (baseline.median / 60).toFixed(1);
+          const threshold70 = baseline.median * 0.7;
+          
+          if (finding.current_time_minutes < threshold70) {
+            suggestionText = `Current: ${currentHours}h — Minimum realistic time: ${medianHours}h — Based on: ${baseline.count} similar tasks (median ${medianHours}h)`;
+            confidence = 'High';
+          } else {
+            suggestionText = `Review time estimate (${currentHours}h exceeds ${config.time_outlier_threshold}h threshold)`;
+            confidence = 'Medium';
+          }
+        } else {
+          suggestionText = `Review time estimate (${currentHours}h exceeds ${config.time_outlier_threshold}h threshold)`;
+          confidence = 'Low';
+        }
+
         generatedSuggestions.push({
           id: `time-outlier-${finding.id}`,
           scope_level: 'Task',
           entity_id: finding.id,
           entity_name: finding.title,
           suggestion_type: 'time',
-          suggestion_text: `Review time estimate - exceeds ${config.time_outlier_threshold}h threshold`,
+          suggestion_text: suggestionText,
           reason: finding.reason,
           project_id: finding.project_id,
           project_title: finding.project_title,
           workorder_id: finding.workorder_id,
-          workorder_title: finding.workorder_title
+          workorder_title: finding.workorder_title,
+          confidence
         });
       }
 
