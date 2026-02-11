@@ -78,12 +78,43 @@ export default function LeadForm({
     }
   }, [formData.customer_id, boats]);
 
+  // Auto-fill customer data when existing customer is selected
+  useEffect(() => {
+    if (formData.customer_id && customers) {
+      const selectedCustomer = customers.find(c => c.id === formData.customer_id);
+      if (selectedCustomer) {
+        setFormData(prev => ({
+          ...prev,
+          name: `${selectedCustomer.first_name || ''} ${selectedCustomer.last_name || ''}`.trim(),
+          phone: selectedCustomer.phone || prev.phone,
+          email: selectedCustomer.email || prev.email,
+        }));
+      }
+    }
+  }, [formData.customer_id, customers]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSelectChange = (name, value) => {
+    if (name === 'customer_id') {
+      // Clear customer fields when deselecting
+      if (!value) {
+        setFormData((prev) => ({ 
+          ...prev, 
+          customer_id: '',
+          name: '',
+          first_name: '',
+          last_name: '',
+          phone: '',
+          email: '',
+        }));
+        return;
+      }
+    }
+    
     if (name === 'boat_id' && value) {
       const selectedBoat = boats.find(b => b.id === value);
       if (selectedBoat) {
@@ -112,13 +143,13 @@ export default function LeadForm({
         return;
       }
       dataToSave.name = `${formData.first_name.trim()} ${formData.last_name.trim()}`;
+      
+      if (!formData.phone) {
+        setError('Phone number is required');
+        return;
+      }
     }
-    // If customer selected, name is not required from user (pre-filled)
-
-    if (!formData.phone) {
-      setError('Phone number is required');
-      return;
-    }
+    // If customer selected, name/phone are pre-filled and not required from user
 
     try {
       setIsSubmitting(true);
@@ -219,7 +250,7 @@ export default function LeadForm({
         {formData.customer_id ? (
           <div>
             <Label htmlFor="name" className="text-xs">
-              Name *
+              Name
             </Label>
             <Input
               id="name"
@@ -227,7 +258,8 @@ export default function LeadForm({
               value={formData.name}
               onChange={handleInputChange}
               placeholder="Contact person name"
-              className="text-sm"
+              className="text-sm bg-slate-50"
+              disabled
             />
           </div>
         ) : (
@@ -272,7 +304,8 @@ export default function LeadForm({
               value={formData.phone}
               onChange={handleInputChange}
               placeholder="Phone number"
-              className="text-sm"
+              className={formData.customer_id ? "text-sm bg-slate-50" : "text-sm"}
+              disabled={formData.customer_id}
             />
           </div>
           <div>
@@ -286,7 +319,8 @@ export default function LeadForm({
               value={formData.email}
               onChange={handleInputChange}
               placeholder="Email address"
-              className="text-sm"
+              className={formData.customer_id ? "text-sm bg-slate-50" : "text-sm"}
+              disabled={formData.customer_id}
             />
           </div>
         </div>
