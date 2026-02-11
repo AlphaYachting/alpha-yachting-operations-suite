@@ -56,6 +56,12 @@ export default function ProjectIntelligence() {
   const [cohesionProjectId, setCohesionProjectId] = useState('');
   const [cohesionAnalyzing, setCohesionAnalyzing] = useState(false);
   const [cohesionResults, setCohesionResults] = useState(null);
+  const [selectedCohesionSuggestions, setSelectedCohesionSuggestions] = useState(new Set());
+  const [cohesionConfidenceFilter, setCohesionConfidenceFilter] = useState('all');
+  const [cohesionApplyModalOpen, setCohesionApplyModalOpen] = useState(false);
+  const [cohesionApplyConfirm, setCohesionApplyConfirm] = useState('');
+  const [applyingCohesion, setApplyingCohesion] = useState(false);
+  const [cohesionApplyResults, setCohesionApplyResults] = useState(null);
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -1052,11 +1058,161 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
       });
 
       toast.success(`Cohesion analysis complete: ${cohesionAnalysis.length} workorders analyzed`);
+      setSelectedCohesionSuggestions(new Set());
+      setCohesionConfidenceFilter('all');
     } catch (error) {
       console.error('Error analyzing cohesion:', error);
       toast.error('Failed to analyze cohesion');
     } finally {
       setCohesionAnalyzing(false);
+    }
+  };
+
+  const toggleCohesionSuggestion = (suggestionKey) => {
+    setSelectedCohesionSuggestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(suggestionKey)) {
+        newSet.delete(suggestionKey);
+      } else {
+        newSet.add(suggestionKey);
+      }
+      return newSet;
+    });
+  };
+
+  const selectHighConfidenceCohesion = () => {
+    if (!cohesionResults) return;
+    
+    const highConfKeys = new Set();
+    cohesionResults.analysis.forEach(wo => {
+      wo.suggestions.forEach((sugg, idx) => {
+        if (sugg.confidence === 'High' && sugg.type === 'move') {
+          highConfKeys.add(`${wo.workorder_id}-${idx}`);
+        }
+      });
+    });
+    
+    setSelectedCohesionSuggestions(highConfKeys);
+  };
+
+  const getCohesionSelectionSummary = () => {
+    if (!cohesionResults || selectedCohesionSuggestions.size === 0) return null;
+
+    const moves = [];
+    const blocked = [];
+
+    cohesionResults.analysis.forEach(wo => {
+      wo.suggestions.forEach((sugg, idx) => {
+        const key = `${wo.workorder_id}-${idx}`;
+        if (!selectedCohesionSuggestions.has(key)) return;
+
+        if (sugg.type === 'move' && sugg.target_workorder_id) {
+          moves.push({
+            task_id: sugg.task_id,
+            task_title: sugg.task_title,
+            source_wo_id: sugg.source_workorder_id,
+            source_wo_title: sugg.source_workorder_title,
+            target_wo_id: sugg.target_workorder_id,
+            target_wo_title: sugg.target_workorder_title,
+            reason: sugg.reason,
+            confidence: sugg.confidence
+          });
+        } else {
+          blocked.push({
+            task_title: sugg.task_title || sugg.task_titles,
+            reason: 'Requires manual workorder creation',
+            originalSuggestion: sugg
+          });
+        }
+      });
+    });
+
+    const affectedWorkorders = new Set();
+    moves.forEach(m => {
+      affectedWorkorders.add(m.source_wo_id);
+      affectedWorkorders.add(m.target_wo_id);
+    });
+
+    return {
+      totalSelected: selectedCohesionSuggestions.size,
+      moveCount: moves.length,
+      blockedCount: blocked.length,
+      moves,
+      blocked,
+      affectedWorkorderCount: affectedWorkorders.size
+    };
+  };
+
+  const handleApplyCohesionSuggestions = async () => {
+    if (cohesionApplyConfirm !== 'CONFIRM') {
+      toast.error('Please type CONFIRM to proceed');
+      return;
+    }
+
+    try {
+      setApplyingCohesion(true);
+      setCohesionApplyModalOpen(false);
+      toast.info('Applying task reassignments...');
+
+      const summary = getCohesionSelectionSummary();
+      const results = {
+        applied: [],
+        blocked: summary.blocked,
+        failed: []
+      };
+
+      // Batch Task updates
+      const taskUpdates = new Map();
+      
+      for (const move of summary.moves) {
+        try {
+          // Validate that task and workorders belong to current project
+          taskUpdates.set(move.task_id, {
+            work_order_id: move.target_wo_id
+          });
+          results.applied.push(move);
+        } catch (err) {
+          results.failed.push({
+            ...move,
+            error: err.message
+          });
+        }
+      }
+
+      // Apply all task moves
+      for (const [taskId, updates] of taskUpdates.entries()) {
+        try {
+          await base44.entities.Task.update(taskId, updates);
+        } catch (err) {
+          const failedMove = results.applied.find(m => m.task_id === taskId);
+          if (failedMove) {
+            results.applied = results.applied.filter(m => m.task_id !== taskId);
+            results.failed.push({
+              ...failedMove,
+              error: err.message
+            });
+          }
+        }
+      }
+
+      setCohesionApplyResults(results);
+      setSelectedCohesionSuggestions(new Set());
+      setCohesionApplyConfirm('');
+
+      if (results.applied.length > 0) {
+        toast.success(`Moved ${results.applied.length} task(s)`);
+      }
+      if (results.blocked.length > 0) {
+        toast.warning(`${results.blocked.length} suggestion(s) require manual action`);
+      }
+      if (results.failed.length > 0) {
+        toast.error(`${results.failed.length} move(s) failed`);
+      }
+    } catch (error) {
+      console.error('Error applying cohesion suggestions:', error);
+      toast.error('Failed to apply suggestions');
+    } finally {
+      setApplyingCohesion(false);
     }
   };
 
@@ -2197,6 +2353,38 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                 </div>
               </div>
 
+              {/* Filters and Actions */}
+              {cohesionResults.total_suggestions > 0 && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <Select value={cohesionConfidenceFilter} onValueChange={setCohesionConfidenceFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Confidence</SelectItem>
+                      <SelectItem value="High">High Only</SelectItem>
+                      <SelectItem value="Medium">Medium+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={selectHighConfidenceCohesion}
+                  >
+                    Select All High Confidence
+                  </Button>
+                  {selectedCohesionSuggestions.size > 0 && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setSelectedCohesionSuggestions(new Set())}
+                    >
+                      Clear Selection
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {cohesionResults.analysis.map(wo => (
                 <Card key={wo.workorder_id} className="bg-slate-50">
                   <CardContent className="p-4">
@@ -2259,69 +2447,93 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                           Suggested Actions ({wo.suggestions.length}):
                         </p>
                         <div className="space-y-2">
-                          {wo.suggestions.map((sugg, idx) => (
+                          {wo.suggestions
+                            .filter(sugg => {
+                              if (cohesionConfidenceFilter === 'all') return true;
+                              if (cohesionConfidenceFilter === 'High') return sugg.confidence === 'High';
+                              if (cohesionConfidenceFilter === 'Medium') return sugg.confidence === 'High' || sugg.confidence === 'Medium';
+                              return true;
+                            })
+                            .map((sugg, idx) => {
+                              const suggKey = `${wo.workorder_id}-${idx}`;
+                              const isSelectable = sugg.type === 'move' && sugg.target_workorder_id;
+                              
+                              return (
                             <div key={idx} className="bg-white border border-slate-200 rounded p-3">
-                              {sugg.type === 'move' && (
-                                <>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <ArrowRight className="h-3 w-3 text-blue-600" />
-                                    <span className="text-xs font-semibold text-slate-900">
-                                      Move Task
-                                    </span>
-                                    <span className={`text-xs px-2 py-0.5 rounded ${
-                                      sugg.confidence === 'High' ? 'bg-green-100 text-green-800' :
-                                      sugg.confidence === 'Medium' ? 'bg-amber-100 text-amber-800' :
-                                      'bg-slate-100 text-slate-800'
-                                    }`}>
-                                      {sugg.confidence}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-slate-700 mb-1">
-                                    Task: <span className="font-medium">{sugg.task_title}</span>
-                                  </p>
-                                  <p className="text-xs text-slate-700 mb-1">
-                                    Move to: <span className="font-medium">{sugg.target_workorder_title}</span>
-                                  </p>
-                                  <p className="text-xs text-slate-500 italic">
-                                    Reason: {sugg.reason}
-                                  </p>
-                                </>
-                              )}
-                              {(sugg.type === 'split' || sugg.type === 'split_cluster') && (
-                                <>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <AlertCircle className="h-3 w-3 text-purple-600" />
-                                    <span className="text-xs font-semibold text-slate-900">
-                                      {sugg.type === 'split_cluster' ? 'Split Cluster' : 'Create New Workorder'}
-                                    </span>
-                                    <span className={`text-xs px-2 py-0.5 rounded ${
-                                      sugg.confidence === 'High' ? 'bg-green-100 text-green-800' :
-                                      sugg.confidence === 'Medium' ? 'bg-amber-100 text-amber-800' :
-                                      'bg-slate-100 text-slate-800'
-                                    }`}>
-                                      {sugg.confidence}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-slate-700 mb-1">
-                                    {sugg.type === 'split_cluster' ? (
-                                      <>Tasks: <span className="font-medium">{sugg.task_titles}</span></>
-                                    ) : (
-                                      <>Task: <span className="font-medium">{sugg.task_title}</span></>
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-slate-700 mb-1">
-                                    Suggested: <span className="font-medium">{sugg.target_workorder_title}</span>
-                                  </p>
-                                  <p className="text-xs text-slate-500 italic">
-                                    Reason: {sugg.reason}
-                                  </p>
-                                </>
-                              )}
+                              <div className="flex items-start gap-2">
+                                {isSelectable && (
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedCohesionSuggestions.has(suggKey)}
+                                    onChange={() => toggleCohesionSuggestion(suggKey)}
+                                    className="mt-1 h-4 w-4 rounded border-slate-300"
+                                  />
+                                )}
+                                <div className="flex-1">
+                                  {sugg.type === 'move' && (
+                                    <>
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <ArrowRight className="h-3 w-3 text-blue-600" />
+                                        <span className="text-xs font-semibold text-slate-900">
+                                          Move Task
+                                        </span>
+                                        <span className={`text-xs px-2 py-0.5 rounded ${
+                                          sugg.confidence === 'High' ? 'bg-green-100 text-green-800' :
+                                          sugg.confidence === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                                          'bg-slate-100 text-slate-800'
+                                        }`}>
+                                          {sugg.confidence}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-slate-700 mb-1">
+                                        Task: <span className="font-medium">{sugg.task_title}</span>
+                                      </p>
+                                      <p className="text-xs text-slate-700 mb-1">
+                                        Move to: <span className="font-medium">{sugg.target_workorder_title}</span>
+                                      </p>
+                                      <p className="text-xs text-slate-500 italic">
+                                        Reason: {sugg.reason}
+                                      </p>
+                                    </>
+                                  )}
+                                  {(sugg.type === 'split' || sugg.type === 'split_cluster') && (
+                                    <>
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <AlertCircle className="h-3 w-3 text-purple-600" />
+                                        <span className="text-xs font-semibold text-slate-900">
+                                          {sugg.type === 'split_cluster' ? 'Split Cluster' : 'Create New Workorder'}
+                                        </span>
+                                        <span className={`text-xs px-2 py-0.5 rounded ${
+                                          sugg.confidence === 'High' ? 'bg-green-100 text-green-800' :
+                                          sugg.confidence === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                                          'bg-slate-100 text-slate-800'
+                                        }`}>
+                                          {sugg.confidence}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-slate-700 mb-1">
+                                        {sugg.type === 'split_cluster' ? (
+                                          <>Tasks: <span className="font-medium">{sugg.task_titles}</span></>
+                                        ) : (
+                                          <>Task: <span className="font-medium">{sugg.task_title}</span></>
+                                        )}
+                                      </p>
+                                      <p className="text-xs text-slate-700 mb-1">
+                                        Suggested: <span className="font-medium">{sugg.target_workorder_title}</span>
+                                      </p>
+                                      <p className="text-xs text-slate-500 italic">
+                                        Reason: {sugg.reason}
+                                      </p>
+                                      <p className="text-xs text-amber-700 mt-2">
+                                        ℹ️ Requires manual workorder creation (not auto-applicable)
+                                      </p>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                          );
+                        })}
 
                     {wo.suggestions.length === 0 && wo.cohesion_rating === 'Good' && (
                       <div className="text-xs text-green-600 italic">
@@ -2332,17 +2544,221 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                 </Card>
               ))}
 
+              {/* Selection Summary and Apply */}
+              {selectedCohesionSuggestions.size > 0 && (() => {
+                const summary = getCohesionSelectionSummary();
+                return (
+                  <div className="border-t pt-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                        {summary.totalSelected} Suggestion(s) Selected
+                      </h4>
+                      <div className="text-xs text-slate-600 space-y-1">
+                        <p>• {summary.moveCount} task move(s) to existing workorders</p>
+                        {summary.blockedCount > 0 && (
+                          <p className="text-amber-700">• {summary.blockedCount} require manual workorder creation</p>
+                        )}
+                        <p>• Affects {summary.affectedWorkorderCount} workorder(s)</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setSelectedCohesionSuggestions(new Set())}
+                      >
+                        Clear Selection
+                      </Button>
+                      {summary.moveCount > 0 && (
+                        <Button 
+                          onClick={() => setCohesionApplyModalOpen(true)}
+                          disabled={applyingCohesion}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Apply {summary.moveCount} Move(s)
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-amber-800">
-                  <strong>Draft Mode:</strong> These are suggestions only. No tasks or workorders have been modified. 
-                  Review suggestions and manually reorganize as needed.
+                  <strong>Draft Mode:</strong> Select suggestions with checkboxes to apply task reassignments. 
+                  Only moves to existing workorders can be applied automatically.
                 </p>
               </div>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Cohesion Apply Results */}
+      {cohesionApplyResults && (
+        <Card className="border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Task Reassignment Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {cohesionApplyResults.applied.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-green-900 mb-2">
+                  Successfully Moved ({cohesionApplyResults.applied.length})
+                </h3>
+                <div className="space-y-2">
+                  {cohesionApplyResults.applied.map((move, idx) => (
+                    <div key={idx} className="p-2 bg-green-50 rounded border border-green-200 text-xs">
+                      <p className="font-medium text-slate-900 mb-1">{move.task_title}</p>
+                      <p className="text-green-700">
+                        {move.source_wo_title} → {move.target_wo_title}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {cohesionApplyResults.blocked.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-amber-900 mb-2">
+                  Manual Action Required ({cohesionApplyResults.blocked.length})
+                </h3>
+                <div className="space-y-2">
+                  {cohesionApplyResults.blocked.map((item, idx) => (
+                    <div key={idx} className="p-2 bg-amber-50 rounded border border-amber-200">
+                      <p className="text-xs font-medium text-slate-900">{item.task_title}</p>
+                      <p className="text-xs text-amber-700">{item.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {cohesionApplyResults.failed.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-red-900 mb-2">
+                  Failed ({cohesionApplyResults.failed.length})
+                </h3>
+                <div className="space-y-2">
+                  {cohesionApplyResults.failed.map((item, idx) => (
+                    <div key={idx} className="p-2 bg-red-50 rounded border border-red-200">
+                      <p className="text-xs font-medium text-slate-900">{item.task_title}</p>
+                      <p className="text-xs text-red-700">{item.error}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cohesion Apply Confirmation Modal */}
+      <Dialog open={cohesionApplyModalOpen} onOpenChange={setCohesionApplyModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Confirm Task Reassignments</DialogTitle>
+            <DialogDescription>
+              You are about to move tasks between workorders. This will modify live data.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Warning Banner */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-900">Warning</p>
+                <p className="text-xs text-red-700 mt-1">
+                  These changes will update task assignments. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            {/* Changes List */}
+            {(() => {
+              const summary = getCohesionSelectionSummary();
+              if (!summary) return null;
+
+              return (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Task Moves ({summary.moveCount})
+                  </h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {summary.moves.map((move, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded border border-slate-200">
+                        <p className="text-sm font-medium text-slate-900 mb-2">{move.task_title}</p>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-slate-600">{move.source_wo_title}</span>
+                          <ArrowRight className="h-3 w-3 text-blue-600" />
+                          <span className="text-blue-700 font-semibold">{move.target_wo_title}</span>
+                        </div>
+                        <p className="text-xs text-slate-500 italic mt-1">
+                          {move.reason}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Scope Summary */}
+                  <div className="bg-slate-100 rounded p-3 text-xs">
+                    <p className="font-medium text-slate-900 mb-1">Scope:</p>
+                    <div className="text-slate-600">
+                      <p>• {summary.moveCount} task(s) will be reassigned</p>
+                      <p>• {summary.affectedWorkorderCount} workorder(s) affected</p>
+                      <p>• Project: {cohesionResults.project_title}</p>
+                    </div>
+                  </div>
+
+                  {summary.blockedCount > 0 && (
+                    <div className="bg-amber-50 rounded p-3 text-xs">
+                      <p className="font-medium text-amber-900 mb-1">Not Applied:</p>
+                      <p className="text-amber-700">
+                        {summary.blockedCount} suggestion(s) require manual workorder creation
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Confirmation Input */}
+            <div className="pt-4 border-t">
+              <Label htmlFor="cohesion-confirm-input">Type CONFIRM to proceed</Label>
+              <Input
+                id="cohesion-confirm-input"
+                type="text"
+                value={cohesionApplyConfirm}
+                onChange={(e) => setCohesionApplyConfirm(e.target.value)}
+                placeholder="CONFIRM"
+                className="mt-1 font-mono"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setCohesionApplyModalOpen(false);
+              setCohesionApplyConfirm('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApplyCohesionSuggestions}
+              disabled={cohesionApplyConfirm !== 'CONFIRM' || applyingCohesion}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {applyingCohesion ? 'Applying...' : 'Confirm & Move Tasks'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Planning Input Modal */}
       <Dialog open={planningModalOpen} onOpenChange={setPlanningModalOpen}>

@@ -87,6 +87,7 @@ import PDFLayoutEditor from './pages/PDFLayoutEditor';
 import PDFTemplateManager from './pages/PDFTemplateManager';
 import PDFTemplateSettings from './pages/PDFTemplateSettings';
 import PrintDocument from './pages/PrintDocument';
+import ProjectIntelligence from './pages/ProjectIntelligence';
 import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
@@ -107,7 +108,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import ProjectIntelligence from './pages/ProjectIntelligence';
 import __Layout from './Layout.jsx';
 
 
@@ -152,6 +152,7 @@ export const PAGES = {
     "PDFTemplateManager": PDFTemplateManager,
     "PDFTemplateSettings": PDFTemplateSettings,
     "PrintDocument": PrintDocument,
+    "ProjectIntelligence": ProjectIntelligence,
     "Reports": Reports,
     "Schedule": Schedule,
     "Settings": Settings,
@@ -172,7 +173,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "ProjectIntelligence": ProjectIntelligence,
 }
 
 export const pagesConfig = {
