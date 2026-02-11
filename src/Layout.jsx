@@ -29,7 +29,8 @@ import {
                     Camera,
                     Bell,
                     Monitor,
-                    Database
+                    Database,
+                    Brain
                   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -62,6 +63,7 @@ const navItems = [
   { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates', adminOnly: true },
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
+  { name: 'Project Intelligence', icon: Brain, page: 'ProjectIntelligence', adminOnly: true },
   { name: 'Customer Portal Test', icon: Users, page: 'CustomerPortalTest', adminOnly: true },
         { name: 'Workshop Display', icon: Monitor, page: 'WorkshopDisplay' },
         { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
