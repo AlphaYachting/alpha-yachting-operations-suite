@@ -6,7 +6,16 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { Loader2, Sparkles, AlertCircle, FileText, Upload, Trash2, Edit2 } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +26,7 @@ import {
 } from '@/components/ui/dialog';
 
 export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated, onDescriptionGenerated, existingTasks = [] }) {
+  const [mode, setMode] = useState('text'); // 'text' or 'pdf'
   const [prompt, setPrompt] = useState('');
   const [defaultUnitPrice, setDefaultUnitPrice] = useState(70);
   const [detailedExplanations, setDetailedExplanations] = useState(false);
@@ -26,6 +36,15 @@ export default function AIOfferGenerator({ formData, customers, boats, jobs, onT
   const [pendingTasks, setPendingTasks] = useState([]);
   const [pendingDescription, setPendingDescription] = useState('');
   const [keepExisting, setKeepExisting] = useState(true);
+  
+  // PDF mode states
+  const [pdfFile, setPdfFile] = useState(null);
+  const [extracting, setExtracting] = useState(false);
+  const [extractedPositions, setExtractedPositions] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [editingRow, setEditingRow] = useState(null);
+  const [showCreateConfirm, setShowCreateConfirm] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -149,6 +168,161 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
     setKeepExisting(true);
   };
 
+  const handlePdfUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      setPdfFile(file);
+      setError(null);
+      setExtractedPositions([]);
+      setShowPreview(false);
+    } else {
+      setError('Please upload a valid PDF file');
+    }
+  };
+
+  const handleExtractAndPreview = async () => {
+    if (!pdfFile) {
+      setError('Please select a PDF file first');
+      return;
+    }
+
+    setExtracting(true);
+    setError(null);
+
+    try {
+      // Step 1: Upload file
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: pdfFile });
+
+      // Step 2: Extract structured data
+      const extractionSchema = {
+        type: 'object',
+        properties: {
+          positions: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                title: { type: 'string' },
+                description: { type: 'string' },
+                quantity: { type: 'number' },
+                unit: { type: 'string' },
+                group: { type: 'string' },
+                source_excerpt: { type: 'string' },
+                confidence: { type: 'string', enum: ['High', 'Medium', 'Low'] }
+              },
+              required: ['title']
+            }
+          },
+          general_description: { type: 'string' }
+        },
+        required: ['positions']
+      };
+
+      const result = await base44.integrations.Core.ExtractDataFromUploadedFile({
+        file_url,
+        json_schema: extractionSchema
+      });
+
+      if (result.status === 'error') {
+        setError(result.details || 'Failed to extract data from PDF. This may be an image-based PDF.');
+        setExtracting(false);
+        return;
+      }
+
+      const positions = result.output?.positions || [];
+      
+      if (positions.length === 0) {
+        setError('No positions found in PDF. This may be an image-based PDF where text extraction is not possible.');
+        setExtracting(false);
+        return;
+      }
+
+      // Normalize positions
+      const normalizedPositions = positions.map((pos, idx) => ({
+        id: `extracted-${idx}`,
+        title: pos.title || 'Untitled Position',
+        description: pos.description || '',
+        quantity: pos.quantity || 1,
+        unit: pos.unit || 'Piece',
+        group: pos.group || '',
+        source_excerpt: pos.source_excerpt || '',
+        confidence: pos.confidence || 'Medium',
+        unit_price: defaultUnitPrice,
+        total_amount: (pos.quantity || 1) * defaultUnitPrice
+      }));
+
+      setExtractedPositions(normalizedPositions);
+      if (result.output?.general_description) {
+        setPendingDescription(result.output.general_description);
+      }
+      setShowPreview(true);
+      setExtracting(false);
+    } catch (err) {
+      console.error('PDF extraction error:', err);
+      setError(err.message || 'Failed to extract data from PDF. Please try again.');
+      setExtracting(false);
+    }
+  };
+
+  const handleDeletePosition = (id) => {
+    setExtractedPositions(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleEditPosition = (position) => {
+    setEditingRow(position);
+  };
+
+  const handleSaveEdit = () => {
+    if (editingRow) {
+      setExtractedPositions(prev => 
+        prev.map(p => p.id === editingRow.id ? editingRow : p)
+      );
+      setEditingRow(null);
+    }
+  };
+
+  const handleCreateFromPreview = () => {
+    if (extractedPositions.length === 0) {
+      setError('No positions to create');
+      return;
+    }
+    setShowCreateConfirm(true);
+  };
+
+  const handleConfirmCreate = () => {
+    if (confirmText.toUpperCase() !== 'CONFIRM') {
+      setError('Please type CONFIRM to proceed');
+      return;
+    }
+
+    const tasksToCreate = extractedPositions.map(pos => ({
+      title: pos.title,
+      description: pos.description,
+      quantity: pos.quantity,
+      unit_type: pos.unit,
+      unit_price: pos.unit_price,
+      total_amount: pos.total_amount
+    }));
+
+    const finalTasks = keepExisting 
+      ? [...existingTasks, ...tasksToCreate]
+      : tasksToCreate;
+
+    onTasksGenerated(finalTasks);
+    
+    if (pendingDescription && onDescriptionGenerated) {
+      onDescriptionGenerated(pendingDescription);
+    }
+
+    // Reset
+    setShowCreateConfirm(false);
+    setConfirmText('');
+    setPdfFile(null);
+    setExtractedPositions([]);
+    setShowPreview(false);
+    setKeepExisting(true);
+  };
+
   return (
     <div className="space-y-4">
       {error && (
@@ -158,8 +332,36 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
         </Alert>
       )}
 
-      <div className="space-y-2">
-        <Label>Describe the Work Needed</Label>
+      {/* Mode Selector */}
+      <div className="flex gap-2 p-1 bg-slate-100 rounded-lg">
+        <button
+          onClick={() => setMode('text')}
+          className={`flex-1 px-4 py-2 rounded text-sm font-medium transition-colors ${
+            mode === 'text' 
+              ? 'bg-white text-slate-900 shadow' 
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <FileText className="h-4 w-4 inline mr-2" />
+          Generate from Text
+        </button>
+        <button
+          onClick={() => setMode('pdf')}
+          className={`flex-1 px-4 py-2 rounded text-sm font-medium transition-colors ${
+            mode === 'pdf' 
+              ? 'bg-white text-slate-900 shadow' 
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Upload className="h-4 w-4 inline mr-2" />
+          Generate from PDF
+        </button>
+      </div>
+
+      {mode === 'text' ? (
+        <>
+          <div className="space-y-2">
+            <Label>Describe the Work Needed</Label>
         <Textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -204,25 +406,295 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
         </div>
       </div>
 
-      <Button
-        onClick={handleGenerate}
-        disabled={generating || !prompt.trim()}
-        className="w-full bg-purple-600 hover:bg-purple-700"
-      >
-        {generating ? (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Generating Tasks...
-          </>
-        ) : (
-          <>
-            <Sparkles className="h-4 w-4 mr-2" />
-            Generate Tasks with AI
-          </>
-        )}
-      </Button>
+          <Button
+            onClick={handleGenerate}
+            disabled={generating || !prompt.trim()}
+            className="w-full bg-purple-600 hover:bg-purple-700"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating Tasks...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Generate Tasks with AI
+              </>
+            )}
+          </Button>
+        </>
+      ) : (
+        <>
+          {/* PDF Upload Mode */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Upload PDF</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handlePdfUpload}
+                  disabled={extracting}
+                  className="flex-1"
+                />
+                {pdfFile && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setPdfFile(null);
+                      setExtractedPositions([]);
+                      setShowPreview(false);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {pdfFile && (
+                <p className="text-xs text-slate-600">
+                  Selected: {pdfFile.name} ({(pdfFile.size / 1024).toFixed(1)} KB)
+                </p>
+              )}
+              <p className="text-xs text-slate-500">
+                Upload a text-based PDF (offer, specification, or email export). Image-based/scanned PDFs may not work.
+              </p>
+            </div>
 
-      {/* Confirmation Dialog */}
+            <div className="space-y-2">
+              <Label>Default Unit Price (€)</Label>
+              <Input
+                type="number"
+                step="1"
+                min="0"
+                value={defaultUnitPrice}
+                onChange={(e) => setDefaultUnitPrice(parseFloat(e.target.value) || 70)}
+                disabled={extracting}
+              />
+            </div>
+
+            <Button
+              onClick={handleExtractAndPreview}
+              disabled={!pdfFile || extracting}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              {extracting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Extracting...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Extract & Preview
+                </>
+              )}
+            </Button>
+
+            {/* Preview Table */}
+            {showPreview && extractedPositions.length > 0 && (
+              <div className="space-y-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">
+                    Extracted Positions ({extractedPositions.length})
+                  </h3>
+                  <Button
+                    onClick={handleCreateFromPreview}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Create Positions from Preview
+                  </Button>
+                </div>
+
+                <div className="border rounded-lg bg-white overflow-auto max-h-96">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px]">Title</TableHead>
+                        <TableHead className="w-[80px]">Qty</TableHead>
+                        <TableHead className="w-[80px]">Unit</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="w-[100px]">Confidence</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {extractedPositions.map((position) => (
+                        <TableRow key={position.id}>
+                          <TableCell>
+                            {editingRow?.id === position.id ? (
+                              <Input
+                                value={editingRow.title}
+                                onChange={(e) => setEditingRow({...editingRow, title: e.target.value})}
+                                className="h-8"
+                              />
+                            ) : (
+                              <div className="font-medium text-sm">{position.title}</div>
+                            )}
+                            {position.group && (
+                              <Badge variant="outline" className="text-xs mt-1">
+                                {position.group}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {editingRow?.id === position.id ? (
+                              <Input
+                                type="number"
+                                value={editingRow.quantity}
+                                onChange={(e) => setEditingRow({...editingRow, quantity: parseFloat(e.target.value) || 1})}
+                                className="h-8 w-16"
+                              />
+                            ) : (
+                              position.quantity
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {editingRow?.id === position.id ? (
+                              <Input
+                                value={editingRow.unit}
+                                onChange={(e) => setEditingRow({...editingRow, unit: e.target.value})}
+                                className="h-8 w-20"
+                              />
+                            ) : (
+                              position.unit
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {editingRow?.id === position.id ? (
+                              <Textarea
+                                value={editingRow.description}
+                                onChange={(e) => setEditingRow({...editingRow, description: e.target.value})}
+                                className="min-h-[60px] text-xs"
+                                rows={2}
+                              />
+                            ) : (
+                              <div className="text-xs text-slate-600">
+                                {position.description || '-'}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                position.confidence === 'High' ? 'default' :
+                                position.confidence === 'Medium' ? 'secondary' : 'outline'
+                              }
+                              className="text-xs"
+                            >
+                              {position.confidence}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {editingRow?.id === position.id ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleSaveEdit}
+                                  className="h-8 px-2"
+                                >
+                                  Save
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleEditPosition(position)}
+                                  className="h-8 px-2"
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeletePosition(position.id)}
+                                className="h-8 px-2 text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Create Confirmation Dialog */}
+      <Dialog open={showCreateConfirm} onOpenChange={setShowCreateConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Position Creation</DialogTitle>
+            <DialogDescription>
+              You are about to create {extractedPositions.length} position(s) in this offer.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {existingTasks && existingTasks.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="keep-existing-pdf"
+                  checked={keepExisting}
+                  onCheckedChange={setKeepExisting}
+                />
+                <label
+                  htmlFor="keep-existing-pdf"
+                  className="text-sm font-medium"
+                >
+                  Keep existing {existingTasks.length} task(s)
+                </label>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label>Type CONFIRM to proceed</Label>
+              <Input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="Type CONFIRM"
+                className="font-mono"
+              />
+            </div>
+
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {keepExisting && existingTasks?.length > 0
+                  ? `${extractedPositions.length} new positions will be added to the existing ${existingTasks.length}.`
+                  : `${extractedPositions.length} position(s) will be created${existingTasks?.length > 0 ? ', replacing existing tasks' : ''}.`
+                }
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowCreateConfirm(false);
+              setConfirmText('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmCreate} 
+              disabled={confirmText.toUpperCase() !== 'CONFIRM'}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Create Positions
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Existing Task Confirmation Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>
           <DialogHeader>
