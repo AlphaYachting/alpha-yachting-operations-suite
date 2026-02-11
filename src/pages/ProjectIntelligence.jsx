@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Brain, FileSearch, Lightbulb, TrendingUp, Save, Settings, AlertCircle, Clock, Users, GitBranch } from 'lucide-react';
+import { Brain, FileSearch, Lightbulb, TrendingUp, Save, Settings, AlertCircle, Clock, Users, GitBranch, CheckCircle, XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,10 @@ export default function ProjectIntelligence() {
   const [suggestions, setSuggestions] = useState(null);
   const [suggestionsRunning, setSuggestionsRunning] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState(new Set());
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [confirmChecked, setConfirmChecked] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applyResults, setApplyResults] = useState(null);
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -452,6 +456,123 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
       }
       return newSet;
     });
+  };
+
+  const handleApplySelected = async () => {
+    if (!confirmChecked) {
+      toast.error('Please confirm before applying');
+      return;
+    }
+
+    try {
+      setApplying(true);
+      setApplyModalOpen(false);
+      toast.info('Applying selected suggestions...');
+
+      const selectedItems = suggestions.all.filter(s => selectedSuggestions.has(s.id));
+      const results = {
+        applied: [],
+        blocked: [],
+        failed: []
+      };
+
+      // Group by entity type and suggestion type for batching
+      const taskUpdates = new Map();
+      const workOrderUpdates = new Map();
+
+      for (const suggestion of selectedItems) {
+        try {
+          // TIME SUGGESTIONS - update estimated_minutes on Task
+          if (suggestion.suggestion_type === 'time' && suggestion.scope_level === 'Task') {
+            if (suggestion.suggestion_text.includes('Add estimated time')) {
+              // Suggest a default range (60 minutes as middle ground)
+              taskUpdates.set(suggestion.entity_id, {
+                estimated_minutes: 60
+              });
+              results.applied.push(suggestion);
+            } else if (suggestion.suggestion_text.includes('Review time estimate')) {
+              // Can't auto-apply review requests
+              results.blocked.push({
+                ...suggestion,
+                block_reason: 'Requires manual review'
+              });
+            }
+          }
+          // SKILL SUGGESTIONS - cannot be auto-applied
+          else if (suggestion.suggestion_type === 'skill') {
+            results.blocked.push({
+              ...suggestion,
+              block_reason: 'Requires manual clarification of service area'
+            });
+          }
+          // STRUCTURE SUGGESTIONS - not implemented (requires complex parent selection)
+          else if (suggestion.suggestion_type === 'structure') {
+            results.blocked.push({
+              ...suggestion,
+              block_reason: 'Structural changes require manual entity selection'
+            });
+          }
+        } catch (err) {
+          results.failed.push({
+            ...suggestion,
+            error: err.message
+          });
+        }
+      }
+
+      // Apply batched Task updates
+      for (const [taskId, updates] of taskUpdates.entries()) {
+        try {
+          await base44.entities.Task.update(taskId, updates);
+        } catch (err) {
+          const failedSuggestion = results.applied.find(s => s.entity_id === taskId);
+          if (failedSuggestion) {
+            results.applied = results.applied.filter(s => s.entity_id !== taskId);
+            results.failed.push({
+              ...failedSuggestion,
+              error: err.message
+            });
+          }
+        }
+      }
+
+      setApplyResults(results);
+      setSelectedSuggestions(new Set());
+      setConfirmChecked(false);
+
+      if (results.applied.length > 0) {
+        toast.success(`Applied ${results.applied.length} suggestion(s)`);
+      }
+      if (results.blocked.length > 0) {
+        toast.warning(`${results.blocked.length} suggestion(s) require manual action`);
+      }
+      if (results.failed.length > 0) {
+        toast.error(`${results.failed.length} suggestion(s) failed`);
+      }
+    } catch (error) {
+      console.error('Error applying suggestions:', error);
+      toast.error('Failed to apply suggestions');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const getSelectedSummary = () => {
+    if (!suggestions || selectedSuggestions.size === 0) return null;
+
+    const selected = suggestions.all.filter(s => selectedSuggestions.has(s.id));
+    const byScope = {
+      Task: selected.filter(s => s.scope_level === 'Task').length,
+      Workorder: selected.filter(s => s.scope_level === 'Workorder').length,
+      Project: selected.filter(s => s.scope_level === 'Project').length
+    };
+    const byType = {
+      time: selected.filter(s => s.suggestion_type === 'time').length,
+      skill: selected.filter(s => s.suggestion_type === 'skill').length,
+      structure: selected.filter(s => s.suggestion_type === 'structure').length
+    };
+
+    return { selected, byScope, byType };
   };
 
   return (
@@ -952,12 +1073,215 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
               </div>
             )}
 
-            <div className="text-xs text-slate-500 text-center pt-4 border-t">
-              {selectedSuggestions.size} of {suggestions.total} suggestions selected (for review only)
-            </div>
+            {/* Selection Summary and Apply */}
+            {selectedSuggestions.size > 0 && (() => {
+              const summary = getSelectedSummary();
+              return (
+                <div className="border-t pt-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                      {selectedSuggestions.size} Suggestion(s) Selected
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="text-blue-700 font-medium">By Scope:</p>
+                        <ul className="text-slate-600 mt-1 space-y-0.5">
+                          {summary.byScope.Task > 0 && <li>• {summary.byScope.Task} Task(s)</li>}
+                          {summary.byScope.Workorder > 0 && <li>• {summary.byScope.Workorder} Work Order(s)</li>}
+                          {summary.byScope.Project > 0 && <li>• {summary.byScope.Project} Project(s)</li>}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-blue-700 font-medium">By Type:</p>
+                        <ul className="text-slate-600 mt-1 space-y-0.5">
+                          {summary.byType.time > 0 && <li>• {summary.byType.time} Time</li>}
+                          {summary.byType.skill > 0 && <li>• {summary.byType.skill} Skill</li>}
+                          {summary.byType.structure > 0 && <li>• {summary.byType.structure} Structure</li>}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedSuggestions(new Set())}
+                    >
+                      Clear Selection
+                    </Button>
+                    <Button 
+                      onClick={() => setApplyModalOpen(true)}
+                      disabled={applying}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Apply Selected
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {!selectedSuggestions.size && (
+              <div className="text-xs text-slate-500 text-center pt-4 border-t">
+                Select suggestions to apply changes
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
+      {/* Apply Results */}
+      {applyResults && (
+        <Card className="border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Apply Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {applyResults.applied.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-green-900 mb-2">
+                  Successfully Applied ({applyResults.applied.length})
+                </h3>
+                <div className="space-y-1">
+                  {applyResults.applied.map((s, idx) => (
+                    <div key={idx} className="text-xs text-slate-600 flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-green-600" />
+                      <span>{s.entity_name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {applyResults.blocked.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-amber-900 mb-2">
+                  Blocked - Manual Action Required ({applyResults.blocked.length})
+                </h3>
+                <div className="space-y-2">
+                  {applyResults.blocked.map((s, idx) => (
+                    <div key={idx} className="p-2 bg-amber-50 rounded border border-amber-200">
+                      <p className="text-xs font-medium text-slate-900">{s.entity_name}</p>
+                      <p className="text-xs text-amber-700">{s.block_reason}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {applyResults.failed.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-red-900 mb-2">
+                  Failed ({applyResults.failed.length})
+                </h3>
+                <div className="space-y-2">
+                  {applyResults.failed.map((s, idx) => (
+                    <div key={idx} className="p-2 bg-red-50 rounded border border-red-200">
+                      <p className="text-xs font-medium text-slate-900">{s.entity_name}</p>
+                      <p className="text-xs text-red-700">{s.error}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Confirmation Modal */}
+      <Dialog open={applyModalOpen} onOpenChange={setApplyModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Confirm Apply Suggestions</DialogTitle>
+            <DialogDescription>
+              Review the changes that will be applied to live data.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Warning Banner */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-900">Warning</p>
+                <p className="text-xs text-red-700 mt-1">
+                  These changes will update live data. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            {/* Changes List */}
+            {(() => {
+              const summary = getSelectedSummary();
+              if (!summary) return null;
+
+              return (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Changes to Apply ({summary.selected.length})
+                  </h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {summary.selected.map(s => (
+                      <div key={s.id} className="p-2 bg-slate-50 rounded border border-slate-200 text-xs">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-slate-500 uppercase">{s.scope_level}</span>
+                          <span className="text-slate-400">•</span>
+                          <span className="font-medium text-slate-900">{s.entity_name}</span>
+                        </div>
+                        <p className="text-slate-700">{s.suggestion_text}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Scope Summary */}
+                  <div className="bg-slate-100 rounded p-3 text-xs">
+                    <p className="font-medium text-slate-900 mb-1">Affected Entities:</p>
+                    <div className="text-slate-600 space-y-0.5">
+                      {summary.byScope.Task > 0 && <p>• {summary.byScope.Task} Task(s)</p>}
+                      {summary.byScope.Workorder > 0 && <p>• {summary.byScope.Workorder} Work Order(s)</p>}
+                      {summary.byScope.Project > 0 && <p>• {summary.byScope.Project} Project(s)</p>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Confirmation Checkbox */}
+            <div className="flex items-center space-x-2 pt-4 border-t">
+              <Checkbox 
+                id="confirm" 
+                checked={confirmChecked}
+                onCheckedChange={setConfirmChecked}
+              />
+              <label
+                htmlFor="confirm"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                I understand these changes will modify live data and cannot be undone
+              </label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setApplyModalOpen(false);
+              setConfirmChecked(false);
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApplySelected}
+              disabled={!confirmChecked || applying}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {applying ? 'Applying...' : 'Confirm & Apply'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
