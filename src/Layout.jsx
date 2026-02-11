@@ -46,7 +46,7 @@ import NotificationBell from '@/components/notifications/NotificationBell';
 
 const navItems = [
         { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-        { name: 'Leads V2', icon: Phone, page: 'LeadsV2' },
+        { name: 'Leads', icon: Phone, page: 'LeadsV2' },
         { name: 'Customers', icon: Users, page: 'Customers' },
         { name: 'Boats', icon: Ship, page: 'Boats' },
         { name: 'Locations', icon: MapPin, page: 'Locations' },

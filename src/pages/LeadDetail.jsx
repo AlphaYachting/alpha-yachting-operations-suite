@@ -325,7 +325,7 @@ export default function LeadDetail() {
       <div className="text-center py-12">
         <h3 className="text-lg font-medium text-slate-900">Lead not found</h3>
         <Button asChild className="mt-4">
-          <Link to={createPageUrl(fromV2 ? 'LeadsV2' : 'Leads')}>
+          <Link to={createPageUrl('LeadsV2')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Leads
           </Link>
@@ -340,7 +340,7 @@ export default function LeadDetail() {
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <Button asChild variant="ghost" size="sm" className="mb-3">
-            <Link to={createPageUrl(fromV2 ? 'LeadsV2' : 'Leads')}>
+            <Link to={createPageUrl('LeadsV2')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Leads
             </Link>
