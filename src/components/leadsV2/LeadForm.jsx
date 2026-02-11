@@ -168,13 +168,15 @@ export default function LeadForm({
     return contact ? `${name} — ${contact}` : name;
   };
 
-  const filteredCustomers = customers.filter((customer) => {
+  const filteredCustomers = (customers || []).filter((customer) => {
     if (!customerSearch) return true;
     const searchLower = customerSearch.toLowerCase();
     const fullName = `${customer.first_name || ''} ${customer.last_name || ''}`.toLowerCase();
     const firstName = (customer.first_name || '').toLowerCase();
     const lastName = (customer.last_name || '').toLowerCase();
-    return fullName.includes(searchLower) || firstName.includes(searchLower) || lastName.includes(searchLower);
+    const email = (customer.email || '').toLowerCase();
+    const phone = (customer.phone || '').toLowerCase();
+    return fullName.includes(searchLower) || firstName.includes(searchLower) || lastName.includes(searchLower) || email.includes(searchLower) || phone.includes(searchLower);
   });
 
   return (
@@ -235,9 +237,11 @@ export default function LeadForm({
                 </SelectItem>
               ))
             ) : (
-              <SelectItem disabled value="no-matches">
-                No matching customers
-              </SelectItem>
+              customerSearch ? (
+                <div className="px-2 py-1.5 text-xs text-slate-500">No matching customers</div>
+              ) : (
+                <div className="px-2 py-1.5 text-xs text-slate-500">No customers yet</div>
+              )
             )}
           </SelectContent>
         </Select>
