@@ -29,6 +29,9 @@ export default function ProjectIntelligence() {
   const [aiQuestion, setAiQuestion] = useState('');
   const [aiAnswer, setAiAnswer] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState(null);
+  const [suggestionsRunning, setSuggestionsRunning] = useState(false);
+  const [selectedSuggestions, setSelectedSuggestions] = useState(new Set());
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -323,6 +326,134 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
     }
   };
 
+  const handleRunSuggestions = async () => {
+    if (!auditResults) {
+      toast.error('No audit results available. Run audit first.');
+      return;
+    }
+
+    try {
+      setSuggestionsRunning(true);
+      toast.info('Generating suggestions...');
+
+      const generatedSuggestions = [];
+
+      // A) TIME IMPROVEMENTS
+      for (const finding of auditResults.findings.time.missing) {
+        generatedSuggestions.push({
+          id: `time-missing-${finding.id}`,
+          scope_level: 'Task',
+          entity_id: finding.id,
+          entity_name: finding.title,
+          suggestion_type: 'time',
+          suggestion_text: 'Add estimated time (suggest range: 30-120 minutes based on task type)',
+          reason: finding.reason
+        });
+      }
+
+      for (const finding of auditResults.findings.time.outlier) {
+        generatedSuggestions.push({
+          id: `time-outlier-${finding.id}`,
+          scope_level: 'Task',
+          entity_id: finding.id,
+          entity_name: finding.title,
+          suggestion_type: 'time',
+          suggestion_text: `Review time estimate - exceeds ${config.time_outlier_threshold}h threshold`,
+          reason: finding.reason
+        });
+      }
+
+      // B) SKILL / PROFESSION IMPROVEMENTS
+      for (const finding of auditResults.findings.skill.missing) {
+        const skillMatch = finding.reason.match(/External (.+) professional needed/);
+        const skillName = skillMatch ? skillMatch[1] : 'specialized';
+        
+        generatedSuggestions.push({
+          id: `skill-missing-${finding.id}`,
+          scope_level: 'Task',
+          entity_id: finding.id,
+          entity_name: finding.title,
+          suggestion_type: 'skill',
+          suggestion_text: `External professional required: ${skillName}`,
+          reason: finding.reason
+        });
+      }
+
+      for (const finding of auditResults.findings.skill.undetermined) {
+        generatedSuggestions.push({
+          id: `skill-undetermined-${finding.id}`,
+          scope_level: 'Task',
+          entity_id: finding.id,
+          entity_name: finding.title,
+          suggestion_type: 'skill',
+          suggestion_text: 'Clarify required skill/service area for proper resource allocation',
+          reason: finding.reason
+        });
+      }
+
+      // C) STRUCTURAL IMPROVEMENTS
+      for (const finding of auditResults.findings.structure.inconsistent) {
+        let suggestionText = '';
+        let scopeLevel = 'Task';
+
+        if (finding.type === 'task_no_workorder') {
+          suggestionText = 'Link task to an existing work order or create new work order';
+          scopeLevel = 'Task';
+        } else if (finding.type === 'workorder_no_project') {
+          suggestionText = 'Link work order to an existing project or create new project';
+          scopeLevel = 'Workorder';
+        } else if (finding.type === 'workorder_no_tasks') {
+          suggestionText = 'Review structural integrity - work order has no tasks';
+          scopeLevel = 'Workorder';
+        } else {
+          suggestionText = 'Review and resolve structural inconsistency';
+        }
+
+        generatedSuggestions.push({
+          id: `structure-${finding.type}-${finding.id}`,
+          scope_level: scopeLevel,
+          entity_id: finding.id,
+          entity_name: finding.title,
+          suggestion_type: 'structure',
+          suggestion_text: suggestionText,
+          reason: finding.reason
+        });
+      }
+
+      // Group suggestions by type
+      const grouped = {
+        time: generatedSuggestions.filter(s => s.suggestion_type === 'time'),
+        skill: generatedSuggestions.filter(s => s.suggestion_type === 'skill'),
+        structure: generatedSuggestions.filter(s => s.suggestion_type === 'structure')
+      };
+
+      setSuggestions({
+        all: generatedSuggestions,
+        grouped,
+        total: generatedSuggestions.length
+      });
+
+      toast.success(`Generated ${generatedSuggestions.length} suggestions`);
+    } catch (error) {
+      console.error('Error generating suggestions:', error);
+      toast.error('Failed to generate suggestions');
+    } finally {
+      setSuggestionsRunning(false);
+    }
+  };
+
+  const toggleSuggestion = (suggestionId) => {
+    setSelectedSuggestions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(suggestionId)) {
+        newSet.delete(suggestionId);
+      } else {
+        newSet.add(suggestionId);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -353,11 +484,12 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
             </Button>
             <Button 
               variant="outline" 
-              disabled={!isWriteAllowed}
+              onClick={handleRunSuggestions}
+              disabled={suggestionsRunning || !auditResults}
               className="justify-start"
             >
               <Lightbulb className="h-4 w-4 mr-2" />
-              Run Suggestions (Draft)
+              {suggestionsRunning ? 'Generating...' : 'Run Suggestions (Draft)'}
             </Button>
             <Button 
               variant="outline" 
@@ -654,6 +786,174 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                   </ul>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Suggestions */}
+      {suggestions && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-amber-600" />
+              Improvement Suggestions (Draft)
+            </CardTitle>
+            <CardDescription>
+              {suggestions.total} actionable suggestions generated from audit findings
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Info Banner */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-amber-900">
+                <strong>Draft Mode:</strong> Suggestions are proposals only. Nothing is changed until explicitly confirmed. 
+                Selection state is for review purposes and is not persisted.
+              </p>
+            </div>
+
+            {/* Summary */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card className="bg-blue-50">
+                <CardContent className="p-3">
+                  <p className="text-xs text-blue-700 uppercase">Time</p>
+                  <p className="text-lg font-bold text-blue-900">{suggestions.grouped.time.length}</p>
+                  <p className="text-xs text-blue-600">Suggestions</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-green-50">
+                <CardContent className="p-3">
+                  <p className="text-xs text-green-700 uppercase">Skill/Profession</p>
+                  <p className="text-lg font-bold text-green-900">{suggestions.grouped.skill.length}</p>
+                  <p className="text-xs text-green-600">Suggestions</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-purple-50">
+                <CardContent className="p-3">
+                  <p className="text-xs text-purple-700 uppercase">Structure</p>
+                  <p className="text-lg font-bold text-purple-900">{suggestions.grouped.structure.length}</p>
+                  <p className="text-xs text-purple-600">Suggestions</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Time Suggestions */}
+            {suggestions.grouped.time.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-600" />
+                  Time Improvements ({suggestions.grouped.time.length})
+                </h3>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {suggestions.grouped.time.map(suggestion => (
+                    <div 
+                      key={suggestion.id} 
+                      className="flex items-start gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSuggestions.has(suggestion.id)}
+                        onChange={() => toggleSuggestion(suggestion.id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-slate-500 uppercase">
+                            {suggestion.scope_level}
+                          </span>
+                          <span className="text-xs text-slate-400">•</span>
+                          <span className="text-sm font-medium text-slate-900 truncate">
+                            {suggestion.entity_name}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-700 mb-1">{suggestion.suggestion_text}</p>
+                        <p className="text-xs text-slate-500 italic">Reason: {suggestion.reason}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Skill Suggestions */}
+            {suggestions.grouped.skill.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <Users className="h-4 w-4 text-green-600" />
+                  Skill/Profession Improvements ({suggestions.grouped.skill.length})
+                </h3>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {suggestions.grouped.skill.map(suggestion => (
+                    <div 
+                      key={suggestion.id} 
+                      className="flex items-start gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSuggestions.has(suggestion.id)}
+                        onChange={() => toggleSuggestion(suggestion.id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-slate-500 uppercase">
+                            {suggestion.scope_level}
+                          </span>
+                          <span className="text-xs text-slate-400">•</span>
+                          <span className="text-sm font-medium text-slate-900 truncate">
+                            {suggestion.entity_name}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-700 mb-1">{suggestion.suggestion_text}</p>
+                        <p className="text-xs text-slate-500 italic">Reason: {suggestion.reason}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Structural Suggestions */}
+            {suggestions.grouped.structure.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <GitBranch className="h-4 w-4 text-purple-600" />
+                  Structural Improvements ({suggestions.grouped.structure.length})
+                </h3>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {suggestions.grouped.structure.map(suggestion => (
+                    <div 
+                      key={suggestion.id} 
+                      className="flex items-start gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSuggestions.has(suggestion.id)}
+                        onChange={() => toggleSuggestion(suggestion.id)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-slate-500 uppercase">
+                            {suggestion.scope_level}
+                          </span>
+                          <span className="text-xs text-slate-400">•</span>
+                          <span className="text-sm font-medium text-slate-900 truncate">
+                            {suggestion.entity_name}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-700 mb-1">{suggestion.suggestion_text}</p>
+                        <p className="text-xs text-slate-500 italic">Reason: {suggestion.reason}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="text-xs text-slate-500 text-center pt-4 border-t">
+              {selectedSuggestions.size} of {suggestions.total} suggestions selected (for review only)
             </div>
           </CardContent>
         </Card>
