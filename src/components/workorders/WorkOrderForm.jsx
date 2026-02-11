@@ -253,7 +253,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
                   variant="outline"
                   role="combobox"
                   aria-expanded={customerPopoverOpen}
-                  className="w-full justify-between"
+                  className="w-full justify-between h-9"
                 >
                   {selectedCustomerId
                     ? getCustomerDisplayName(customers.find((c) => c.id === selectedCustomerId))
@@ -261,7 +261,13 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[400px] p-0">
+              <PopoverContent 
+                className="w-[400px] p-0" 
+                side="bottom" 
+                align="start" 
+                sideOffset={4}
+                avoidCollisions={false}
+              >
                 <Command>
                   <CommandInput placeholder="Search customer..." />
                   <CommandEmpty>No customer found.</CommandEmpty>
