@@ -433,15 +433,110 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         return true;
       };
 
-      // Build similarity baselines (by service_category)
-      const categoryBaselines = {};
-      auditResults.findings.time.complete.forEach(finding => {
-        if (!finding.service_category || !finding.time_minutes) return;
-        if (!categoryBaselines[finding.service_category]) {
-          categoryBaselines[finding.service_category] = [];
+      // Extract keywords from task titles
+      const extractKeywords = (title) => {
+        if (!title) return [];
+        const normalized = title.toLowerCase();
+        
+        // Remove common words
+        const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
+        const words = normalized.split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+        
+        // Extract multi-word technical terms (2-3 words)
+        const terms = [];
+        for (let i = 0; i < words.length - 1; i++) {
+          terms.push(`${words[i]} ${words[i + 1]}`);
+          if (i < words.length - 2) {
+            terms.push(`${words[i]} ${words[i + 1]} ${words[i + 2]}`);
+          }
         }
-        categoryBaselines[finding.service_category].push(finding.time_minutes);
-      });
+        
+        return [...new Set([...terms, ...words])];
+      };
+
+      // Extract action verbs
+      const extractActionVerb = (title) => {
+        if (!title) return null;
+        const normalized = title.toLowerCase();
+        const actionVerbs = ['check', 'inspect', 'test', 'replace', 'install', 'repair', 'service', 'maintain', 'clean', 'adjust'];
+        return actionVerbs.find(verb => normalized.includes(verb)) || null;
+      };
+
+      // Pre-process all tasks with time data
+      const tasksWithTime = auditResults.findings.time.complete.map(finding => ({
+        ...finding,
+        keywords: extractKeywords(finding.title),
+        actionVerb: extractActionVerb(finding.title)
+      }));
+
+      // Hierarchical matching function
+      const findSimilarTasks = (targetTitle, targetCategory) => {
+        const targetKeywords = extractKeywords(targetTitle);
+        const targetVerb = extractActionVerb(targetTitle);
+        
+        // Level 1: Strong keyword match (3+ word phrases or 2+ single word matches)
+        let matches = tasksWithTime.filter(task => {
+          if (task.service_category !== targetCategory) return false;
+          const matchedKeywords = targetKeywords.filter(kw => 
+            task.keywords.some(tk => tk.includes(kw) || kw.includes(tk))
+          );
+          return matchedKeywords.length >= 2;
+        });
+        
+        if (matches.length >= 5) {
+          const topKeywords = targetKeywords.slice(0, 3).join(', ');
+          return {
+            tasks: matches,
+            level: 'Strong keyword match',
+            keywords: topKeywords,
+            confidence: 'High'
+          };
+        }
+        
+        // Level 2: Subsystem keywords (1+ keyword) + category
+        matches = tasksWithTime.filter(task => {
+          if (task.service_category !== targetCategory) return false;
+          return targetKeywords.some(kw => 
+            task.keywords.some(tk => tk.includes(kw) || kw.includes(tk))
+          );
+        });
+        
+        if (matches.length >= 5) {
+          const topKeywords = targetKeywords.slice(0, 2).join(', ');
+          return {
+            tasks: matches,
+            level: 'Subsystem + category',
+            keywords: topKeywords,
+            confidence: 'Medium'
+          };
+        }
+        
+        // Level 3: Action verb match + category
+        if (targetVerb) {
+          matches = tasksWithTime.filter(task => 
+            task.service_category === targetCategory && task.actionVerb === targetVerb
+          );
+          
+          if (matches.length >= 5) {
+            return {
+              tasks: matches,
+              level: 'Action verb match',
+              keywords: targetVerb,
+              confidence: 'Medium'
+            };
+          }
+        }
+        
+        // Level 4: Fallback - category only
+        matches = tasksWithTime.filter(task => task.service_category === targetCategory);
+        
+        return {
+          tasks: matches,
+          level: 'Generic baseline (category only)',
+          keywords: targetCategory || 'none',
+          confidence: 'Low'
+        };
+      };
 
       // Compute percentiles
       const computePercentile = (values, p) => {
@@ -456,22 +551,21 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
 
       const computeMedian = (values) => computePercentile(values, 50);
 
-      const categoryStats = {};
-      Object.entries(categoryBaselines).forEach(([category, times]) => {
-        categoryStats[category] = {
-          median: computeMedian(times),
-          p25: computePercentile(times, 25),
-          p75: computePercentile(times, 75),
-          count: times.length
-        };
+      const computeStats = (times) => ({
+        median: computeMedian(times),
+        p25: computePercentile(times, 25),
+        p75: computePercentile(times, 75),
+        count: times.length
       });
 
       // A) TIME IMPROVEMENTS - Missing time
       for (const finding of auditResults.findings.time.missing.filter(shouldIncludeTask)) {
         const category = finding.service_category || 'General Service';
-        const stats = categoryStats[category];
+        const matchResult = findSimilarTasks(finding.title, category);
+        const times = matchResult.tasks.map(t => t.time_minutes);
+        const stats = times.length > 0 ? computeStats(times) : null;
 
-        let status, suggestionText, confidence, suggested_time, expected_band, n_similar;
+        let status, suggestionText, confidence, suggested_time, expected_band, n_similar, match_level, keywords;
 
         if (stats && stats.count >= 5) {
           status = 'Missing time';
@@ -481,13 +575,17 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           suggested_time = `${medianHours}h`;
           expected_band = `${p25Hours}h – ${p75Hours}h`;
           n_similar = stats.count;
-          suggestionText = `Missing time — Expected: ${expected_band} (median ${medianHours}h) — Based on ${n_similar} similar tasks`;
-          confidence = 'High';
+          match_level = matchResult.level;
+          keywords = matchResult.keywords;
+          confidence = matchResult.confidence;
+          suggestionText = `Missing time — Expected: ${expected_band} (median ${medianHours}h) — Matched by: ${match_level} — Keywords: ${keywords} — Similar tasks: n=${n_similar}`;
         } else {
           status = 'Manual review';
-          suggestionText = 'Insufficient comparison data (< 5 similar tasks) — Manual review recommended';
-          confidence = 'Low';
           n_similar = stats?.count || 0;
+          match_level = matchResult.level;
+          keywords = matchResult.keywords;
+          confidence = 'Low';
+          suggestionText = `Insufficient comparison data (${n_similar} similar tasks) — Manual review recommended — Matched by: ${match_level}`;
         }
 
         generatedSuggestions.push({
@@ -507,14 +605,18 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           suggested_time,
           expected_band,
           n_similar,
-          current_time: null
+          current_time: null,
+          match_level,
+          keywords
         });
       }
 
       // B) TIME IMPROVEMENTS - Existing time (check if within expected band)
       for (const finding of auditResults.findings.time.complete.filter(shouldIncludeTask)) {
         const category = finding.service_category || 'General Service';
-        const stats = categoryStats[category];
+        const matchResult = findSimilarTasks(finding.title, category);
+        const times = matchResult.tasks.filter(t => t.id !== finding.id).map(t => t.time_minutes);
+        const stats = times.length > 0 ? computeStats(times) : null;
         const currentMinutes = finding.time_minutes;
 
         if (!stats || stats.count < 5) continue;
@@ -527,24 +629,26 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         let status, suggestionText, confidence, suggested_time;
         const expected_band = `${p25Hours}h – ${p75Hours}h`;
         const n_similar = stats.count;
+        const match_level = matchResult.level;
+        const keywords = matchResult.keywords;
 
         if (currentMinutes < stats.p25) {
           status = 'Too low';
           suggested_time = `${medianHours}h`;
-          suggestionText = `Current: ${currentHours}h — Too low — Expected: ${expected_band} (median ${medianHours}h) — Based on ${n_similar} similar tasks`;
-          confidence = 'High';
+          suggestionText = `Current: ${currentHours}h — Too low — Expected: ${expected_band} (median ${medianHours}h) — Matched by: ${match_level} — Keywords: ${keywords} — Similar tasks: n=${n_similar}`;
+          confidence = matchResult.confidence;
         } else if (currentMinutes > stats.p75) {
           status = 'Too high';
           suggested_time = 'Review recommended';
-          suggestionText = `Current: ${currentHours}h — Too high — Expected: ${expected_band} (median ${medianHours}h) — Based on ${n_similar} similar tasks`;
-          confidence = 'High';
+          suggestionText = `Current: ${currentHours}h — Too high — Expected: ${expected_band} (median ${medianHours}h) — Matched by: ${match_level} — Keywords: ${keywords} — Similar tasks: n=${n_similar}`;
+          confidence = matchResult.confidence;
         } else {
           status = 'OK';
           if (!showOnlyIssues) {
-            suggestionText = `Current: ${currentHours}h — Within expected range ${expected_band}`;
-            confidence = 'High';
+            suggestionText = `Current: ${currentHours}h — Within expected range ${expected_band} — Matched by: ${match_level} — Similar tasks: n=${n_similar}`;
+            confidence = matchResult.confidence;
           } else {
-            continue; // Skip OK items if showOnlyIssues is true
+            continue;
           }
         }
 
@@ -565,7 +669,9 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           suggested_time,
           expected_band,
           n_similar,
-          current_time: `${currentHours}h`
+          current_time: `${currentHours}h`,
+          match_level,
+          keywords
         });
       }
 
