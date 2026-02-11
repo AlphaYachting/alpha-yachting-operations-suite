@@ -147,7 +147,7 @@ export default function ProjectIntelligence() {
       for (const task of tasks) {
         const wo = woMap.get(task.work_order_id);
         const job = wo ? jobMap.get(wo.job_id) : null;
-        const serviceCategory = job?.service_category;
+        const serviceCategory = wo?.service_area || job?.service_category;
 
         if (!serviceCategory || serviceCategory === 'Other' || serviceCategory === 'General Service') {
           findings.skill.undetermined.push({
@@ -222,6 +222,7 @@ export default function ProjectIntelligence() {
       for (const task of tasks) {
         const wo = woMap.get(task.work_order_id);
         const job = wo ? jobMap.get(wo.job_id) : null;
+        const serviceCategory = wo?.service_area || job?.service_category;
 
         if (!task.estimated_minutes && !task.actual_minutes) {
           findings.time.missing.push({
@@ -234,7 +235,7 @@ export default function ProjectIntelligence() {
             workorder_id: wo?.id,
             workorder_title: wo?.title,
             task_status: task.status,
-            service_category: job?.service_category
+            service_category: serviceCategory
           });
         } else {
           findings.time.complete.push({
@@ -247,7 +248,7 @@ export default function ProjectIntelligence() {
             workorder_id: wo?.id,
             workorder_title: wo?.title,
             task_status: task.status,
-            service_category: job?.service_category,
+            service_category: serviceCategory,
             time_minutes: task.estimated_minutes || task.actual_minutes
           });
         }
@@ -266,7 +267,7 @@ export default function ProjectIntelligence() {
               workorder_id: wo?.id,
               workorder_title: wo?.title,
               task_status: task.status,
-              service_category: job?.service_category,
+              service_category: serviceCategory,
               current_time_minutes: timeValue
             });
           }
@@ -1067,7 +1068,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           woPlannedMinutes += baseMinutes;
 
           // Determine skill requirements
-          const serviceCategory = projectData.service_category;
+          const serviceCategory = wo.service_area || projectData.service_category;
           const requiredSkill = categoryToSkill[serviceCategory];
           
           if (requiredSkill) {
