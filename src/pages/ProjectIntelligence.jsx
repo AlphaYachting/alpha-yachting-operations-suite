@@ -2798,61 +2798,63 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                             className="mt-1 h-4 w-4 rounded border-slate-300"
                           />
                         )}
-                          <div>
-                            <p className="text-xs text-slate-500 mb-1">Current Title:</p>
-                            <p className="text-sm font-medium text-slate-900 mb-3">
-                              {sugg.current_title}
-                            </p>
-                            
-                            {sugg.suggested_title && (
-                              <>
-                                <p className="text-xs text-indigo-700 mb-1">Suggested Title:</p>
-                                <p className="text-sm font-semibold text-indigo-900 mb-2">
-                                  {sugg.suggested_title}
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <p className="text-xs text-slate-500 mb-1">Current Title:</p>
+                              <p className="text-sm font-medium text-slate-900 mb-3">
+                                {sugg.current_title}
+                              </p>
+
+                              {sugg.suggested_title && (
+                                <>
+                                  <p className="text-xs text-indigo-700 mb-1">Suggested Title:</p>
+                                  <p className="text-sm font-semibold text-indigo-900 mb-2">
+                                    {sugg.suggested_title}
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                                sugg.confidence === 'High' ? 'bg-green-100 text-green-800' :
+                                sugg.confidence === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                                'bg-slate-100 text-slate-800'
+                              }`}>
+                                {sugg.confidence}
+                              </span>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                sugg.cohesion_rating === 'Good' ? 'bg-green-100 text-green-800' :
+                                sugg.cohesion_rating === 'Mixed' ? 'bg-amber-100 text-amber-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {sugg.cohesion_rating}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="border-t pt-3">
+                            <p className="text-xs text-slate-500 mb-1">Reason:</p>
+                            <p className="text-xs text-slate-700">{sugg.reason}</p>
+
+                            {sugg.dominant_cluster && (
+                              <div className="mt-2">
+                                <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">
+                                  Dominant: {sugg.dominant_cluster} ({sugg.task_count} tasks)
+                                </span>
+                              </div>
+                            )}
+
+                            {sugg.ambiguity_flag && (
+                              <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
+                                <p className="text-xs text-amber-800 flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {sugg.ambiguity_flag}
                                 </p>
-                              </>
+                              </div>
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span className={`text-xs px-2 py-1 rounded font-semibold ${
-                            sugg.confidence === 'High' ? 'bg-green-100 text-green-800' :
-                            sugg.confidence === 'Medium' ? 'bg-amber-100 text-amber-800' :
-                            'bg-slate-100 text-slate-800'
-                          }`}>
-                            {sugg.confidence}
-                          </span>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            sugg.cohesion_rating === 'Good' ? 'bg-green-100 text-green-800' :
-                            sugg.cohesion_rating === 'Mixed' ? 'bg-amber-100 text-amber-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {sugg.cohesion_rating}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="border-t pt-3">
-                        <p className="text-xs text-slate-500 mb-1">Reason:</p>
-                        <p className="text-xs text-slate-700">{sugg.reason}</p>
-                        
-                        {sugg.dominant_cluster && (
-                          <div className="mt-2">
-                            <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">
-                              Dominant: {sugg.dominant_cluster} ({sugg.task_count} tasks)
-                            </span>
-                          </div>
-                        )}
-
-                        {sugg.ambiguity_flag && (
-                          <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
-                            <p className="text-xs text-amber-800 flex items-center gap-1">
-                              <AlertCircle className="h-3 w-3" />
-                              {sugg.ambiguity_flag}
-                            </p>
-                          </div>
-                        )}
-                      </div>
                     </CardContent>
                   </Card>
                 ))}
