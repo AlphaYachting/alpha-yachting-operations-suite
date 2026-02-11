@@ -62,6 +62,7 @@ export default function ProjectIntelligence() {
   const [cohesionApplyConfirm, setCohesionApplyConfirm] = useState('');
   const [applyingCohesion, setApplyingCohesion] = useState(false);
   const [cohesionApplyResults, setCohesionApplyResults] = useState(null);
+  const [namingReviewResults, setNamingReviewResults] = useState(null);
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -1057,6 +1058,10 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
         total_suggestions: cohesionAnalysis.reduce((sum, a) => sum + a.suggestions.length, 0)
       });
 
+      // Generate naming review suggestions
+      const namingReview = generateNamingReview(cohesionAnalysis, job);
+      setNamingReviewResults(namingReview);
+
       toast.success(`Cohesion analysis complete: ${cohesionAnalysis.length} workorders analyzed`);
       setSelectedCohesionSuggestions(new Set());
       setCohesionConfidenceFilter('all');
@@ -1140,6 +1145,71 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
       moves,
       blocked,
       affectedWorkorderCount: affectedWorkorders.size
+    };
+  };
+
+  const generateNamingReview = (cohesionAnalysis, job) => {
+    const suggestions = [];
+
+    // Generic title keywords that indicate need for renaming
+    const genericKeywords = ['general', 'service', 'work', 'fixes', 'maintenance', 'tasks', 'todo', 'misc', 'other'];
+
+    for (const wo of cohesionAnalysis) {
+      const titleLower = wo.workorder_title.toLowerCase();
+      const isGeneric = genericKeywords.some(kw => titleLower.includes(kw));
+      const dominantCluster = wo.clusters[0];
+      const hasMultipleClusters = wo.clusters.length >= 3;
+
+      let titleSuggestion = null;
+      let reason = null;
+      let confidence = null;
+
+      // Determine if rename is needed
+      if (isGeneric && dominantCluster) {
+        // Generic title + clear dominant cluster
+        const clusterName = dominantCluster.keyword.charAt(0).toUpperCase() + dominantCluster.keyword.slice(1);
+        const scope = wo.task_count > 3 ? 'Service & Diagnostics' : 'Service';
+        titleSuggestion = `${clusterName} — ${scope}`;
+        reason = `Current title is generic; ${dominantCluster.count}/${wo.task_count} tasks focus on ${dominantCluster.keyword} work`;
+        confidence = dominantCluster.count / wo.task_count > 0.7 ? 'High' : 'Medium';
+      } else if (!isGeneric && dominantCluster && dominantCluster.count / wo.task_count > 0.8) {
+        // Specific title but might not reflect dominant cluster
+        const clusterName = dominantCluster.keyword.charAt(0).toUpperCase() + dominantCluster.keyword.slice(1);
+        if (!titleLower.includes(dominantCluster.keyword)) {
+          titleSuggestion = `${clusterName} — ${wo.workorder_title}`;
+          reason = `${dominantCluster.count}/${wo.task_count} tasks focus on ${dominantCluster.keyword}, not reflected in title`;
+          confidence = 'Medium';
+        }
+      }
+
+      // Ambiguity flag
+      let ambiguityFlag = null;
+      if (hasMultipleClusters && wo.cohesion_rating === 'Poor') {
+        const topClusters = wo.clusters.slice(0, 3).map(c => c.keyword).join(', ');
+        ambiguityFlag = `Contains multiple distinct clusters (${topClusters}) — consider splitting conceptually`;
+      }
+
+      if (titleSuggestion || ambiguityFlag) {
+        suggestions.push({
+          workorder_id: wo.workorder_id,
+          current_title: wo.workorder_title,
+          suggested_title: titleSuggestion,
+          reason: reason || ambiguityFlag,
+          confidence: confidence || 'Low',
+          ambiguity_flag: ambiguityFlag,
+          dominant_cluster: dominantCluster?.keyword,
+          task_count: wo.task_count,
+          cohesion_rating: wo.cohesion_rating
+        });
+      }
+    }
+
+    return {
+      project_id: job.id,
+      project_title: job.title,
+      total_workorders: cohesionAnalysis.length,
+      suggestions,
+      total_suggestions: suggestions.length
     };
   };
 
@@ -2597,6 +2667,115 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           )}
         </CardContent>
       </Card>
+
+      {/* Workorder Naming & Category Review */}
+      {namingReviewResults && (
+        <Card className="border-indigo-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-indigo-600" />
+              Workorder Naming & Category Review (Draft)
+            </CardTitle>
+            <CardDescription>
+              Suggested improvements to workorder titles for better clarity. Review before applying task reassignments.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-indigo-900 mb-2">
+                Project: {namingReviewResults.project_title}
+              </h3>
+              <div className="text-xs text-slate-600 space-y-1">
+                <p>• Total Workorders: {namingReviewResults.total_workorders}</p>
+                <p>• Naming Suggestions: {namingReviewResults.total_suggestions}</p>
+              </div>
+            </div>
+
+            {namingReviewResults.suggestions.length === 0 ? (
+              <div className="text-center py-8 text-sm text-green-600">
+                ✓ All workorder titles are clear and descriptive. No changes suggested.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {namingReviewResults.suggestions.map(sugg => (
+                  <Card key={sugg.workorder_id} className="bg-slate-50">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <p className="text-xs text-slate-500 mb-1">Current Title:</p>
+                          <p className="text-sm font-medium text-slate-900 mb-3">
+                            {sugg.current_title}
+                          </p>
+                          
+                          {sugg.suggested_title && (
+                            <>
+                              <p className="text-xs text-indigo-700 mb-1">Suggested Title:</p>
+                              <p className="text-sm font-semibold text-indigo-900 mb-2">
+                                {sugg.suggested_title}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                            sugg.confidence === 'High' ? 'bg-green-100 text-green-800' :
+                            sugg.confidence === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                            'bg-slate-100 text-slate-800'
+                          }`}>
+                            {sugg.confidence}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            sugg.cohesion_rating === 'Good' ? 'bg-green-100 text-green-800' :
+                            sugg.cohesion_rating === 'Mixed' ? 'bg-amber-100 text-amber-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {sugg.cohesion_rating}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-3">
+                        <p className="text-xs text-slate-500 mb-1">Reason:</p>
+                        <p className="text-xs text-slate-700">{sugg.reason}</p>
+                        
+                        {sugg.dominant_cluster && (
+                          <div className="mt-2">
+                            <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">
+                              Dominant: {sugg.dominant_cluster} ({sugg.task_count} tasks)
+                            </span>
+                          </div>
+                        )}
+
+                        {sugg.ambiguity_flag && (
+                          <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
+                            <p className="text-xs text-amber-800 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              {sugg.ambiguity_flag}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-blue-900">
+                <strong>Draft Mode:</strong> These are naming suggestions only. No workorder titles have been changed. 
+                Use this review to understand workorder structure before applying task reassignments.
+              </p>
+            </div>
+
+            <div className="text-xs text-slate-500 italic text-center pt-2">
+              Note: Apply functionality for workorder renames will be added in a future step. 
+              For now, use this as guidance to understand current workorder organization.
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Cohesion Apply Results */}
       {cohesionApplyResults && (
