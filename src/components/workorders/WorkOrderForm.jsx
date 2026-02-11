@@ -237,7 +237,9 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
           <h3 className="text-sm font-semibold text-slate-900">Customer Context</h3>
           
           <div className="space-y-2">
-            <Label>Customer *</Label>
+            <Label className="text-sm font-semibold">
+              Customer <span className="text-red-600">*</span>
+            </Label>
             <div className="space-y-2">
               <Input
                 placeholder="Search customer by name or email..."
@@ -250,8 +252,8 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
                 setSelectedBoatId('');
                 setFormData(prev => ({ ...prev, job_id: '' }));
               }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select customer" />
+                <SelectTrigger className={!selectedCustomerId ? 'border-red-300 bg-red-50' : ''}>
+                  <SelectValue placeholder="⚠️ Select customer (required)" />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredCustomers.slice(0, 50).map(customer => (
@@ -266,10 +268,12 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
 
           {selectedCustomerId && (
             <div className="space-y-2">
-              <Label>Boat *</Label>
+              <Label className="text-sm font-semibold">
+                Boat <span className="text-red-600">*</span>
+              </Label>
               <Select value={selectedBoatId} onValueChange={setSelectedBoatId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select boat" />
+                <SelectTrigger className={!selectedBoatId ? 'border-red-300 bg-red-50' : ''}>
+                  <SelectValue placeholder="⚠️ Select boat (required)" />
                 </SelectTrigger>
                 <SelectContent>
                   {customerBoats.map(boat => (
@@ -284,11 +288,13 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
 
           {selectedCustomerId && selectedBoatId && (
             <div className="space-y-2">
-              <Label>Project *</Label>
+              <Label className="text-sm font-semibold">
+                Project <span className="text-red-600">*</span>
+              </Label>
               {customerProjects.length > 0 ? (
                 <Select value={formData.job_id} onValueChange={(v) => updateField('job_id', v)}>
-                  <SelectTrigger className={fieldErrors.job_id ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Select existing project" />
+                  <SelectTrigger className={!formData.job_id || fieldErrors.job_id ? 'border-red-300 bg-red-50' : ''}>
+                    <SelectValue placeholder="⚠️ Select existing project (required)" />
                   </SelectTrigger>
                   <SelectContent>
                     {customerProjects.map(project => (
