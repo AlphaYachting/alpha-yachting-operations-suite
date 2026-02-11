@@ -48,7 +48,7 @@ import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfD
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
-import LeadForm from '@/components/leads/LeadForm';
+import LeadForm from '@/components/leadsV2/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
 
@@ -1083,10 +1083,10 @@ export default function Dashboard() {
             customers={customers}
             boats={boats}
             onSave={async (workOrderData) => {
-              const { work_order_number } = await base44.functions.invoke('generateWorkOrderNumber', {});
+              const woNumber = `WO${Date.now().toString().slice(-6)}`;
               const newWo = await base44.entities.WorkOrder.create({ 
                 ...workOrderData, 
-                work_order_number 
+                work_order_number: woNumber 
               });
               setWorkOrders([newWo, ...workOrders]);
               setShowWorkOrderDialog(false);
@@ -1105,7 +1105,10 @@ export default function Dashboard() {
             <DialogTitle>Create New Lead</DialogTitle>
           </DialogHeader>
           <LeadForm
+            customers={customers}
             locations={locations}
+            users={users}
+            boats={boats}
             onSave={async (leadData) => {
               const newLead = await base44.entities.Lead.create(leadData);
               setLeads([newLead, ...leads]);
