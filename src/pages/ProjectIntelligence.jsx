@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Brain, FileSearch, Lightbulb, TrendingUp, Save, Settings, AlertCircle, Clock, Users, GitBranch, CheckCircle, XCircle, Calendar } from 'lucide-react';
+import { Brain, FileSearch, Lightbulb, TrendingUp, Save, Settings, AlertCircle, Clock, Users, GitBranch, CheckCircle, XCircle, Calendar, Layers, ArrowRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
