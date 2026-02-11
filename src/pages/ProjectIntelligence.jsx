@@ -133,7 +133,11 @@ export default function ProjectIntelligence() {
             id: task.id,
             title: task.title,
             type: 'skill_undetermined',
-            reason: 'No specific service category defined'
+            reason: 'No specific service category defined',
+            project_id: job?.id,
+            project_title: job?.title,
+            workorder_id: wo?.id,
+            workorder_title: wo?.title
           });
         } else {
           // Map service category to skill (simplified matching)
@@ -157,21 +161,33 @@ export default function ProjectIntelligence() {
               id: task.id,
               title: task.title,
               type: 'skill_covered',
-              reason: `Team has ${requiredSkill} skill`
+              reason: `Team has ${requiredSkill} skill`,
+              project_id: job?.id,
+              project_title: job?.title,
+              workorder_id: wo?.id,
+              workorder_title: wo?.title
             });
           } else if (requiredSkill) {
             findings.skill.missing.push({
               id: task.id,
               title: task.title,
               type: 'skill_missing',
-              reason: `External ${requiredSkill} professional needed`
+              reason: `External ${requiredSkill} professional needed`,
+              project_id: job?.id,
+              project_title: job?.title,
+              workorder_id: wo?.id,
+              workorder_title: wo?.title
             });
           } else {
             findings.skill.undetermined.push({
               id: task.id,
               title: task.title,
               type: 'skill_undetermined',
-              reason: `Service category "${serviceCategory}" cannot be mapped to skill`
+              reason: `Service category "${serviceCategory}" cannot be mapped to skill`,
+              project_id: job?.id,
+              project_title: job?.title,
+              workorder_id: wo?.id,
+              workorder_title: wo?.title
             });
           }
         }
@@ -179,19 +195,30 @@ export default function ProjectIntelligence() {
 
       // B) TIME COMPLETENESS AUDIT
       for (const task of tasks) {
+        const wo = woMap.get(task.work_order_id);
+        const job = wo ? jobMap.get(wo.job_id) : null;
+
         if (!task.estimated_minutes && !task.actual_minutes) {
           findings.time.missing.push({
             id: task.id,
             title: task.title,
             type: 'time_missing',
-            reason: 'No estimated or actual time'
+            reason: 'No estimated or actual time',
+            project_id: job?.id,
+            project_title: job?.title,
+            workorder_id: wo?.id,
+            workorder_title: wo?.title
           });
         } else {
           findings.time.complete.push({
             id: task.id,
             title: task.title,
             type: 'time_complete',
-            reason: `${task.estimated_minutes || task.actual_minutes} minutes`
+            reason: `${task.estimated_minutes || task.actual_minutes} minutes`,
+            project_id: job?.id,
+            project_title: job?.title,
+            workorder_id: wo?.id,
+            workorder_title: wo?.title
           });
         }
 
@@ -203,7 +230,11 @@ export default function ProjectIntelligence() {
               id: task.id,
               title: task.title,
               type: 'time_outlier_high',
-              reason: `${timeValue} minutes exceeds threshold`
+              reason: `${timeValue} minutes exceeds threshold`,
+              project_id: job?.id,
+              project_title: job?.title,
+              workorder_id: wo?.id,
+              workorder_title: wo?.title
             });
           }
         }
@@ -367,7 +398,11 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           entity_name: finding.title,
           suggestion_type: 'time',
           suggestion_text: 'Add estimated time (suggest range: 30-120 minutes based on task type)',
-          reason: finding.reason
+          reason: finding.reason,
+          project_id: finding.project_id,
+          project_title: finding.project_title,
+          workorder_id: finding.workorder_id,
+          workorder_title: finding.workorder_title
         });
       }
 
@@ -379,7 +414,11 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           entity_name: finding.title,
           suggestion_type: 'time',
           suggestion_text: `Review time estimate - exceeds ${config.time_outlier_threshold}h threshold`,
-          reason: finding.reason
+          reason: finding.reason,
+          project_id: finding.project_id,
+          project_title: finding.project_title,
+          workorder_id: finding.workorder_id,
+          workorder_title: finding.workorder_title
         });
       }
 
@@ -395,7 +434,11 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           entity_name: finding.title,
           suggestion_type: 'skill',
           suggestion_text: `External professional required: ${skillName}`,
-          reason: finding.reason
+          reason: finding.reason,
+          project_id: finding.project_id,
+          project_title: finding.project_title,
+          workorder_id: finding.workorder_id,
+          workorder_title: finding.workorder_title
         });
       }
 
@@ -407,7 +450,11 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
           entity_name: finding.title,
           suggestion_type: 'skill',
           suggestion_text: 'Clarify required skill/service area for proper resource allocation',
-          reason: finding.reason
+          reason: finding.reason,
+          project_id: finding.project_id,
+          project_title: finding.project_title,
+          workorder_id: finding.workorder_id,
+          workorder_title: finding.workorder_title
         });
       }
 
@@ -1290,13 +1337,27 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                         className="mt-1 h-4 w-4 rounded border-slate-300"
                       />
                       <div className="flex-1 min-w-0">
+                        {/* Hierarchy Context */}
+                        <div className="mb-2 pb-2 border-b border-slate-200">
+                          {suggestion.project_title && (
+                            <div className="text-sm font-bold text-slate-900 mb-0.5">
+                              PROJECT: {suggestion.project_title}
+                            </div>
+                          )}
+                          {suggestion.workorder_title && (
+                            <div className="text-xs text-slate-600">
+                              Workorder: {suggestion.workorder_title}
+                            </div>
+                          )}
+                          <div className="text-xs text-slate-700 mt-0.5">
+                            Task: {suggestion.entity_name}
+                          </div>
+                        </div>
+                        
+                        {/* Suggestion Content */}
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-slate-500 uppercase">
-                            {suggestion.scope_level}
-                          </span>
-                          <span className="text-xs text-slate-400">•</span>
-                          <span className="text-sm font-medium text-slate-900 truncate">
-                            {suggestion.entity_name}
+                          <span className="text-xs font-medium text-blue-600 uppercase bg-blue-50 px-2 py-0.5 rounded">
+                            {suggestion.suggestion_type}
                           </span>
                         </div>
                         <p className="text-sm text-slate-700 mb-1">{suggestion.suggestion_text}</p>
@@ -1328,13 +1389,27 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                         className="mt-1 h-4 w-4 rounded border-slate-300"
                       />
                       <div className="flex-1 min-w-0">
+                        {/* Hierarchy Context */}
+                        <div className="mb-2 pb-2 border-b border-slate-200">
+                          {suggestion.project_title && (
+                            <div className="text-sm font-bold text-slate-900 mb-0.5">
+                              PROJECT: {suggestion.project_title}
+                            </div>
+                          )}
+                          {suggestion.workorder_title && (
+                            <div className="text-xs text-slate-600">
+                              Workorder: {suggestion.workorder_title}
+                            </div>
+                          )}
+                          <div className="text-xs text-slate-700 mt-0.5">
+                            Task: {suggestion.entity_name}
+                          </div>
+                        </div>
+                        
+                        {/* Suggestion Content */}
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-slate-500 uppercase">
-                            {suggestion.scope_level}
-                          </span>
-                          <span className="text-xs text-slate-400">•</span>
-                          <span className="text-sm font-medium text-slate-900 truncate">
-                            {suggestion.entity_name}
+                          <span className="text-xs font-medium text-green-600 uppercase bg-green-50 px-2 py-0.5 rounded">
+                            {suggestion.suggestion_type}
                           </span>
                         </div>
                         <p className="text-sm text-slate-700 mb-1">{suggestion.suggestion_text}</p>
@@ -1366,13 +1441,27 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                         className="mt-1 h-4 w-4 rounded border-slate-300"
                       />
                       <div className="flex-1 min-w-0">
+                        {/* Hierarchy Context */}
+                        <div className="mb-2 pb-2 border-b border-slate-200">
+                          {suggestion.project_title && (
+                            <div className="text-sm font-bold text-slate-900 mb-0.5">
+                              PROJECT: {suggestion.project_title}
+                            </div>
+                          )}
+                          {suggestion.workorder_title && (
+                            <div className="text-xs text-slate-600">
+                              Workorder: {suggestion.workorder_title}
+                            </div>
+                          )}
+                          <div className="text-xs text-slate-700 mt-0.5">
+                            Task: {suggestion.entity_name}
+                          </div>
+                        </div>
+                        
+                        {/* Suggestion Content */}
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-slate-500 uppercase">
-                            {suggestion.scope_level}
-                          </span>
-                          <span className="text-xs text-slate-400">•</span>
-                          <span className="text-sm font-medium text-slate-900 truncate">
-                            {suggestion.entity_name}
+                          <span className="text-xs font-medium text-purple-600 uppercase bg-purple-50 px-2 py-0.5 rounded">
+                            {suggestion.suggestion_type}
                           </span>
                         </div>
                         <p className="text-sm text-slate-700 mb-1">{suggestion.suggestion_text}</p>
