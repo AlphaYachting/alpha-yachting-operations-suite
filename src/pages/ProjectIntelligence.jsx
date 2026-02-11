@@ -46,6 +46,11 @@ export default function ProjectIntelligence() {
   const [planRunning, setPlanRunning] = useState(false);
   const [planDraft, setPlanDraft] = useState(null);
   const [availableProjects, setAvailableProjects] = useState([]);
+  const [selectedPlanElements, setSelectedPlanElements] = useState(new Set());
+  const [planApplyModalOpen, setPlanApplyModalOpen] = useState(false);
+  const [planApplyConfirm, setPlanApplyConfirm] = useState('');
+  const [applyingPlan, setApplyingPlan] = useState(false);
+  const [planApplyResults, setPlanApplyResults] = useState(null);
 
   // Load config from user profile on mount
   useEffect(() => {
@@ -758,12 +763,126 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
       });
 
       setPlanningModalOpen(false);
+      setSelectedPlanElements(new Set());
       toast.success('Plan draft generated');
     } catch (error) {
       console.error('Error generating plan:', error);
       toast.error('Failed to generate plan');
     } finally {
       setPlanRunning(false);
+    }
+  };
+
+  const togglePlanElement = (elementId) => {
+    setSelectedPlanElements(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(elementId)) {
+        newSet.delete(elementId);
+      } else {
+        newSet.add(elementId);
+      }
+      return newSet;
+    });
+  };
+
+  const getPlanSelectionSummary = () => {
+    if (!planDraft || selectedPlanElements.size === 0) return null;
+
+    const changes = [];
+    for (const wo of planDraft.orderedWorkOrders) {
+      if (selectedPlanElements.has(`wo-${wo.id}`)) {
+        changes.push({
+          type: 'workorder_dates',
+          entityId: wo.id,
+          entityName: wo.title,
+          changes: [
+            { field: 'scheduled_date', value: wo.startWindow.toISOString().split('T')[0] },
+            { field: 'scheduled_end_date', value: wo.endWindow.toISOString().split('T')[0] }
+          ]
+        });
+      }
+    }
+
+    return {
+      totalChanges: changes.length,
+      workorderCount: changes.filter(c => c.type === 'workorder_dates').length,
+      changes
+    };
+  };
+
+  const handleApplyPlanningDraft = async () => {
+    if (planApplyConfirm !== 'CONFIRM') {
+      toast.error('Please type CONFIRM to proceed');
+      return;
+    }
+
+    try {
+      setApplyingPlan(true);
+      setPlanApplyModalOpen(false);
+      toast.info('Applying selected planning elements...');
+
+      const summary = getPlanSelectionSummary();
+      const results = {
+        applied: [],
+        blocked: [],
+        failed: []
+      };
+
+      // Batch updates by entity type
+      const workOrderUpdates = new Map();
+
+      for (const change of summary.changes) {
+        try {
+          if (change.type === 'workorder_dates') {
+            const updates = {};
+            for (const c of change.changes) {
+              updates[c.field] = c.value;
+            }
+            workOrderUpdates.set(change.entityId, updates);
+            results.applied.push(change);
+          }
+        } catch (err) {
+          results.failed.push({
+            ...change,
+            error: err.message
+          });
+        }
+      }
+
+      // Apply batched WorkOrder updates
+      for (const [woId, updates] of workOrderUpdates.entries()) {
+        try {
+          await base44.entities.WorkOrder.update(woId, updates);
+        } catch (err) {
+          const failedChange = results.applied.find(c => c.entityId === woId);
+          if (failedChange) {
+            results.applied = results.applied.filter(c => c.entityId !== woId);
+            results.failed.push({
+              ...failedChange,
+              error: err.message
+            });
+          }
+        }
+      }
+
+      setPlanApplyResults(results);
+      setSelectedPlanElements(new Set());
+      setPlanApplyConfirm('');
+
+      if (results.applied.length > 0) {
+        toast.success(`Applied ${results.applied.length} planning element(s)`);
+      }
+      if (results.blocked.length > 0) {
+        toast.warning(`${results.blocked.length} element(s) blocked`);
+      }
+      if (results.failed.length > 0) {
+        toast.error(`${results.failed.length} element(s) failed`);
+      }
+    } catch (error) {
+      console.error('Error applying planning draft:', error);
+      toast.error('Failed to apply planning draft');
+    } finally {
+      setApplyingPlan(false);
     }
   };
 
@@ -1451,60 +1570,70 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                 {planDraft.orderedWorkOrders.map((wo, idx) => (
                   <Card key={wo.id} className="bg-slate-50">
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start gap-3 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedPlanElements.has(`wo-${wo.id}`)}
+                          onChange={() => togglePlanElement(`wo-${wo.id}`)}
+                          className="mt-1 h-4 w-4 rounded border-slate-300"
+                        />
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-slate-500 bg-slate-200 rounded px-2 py-0.5">
-                              #{idx + 1}
-                            </span>
-                            <span className="text-sm font-semibold text-slate-900">{wo.title}</span>
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-bold text-slate-500 bg-slate-200 rounded px-2 py-0.5">
+                                  #{idx + 1}
+                                </span>
+                                <span className="text-sm font-semibold text-slate-900">{wo.title}</span>
+                              </div>
+                              <p className="text-xs text-slate-600">{wo.taskCount} task(s)</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-bold text-slate-900">
+                                {Math.ceil(wo.plannedWithReserve / 60)}h
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                (+{Math.ceil(wo.reserveMinutes / 60)}h reserve)
+                              </p>
+                            </div>
                           </div>
-                          <p className="text-xs text-slate-600">{wo.taskCount} task(s)</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-slate-900">
-                            {Math.ceil(wo.plannedWithReserve / 60)}h
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            (+{Math.ceil(wo.reserveMinutes / 60)}h reserve)
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="grid md:grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <p className="text-slate-500 font-medium mb-1">Required Skills:</p>
-                          {wo.requiredSkills.length > 0 ? (
-                            <ul className="text-slate-700 space-y-0.5">
-                              {wo.requiredSkills.map(skill => (
-                                <li key={skill} className="flex items-center gap-1">
-                                  <CheckCircle className="h-3 w-3 text-green-600" />
-                                  {skill} (internal)
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-slate-400 italic">None identified</p>
-                          )}
-                          {wo.externalRoles.length > 0 && (
-                            <ul className="text-amber-700 space-y-0.5 mt-1">
-                              {wo.externalRoles.map(role => (
-                                <li key={role} className="flex items-center gap-1">
-                                  <AlertCircle className="h-3 w-3 text-amber-600" />
-                                  {role}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-slate-500 font-medium mb-1">Estimated Window:</p>
-                          <p className="text-slate-700">
-                            {new Date(wo.startWindow).toLocaleDateString()} → {new Date(wo.endWindow).toLocaleDateString()}
-                          </p>
-                          <p className="text-slate-400 italic mt-0.5">
-                            (~{Math.ceil(wo.plannedWithReserve / (8 * 60))} day(s))
-                          </p>
+                          <div className="grid md:grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <p className="text-slate-500 font-medium mb-1">Required Skills:</p>
+                              {wo.requiredSkills.length > 0 ? (
+                                <ul className="text-slate-700 space-y-0.5">
+                                  {wo.requiredSkills.map(skill => (
+                                    <li key={skill} className="flex items-center gap-1">
+                                      <CheckCircle className="h-3 w-3 text-green-600" />
+                                      {skill} (internal)
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="text-slate-400 italic">None identified</p>
+                              )}
+                              {wo.externalRoles.length > 0 && (
+                                <ul className="text-amber-700 space-y-0.5 mt-1">
+                                  {wo.externalRoles.map(role => (
+                                    <li key={role} className="flex items-center gap-1">
+                                      <AlertCircle className="h-3 w-3 text-amber-600" />
+                                      {role}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-slate-500 font-medium mb-1">Estimated Window:</p>
+                              <p className="text-slate-700">
+                                {new Date(wo.startWindow).toLocaleDateString()} → {new Date(wo.endWindow).toLocaleDateString()}
+                              </p>
+                              <p className="text-slate-400 italic mt-0.5">
+                                (~{Math.ceil(wo.plannedWithReserve / (8 * 60))} day(s))
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -1530,18 +1659,205 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
               </div>
             )}
 
+            {/* Selection Summary */}
+            {selectedPlanElements.size > 0 && (() => {
+              const summary = getPlanSelectionSummary();
+              return (
+                <div className="border-t pt-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                      {selectedPlanElements.size} Element(s) Selected
+                    </h4>
+                    <div className="text-xs text-slate-600">
+                      <p>• {summary.workorderCount} Work Order date window(s)</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Action Buttons */}
             <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setPlanDraft(null)}>
+              <Button variant="outline" onClick={() => {
+                setPlanDraft(null);
+                setSelectedPlanElements(new Set());
+              }}>
                 Discard Draft
               </Button>
-              <Button disabled className="bg-slate-400">
-                Apply Parts of Plan (Coming Soon)
-              </Button>
+              {selectedPlanElements.size > 0 ? (
+                <Button 
+                  onClick={() => setPlanApplyModalOpen(true)}
+                  disabled={applyingPlan}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Apply Selected
+                </Button>
+              ) : (
+                <Button disabled className="bg-slate-400">
+                  Select Elements to Apply
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Plan Apply Results */}
+      {planApplyResults && (
+        <Card className="border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Plan Apply Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {planApplyResults.applied.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-green-900 mb-2">
+                  Successfully Applied ({planApplyResults.applied.length})
+                </h3>
+                <div className="space-y-2">
+                  {planApplyResults.applied.map((c, idx) => (
+                    <div key={idx} className="p-2 bg-green-50 rounded border border-green-200 text-xs">
+                      <p className="font-medium text-slate-900 mb-1">{c.entityName}</p>
+                      <ul className="text-green-700 space-y-0.5">
+                        {c.changes.map((ch, chIdx) => (
+                          <li key={chIdx}>• {ch.field}: {ch.value}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {planApplyResults.blocked.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-amber-900 mb-2">
+                  Blocked ({planApplyResults.blocked.length})
+                </h3>
+                <div className="space-y-2">
+                  {planApplyResults.blocked.map((c, idx) => (
+                    <div key={idx} className="p-2 bg-amber-50 rounded border border-amber-200">
+                      <p className="text-xs font-medium text-slate-900">{c.entityName}</p>
+                      <p className="text-xs text-amber-700">{c.blockReason}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {planApplyResults.failed.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-red-900 mb-2">
+                  Failed ({planApplyResults.failed.length})
+                </h3>
+                <div className="space-y-2">
+                  {planApplyResults.failed.map((c, idx) => (
+                    <div key={idx} className="p-2 bg-red-50 rounded border border-red-200">
+                      <p className="text-xs font-medium text-slate-900">{c.entityName}</p>
+                      <p className="text-xs text-red-700">{c.error}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Plan Apply Confirmation Modal */}
+      <Dialog open={planApplyModalOpen} onOpenChange={setPlanApplyModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Confirm Apply Planning Draft</DialogTitle>
+            <DialogDescription>
+              You are about to modify live project data. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Warning Banner */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-900">Warning</p>
+                <p className="text-xs text-red-700 mt-1">
+                  These changes will update live Work Order data. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            {/* Changes List */}
+            {(() => {
+              const summary = getPlanSelectionSummary();
+              if (!summary) return null;
+
+              return (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    Changes to Apply ({summary.totalChanges})
+                  </h3>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {summary.changes.map((c, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 rounded border border-slate-200">
+                        <p className="text-sm font-medium text-slate-900 mb-2">{c.entityName}</p>
+                        <div className="space-y-1">
+                          {c.changes.map((ch, chIdx) => (
+                            <div key={chIdx} className="flex items-center gap-2 text-xs">
+                              <span className="text-slate-500 font-mono">{ch.field}:</span>
+                              <span className="text-blue-700 font-semibold">{ch.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Scope Summary */}
+                  <div className="bg-slate-100 rounded p-3 text-xs">
+                    <p className="font-medium text-slate-900 mb-1">Affected Entities:</p>
+                    <div className="text-slate-600">
+                      <p>• {summary.workorderCount} Work Order(s)</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Confirmation Input */}
+            <div className="pt-4 border-t">
+              <Label htmlFor="confirm-input">Type CONFIRM to proceed</Label>
+              <Input
+                id="confirm-input"
+                type="text"
+                value={planApplyConfirm}
+                onChange={(e) => setPlanApplyConfirm(e.target.value)}
+                placeholder="CONFIRM"
+                className="mt-1 font-mono"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setPlanApplyModalOpen(false);
+              setPlanApplyConfirm('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleApplyPlanningDraft}
+              disabled={planApplyConfirm !== 'CONFIRM' || applyingPlan}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {applyingPlan ? 'Applying...' : 'Confirm & Apply'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Planning Input Modal */}
       <Dialog open={planningModalOpen} onOpenChange={setPlanningModalOpen}>
