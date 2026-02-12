@@ -665,6 +665,77 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     yPos += 10;
   }
 
+  // Gallery Appendix for Offers
+  if (!isInvoice && document.attachments && document.attachments.length > 0) {
+    doc.addPage();
+    addLetterhead();
+    yPos = margins.top;
+
+    // Title
+    doc.setFontSize(14);
+    doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+    doc.setFont(fontFamily, 'bold');
+    doc.text('Photo Documentation (Appendix)', margins.left, yPos);
+    yPos += 10;
+
+    // Intro text
+    doc.setFontSize(9);
+    doc.setTextColor(85, 85, 85);
+    doc.setFont(fontFamily, 'normal');
+    doc.text('Attached photos for documentation purposes.', margins.left, yPos);
+    yPos += 8;
+
+    // Gallery grid (2 columns)
+    const imageWidth = (contentWidth - 10) / 2;
+    const imageHeight = 80;
+    let xPos = margins.left;
+    let imageCount = 0;
+
+    for (const imageUrl of document.attachments) {
+      // Check page break
+      if (yPos + imageHeight + 30 > pageHeight - margins.bottom - 20) {
+        doc.addPage();
+        addLetterhead();
+        yPos = margins.top;
+        xPos = margins.left;
+      }
+
+      try {
+        // Add image
+        doc.addImage(imageUrl, 'JPEG', xPos, yPos, imageWidth - 5, imageHeight);
+        
+        // Add caption if available
+        let captionText = '';
+        if (document.gallery_meta && document.gallery_meta[imageUrl]) {
+          captionText = document.gallery_meta[imageUrl].caption || '';
+        }
+
+        let captionY = yPos + imageHeight + 2;
+        if (captionText) {
+          doc.setFontSize(8);
+          doc.setTextColor(85, 85, 85);
+          doc.setFont(fontFamily, 'italic');
+          const captionLines = doc.splitTextToSize(captionText, imageWidth - 5);
+          doc.text(captionLines, xPos + 2, captionY);
+          captionY += captionLines.length * 3.5;
+        }
+
+        // Position for next image
+        imageCount++;
+        if (imageCount % 2 === 0) {
+          // Move to next row
+          yPos = captionText ? captionY + 5 : yPos + imageHeight + 5;
+          xPos = margins.left;
+        } else {
+          // Move to next column
+          xPos += imageWidth + 5;
+        }
+      } catch (err) {
+        console.error('Failed to load image:', err);
+      }
+    }
+  }
+
   // Footer
   const footerY = pageHeight - margins.bottom - 15;
 
