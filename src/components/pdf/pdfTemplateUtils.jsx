@@ -777,6 +777,26 @@ ${document.public_notes}</div>
             <div>Generated: ${new Date().toLocaleDateString('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' })} ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
         </div>
+
+        <!-- Gallery Appendix (if images exist) -->
+        ${document.attachments && document.attachments.length > 0 ? `
+          <div class="gallery-appendix">
+            <h2 class="gallery-title">Photo Documentation (Appendix)</h2>
+            <div class="gallery-intro">Attached photos for documentation purposes.</div>
+            <div class="gallery-grid">
+              ${document.attachments.map((imageUrl, idx) => {
+                const meta = document.gallery_meta?.[imageUrl] || {};
+                const caption = meta.caption || '';
+                return `
+                  <div class="gallery-item">
+                    <img src="${imageUrl}" alt="Photo ${idx + 1}" class="gallery-image" onerror="this.outerHTML='<div class=\"gallery-no-image\">Image unavailable</div>'">
+                    ${caption ? `<div class="gallery-caption">${caption}</div>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
       </div>
     </body>
     </html>
