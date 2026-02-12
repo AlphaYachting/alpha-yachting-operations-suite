@@ -287,6 +287,26 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
             <p className="text-sm">No images yet. Upload to get started.</p>
           </div>
         )}
+
+        {/* Minimum Images Warning */}
+        {galleryItems.length > 0 && galleryItems.length < 6 && (
+          <Alert className="bg-amber-50 border-amber-200">
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800 text-sm">
+              {6 - galleryItems.length} more image(s) needed. Gallery will not appear in PDF until minimum 6 images are uploaded.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Ready for PDF */}
+        {hasMinimumImages && (
+          <Alert className="bg-green-50 border-green-200">
+            <AlertCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800 text-sm">
+              ✓ Gallery with {galleryItems.length} image(s) will be included in PDF export.
+            </AlertDescription>
+          </Alert>
+        )}
       </CardContent>
     </Card>
   );
