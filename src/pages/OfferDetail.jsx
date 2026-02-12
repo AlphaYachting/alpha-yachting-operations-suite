@@ -704,7 +704,9 @@ Requirements:
       public_notes: formData.customer_notes,
       safety_compliance_clause: formData.safety_compliance_clause,
       currency: 'EUR',
-      language: formData.language
+      language: formData.language,
+      attachments: formData.attachments || [],
+      gallery_meta: formData.gallery_meta || {}
     };
   };
 
