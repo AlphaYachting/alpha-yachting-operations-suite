@@ -21,16 +21,18 @@ export function Step10Review() {
     try {
       const response = await base44.functions.invoke('caseWizardAdapter', wizardData);
 
-      if (response.data.success) {
+      if (response.data?.success) {
         // Redirect to appropriate detail page
         setTimeout(() => {
           navigate(response.data.redirectTo);
         }, 500);
       } else {
-        setError(response.data.error || 'Failed to create case');
+        setError(response.data?.error || 'Failed to create case');
       }
     } catch (err) {
-      setError(err.message || 'Error creating case');
+      console.error('Wizard submission error:', err);
+      const errorMsg = err.response?.data?.error || err.message || 'Unknown error occurred';
+      setError(`Error: ${errorMsg} (Status: ${err.response?.status || 'N/A'})`);
     } finally {
       setIsSubmitting(false);
     }
