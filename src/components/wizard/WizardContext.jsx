@@ -13,7 +13,8 @@ export function WizardProvider({ children }) {
     },
     vessel: { existing: null, new: null }, // boat_id OR new boatData
     location: { existing: null, new: null }, // location_id OR new locationData OR 'unknown'
-    intent: null, // 'offer' | 'job' | 'offer+job' | 'inspection' | 'boat_only'
+    intent: null, // 'offer' | 'job' | 'offer+job' | 'inspection' | 'boat_only' | 'workorder_for_existing_project'
+    existingProjectId: null, // for workorder_for_existing_project intent
     offer: {
       title: '',
       description: '',
@@ -106,6 +107,7 @@ export function WizardProvider({ children }) {
       vessel: { existing: null, new: null },
       location: { existing: null, new: null },
       intent: null,
+      existingProjectId: null,
       offer: {
         title: '',
         description: '',

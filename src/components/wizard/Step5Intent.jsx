@@ -12,6 +12,8 @@ export function Step5Intent() {
   const [alertOpen, setAlertOpen] = React.useState(false);
   const [alertMessage, setAlertMessage] = React.useState('');
 
+  const isExistingCustomer = wizardData.source === 'customer';
+
   const intents = [
     {
       value: 'offer',
@@ -33,6 +35,14 @@ export function Step5Intent() {
       description: 'Create offer first, then convert to project',
       icon: Briefcase,
       color: 'text-purple-600'
+    },
+    {
+      value: 'workorder_for_existing_project',
+      label: 'Workorder for Existing Project',
+      description: 'Add a work order to an existing project',
+      icon: Briefcase,
+      color: 'text-indigo-600',
+      requiresExistingCustomer: true
     },
     {
       value: 'inspection',
@@ -59,6 +69,8 @@ export function Step5Intent() {
     // Skip to appropriate next step based on intent
     if (wizardData.intent === 'boat_only') {
       setStep(10); // Go straight to review
+    } else if (wizardData.intent === 'workorder_for_existing_project') {
+      setStep(5.5); // Go to project selection
     } else {
       setStep(6); // Go to details
     }
@@ -76,15 +88,19 @@ export function Step5Intent() {
             <div className="space-y-3">
               {intents.map((intent) => {
                 const Icon = intent.icon;
+                const isDisabled = intent.requiresExistingCustomer && !isExistingCustomer;
                 return (
-                  <div key={intent.value} className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                    <RadioGroupItem value={intent.value} id={`intent-${intent.value}`} />
-                    <Label htmlFor={`intent-${intent.value}`} className="flex-1 cursor-pointer">
+                  <div key={intent.value} className={`flex items-center space-x-2 p-4 border rounded-lg ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 cursor-pointer'}`}>
+                    <RadioGroupItem value={intent.value} id={`intent-${intent.value}`} disabled={isDisabled} />
+                    <Label htmlFor={`intent-${intent.value}`} className={`flex-1 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                       <div className="flex items-center gap-2 mb-1">
                         <Icon className={`h-4 w-4 ${intent.color}`} />
                         <span className="font-medium">{intent.label}</span>
                       </div>
-                      <p className="text-sm text-slate-500">{intent.description}</p>
+                      <p className="text-sm text-slate-500">
+                        {intent.description}
+                        {isDisabled && ' (Select existing customer first)'}
+                      </p>
                     </Label>
                   </div>
                 );

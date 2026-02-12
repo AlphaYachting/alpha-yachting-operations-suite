@@ -5,6 +5,7 @@ import { Step2ContactInfo } from '@/components/wizard/Step2ContactInfo';
 import { Step3VesselSelection } from '@/components/wizard/Step3VesselSelection';
 import { Step4LocationSelection } from '@/components/wizard/Step4LocationSelection';
 import { Step5Intent } from '@/components/wizard/Step5Intent';
+import { Step5bProjectSelection } from '@/components/wizard/Step5bProjectSelection';
 import { Step6Details } from '@/components/wizard/Step6Details';
 import { Step7AddLineItems } from '@/components/wizard/Step7AddLineItems';
 import { Step8TechnicianAssignment } from '@/components/wizard/Step8TechnicianAssignment';
@@ -23,6 +24,7 @@ function WizardContent() {
       3: 'Vessel',
       4: 'Location',
       5: 'Intent',
+      5.5: 'Project',
       6: 'Details',
       7: 'Line Items',
       8: 'Technicians',
@@ -36,15 +38,18 @@ function WizardContent() {
     // Always show steps 1-5
     if (step <= 5) return true;
 
+    // Step 5.5: Project selection (only for workorder_for_existing_project)
+    if (step === 5.5) return wizardData.intent === 'workorder_for_existing_project';
+
     // Step 6-7: Offer or Job details
     if (step === 6) return true; // Always visible (conditional content inside)
     if (step === 7) return wizardData.intent && wizardData.intent.includes('offer'); // Line items only for offers
 
     // Step 8: Technician (if WO created)
-    if (step === 8) return wizardData.intent === 'inspection' || (wizardData.intent && wizardData.intent.includes('job') && wizardData.workOrder?.createFirst !== false);
+    if (step === 8) return wizardData.intent === 'inspection' || wizardData.intent === 'workorder_for_existing_project' || (wizardData.intent && wizardData.intent.includes('job') && wizardData.workOrder?.createFirst !== false);
 
     // Step 9: External Partner (optional, always visible)
-    if (step === 9) return wizardData.intent === 'inspection' || (wizardData.intent && wizardData.intent.includes('job'));
+    if (step === 9) return wizardData.intent === 'inspection' || wizardData.intent === 'workorder_for_existing_project' || (wizardData.intent && wizardData.intent.includes('job'));
 
     // Step 10: Always review
     if (step === 10) return true;
@@ -52,7 +57,7 @@ function WizardContent() {
     return false;
   };
 
-  const visibleSteps = Array.from({ length: 10 }, (_, i) => i + 1).filter(isStepVisible);
+  const visibleSteps = [1, 2, 3, 4, 5, 5.5, 6, 7, 8, 9, 10].filter(isStepVisible);
 
   return (
     <div className="space-y-6">
@@ -99,6 +104,7 @@ function WizardContent() {
           {wizardData.currentStep === 3 && <Step3VesselSelection />}
           {wizardData.currentStep === 4 && <Step4LocationSelection />}
           {wizardData.currentStep === 5 && <Step5Intent />}
+          {wizardData.currentStep === 5.5 && <Step5bProjectSelection />}
           {wizardData.currentStep === 6 && <Step6Details />}
           {wizardData.currentStep === 7 && <Step7AddLineItems />}
           {wizardData.currentStep === 8 && <Step8TechnicianAssignment />}

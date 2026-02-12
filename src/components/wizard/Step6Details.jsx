@@ -24,6 +24,11 @@ export function Step6Details() {
       setAlertOpen(true);
       return;
     }
+    if (wizardData.intent === 'workorder_for_existing_project' && !wizardData.workOrder?.title) {
+      setAlertMessage('Work order title is required');
+      setAlertOpen(true);
+      return;
+    }
 
     // If offer path and no line items, skip to technician step
     if (wizardData.intent.includes('offer') && !wizardData.intent.includes('job')) {
@@ -31,7 +36,7 @@ export function Step6Details() {
     } else if (wizardData.intent.includes('offer')) {
       setStep(7); // Go to line items for offer+job
     } else {
-      setStep(8); // Go to technicians for job-only or inspection
+      setStep(8); // Go to technicians for job-only, inspection, or workorder_for_existing_project
     }
   };
 
@@ -275,6 +280,56 @@ export function Step6Details() {
                 onChange={(e) => updateWizardData('workOrder.estimated_duration_hours', e.target.value ? parseFloat(e.target.value) : null)}
                 placeholder="e.g., 2"
               />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* WORKORDER FOR EXISTING PROJECT SETUP */}
+      {wizardData.intent === 'workorder_for_existing_project' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Work Order Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Work Order Title *</Label>
+              <Input
+                value={wizardData.workOrder?.title || ''}
+                onChange={(e) => updateWizardData('workOrder.title', e.target.value)}
+                placeholder="e.g., Engine Service"
+              />
+            </div>
+
+            <div>
+              <Label>Description</Label>
+              <Textarea
+                value={wizardData.workOrder?.description || ''}
+                onChange={(e) => updateWizardData('workOrder.description', e.target.value)}
+                placeholder="Work order details"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Scheduled Date</Label>
+                <Input
+                  type="date"
+                  value={wizardData.workOrder?.scheduled_date || ''}
+                  onChange={(e) => updateWizardData('workOrder.scheduled_date', e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label>Estimated Duration (Hours)</Label>
+                <Input
+                  type="number"
+                  value={wizardData.workOrder?.estimated_duration_hours || ''}
+                  onChange={(e) => updateWizardData('workOrder.estimated_duration_hours', e.target.value ? parseFloat(e.target.value) : null)}
+                  placeholder="e.g., 4"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
