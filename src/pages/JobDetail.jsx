@@ -19,9 +19,27 @@ import {
   AlertCircle,
   AlertTriangle,
   Edit,
-  GripVertical
+  GripVertical,
+  MoreVertical,
+  Trash2
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +93,8 @@ export default function ProjectDetail() {
    const [leadTechnician, setLeadTechnician] = useState(null);
    const [editingWorkOrder, setEditingWorkOrder] = useState(null);
    const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
+   const [deleteWorkOrder, setDeleteWorkOrder] = useState(null);
+   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
    useEffect(() => {
      if (projectId) {
@@ -205,6 +225,36 @@ export default function ProjectDetail() {
       toast.error('Failed to update order');
       // Reload on error to restore correct state
       await loadProjectData();
+    }
+  };
+
+  const handleDeleteWorkOrder = async () => {
+    if (!deleteWorkOrder) return;
+
+    try {
+      // Get all tasks for this workorder
+      const woTasks = tasks.filter(t => t.work_order_id === deleteWorkOrder.id);
+      
+      // Delete tasks first (batch)
+      if (woTasks.length > 0) {
+        await Promise.all(
+          woTasks.map(task => base44.entities.Task.delete(task.id))
+        );
+      }
+      
+      // Delete workorder
+      await base44.entities.WorkOrder.delete(deleteWorkOrder.id);
+      
+      // Update local state immediately
+      setWorkOrders(prev => prev.filter(wo => wo.id !== deleteWorkOrder.id));
+      setTasks(prev => prev.filter(t => t.work_order_id !== deleteWorkOrder.id));
+      
+      toast.success('Work order and tasks deleted');
+      setShowDeleteDialog(false);
+      setDeleteWorkOrder(null);
+    } catch (error) {
+      console.error('Error deleting work order:', error);
+      toast.error('Failed to delete work order');
     }
   };
 
@@ -604,7 +654,26 @@ export default function ProjectDetail() {
                             View Details
                           </Link>
                         </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                              onClick={() => {
+                                setDeleteWorkOrder(wo);
+                                setShowDeleteDialog(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Workorder
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                       </div>
                     </CardHeader>
                     
@@ -704,6 +773,44 @@ export default function ProjectDetail() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Work Order Confirmation */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Work Order?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                You are about to permanently delete:{' '}
+                <span className="font-semibold text-slate-900">{deleteWorkOrder?.title}</span>
+              </p>
+              <p className="text-red-600 font-medium">
+                {deleteWorkOrder && (() => {
+                  const taskCount = tasks.filter(t => t.work_order_id === deleteWorkOrder.id).length;
+                  return taskCount > 0
+                    ? `⚠ This will also delete ${taskCount} task${taskCount === 1 ? '' : 's'} belonging to this work order.`
+                    : 'All associated data will be permanently deleted.';
+                })()}
+              </p>
+              <p className="text-sm">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowDeleteDialog(false);
+              setDeleteWorkOrder(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteWorkOrder}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              Delete Work Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
