@@ -10,6 +10,7 @@ Deno.serve(async (req) => {
     }
 
     const wizardData = await req.json();
+    console.log('Wizard adapter invoked for:', wizardData.intent);
 
     // ============================================================
     // PHASE 1: RESOLVE SOURCE & CUSTOMER
