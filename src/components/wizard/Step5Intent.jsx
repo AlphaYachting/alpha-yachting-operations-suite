@@ -5,9 +5,12 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { FileText, Briefcase, Compass, Ship } from 'lucide-react';
 import { useWizard } from './WizardContext';
+import { WizardAlert } from './WizardAlert';
 
 export function Step5Intent() {
   const { wizardData, updateWizardData, setStep } = useWizard();
+  const [alertOpen, setAlertOpen] = React.useState(false);
+  const [alertMessage, setAlertMessage] = React.useState('');
 
   const intents = [
     {
@@ -49,7 +52,8 @@ export function Step5Intent() {
 
   const handleNext = () => {
     if (!wizardData.intent) {
-      alert('Please select an intent');
+      setAlertMessage('Please select an intent');
+      setAlertOpen(true);
       return;
     }
     // Skip to appropriate next step based on intent
@@ -62,6 +66,7 @@ export function Step5Intent() {
 
   return (
     <div className="space-y-6">
+      <WizardAlert open={alertOpen} onOpenChange={setAlertOpen} message={alertMessage} />
       <Card>
         <CardHeader>
           <CardTitle>What would you like to create?</CardTitle>

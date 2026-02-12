@@ -6,17 +6,22 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useWizard } from './WizardContext';
+import { WizardAlert } from './WizardAlert';
 
 export function Step6Details() {
   const { wizardData, updateWizardData, setStep } = useWizard();
+  const [alertOpen, setAlertOpen] = React.useState(false);
+  const [alertMessage, setAlertMessage] = React.useState('');
 
   const handleNext = () => {
     if (wizardData.intent.includes('offer') && !wizardData.offer.title) {
-      alert('Offer title is required');
+      setAlertMessage('Offer title is required');
+      setAlertOpen(true);
       return;
     }
     if (wizardData.intent.includes('job') && !wizardData.job.title) {
-      alert('Project title is required');
+      setAlertMessage('Project title is required');
+      setAlertOpen(true);
       return;
     }
 
@@ -32,6 +37,7 @@ export function Step6Details() {
 
   return (
     <div className="space-y-6">
+      <WizardAlert open={alertOpen} onOpenChange={setAlertOpen} message={alertMessage} />
       {/* OFFER DETAILS */}
       {wizardData.intent.includes('offer') && (
         <Card>
