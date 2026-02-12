@@ -120,6 +120,9 @@ export default function WorkOrderDetail() {
   const [generatingBrief, setGeneratingBrief] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showPartnerBriefPDF, setShowPartnerBriefPDF] = useState(false);
+  const [allJobs, setAllJobs] = useState([]);
+  const [allCustomers, setAllCustomers] = useState([]);
+  const [allBoats, setAllBoats] = useState([]);
 
   useEffect(() => {
     loadCurrentUser();
@@ -139,7 +142,7 @@ export default function WorkOrderDetail() {
 
   const loadWorkOrderDetails = async () => {
     try {
-      const [woData, allTasks, allTechs, allPhotos, teamOrders, allComments, allTimeEntries, allAccessLogs] = await Promise.all([
+      const [woData, allTasks, allTechs, allPhotos, teamOrders, allComments, allTimeEntries, allAccessLogs, allJobs, allCustomers, allBoats] = await Promise.all([
         base44.entities.WorkOrder.filter({ id: workOrderId }),
         base44.entities.Task.filter({ work_order_id: workOrderId }, 'sequence_order'),
         base44.entities.Technician.list(),
@@ -147,7 +150,10 @@ export default function WorkOrderDetail() {
         base44.entities.TeamOrder.filter({ work_order_id: workOrderId }),
         base44.entities.WorkOrderComment.filter({ work_order_id: workOrderId }, '-created_date'),
         base44.entities.TimeEntry.filter({ work_order_id: workOrderId }, '-entry_date'),
-        base44.entities.WorkOrderAccessLog.filter({ work_order_id: workOrderId }, '-accessed_at')
+        base44.entities.WorkOrderAccessLog.filter({ work_order_id: workOrderId }, '-accessed_at'),
+        base44.entities.Job.list('-created_date', 100),
+        base44.entities.Customer.list('-created_date', 100),
+        base44.entities.Boat.list('-created_date', 100)
       ]);
 
       if (woData.length === 0) {
@@ -164,6 +170,9 @@ export default function WorkOrderDetail() {
       setComments(allComments);
       setTimeEntries(allTimeEntries);
       setAccessLogs(allAccessLogs);
+      setAllJobs(allJobs);
+      setAllCustomers(allCustomers);
+      setAllBoats(allBoats);
 
       if (wo.job_id) {
         const [projectData] = await base44.entities.Job.filter({ id: wo.job_id });
@@ -256,25 +265,29 @@ export default function WorkOrderDetail() {
   };
 
   const handleDragEnd = async (result) => {
-    const { source, destination, draggableId } = result;
+    if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
 
-    if (!destination) return;
-    if (source.index === destination.index) return;
+    // Optimistically update UI first
+    const sortedTasks = [...tasks].sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
+    const reorderedTasks = Array.from(sortedTasks);
+    const [movedTask] = reorderedTasks.splice(result.source.index, 1);
+    reorderedTasks.splice(result.destination.index, 0, movedTask);
 
-    const reorderedTasks = Array.from(tasks);
-    const [movedTask] = reorderedTasks.splice(source.index, 1);
-    reorderedTasks.splice(destination.index, 0, movedTask);
-
-    // Update sequence_order for affected tasks
-    const updatePromises = reorderedTasks.map((task, index) => {
-      return base44.entities.Task.update(task.id, { sequence_order: index });
-    });
+    // Update local state immediately
+    setTasks(reorderedTasks);
 
     try {
+      // Update sequence_order for all tasks in background
+      const updatePromises = reorderedTasks.map((task, index) => 
+        base44.entities.Task.update(task.id, { sequence_order: index })
+      );
       await Promise.all(updatePromises);
-      setTasks(reorderedTasks);
+      toast.success('Tasks reordered');
     } catch (error) {
       console.error('Error reordering tasks:', error);
+      toast.error('Failed to save order');
+      // Reload on failure
       await loadWorkOrderDetails();
     }
   };
@@ -1276,10 +1289,11 @@ export default function WorkOrderDetail() {
           {workOrder && job && (
             <WorkOrderForm
               workOrder={workOrder}
-              jobs={job ? [job] : []}
+              jobs={allJobs}
               technicians={technicians}
-              customers={customer ? [customer] : []}
-              boats={boat ? [boat] : []}
+              customers={allCustomers}
+              boats={allBoats}
+              preselectedJobId={job.id}
               onSave={async (formData, selectedTemplateId, suggestedTasks) => {
                 console.log('WorkOrderDetail onSave called with:', formData);
                 try {
