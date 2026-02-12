@@ -130,6 +130,11 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
   };
 
   const deleteImage = async (url) => {
+    // Warn if deleting would drop below 6 images
+    if (galleryItems.length === 6) {
+      toast.warning('Gallery will no longer be included in PDF (need minimum 6 images)');
+    }
+
     try {
       const updatedAttachments = attachments.filter(a => a !== url);
       const updatedMeta = { ...galleryMeta };
@@ -147,6 +152,9 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
       toast.error('Failed to delete image');
     }
   };
+
+  // Export flag for PDF export validation
+  const isGalleryEligibleForPDF = hasMinimumImages;
 
   const hasMinimumImages = galleryItems.length >= 6;
 
