@@ -15,6 +15,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
+import DayDispatchView from '@/components/DayDispatchView';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,6 +69,9 @@ export default function Schedule() {
   const [dispatchViewMode, setDispatchViewMode] = useState('day');
   const [dispatchDate, setDispatchDate] = useState(new Date());
   const [gridSize, setGridSize] = useState('1h');
+  
+  // Calendar day drill-down state
+  const [calendarDayView, setCalendarDayView] = useState(null);
   const [locationFilter, setLocationFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [technicianFilter, setTechnicianFilter] = useState([]);
@@ -202,6 +206,16 @@ export default function Schedule() {
     setEditingWorkOrder(workOrder);
     setShowWorkOrderDialog(true);
   };
+  
+  // Handle day click from calendar grid → switch to day timeline view
+  const handleCalendarDayClick = (date) => {
+    setCalendarDayView(date);
+  };
+  
+  // Handle back to calendar grid
+  const handleBackToCalendarGrid = () => {
+    setCalendarDayView(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -273,28 +287,74 @@ export default function Schedule() {
         {/* Calendar View */}
         <TabsContent value="calendar" className="space-y-6 mt-6">
 
-        {/* Drag-Drop Calendar Grid */}
-        {loading ? (
-        <div className="grid grid-cols-7 gap-4">
-            {[1,2,3,4,5,6,7].map(i => (
-              <Skeleton key={i} className="h-64" />
-            ))}
-          </div>
+        {/* Day Timeline View (when day clicked) */}
+        {calendarDayView ? (
+          <>
+            <div className="flex items-center gap-4 mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBackToCalendarGrid}
+                className="flex items-center gap-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back to Calendar
+              </Button>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Day Timeline</h2>
+                <p className="text-sm text-slate-500">{format(calendarDayView, 'EEEE, MMMM d, yyyy')}</p>
+              </div>
+              <Select value={gridSize} onValueChange={setGridSize} className="ml-auto">
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30m">30 minutes</SelectItem>
+                  <SelectItem value="1h">1 hour</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <DayDispatchView
+              technicians={technicians}
+              workOrders={workOrders}
+              jobs={jobs}
+              customers={customers}
+              boats={boats}
+              locations={locations}
+              selectedDate={calendarDayView}
+              gridSize={gridSize}
+              onWorkOrderUpdate={handleWorkOrderUpdate}
+              onWorkOrderEdit={handleWorkOrderEditFromCalendar}
+            />
+          </>
         ) : (
-          <DragDropCalendar
-            currentWeekStart={currentWeekStart}
-            workOrders={workOrders}
-            jobs={jobs}
-            technicians={technicians}
-            customers={customers}
-            boats={boats}
-            locations={locations}
-            inventoryReservations={inventoryReservations}
-            onWorkOrderUpdate={handleWorkOrderUpdate}
-            onWorkOrderEdit={handleWorkOrderEditFromCalendar}
-            loading={loading}
-            viewType={calendarViewType}
-          />
+          <>
+            {/* Drag-Drop Calendar Grid */}
+            {loading ? (
+            <div className="grid grid-cols-7 gap-4">
+                {[1,2,3,4,5,6,7].map(i => (
+                  <Skeleton key={i} className="h-64" />
+                ))}
+              </div>
+            ) : (
+              <DragDropCalendar
+                currentWeekStart={currentWeekStart}
+                workOrders={workOrders}
+                jobs={jobs}
+                technicians={technicians}
+                customers={customers}
+                boats={boats}
+                locations={locations}
+                inventoryReservations={inventoryReservations}
+                onWorkOrderUpdate={handleWorkOrderUpdate}
+                onWorkOrderEdit={handleWorkOrderEditFromCalendar}
+                onDayClick={handleCalendarDayClick}
+                loading={loading}
+                viewType={calendarViewType}
+              />
+            )}
+          </>
         )}
 
         {/* Unscheduled Work Orders */}
