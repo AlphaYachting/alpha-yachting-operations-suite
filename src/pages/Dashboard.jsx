@@ -50,6 +50,8 @@ import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
+import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
+import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -74,6 +76,7 @@ export default function Dashboard() {
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -409,13 +412,11 @@ export default function Dashboard() {
         <div className="flex items-center gap-2">
           <Button 
             size="sm" 
-            asChild
+            onClick={() => setShowDispatchModal(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
           >
-            <Link to={createPageUrl('Schedule') + '?view=dispatch'}>
-              <Calendar className="h-4 w-4 mr-1" />
-              Dispatch
-            </Link>
+            <Calendar className="h-4 w-4 mr-1" />
+            Dispatch
           </Button>
           <Button 
             size="sm" 
@@ -1122,6 +1123,18 @@ export default function Dashboard() {
       <CapacityModal 
         open={showCapacityModal} 
         onOpenChange={setShowCapacityModal} 
+      />
+
+      {/* Dispatch Fullscreen Modal */}
+      <DispatchFullscreenModal 
+        open={showDispatchModal} 
+        onClose={() => setShowDispatchModal(false)} 
+      />
+
+      {/* Dispatch Fullscreen Modal */}
+      <DispatchFullscreenModal 
+        open={showDispatchModal} 
+        onClose={() => setShowDispatchModal(false)} 
       />
 
       {/* Note Dialog */}
