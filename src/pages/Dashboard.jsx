@@ -302,8 +302,8 @@ export default function Dashboard() {
   const getProjectProgress = (job) => {
     const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
     if (jobWorkOrders.length === 0) return 0;
-    const completedWOs = jobWorkOrders.filter(wo => ['Completed', 'Invoiced'].includes(wo.status)).length;
-    return Math.round((completedWOs / jobWorkOrders.length) * 100);
+    const progressWOs = jobWorkOrders.filter(wo => !['Draft', 'Scheduled'].includes(wo.status)).length;
+    return Math.round((progressWOs / jobWorkOrders.length) * 100);
   };
 
   // SALES & ORGANISATION
