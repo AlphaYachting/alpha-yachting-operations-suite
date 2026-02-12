@@ -28,6 +28,12 @@ export function Step3VesselSelection() {
       setLoadingBoats(true);
       const data = await base44.entities.Boat.filter({ customer_id: customerId });
       setBoats(data);
+      
+      // Auto-select first boat if available and none selected yet
+      if (data.length > 0 && !wizardData.vessel?.existing) {
+        updateWizardData('vessel.existing', data[0].id);
+        setVesselTab('existing');
+      }
     } catch (error) {
       console.error('Error loading boats:', error);
     } finally {
@@ -63,7 +69,7 @@ export function Step3VesselSelection() {
               <TabsTrigger value="new">Create New Boat</TabsTrigger>
             </TabsList>
 
-            {boats.length > 0 && (
+            {boats.length > 0 ? (
               <TabsContent value="existing" className="space-y-4">
                 <SearchSelect
                   placeholder="Search boats..."
@@ -78,7 +84,15 @@ export function Step3VesselSelection() {
                   selectedValue={wizardData.vessel?.existing}
                 />
               </TabsContent>
-            )}
+            ) : !loadingBoats && (wizardData.sourceData?.customer || wizardData.sourceData?.lead?.converted_customer_id) ? (
+              <TabsContent value="existing" className="space-y-4">
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded">
+                  <p className="text-sm text-amber-800">
+                    No boat assigned yet. Please create a new boat below.
+                  </p>
+                </div>
+              </TabsContent>
+            ) : null}
 
             <TabsContent value="new" className="space-y-4">
               <div>
