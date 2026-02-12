@@ -63,8 +63,12 @@ export default function Schedule() {
   const [currentWeekStart, setCurrentWeekStart] = useState(addDays(startOfWeek(new Date(), { weekStartsOn: 1 }), -7));
   const [calendarViewType, setCalendarViewType] = useState('week'); // 'week' or 'month'
   
+  // Read URL params for initial view
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialView = urlParams.get('view') === 'dispatch' ? 'dispatch' : 'calendar';
+  
   // Dispatch view state
-  const [viewMode, setViewMode] = useState('calendar');
+  const [viewMode, setViewMode] = useState(initialView);
   const [dispatchViewMode, setDispatchViewMode] = useState('day');
   const [dispatchDate, setDispatchDate] = useState(new Date());
   const [gridSize, setGridSize] = useState('1h');
