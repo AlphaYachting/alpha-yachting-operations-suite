@@ -278,30 +278,9 @@ export default function Dashboard() {
       return { status: 'red', label: 'Critical', step: hasOverdueWO ? 'Overdue work order' : 'No active work orders' };
     }
     
-    // Calculate planning completeness ratio
-    const unplannedCount = activeWOs.filter(wo =>
-      !wo.scheduled_date ||
-      !wo.assigned_technicians ||
-      wo.assigned_technicians.length === 0
-    ).length;
-
-    const totalActive = activeWOs.length;
-    const unplannedRatio = totalActive > 0 ? unplannedCount / totalActive : 0;
-
-    if (unplannedRatio > 0.4) {
-      return { 
-        status: 'red', 
-        label: 'Critical', 
-        step: `Planning incomplete (${unplannedCount}/${totalActive} unplanned)` 
-      };
-    }
-
-    if (unplannedRatio > 0.1) {
-      return { 
-        status: 'yellow', 
-        label: 'Attention', 
-        step: `Partial planning (${unplannedCount}/${totalActive} unplanned)` 
-      };
+    const hasUnplannedWO = activeWOs.some(wo => !wo.scheduled_date || !wo.assigned_technicians || wo.assigned_technicians.length === 0);
+    if (hasUnplannedWO) {
+      return { status: 'red', label: 'Critical', step: 'Missing planning' };
     }
     
     // Yellow: WO due soon
@@ -321,7 +300,7 @@ export default function Dashboard() {
   };
   
   const getProjectProgress = (job) => {
-    const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
+    const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id && wo.status !== 'Cancelled');
     if (jobWorkOrders.length === 0) return 0;
     const completedWOs = jobWorkOrders.filter(wo => wo.status === 'Completed').length;
     return Math.round((completedWOs / jobWorkOrders.length) * 100);
