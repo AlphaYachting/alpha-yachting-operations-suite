@@ -109,14 +109,19 @@ export default function ProjectDetail() {
 
          let projectWOs = allWOs.filter(wo => wo.job_id === projectId);
 
-         // Initialize sort_index if missing
-         const needsIndex = projectWOs.some(wo => wo.sort_index === null || wo.sort_index === undefined);
-         if (needsIndex) {
-           for (let i = 0; i < projectWOs.length; i++) {
-             if (projectWOs[i].sort_index === null || projectWOs[i].sort_index === undefined) {
-               await base44.entities.WorkOrder.update(projectWOs[i].id, { sort_index: i + 1 });
-               projectWOs[i].sort_index = i + 1;
-             }
+         // Initialize sort_index if missing (batch update)
+         const needsIndexInit = projectWOs.filter(wo => wo.sort_index === null || wo.sort_index === undefined);
+         if (needsIndexInit.length > 0) {
+           try {
+             await Promise.all(
+               needsIndexInit.map((wo, idx) => {
+                 const sortIndex = projectWOs.indexOf(wo) + 1;
+                 wo.sort_index = sortIndex;
+                 return base44.entities.WorkOrder.update(wo.id, { sort_index: sortIndex });
+               })
+             );
+           } catch (error) {
+             console.error('Error initializing sort_index:', error);
            }
          }
 
