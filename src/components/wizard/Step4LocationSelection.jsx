@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useWizard } from './WizardContext';
 import { SearchSelect } from './SearchSelect';
+import { WizardAlert } from './WizardAlert';
 import { base44 } from '@/api/base44Client';
 
 export function Step4LocationSelection() {
@@ -14,6 +15,8 @@ export function Step4LocationSelection() {
   const [locations, setLocations] = useState([]);
   const [customerLocations, setCustomerLocations] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
   const [locationTab, setLocationTab] = useState(
     wizardData.location?.existing ? 'existing' : wizardData.location?.new ? 'new' : 'unknown'
   );
@@ -50,6 +53,7 @@ export function Step4LocationSelection() {
 
   return (
     <div className="space-y-6">
+      <WizardAlert open={alertOpen} onOpenChange={setAlertOpen} message={alertMessage} />
       <Card>
         <CardHeader>
           <CardTitle>Select or Create Location</CardTitle>
