@@ -253,12 +253,19 @@ Deno.serve(async (req) => {
         ? 'Initial Inspection'
         : wizardData.workOrder?.title || job.title;
 
+      // Format scheduled_date as YYYY-MM-DD string
+      let scheduledDateStr = wizardData.workOrder?.scheduled_date;
+      if (scheduledDateStr) {
+        const dateObj = new Date(scheduledDateStr);
+        scheduledDateStr = dateObj.toISOString().split('T')[0];
+      }
+
       workOrder = await base44.asServiceRole.entities.WorkOrder.create({
         job_id: job.id,
         offer_id: offer?.id || null,
         title: woTitle,
         description: wizardData.workOrder?.description || '',
-        scheduled_date: wizardData.workOrder?.scheduled_date,
+        scheduled_date: scheduledDateStr,
         scheduled_start_time: wizardData.workOrder?.scheduled_start_time || null,
         estimated_duration_hours: wizardData.workOrder?.estimated_duration_hours,
         service_area: wizardData.job?.serviceCategory || 'General Service',
