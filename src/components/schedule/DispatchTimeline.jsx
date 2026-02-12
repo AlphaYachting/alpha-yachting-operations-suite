@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Clock, MapPin, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import ScheduleItemEditModal from '@/components/ScheduleItemEditModal';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -89,8 +90,11 @@ export default function DispatchTimeline({
   technicianFilter,
   searchTerm,
   onWorkOrderClick,
-  onWorkOrderUpdate
+  onWorkOrderUpdate,
+  useScheduleModal = false
 }) {
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const startHour = 6;
   const endHour = 18;
   const hoursRange = endHour - startHour;
@@ -276,7 +280,12 @@ export default function DispatchTimeline({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        onWorkOrderClick && onWorkOrderClick(wo.id);
+                        if (useScheduleModal) {
+                          setSelectedWorkOrder(wo);
+                          setScheduleModalOpen(true);
+                        } else {
+                          onWorkOrderClick && onWorkOrderClick(wo.id);
+                        }
                       }}
                       className="group absolute top-2 bottom-2 rounded-md shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden border"
                       style={{
@@ -350,6 +359,23 @@ export default function DispatchTimeline({
           ))}
         </div>
       </div>
+
+      {/* Schedule Edit Modal */}
+      {useScheduleModal && (
+        <ScheduleItemEditModal
+          open={scheduleModalOpen}
+          onClose={() => {
+            setScheduleModalOpen(false);
+            setSelectedWorkOrder(null);
+          }}
+          workOrder={selectedWorkOrder}
+          technicians={technicians}
+          jobs={jobs}
+          customers={customers}
+          boats={boats}
+          onSave={onWorkOrderUpdate}
+        />
+      )}
     </div>
   );
 }
