@@ -43,7 +43,9 @@ const COLORS = [
   { value: '#ef4444', label: 'Red' },
   { value: '#14b8a6', label: 'Teal' },
   { value: '#f97316', label: 'Orange' },
-  { value: '#6366f1', label: 'Indigo' }
+  { value: '#6366f1', label: 'Indigo' },
+  { value: '#475569', label: 'Dark Slate' },
+  { value: '#84cc16', label: 'Lime' }
 ];
 
 export default function TechnicianForm({ technician, onSave, onCancel }) {
