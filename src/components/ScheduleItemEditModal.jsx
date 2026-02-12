@@ -12,6 +12,9 @@ export default function ScheduleItemEditModal({
   onClose, 
   workOrder, 
   technicians,
+  jobs,
+  customers,
+  boats,
   onSave 
 }) {
   const [formData, setFormData] = useState({
@@ -24,6 +27,21 @@ export default function ScheduleItemEditModal({
   });
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [jobInfo, setJobInfo] = useState(null);
+
+  useEffect(() => {
+    if (workOrder && jobs && customers && boats) {
+      const job = jobs.find(j => j.id === workOrder.job_id);
+      if (job) {
+        const customer = customers.find(c => c.id === job.customer_id);
+        const boat = boats.find(b => b.id === job.boat_id);
+        setJobInfo({
+          customer: customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown',
+          boat: boat?.vessel_name || 'Unknown'
+        });
+      }
+    }
+  }, [workOrder, jobs, customers, boats]);
 
   useEffect(() => {
     if (workOrder && open) {
@@ -138,6 +156,20 @@ export default function ScheduleItemEditModal({
             <Label>Work Order</Label>
             <Input value={workOrder?.title || ''} disabled className="bg-slate-50" />
           </div>
+
+          {jobInfo && (
+            <>
+              <div className="space-y-2">
+                <Label>Customer</Label>
+                <Input value={jobInfo.customer} disabled className="bg-slate-50" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Boat</Label>
+                <Input value={jobInfo.boat} disabled className="bg-slate-50" />
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <Label>Technician</Label>
