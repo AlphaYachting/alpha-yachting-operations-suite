@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Clock, MapPin, AlertTriangle, GripVertical } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import ScheduleItemEditModal from '@/components/ScheduleItemEditModal';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -82,10 +83,13 @@ export default function DayDispatchView({
   selectedDate,
   gridSize = '30m',
   onWorkOrderUpdate,
-  onWorkOrderEdit
+  onWorkOrderEdit,
+  useScheduleModal = false
 }) {
   const [resizing, setResizing] = useState(null);
   const [error, setError] = useState(null);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   
   const startHour = 6;
   const endHour = 18;
@@ -332,6 +336,7 @@ export default function DayDispatchView({
   };
 
   return (
+    <>
     <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
       <div className="border rounded-lg bg-white overflow-hidden">
         {error && (
@@ -468,7 +473,10 @@ export default function DayDispatchView({
                                       const handleCardClick = (e) => {
                                         if (isDragging) return;
                                         e.stopPropagation();
-                                        if (onWorkOrderEdit) {
+                                        if (useScheduleModal) {
+                                          setSelectedWorkOrder(wo);
+                                          setScheduleModalOpen(true);
+                                        } else if (onWorkOrderEdit) {
                                           onWorkOrderEdit(wo);
                                         }
                                       };
@@ -529,5 +537,23 @@ export default function DayDispatchView({
         </div>
       </div>
     </DragDropContext>
+
+    {/* Schedule Edit Modal */}
+    {useScheduleModal && (
+      <ScheduleItemEditModal
+        open={scheduleModalOpen}
+        onClose={() => {
+          setScheduleModalOpen(false);
+          setSelectedWorkOrder(null);
+        }}
+        workOrder={selectedWorkOrder}
+        technicians={technicians}
+        jobs={jobs}
+        customers={customers}
+        boats={boats}
+        onSave={onWorkOrderUpdate}
+      />
+    )}
+    </>
   );
 }
