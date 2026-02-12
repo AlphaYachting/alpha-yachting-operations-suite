@@ -326,6 +326,7 @@ export default function Schedule() {
               gridSize={gridSize}
               onWorkOrderUpdate={handleWorkOrderUpdate}
               onWorkOrderEdit={handleWorkOrderEditFromCalendar}
+              useScheduleModal={true}
             />
           </>
         ) : (
@@ -481,6 +482,7 @@ export default function Schedule() {
                 technicianFilter={technicianFilter}
                 searchTerm={searchTerm}
                 onWorkOrderClick={handleWorkOrderClick}
+                useScheduleModal={true}
               />
             )}
             </>
