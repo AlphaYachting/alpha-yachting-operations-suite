@@ -226,8 +226,8 @@ export default function Layout({ children, currentPageName }) {
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                     item.subLevel && "ml-4",
-                    item.primary && !isActive && "bg-blue-600 text-white hover:bg-blue-700",
-                    item.primary && isActive && "bg-blue-700 text-white",
+                    item.primary && !isActive && "bg-emerald-500 text-white hover:bg-emerald-600",
+                    item.primary && isActive && "bg-emerald-600 text-white",
                     !item.primary && isActive && "bg-blue-50 text-blue-700",
                     !item.primary && !isActive && "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
