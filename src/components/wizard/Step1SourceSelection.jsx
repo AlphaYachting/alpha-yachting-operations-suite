@@ -64,10 +64,10 @@ export function Step1SourceSelection() {
       </Card>
 
       <div className="flex justify-end gap-2">
-        <Button variant="outline" disabled>
+        <Button variant="outline" disabled className="cursor-not-allowed">
           ← Back
         </Button>
-        <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700 cursor-pointer">
           Next →
         </Button>
       </div>
