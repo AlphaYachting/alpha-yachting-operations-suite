@@ -3130,7 +3130,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                     )}
 
                     {/* Suggestions */}
-                    {wo.suggestions.length > 0 && (
+                    {wo.suggestions?.length > 0 && (
                       <div>
                         <p className="text-xs font-semibold text-slate-900 mb-2">
                           Suggested Actions ({wo.suggestions.length}):
@@ -3227,7 +3227,7 @@ ${auditResults.findings.structure.inconsistent.slice(0, 5).map(f => `- ${f.title
                                 </div>
                                 )}
 
-                                {wo.suggestions.length === 0 && wo.cohesion_rating === 'Good' && (
+                                {(!wo.suggestions || wo.suggestions.length === 0) && wo.cohesion_rating === 'Good' && (
                                 <div className="text-xs text-green-600 italic">
                                 ✓ Tasks are well-organized, no changes suggested
                                 </div>
