@@ -59,12 +59,6 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         return;
       }
       
-      // Validate gallery: if attachments exist, must have minimum 6 images
-      if (documentData.attachments && documentData.attachments.length > 0 && documentData.attachments.length < 6) {
-        setPdfError(`Gallery requires minimum 6 images. Currently have ${documentData.attachments.length}. Add ${6 - documentData.attachments.length} more image(s) or remove all images.`);
-        return;
-      }
-      
       setIsGenerating(true);
       setPdfError(null);
       
