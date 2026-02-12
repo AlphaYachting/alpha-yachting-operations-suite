@@ -353,6 +353,7 @@ export default function Schedule() {
                 onDayClick={handleCalendarDayClick}
                 loading={loading}
                 viewType={calendarViewType}
+                useScheduleModal={true}
               />
             )}
           </>
