@@ -216,7 +216,7 @@ export default function LeadForm({
           }}
         >
           <SelectTrigger className="text-sm">
-            <SelectValue placeholder="Select a customer" />
+            <SelectValue placeholder={!customers || customers.length === 0 ? "Loading customers..." : "Select a customer"} />
           </SelectTrigger>
           <SelectContent>
             <div className="px-2 py-1.5 sticky top-0 bg-white border-b">
@@ -230,7 +230,9 @@ export default function LeadForm({
               />
             </div>
             <SelectItem value={null}>No Customer</SelectItem>
-            {filteredCustomers.length > 0 ? (
+            {!customers ? (
+              <div className="px-2 py-1.5 text-xs text-slate-500">Loading...</div>
+            ) : filteredCustomers.length > 0 ? (
               filteredCustomers.map((customer) => (
                 <SelectItem key={customer.id} value={customer.id}>
                   {getCustomerLabel(customer)}
