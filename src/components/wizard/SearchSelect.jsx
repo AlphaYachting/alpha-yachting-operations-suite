@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
@@ -18,11 +18,23 @@ export function SearchSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debounceTimer = useRef(null);
+
+  useEffect(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 150);
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [query]);
 
   const filtered = useMemo(() => {
-    if (!query) return items.slice(0, 50); // Default: show first 50
-    return items.filter(item => searchFn(item, query)).slice(0, 50);
-  }, [query, items, searchFn]);
+    if (!debouncedQuery) return items.slice(0, 50);
+    return items.filter(item => searchFn(item, debouncedQuery)).slice(0, 50);
+  }, [debouncedQuery, items, searchFn]);
 
   const selectedItem = useMemo(() => {
     return items.find(item => item.id === selectedValue);
@@ -44,7 +56,14 @@ export function SearchSelect({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent 
+        className="p-0" 
+        align="start" 
+        side="bottom"
+        sideOffset={4}
+        avoidCollisions={false}
+        style={{ width: 'var(--radix-popover-trigger-width)' }}
+      >
         <div className="p-2 border-b">
           <Input
             placeholder={`${placeholder}...`}
@@ -52,6 +71,7 @@ export function SearchSelect({
             onChange={(e) => setQuery(e.target.value)}
             className="h-8"
             disabled={isLoading}
+            autoFocus
           />
         </div>
         <Command>
