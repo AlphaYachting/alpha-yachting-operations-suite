@@ -506,6 +506,73 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
           font-size: ${fontSizeBody - 3}pt;
           margin-top: 12px;
         }
+
+        .gallery-appendix {
+          page-break-before: always;
+          margin-top: 0;
+          padding-top: 20px;
+        }
+
+        .gallery-title {
+          font-size: ${fontSizeHeading}pt;
+          color: ${template.primary_color || '#2563eb'};
+          font-weight: bold;
+          margin-bottom: 12px;
+        }
+
+        .gallery-intro {
+          margin-bottom: 20px;
+          padding: 12px;
+          background-color: #f8fafc;
+          border-left: 3px solid ${template.primary_color || '#2563eb'};
+          font-size: 9pt;
+          line-height: 1.4;
+        }
+
+        .gallery-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-top: 15px;
+        }
+
+        .gallery-item {
+          page-break-inside: avoid;
+          break-inside: avoid;
+          text-align: center;
+        }
+
+        .gallery-image {
+          width: 100%;
+          max-width: 200px;
+          margin: 0 auto 10px;
+          border: 1px solid #ddd;
+          border-radius: 3px;
+          display: block;
+        }
+
+        .gallery-caption {
+          font-size: 9pt;
+          color: #333;
+          line-height: 1.3;
+          margin-top: 8px;
+          font-style: italic;
+        }
+
+        .gallery-no-image {
+          width: 100%;
+          max-width: 200px;
+          height: 150px;
+          margin: 0 auto 10px;
+          background-color: #f0f0f0;
+          border: 1px solid #ddd;
+          border-radius: 3px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 8pt;
+          color: #999;
+        }
       </style>
     </head>
     <body>
@@ -689,6 +756,25 @@ ${document.public_notes}</div>
             <div>Generated: ${new Date().toLocaleDateString('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' })} ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</div>
           </div>
         </div>
+
+        ${document.attachments && document.attachments.length > 0 ? `
+          <div class="gallery-appendix">
+            <h2 class="gallery-title">Photo Documentation (Appendix)</h2>
+            <div class="gallery-intro">Attached photos for documentation purposes.</div>
+            <div class="gallery-grid">
+              ${document.attachments.map((imageUrl, idx) => {
+                const meta = document.gallery_meta?.[imageUrl] || {};
+                const caption = meta.caption || '';
+                return `
+                  <div class="gallery-item">
+                    <img src="${imageUrl}" alt="Photo ${idx + 1}" class="gallery-image" onerror="this.outerHTML='<div class=&quot;gallery-no-image&quot;>Image unavailable</div>'">
+                    ${caption ? `<div class="gallery-caption">${caption}</div>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
       </div>
     </body>
     </html>
