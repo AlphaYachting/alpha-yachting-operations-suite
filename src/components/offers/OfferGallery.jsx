@@ -171,7 +171,7 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
           <div className="flex gap-2">
             <Button
               onClick={() => fileInputRef.current?.click()}
-              disabled={uploading || galleryItems.length >= 2}
+              disabled={uploading || galleryItems.length >= 8}
               className="gap-2"
               variant="outline"
             >
@@ -188,14 +188,14 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
               disabled={uploading}
             />
             <span className="text-sm text-slate-500 flex items-center">
-              {galleryItems.length}/2 max
+              {galleryItems.length}/8 max
             </span>
           </div>
-          {galleryItems.length >= 2 && (
+          {galleryItems.length >= 8 && (
             <Alert className="bg-amber-50 border-amber-200">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertDescription className="text-amber-800 text-sm">
-                Maximum 2 images reached for Step 1
+                Maximum 8 images reached
               </AlertDescription>
             </Alert>
           )}
