@@ -148,6 +148,8 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
     }
   };
 
+  const hasMinimumImages = galleryItems.length >= 6;
+
   return (
     <Card>
       <CardHeader>
@@ -155,6 +157,7 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
           <ImageIcon className="h-5 w-5" />
           Gallery (Optional)
         </CardTitle>
+        <p className="text-xs text-slate-500 mt-2">Minimum 6 images required to include in PDF. Recommended: 6–8 images.</p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Upload Section */}
