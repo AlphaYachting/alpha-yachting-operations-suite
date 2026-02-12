@@ -12,6 +12,7 @@ import { base44 } from '@/api/base44Client';
 export function Step4LocationSelection() {
   const { wizardData, updateWizardData, setStep } = useWizard();
   const [locations, setLocations] = useState([]);
+  const [customerLocations, setCustomerLocations] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
   const [locationTab, setLocationTab] = useState(
     wizardData.location?.existing ? 'existing' : wizardData.location?.new ? 'new' : 'unknown'
@@ -24,8 +25,18 @@ export function Step4LocationSelection() {
   const loadLocations = async () => {
     try {
       setLoadingLocations(true);
-      const data = await base44.entities.Location.list('-created_date', 100);
-      setLocations(data);
+      const allLocations = await base44.entities.Location.list('-created_date', 100);
+      setLocations(allLocations);
+
+      // Load customer's boat locations
+      const customerId = wizardData.sourceData?.customer?.id || 
+                        wizardData.sourceData?.lead?.converted_customer_id;
+      if (customerId) {
+        const boats = await base44.entities.Boat.filter({ customer_id: customerId });
+        const locationIds = [...new Set(boats.map(b => b.current_location_id).filter(Boolean))];
+        const customerLocs = allLocations.filter(loc => locationIds.includes(loc.id));
+        setCustomerLocations(customerLocs);
+      }
     } catch (error) {
       console.error('Error loading locations:', error);
     } finally {
@@ -54,18 +65,42 @@ export function Step4LocationSelection() {
 
             {locations.length > 0 && (
               <TabsContent value="existing" className="space-y-4">
-                <SearchSelect
-                  placeholder="Search locations..."
-                  items={locations}
-                  onSelect={(id) => {
-                    updateWizardData('location.existing', id);
-                    updateWizardData('location.new', null);
-                  }}
-                  displayFn={(item) => item.name}
-                  searchFn={(item, query) => item.name?.toLowerCase().includes(query.toLowerCase())}
-                  isLoading={loadingLocations}
-                  selectedValue={wizardData.location?.existing}
-                />
+                {customerLocations.length > 0 && (
+                  <div className="mb-4">
+                    <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                      Customer's Recent Locations
+                    </Label>
+                    <SearchSelect
+                      placeholder="Search customer locations..."
+                      items={customerLocations}
+                      onSelect={(id) => {
+                        updateWizardData('location.existing', id);
+                        updateWizardData('location.new', null);
+                      }}
+                      displayFn={(item) => item.name}
+                      searchFn={(item, query) => item.name?.toLowerCase().includes(query.toLowerCase())}
+                      isLoading={loadingLocations}
+                      selectedValue={wizardData.location?.existing}
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label className="text-sm font-medium text-slate-700 mb-2 block">
+                    All Locations
+                  </Label>
+                  <SearchSelect
+                    placeholder="Search all locations..."
+                    items={locations}
+                    onSelect={(id) => {
+                      updateWizardData('location.existing', id);
+                      updateWizardData('location.new', null);
+                    }}
+                    displayFn={(item) => item.name}
+                    searchFn={(item, query) => item.name?.toLowerCase().includes(query.toLowerCase())}
+                    isLoading={loadingLocations}
+                    selectedValue={wizardData.location?.existing}
+                  />
+                </div>
               </TabsContent>
             )}
 
