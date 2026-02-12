@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useWizard } from './WizardContext';
 import { SearchSelect } from './SearchSelect';
+import { WizardAlert } from './WizardAlert';
 import { base44 } from '@/api/base44Client';
 
 export function Step2ContactInfo() {
@@ -14,6 +15,8 @@ export function Step2ContactInfo() {
   const [loadingLeads, setLoadingLeads] = useState(false);
   const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   useEffect(() => {
     loadData();
@@ -48,23 +51,28 @@ export function Step2ContactInfo() {
     }
   };
 
+  const showAlert = (message) => {
+    setAlertMessage(message);
+    setAlertOpen(true);
+  };
+
   const handleNext = () => {
     if (wizardData.source === 'lead' && !wizardData.sourceId) {
-      alert('Please select a lead');
+      showAlert('Please select a lead');
       return;
     }
     if (wizardData.source === 'customer' && !wizardData.sourceId) {
-      alert('Please select a customer');
+      showAlert('Please select a customer');
       return;
     }
     if (wizardData.source === 'new') {
       const { first_name, last_name, email, phone } = wizardData.sourceData.newContact;
       if (!first_name || !last_name || !email || !phone) {
-        alert('All fields are required');
+        showAlert('All fields are required');
         return;
       }
       if (emailError) {
-        alert(emailError);
+        showAlert(emailError);
         return;
       }
     }
@@ -74,6 +82,7 @@ export function Step2ContactInfo() {
   if (wizardData.source === 'lead') {
     return (
       <div className="space-y-6">
+        <WizardAlert open={alertOpen} onOpenChange={setAlertOpen} message={alertMessage} />
         <Card>
           <CardHeader>
             <CardTitle>Select Lead</CardTitle>
@@ -127,6 +136,7 @@ export function Step2ContactInfo() {
   if (wizardData.source === 'customer') {
     return (
       <div className="space-y-6">
+        <WizardAlert open={alertOpen} onOpenChange={setAlertOpen} message={alertMessage} />
         <Card>
           <CardHeader>
             <CardTitle>Select Customer</CardTitle>
@@ -181,6 +191,7 @@ export function Step2ContactInfo() {
   // source === 'new'
   return (
     <div className="space-y-6">
+      <WizardAlert open={alertOpen} onOpenChange={setAlertOpen} message={alertMessage} />
       <Card>
         <CardHeader>
           <CardTitle>Add New Contact</CardTitle>

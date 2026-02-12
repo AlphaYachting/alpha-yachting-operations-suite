@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useWizard } from './WizardContext';
 import { SearchSelect } from './SearchSelect';
+import { WizardAlert } from './WizardAlert';
 import { base44 } from '@/api/base44Client';
 
 export function Step3VesselSelection() {
@@ -14,6 +15,8 @@ export function Step3VesselSelection() {
   const [boats, setBoats] = useState([]);
   const [loadingBoats, setLoadingBoats] = useState(false);
   const [vesselTab, setVesselTab] = useState(wizardData.vessel?.existing ? 'existing' : 'new');
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   useEffect(() => {
     loadBoats();
@@ -41,15 +44,20 @@ export function Step3VesselSelection() {
     }
   };
 
+  const showAlert = (message) => {
+    setAlertMessage(message);
+    setAlertOpen(true);
+  };
+
   const handleNext = () => {
     if (wizardData.intent === 'boat_only') {
       if (!wizardData.vessel?.new?.vessel_name) {
-        alert('Boat name is required');
+        showAlert('Boat name is required');
         return;
       }
     } else {
       if (!wizardData.vessel?.existing && !wizardData.vessel?.new?.vessel_name) {
-        alert('Please select or create a vessel');
+        showAlert('Please select or create a vessel');
         return;
       }
     }
@@ -58,6 +66,7 @@ export function Step3VesselSelection() {
 
   return (
     <div className="space-y-6">
+      <WizardAlert open={alertOpen} onOpenChange={setAlertOpen} message={alertMessage} />
       <Card>
         <CardHeader>
           <CardTitle>Select or Create Vessel</CardTitle>
