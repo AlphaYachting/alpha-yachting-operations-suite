@@ -44,7 +44,6 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Progress } from '@/components/ui/progress';
 import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays, startOfWeek } from 'date-fns';
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
@@ -303,7 +302,7 @@ export default function Dashboard() {
   const getProjectProgress = (job) => {
     const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
     if (jobWorkOrders.length === 0) return 0;
-    const completedWOs = jobWorkOrders.filter(wo => wo.status === 'Completed').length;
+    const completedWOs = jobWorkOrders.filter(wo => ['Completed', 'Invoiced'].includes(wo.status)).length;
     return Math.round((completedWOs / jobWorkOrders.length) * 100);
   };
 
@@ -926,14 +925,16 @@ export default function Dashboard() {
                             <span className="text-slate-600">Progress: {progress}%</span>
                             <span className="text-slate-500 italic">{health.step}</span>
                           </div>
-                          <Progress 
-                            value={progress} 
-                            className={`h-2 ${
-                              health.status === 'red' ? '[&>*]:bg-red-500' :
-                              health.status === 'yellow' ? '[&>*]:bg-yellow-500' :
-                              '[&>*]:bg-green-500'
-                            }`}
-                          />
+                          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all rounded-full ${
+                                health.status === 'red' ? 'bg-red-500' :
+                                health.status === 'yellow' ? 'bg-yellow-500' :
+                                'bg-green-500'
+                              }`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                       <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
