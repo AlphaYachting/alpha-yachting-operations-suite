@@ -211,13 +211,13 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
                   className="border rounded-lg p-4 space-y-3"
                 >
                   {/* Thumbnail & Info */}
-                  <div className="flex gap-4">
-                    <img
-                      src={item.url}
-                      alt={`Gallery ${idx + 1}`}
-                      className="h-24 w-24 rounded object-contain border"
-                    />
-                    <div className="flex-1 space-y-2">
+                   <div className="flex gap-4">
+                     <img
+                       src={item.url}
+                       alt={`Gallery ${idx + 1}`}
+                       className="max-h-24 max-w-32 rounded border"
+                     />
+                     <div className="flex-1 space-y-2">
                       <div className="text-sm font-medium text-slate-600">
                         Image {idx + 1}
                       </div>
