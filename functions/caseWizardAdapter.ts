@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
     // PHASE 4: CREATE OFFER
     // ============================================================
     let offer = null;
-    if (wizardData.intent.includes('offer')) {
+    if (wizardData.intent && wizardData.intent.includes('offer')) {
       offer = await base44.asServiceRole.entities.Offer.create({
         customer_id: customer.id,
         boat_id: boat?.id,
@@ -210,7 +210,17 @@ Deno.serve(async (req) => {
     // PHASE 5: CREATE JOB
     // ============================================================
     let job = null;
-    if (wizardData.intent.includes('job') || wizardData.intent === 'inspection') {
+    if (wizardData.intent === 'workorder_for_existing_project') {
+      // Use the existing project ID
+      if (!wizardData.existingProjectId) {
+        return Response.json({ error: 'No project selected for workorder_for_existing_project intent' }, { status: 400 });
+      }
+      const jobs = await base44.asServiceRole.entities.Job.filter({ id: wizardData.existingProjectId });
+      if (jobs.length === 0) {
+        return Response.json({ error: 'Selected project not found' }, { status: 404 });
+      }
+      job = jobs[0];
+    } else if (wizardData.intent.includes('job') || wizardData.intent === 'inspection') {
       // Validate scheduled_date not in past (if WO creation needed)
       if (wizardData.workOrder?.scheduled_date) {
         const schedDate = new Date(wizardData.workOrder.scheduled_date);
@@ -252,9 +262,11 @@ Deno.serve(async (req) => {
     // PHASE 6: CREATE WORK ORDER
     // ============================================================
     let workOrder = null;
-    if (wizardData.intent === 'inspection' || (wizardData.intent.includes('job') && wizardData.workOrder?.createFirst !== false)) {
+    if (wizardData.intent === 'inspection' || wizardData.intent === 'workorder_for_existing_project' || (wizardData.intent.includes('job') && wizardData.workOrder?.createFirst !== false)) {
       const woTitle = wizardData.intent === 'inspection' 
         ? 'Initial Inspection'
+        : wizardData.intent === 'workorder_for_existing_project'
+        ? (wizardData.workOrder?.title || 'Work Order')
         : wizardData.workOrder?.title || job.title;
 
       // Format scheduled_date as YYYY-MM-DD string
@@ -309,7 +321,9 @@ Deno.serve(async (req) => {
     // ============================================================
     // SUCCESS
     // ============================================================
-    const redirectTo = job?.id 
+    const redirectTo = workOrder?.id
+      ? `/WorkOrderDetail?id=${workOrder.id}`
+      : job?.id 
       ? `/JobDetail?id=${job.id}` 
       : offer?.id 
       ? `/OfferDetail?id=${offer.id}` 
