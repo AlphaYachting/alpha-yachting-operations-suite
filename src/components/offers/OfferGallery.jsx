@@ -162,7 +162,7 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
           <ImageIcon className="h-5 w-5" />
           Gallery (Optional)
         </CardTitle>
-        <p className="text-xs text-slate-500 mt-2">Minimum 6 images required to include in PDF. Recommended: 6–8 images.</p>
+        <p className="text-xs text-slate-500 mt-2">Upload up to 8 images. Recommended: 6–8 images for best PDF appearance.</p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Upload Section */}
