@@ -51,7 +51,6 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
-import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -1123,12 +1122,6 @@ export default function Dashboard() {
       <CapacityModal 
         open={showCapacityModal} 
         onOpenChange={setShowCapacityModal} 
-      />
-
-      {/* Dispatch Fullscreen Modal */}
-      <DispatchFullscreenModal 
-        open={showDispatchModal} 
-        onClose={() => setShowDispatchModal(false)} 
       />
 
       {/* Dispatch Fullscreen Modal */}
