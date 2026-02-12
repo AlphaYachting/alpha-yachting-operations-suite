@@ -253,11 +253,11 @@ export default function OfferDetail() {
       }[formData.language] || 'Respond in English.';
 
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are writing a professional project introduction for a yacht service offer.
+        prompt: `You are writing a brief project introduction for a yacht service offer.
 
 ${languageInstruction}
 
-Generate a customer-facing project description (2-4 paragraphs) that introduces the scope of work.
+Generate a short, direct project description (1-2 paragraphs max).
 
 Context:
 - Customer: ${customerName || 'N/A'}
@@ -265,16 +265,15 @@ Context:
 - Location: ${locationInfo || 'N/A'}
 - Project title: ${formData.title}
 
-Services included:
+Services:
 ${tasksText || 'N/A'}
 
 Requirements:
-- Professional and welcoming tone
-- Briefly introduce the project scope and key services
-- Mention the boat and customer context if available
-- Keep it concise and clear (2-4 paragraphs)
-- Focus on what will be done, not legal terms
-- Do not mention prices or timelines`,
+- Professional and direct tone
+- State what will be done clearly and concisely
+- Mention boat and location context only if relevant
+- Maximum 2 short paragraphs
+- No prices or timelines`,
       });
 
       updateField('description', response);
