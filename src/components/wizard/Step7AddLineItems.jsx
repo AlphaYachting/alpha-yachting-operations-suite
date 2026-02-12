@@ -5,10 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useWizard } from './WizardContext';
+import { WizardAlert } from './WizardAlert';
 import { Plus, Trash2 } from 'lucide-react';
 
 export function Step7AddLineItems() {
   const { wizardData, updateWizardData, setStep } = useWizard();
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
   const [newItem, setNewItem] = useState({
     title: '',
     description: '',
@@ -20,11 +23,13 @@ export function Step7AddLineItems() {
 
   const handleAddLineItem = () => {
     if (!newItem.title) {
-      alert('Line item title is required');
+      setAlertMessage('Line item title is required');
+      setAlertOpen(true);
       return;
     }
     if (newItem.quantity <= 0 || newItem.unit_price < 0) {
-      alert('Quantity must be > 0 and price must be >= 0');
+      setAlertMessage('Quantity must be > 0 and price must be >= 0');
+      setAlertOpen(true);
       return;
     }
 
@@ -57,6 +62,7 @@ export function Step7AddLineItems() {
 
   return (
     <div className="space-y-6">
+      <WizardAlert open={alertOpen} onOpenChange={setAlertOpen} message={alertMessage} />
       <Card>
         <CardHeader>
           <CardTitle>Add Line Items to Offer</CardTitle>
