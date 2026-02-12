@@ -45,32 +45,46 @@ import { cn } from '@/lib/utils';
 import NotificationBell from '@/components/notifications/NotificationBell';
 
 const navItems = [
-        { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-        { name: 'Leads', icon: Phone, page: 'LeadsV2' },
-        { name: 'Customers', icon: Users, page: 'Customers' },
-        { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard' },
-        { name: 'Boats', icon: Ship, page: 'Boats' },
-        { name: 'Locations', icon: MapPin, page: 'Locations' },
+  // OPERATIONS
+  { header: 'OPERATIONS' },
+  { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
+  { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard', primary: true },
+  { name: 'Schedule', icon: Clock, page: 'Schedule' },
   { name: 'Projects', icon: Briefcase, page: 'Jobs' },
   { name: 'Work Orders', icon: ClipboardList, page: 'WorkOrders' },
   { name: 'Team Orders', icon: Users, page: 'TeamOrders' },
-  { name: 'Schedule', icon: Clock, page: 'Schedule' },
-  { name: 'Technicians', icon: Wrench, page: 'Technicians' },
-  { name: 'Tools & Inventory', icon: Package, page: 'Inventory' },
-  { name: 'Inventory Stats', icon: BarChart3, page: 'InventoryDashboard' },
-  { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
-  { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates', adminOnly: true },
+  { name: 'Workshop Display', icon: Monitor, page: 'WorkshopDisplay' },
+  
+  // SALES & CUSTOMER FLOW
+  { header: 'SALES & CUSTOMER FLOW' },
+  { name: 'Leads', icon: Phone, page: 'LeadsV2' },
+  { name: 'Customers', icon: Users, page: 'Customers' },
+  { name: 'Boats', icon: Ship, page: 'Boats' },
+  { name: 'Locations', icon: MapPin, page: 'Locations' },
   { name: 'Offers', icon: FileText, page: 'Offers' },
-  { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates', adminOnly: true },
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
+  
+  // RESOURCES
+  { header: 'RESOURCES' },
+  { name: 'Technicians', icon: Wrench, page: 'Technicians' },
+  { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
+  { name: 'Tools & Inventory', icon: Package, page: 'Inventory' },
+  { name: 'Inventory Stats', icon: BarChart3, page: 'InventoryDashboard', subLevel: true },
+  { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates', adminOnly: true },
+  { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates', adminOnly: true },
+  
+  // INTELLIGENCE
+  { header: 'INTELLIGENCE' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
   { name: 'Project Intelligence', icon: Brain, page: 'ProjectIntelligence', adminOnly: true },
+  { name: 'Standardize WOs', icon: ClipboardList, page: 'StandardizeWorkOrders', adminOnly: true },
+  
+  // ADMIN
+  { header: 'ADMIN' },
+  { name: 'Settings', icon: Settings, page: 'Settings' },
+  { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
   { name: 'Customer Portal Test', icon: Users, page: 'CustomerPortalTest', adminOnly: true },
-        { name: 'Workshop Display', icon: Monitor, page: 'WorkshopDisplay' },
-        { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
-        { name: 'Settings', icon: Settings, page: 'Settings' },
-        { name: 'Standardize WOs', icon: ClipboardList, page: 'StandardizeWorkOrders', adminOnly: true },
-      ];
+];
 
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -186,7 +200,23 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {navItems.filter(item => !item.adminOnly || user?.role === 'admin').map((item) => {
+            {navItems.filter(item => !item.adminOnly || user?.role === 'admin').map((item, index) => {
+              // Section header
+              if (item.header) {
+                return (
+                  <div 
+                    key={item.header}
+                    className={cn(
+                      "px-3 pt-4 pb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider",
+                      index > 0 && "border-t border-slate-100 mt-3"
+                    )}
+                  >
+                    {item.header}
+                  </div>
+                );
+              }
+              
+              // Navigation item
               const isActive = currentPageName === item.page;
               return (
                 <Link
@@ -195,14 +225,18 @@ export default function Layout({ children, currentPageName }) {
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                    isActive 
-                      ? "bg-blue-50 text-blue-700" 
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    item.subLevel && "ml-4",
+                    item.primary && !isActive && "bg-blue-600 text-white hover:bg-blue-700",
+                    item.primary && isActive && "bg-blue-700 text-white",
+                    !item.primary && isActive && "bg-blue-50 text-blue-700",
+                    !item.primary && !isActive && "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   )}
                 >
                   <item.icon className={cn(
                     "h-5 w-5",
-                    isActive ? "text-blue-600" : "text-slate-400"
+                    item.primary && "text-white",
+                    !item.primary && isActive && "text-blue-600",
+                    !item.primary && !isActive && "text-slate-400"
                   )} />
                   {item.name}
                 </Link>
