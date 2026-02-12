@@ -13,6 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import ScheduleItemEditModal from '@/components/ScheduleItemEditModal';
 
 // Vibrant color palette for technicians
 const TECHNICIAN_COLORS = [
@@ -53,10 +54,13 @@ export default function DragDropCalendar({
   onWorkOrderEdit,
   onDayClick,
   loading,
-  viewType = 'month' // 'week' or 'month'
+  viewType = 'month', // 'week' or 'month'
+  useScheduleModal = false
 }) {
   const [conflicts, setConflicts] = useState({});
   const [technicianColorMap, setTechnicianColorMap] = useState({});
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   
   // Generate calendar days based on view type
   const calendarDays = viewType === 'month' 
@@ -320,7 +324,10 @@ export default function DragDropCalendar({
     if (isDragging) return; // Ignore clicks during drag
     e.preventDefault();
     e.stopPropagation();
-    if (onWorkOrderEdit) {
+    if (useScheduleModal) {
+      setSelectedWorkOrder(wo);
+      setScheduleModalOpen(true);
+    } else if (onWorkOrderEdit) {
       onWorkOrderEdit(wo);
     }
   };
@@ -689,6 +696,28 @@ export default function DragDropCalendar({
           );
         })}
       </div>
+
+      {/* Schedule Edit Modal */}
+      {useScheduleModal && (
+        <ScheduleItemEditModal
+          open={scheduleModalOpen}
+          onClose={() => {
+            setScheduleModalOpen(false);
+            setSelectedWorkOrder(null);
+          }}
+          workOrder={selectedWorkOrder}
+          technicians={technicians}
+          jobs={jobs}
+          customers={customers}
+          boats={boats}
+          onSave={async () => {
+            // Reload data after save
+            if (onWorkOrderUpdate) {
+              // The Schedule page will handle reloading
+            }
+          }}
+        />
+      )}
     </DragDropContext>
   );
 }
