@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
     // PHASE 5: CREATE JOB
     // ============================================================
     let job = null;
-    if (wizardData.intent.includes('job')) {
+    if (wizardData.intent.includes('job') || wizardData.intent === 'inspection') {
       // Validate scheduled_date not in past (if WO creation needed)
       if (wizardData.workOrder?.scheduled_date) {
         const schedDate = new Date(wizardData.workOrder.scheduled_date);
@@ -219,19 +219,23 @@ Deno.serve(async (req) => {
         }
       }
 
+      if (!boat) {
+        return Response.json({ error: 'Boat is required for job/inspection creation' }, { status: 400 });
+      }
+
       job = await base44.asServiceRole.entities.Job.create({
         customer_id: customer.id,
         boat_id: boat.id,
         location_id: location?.id,
-        title: wizardData.job.title,
-        description: wizardData.job.description || '',
-        job_type: wizardData.job.jobType || 'Mobile Service',
-        service_category: wizardData.job.serviceCategory || 'General Service',
-        priority: wizardData.job.priority || 'Normal',
+        title: wizardData.job?.title || wizardData.workOrder?.title || 'Inspection',
+        description: wizardData.job?.description || wizardData.workOrder?.description || '',
+        job_type: wizardData.job?.jobType || 'Mobile Service',
+        service_category: wizardData.job?.serviceCategory || 'General Service',
+        priority: wizardData.job?.priority || 'Normal',
         status: 'New',
         intake_source: 'System',
         intake_date: new Date().toISOString(),
-        requested_date: wizardData.job.targetDate || null,
+        requested_date: wizardData.job?.targetDate || null,
         lead_technician_id: wizardData.technicians?.[0] || null
       });
 
