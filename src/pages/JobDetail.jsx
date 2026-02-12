@@ -752,10 +752,17 @@ export default function ProjectDetail() {
           {editingWorkOrder && (
             <WorkOrderForm
               workOrder={editingWorkOrder}
-              jobs={[project]}
+              jobs={allCustomers && allBoats ? [project, ...allCustomers.flatMap(c => 
+                allBoats.filter(b => b.customer_id === c.id).map(b => ({
+                  id: project.id,
+                  customer_id: c.id,
+                  boat_id: b.id
+                }))
+              )] : [project]}
               technicians={allTechnicians}
               customers={allCustomers}
               boats={allBoats}
+              preselectedJobId={project.id}
               onSave={handleSaveWorkOrder}
               onCancel={() => {
                 setShowWorkOrderDialog(false);
