@@ -18,8 +18,10 @@ import {
   FileText,
   AlertCircle,
   AlertTriangle,
-  Edit
+  Edit,
+  GripVertical
 } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -105,7 +107,21 @@ export default function ProjectDetail() {
          setAllLocations(locations);
          setAllTechnicians(technicians);
 
-         const projectWOs = allWOs.filter(wo => wo.job_id === projectId);
+         let projectWOs = allWOs.filter(wo => wo.job_id === projectId);
+
+         // Initialize sort_index if missing
+         const needsIndex = projectWOs.some(wo => wo.sort_index === null || wo.sort_index === undefined);
+         if (needsIndex) {
+           for (let i = 0; i < projectWOs.length; i++) {
+             if (projectWOs[i].sort_index === null || projectWOs[i].sort_index === undefined) {
+               await base44.entities.WorkOrder.update(projectWOs[i].id, { sort_index: i + 1 });
+               projectWOs[i].sort_index = i + 1;
+             }
+           }
+         }
+
+         // Sort by sort_index
+         projectWOs.sort((a, b) => (a.sort_index || 0) - (b.sort_index || 0));
          setWorkOrders(projectWOs);
 
          const woIds = projectWOs.map(wo => wo.id);
@@ -159,6 +175,32 @@ export default function ProjectDetail() {
         return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
       })
       .join(', ');
+  };
+
+  const handleDragEnd = async (result) => {
+    if (!result.destination) return;
+    if (result.source.index === result.destination.index) return;
+
+    const items = Array.from(workOrders);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    // Update local state immediately for UI responsiveness
+    setWorkOrders(items);
+
+    // Batch update sort_index for all workorders
+    try {
+      const updates = items.map((wo, index) => 
+        base44.entities.WorkOrder.update(wo.id, { sort_index: index + 1 })
+      );
+      await Promise.all(updates);
+      toast.success('Work order order updated');
+    } catch (error) {
+      console.error('Error updating work order order:', error);
+      toast.error('Failed to update order');
+      // Reload on error to restore correct state
+      await loadProjectData();
+    }
   };
 
   if (loading) {
@@ -467,16 +509,35 @@ export default function ProjectDetail() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {workOrders.map((wo) => {
-              const woTasks = getTasksForWO(wo.id);
-              const woCompleted = woTasks.filter(t => t.status === 'Completed').length;
-              
-              return (
-                <Card key={wo.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="workorders">
+              {(provided) => (
+                <div 
+                  {...provided.droppableProps} 
+                  ref={provided.innerRef}
+                  className="space-y-4"
+                >
+                  {workOrders.map((wo, index) => {
+                    const woTasks = getTasksForWO(wo.id);
+                    const woCompleted = woTasks.filter(t => t.status === 'Completed').length;
+                    
+                    return (
+                      <Draggable key={wo.id} draggableId={wo.id} index={index}>
+                        {(provided, snapshot) => (
+                          <Card 
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-400' : ''}
+                          >
+                            <CardHeader>
+                              <div className="flex items-start gap-3">
+                                <div 
+                                  {...provided.dragHandleProps}
+                                  className="cursor-grab active:cursor-grabbing pt-1 text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                  <GripVertical className="h-5 w-5" />
+                                </div>
+                                <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <CardTitle className="text-lg">{wo.title}</CardTitle>
                           <Badge className={statusColors[wo.status]}>{wo.status}</Badge>
@@ -538,12 +599,12 @@ export default function ProjectDetail() {
                             View Details
                           </Link>
                         </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  
-                  {woTasks.length > 0 && (
-                    <CardContent>
+                    </CardHeader>
+                    
+                    {woTasks.length > 0 && (
+                      <CardContent>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-500">Tasks</span>
@@ -582,13 +643,19 @@ export default function ProjectDetail() {
                             </div>
                           ))}
                         </div>
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
-              );
-            })}
-          </div>
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
         )}
       </div>
 
