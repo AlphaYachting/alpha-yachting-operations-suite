@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { 
@@ -90,6 +90,7 @@ const taskStatusColors = {
 
 export default function WorkOrderDetail() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const workOrderId = searchParams.get('id');
 
   const [workOrder, setWorkOrder] = useState(null);
@@ -822,7 +823,7 @@ export default function WorkOrderDetail() {
 
               <div className="flex gap-2 pt-2">
                 <Button 
-                  onClick={() => window.location.href = createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`}
+                  onClick={() => navigate(createPageUrl('TeamOrderDetail') + `?id=${teamOrder.id}`)}
                   variant="outline" 
                   size="sm" 
                   className="flex-1"
@@ -848,7 +849,7 @@ export default function WorkOrderDetail() {
           <CardContent className="p-6 text-center">
             <p className="text-slate-700 mb-4">No Team Order assigned for this work order</p>
             <Button
-              onClick={() => window.location.href = createPageUrl('TeamOrderDetail') + `?workOrderId=${workOrderId}`}
+              onClick={() => navigate(createPageUrl('TeamOrderDetail') + `?workOrderId=${workOrderId}`)}
               className="bg-purple-600 hover:bg-purple-700"
             >
               <Plus className="h-4 w-4 mr-2" />
