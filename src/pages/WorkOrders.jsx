@@ -223,7 +223,6 @@ export default function WorkOrders() {
         const newlyAssigned = newTechIds.filter(id => !oldTechIds.includes(id));
         
         if (newlyAssigned.length > 0) {
-          // Notify newly assigned technicians
           const newlyAssignedTechs = technicians.filter(t => newlyAssigned.includes(t.id));
           for (const tech of newlyAssignedTechs) {
             if (tech.email) {
@@ -243,7 +242,6 @@ export default function WorkOrders() {
         toast.success('Work order updated');
       } else {
         console.log('Creating new work order...');
-        // Use createWorkOrderWithNumber to ensure unique WO number
         const response = await base44.functions.invoke('createWorkOrderWithNumber', workOrderData);
         const result = response.data;
         if (!result.success) {
@@ -254,7 +252,6 @@ export default function WorkOrders() {
         savedWorkOrder = newWo;
         console.log('Work order created:', createdWoId, 'with number:', result.work_order_number);
         
-        // Send notifications to assigned technicians
         if (workOrderData.assigned_technicians && workOrderData.assigned_technicians.length > 0) {
           try {
             await notifyWorkOrderAssignment(newWo, technicians, workOrderData.title);
@@ -263,94 +260,89 @@ export default function WorkOrders() {
           }
         }
 
-        // If AI-suggested tasks, add them
+        // Process AI tasks and templates in parallel
+        const taskCreationPromises = [];
+
         if (suggestedTasks && suggestedTasks.length > 0) {
           console.log('Adding AI-suggested tasks:', suggestedTasks.length);
-          try {
-            const taskPromises = suggestedTasks.map((task, idx) => {
-              console.log(`Creating task ${idx + 1}:`, task.title);
-              return base44.entities.Task.create({
+          taskCreationPromises.push(
+            ...suggestedTasks.map((task, idx) =>
+              base44.entities.Task.create({
                 work_order_id: createdWoId,
                 title: task.title,
                 description: task.description || '',
                 estimated_minutes: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
                 sequence_order: idx,
                 status: 'Not Started'
-              });
-            });
-            
-            await Promise.all(taskPromises);
-            console.log('All AI tasks created successfully');
-            toast.success(`Work order created with ${suggestedTasks.length} AI-suggested tasks`);
-          } catch (aiTaskError) {
-            console.error('Error adding AI-suggested tasks:', aiTaskError);
-            toast.error(`Work order created, but failed to add AI tasks: ${aiTaskError.message}`);
-          }
-        } else if (templateId) {
-          toast.success('Work order created');
-        } else {
-          toast.success('Work order created');
+              })
+            )
+          );
         }
 
-        // If template selected, apply it
         if (templateId) {
           console.log('Applying template:', templateId);
-          try {
-            const user = await base44.auth.me();
-            const templateItems = await base44.entities.TaskTemplateItem.filter(
-              { template_list_id: templateId },
-              'sort_order'
+          const user = await base44.auth.me();
+          const templateItems = await base44.entities.TaskTemplateItem.filter(
+            { template_list_id: templateId },
+            'sort_order'
+          );
+
+          if (templateItems.length > 0) {
+            taskCreationPromises.push(
+              ...templateItems.map((item, idx) =>
+                base44.entities.Task.create({
+                  work_order_id: createdWoId,
+                  title: item.title,
+                  description: item.description || '',
+                  estimated_minutes: item.default_estimated_hours ? Math.round(item.default_estimated_hours * 60) : null,
+                  sequence_order: (suggestedTasks?.length || 0) + idx,
+                  status: 'Not Started',
+                  notes: item.required_tools_note || '',
+                  requires_approval: item.requires_customer_approval || false
+                })
+              )
             );
 
-            if (templateItems.length > 0) {
-              await Promise.all(
-                templateItems.map((item, idx) =>
-                  base44.entities.Task.create({
-                    work_order_id: createdWoId,
-                    title: item.title,
-                    description: item.description || '',
-                    estimated_minutes: item.default_estimated_hours ? Math.round(item.default_estimated_hours * 60) : null,
-                    sequence_order: (suggestedTasks?.length || 0) + idx,
-                    status: 'Not Started',
-                    notes: item.required_tools_note || '',
-                    requires_approval: item.requires_customer_approval || false
-                  })
-                )
-              );
-
-              await base44.entities.WorkOrderTemplateUsage.create({
+            taskCreationPromises.push(
+              base44.entities.WorkOrderTemplateUsage.create({
                 work_order_id: createdWoId,
                 template_list_id: templateId,
                 applied_at: new Date().toISOString(),
                 applied_by: user.email,
                 mode: 'full',
                 selected_item_ids: templateItems.map(t => t.id)
-              });
-              console.log('Template applied successfully');
-            }
-          } catch (templateError) {
-            console.error('Error applying template:', templateError);
-            toast.error(`Template tasks failed: ${templateError.message}`);
+              })
+            );
           }
+        }
+
+        // Execute all task creations in parallel
+        if (taskCreationPromises.length > 0) {
+          await Promise.all(taskCreationPromises);
+          const taskCount = (suggestedTasks?.length || 0) + (templateId ? (await base44.entities.TaskTemplateItem.filter({ template_list_id: templateId })).length : 0);
+          toast.success(`Work order created with ${taskCount} tasks`);
+        } else {
+          toast.success('Work order created');
         }
       }
       
-      console.log('Reloading data...');
-      await loadData();
-      console.log('Closing form...');
+      // Close form immediately for better UX
       setShowForm(false);
       setEditingWorkOrder(null);
       
       // Navigate back to source if came from project
       if (cameFromProject) {
+        toast.loading('Redirecting to project...', { id: 'redirect' });
+        // Use navigate with replace to avoid long reload
         window.location.href = createPageUrl('JobDetail') + `?id=${preselectedJobId}`;
       } else {
         setSearchParams({});
+        // Reload data in background
+        loadData();
       }
-      console.log('Save complete!');
     } catch (error) {
       console.error('Error saving work order:', error);
-      toast.error(`Failed to save work order: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed to save: ${error.message || 'Unknown error'}`);
       throw error;
     }
   };
