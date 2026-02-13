@@ -245,13 +245,14 @@ export default function WorkOrders() {
         console.log('Creating new work order...');
         // Use createWorkOrderWithNumber to ensure unique WO number
         const response = await base44.functions.invoke('createWorkOrderWithNumber', workOrderData);
-        if (!response.success) {
-          throw new Error(response.error || 'Failed to create work order');
+        const result = response.data;
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to create work order');
         }
-        const newWo = response.work_order;
+        const newWo = result.work_order;
         createdWoId = newWo.id;
         savedWorkOrder = newWo;
-        console.log('Work order created:', createdWoId, 'with number:', response.work_order_number);
+        console.log('Work order created:', createdWoId, 'with number:', result.work_order_number);
         
         // Send notifications to assigned technicians
         if (workOrderData.assigned_technicians && workOrderData.assigned_technicians.length > 0) {
