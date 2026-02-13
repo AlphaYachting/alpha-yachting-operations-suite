@@ -10,10 +10,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // STEP 1: Optimized query - fetch limited recent work orders sorted by creation
-    // Note: Base44 sorts by created_date, not work_order_number lexicographically
-    // We limit to 100 most recent to reduce scan time while still capturing max
-    const recentWorkOrders = await base44.entities.WorkOrder.list('-created_date', 100);
+    // STEP 1: Optimized query - fetch limited recent work orders
+    // Limit to 50 most recent to balance performance vs capturing max number
+    const recentWorkOrders = await base44.entities.WorkOrder.list('-created_date', 50);
 
     // Extract and validate numbers matching canonical format WO00001
     const validNumbers = recentWorkOrders
@@ -23,26 +22,7 @@ Deno.serve(async (req) => {
       .filter(num => !isNaN(num));
 
     // STEP 2: Compute max number from recent records
-    // For safety, also check locks to ensure we don't skip numbers
-    let maxNumber = validNumbers.length > 0 ? Math.max(...validNumbers) : 0;
-    
-    // Check recent locks for higher numbers (in case WO created but not yet visible)
-    try {
-      const recentLocks = await base44.entities.WorkOrderNumberLock.list('-created_date', 50);
-      const lockNumbers = recentLocks
-        .map(lock => lock.work_order_number)
-        .filter(num => num && /^WO\d{5}$/.test(num))
-        .map(num => parseInt(num.substring(2), 10))
-        .filter(num => !isNaN(num));
-      
-      if (lockNumbers.length > 0) {
-        const maxLockNumber = Math.max(...lockNumbers);
-        maxNumber = Math.max(maxNumber, maxLockNumber);
-      }
-    } catch (lockError) {
-      // If lock entity doesn't exist yet or query fails, continue with WO max only
-      console.warn('Could not query locks, using WorkOrder max only');
-    }
+    const maxNumber = validNumbers.length > 0 ? Math.max(...validNumbers) : 0;
     let nextNumber = maxNumber + 1;
 
     // STEP 3: Collision check loop with retry
