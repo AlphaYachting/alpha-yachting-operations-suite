@@ -28,9 +28,29 @@ Deno.serve(async (req) => {
       attempt++;
 
       try {
-        // STEP 1: Allocate candidate number
-        const allocationResponse = await base44.functions.invoke('allocateWorkOrderNumber', {});
-        const { work_order_number } = allocationResponse.data;
+        // STEP 1: Allocate candidate number inline (avoid function invoke overhead)
+        const recentWorkOrders = await base44.asServiceRole.entities.WorkOrder.list('-created_date', 50);
+        const validNumbers = recentWorkOrders
+          .map(wo => wo.work_order_number)
+          .filter(num => num && /^WO\d{5}$/.test(num))
+          .map(num => parseInt(num.substring(2), 10))
+          .filter(num => !isNaN(num));
+        
+        let maxNumber = validNumbers.length > 0 ? Math.max(...validNumbers) : 0;
+        
+        const recentLocks = await base44.asServiceRole.entities.WorkOrderNumberLock.list('-created_date', 50);
+        const lockNumbers = recentLocks
+          .map(lock => lock.work_order_number)
+          .filter(num => num && /^WO\d{5}$/.test(num))
+          .map(num => parseInt(num.substring(2), 10))
+          .filter(num => !isNaN(num));
+        
+        if (lockNumbers.length > 0) {
+          maxNumber = Math.max(maxNumber, Math.max(...lockNumbers));
+        }
+        
+        const nextNumber = maxNumber + attempt; // Increment by attempt to reduce collision
+        const work_order_number = `WO${String(nextNumber).padStart(5, '0')}`;
 
         if (!work_order_number) {
           throw new Error('Allocation returned no work_order_number');
