@@ -95,6 +95,7 @@ export default function ProjectDetail() {
    const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
    const [deleteWorkOrder, setDeleteWorkOrder] = useState(null);
    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+   const [showNewWorkOrderDialog, setShowNewWorkOrderDialog] = useState(false);
 
    useEffect(() => {
      if (projectId) {
@@ -179,16 +180,88 @@ export default function ProjectDetail() {
     }
   };
 
-  const handleSaveWorkOrder = async (woData) => {
+  const handleSaveWorkOrder = async (woData, templateId, suggestedTasks) => {
+    const toastId = toast.loading(editingWorkOrder ? 'Updating work order...' : 'Creating work order...');
+
     try {
-      await base44.entities.WorkOrder.update(editingWorkOrder.id, woData);
-      setShowWorkOrderDialog(false);
-      setEditingWorkOrder(null);
-      toast.success('Work order updated');
+      if (editingWorkOrder) {
+        await base44.entities.WorkOrder.update(editingWorkOrder.id, woData);
+        setShowWorkOrderDialog(false);
+        setEditingWorkOrder(null);
+        toast.success('Work order updated', { id: toastId });
+      } else {
+        // Create new work order
+        const response = await base44.functions.invoke('createWorkOrderWithNumber', woData);
+        const result = response.data;
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to create work order');
+        }
+        const createdWoId = result.work_order.id;
+
+        // Create tasks in parallel
+        const taskPromises = [];
+
+        if (suggestedTasks?.length > 0) {
+          taskPromises.push(...suggestedTasks.map((task, idx) =>
+            base44.entities.Task.create({
+              work_order_id: createdWoId,
+              title: task.title,
+              description: task.description || '',
+              estimated_minutes: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
+              sequence_order: idx,
+              status: 'Not Started'
+            })
+          ));
+        }
+
+        if (templateId) {
+          const [user, templateItems] = await Promise.all([
+            base44.auth.me(),
+            base44.entities.TaskTemplateItem.filter({ template_list_id: templateId }, 'sort_order')
+          ]);
+
+          if (templateItems.length > 0) {
+            taskPromises.push(...templateItems.map((item, idx) =>
+              base44.entities.Task.create({
+                work_order_id: createdWoId,
+                title: item.title,
+                description: item.description || '',
+                estimated_minutes: item.default_estimated_hours ? Math.round(item.default_estimated_hours * 60) : null,
+                sequence_order: (suggestedTasks?.length || 0) + idx,
+                status: 'Not Started',
+                notes: item.required_tools_note || '',
+                requires_approval: item.requires_customer_approval || false
+              })
+            ));
+
+            taskPromises.push(
+              base44.entities.WorkOrderTemplateUsage.create({
+                work_order_id: createdWoId,
+                template_list_id: templateId,
+                applied_at: new Date().toISOString(),
+                applied_by: user.email,
+                mode: 'full',
+                selected_item_ids: templateItems.map(t => t.id)
+              })
+            );
+          }
+        }
+
+        if (taskPromises.length > 0) {
+          await Promise.all(taskPromises);
+          toast.success(`Work order created with ${taskPromises.length} tasks`, { id: toastId });
+        } else {
+          toast.success('Work order created', { id: toastId });
+        }
+
+        setShowNewWorkOrderDialog(false);
+      }
+
       await loadProjectData();
     } catch (error) {
-      console.error('Error updating work order:', error);
-      toast.error('Failed to update work order');
+      console.error('Error saving work order:', error);
+      toast.error(`Failed: ${error.message || 'Unknown error'}`, { id: toastId });
+      throw error;
     }
   };
 
@@ -548,10 +621,8 @@ export default function ProjectDetail() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-900">Work Orders & Tasks</h2>
-          <Button asChild size="sm">
-            <Link to={createPageUrl('WorkOrders') + `?job=${projectId}&new=true`}>
-              Add Work Order
-            </Link>
+          <Button size="sm" onClick={() => setShowNewWorkOrderDialog(true)}>
+            Add Work Order
           </Button>
         </div>
 
@@ -752,13 +823,7 @@ export default function ProjectDetail() {
           {editingWorkOrder && (
             <WorkOrderForm
               workOrder={editingWorkOrder}
-              jobs={allCustomers && allBoats ? [project, ...allCustomers.flatMap(c => 
-                allBoats.filter(b => b.customer_id === c.id).map(b => ({
-                  id: project.id,
-                  customer_id: c.id,
-                  boat_id: b.id
-                }))
-              )] : [project]}
+              jobs={[project]}
               technicians={allTechnicians}
               customers={allCustomers}
               boats={allBoats}
@@ -770,6 +835,24 @@ export default function ProjectDetail() {
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* New Work Order Dialog */}
+      <Dialog open={showNewWorkOrderDialog} onOpenChange={setShowNewWorkOrderDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Work Order</DialogTitle>
+          </DialogHeader>
+          <WorkOrderForm
+            jobs={[project]}
+            technicians={allTechnicians}
+            customers={allCustomers}
+            boats={allBoats}
+            preselectedJobId={project.id}
+            onSave={handleSaveWorkOrder}
+            onCancel={() => setShowNewWorkOrderDialog(false)}
+          />
         </DialogContent>
       </Dialog>
 
