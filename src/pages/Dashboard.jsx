@@ -70,7 +70,6 @@ export default function Dashboard() {
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
   const [kpis, setKpis] = useState(null);
-  const [technicians, setTechnicians] = useState([]);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
@@ -88,10 +87,20 @@ export default function Dashboard() {
     loadDashboardData();
   }, []);
 
+  useEffect(() => {
+    // Lazy load Project Health after initial render
+    if (!loading) {
+      const timeoutId = setTimeout(() => {
+        loadProjectHealth();
+      }, 0);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [loading]);
+
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData, techData] = await Promise.all([
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
@@ -99,8 +108,7 @@ export default function Dashboard() {
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
-        base44.entities.Note.list('-created_date', 50),
-        base44.entities.Technician.list()
+        base44.entities.Note.list('-created_date', 50)
       ]);
 
       setWorkOrders(woData);
@@ -111,7 +119,6 @@ export default function Dashboard() {
       setLeads(leadsData);
       setOffers(offersData);
       setNotes(notesData);
-      setTechnicians(techData);
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
@@ -221,16 +228,6 @@ export default function Dashboard() {
     };
   };
 
-  const getTechnicianDisplay = (techIds) => {
-    if (!techIds || techIds.length === 0) return { display: 'Unassigned', isUnassigned: true };
-    if (techIds.length === 1) {
-      const tech = technicians.find(t => t.id === techIds[0]);
-      return { display: tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown', isUnassigned: false };
-    }
-    const firstTech = technicians.find(t => t.id === techIds[0]);
-    return { display: firstTech ? `${firstTech.first_name} ${firstTech.last_name} +${techIds.length - 1}` : `${techIds.length} assigned`, isUnassigned: false };
-  };
-
   // ACTION REQUIRED: Overdue WorkOrders
   const overdueWorkOrders = workOrders.filter(wo => {
     if (['Completed', 'Cancelled'].includes(wo.status)) return false;
@@ -262,19 +259,19 @@ export default function Dashboard() {
     if (['Completed', 'Cancelled'].includes(wo.status)) return false;
     if (!wo.scheduled_date) return false;
     return isToday(parseISO(wo.scheduled_date));
-  }).sort((a, b) => (a.scheduled_start_time || '').localeCompare(b.scheduled_start_time || ''));
+  });
 
-  // THIS WEEK: WorkOrders between tomorrow and end of this week
+  // THIS WEEK: WorkOrders in next 7 days
   const thisWeekWorkOrders = workOrders.filter(wo => {
     if (['Completed', 'Cancelled'].includes(wo.status)) return false;
     if (!wo.scheduled_date) return false;
     const schedDate = parseISO(wo.scheduled_date);
-    const weekEnd = startOfWeek(addDays(today, 7), { weekStartsOn: 1 });
-    return schedDate > endOfDay(today) && schedDate <= weekEnd;
-  }).sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''));
+    const daysAway = differenceInDays(schedDate, today);
+    return daysAway > 0 && daysAway <= 7;
+  });
 
-  // PROJECT HEALTH
-  const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
+  // PROJECT HEALTH - already filtered to active jobs in loadProjectHealth
+  const activeJobs = jobs;
   
   const getProjectHealth = (job) => {
     const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
@@ -550,123 +547,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* TODAY / THIS WEEK - Priority sections */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card className="border-blue-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Clock className="h-5 w-5 text-blue-600" />
-              Today
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todayWorkOrders.length === 0 ? (
-              <p className="text-sm text-slate-500">No work orders scheduled for today</p>
-            ) : (
-              <div className="space-y-2">
-                {todayWorkOrders.map(wo => {
-                  const jobInfo = getJobInfo(wo.job_id);
-                  const techDisplay = getTechnicianDisplay(wo.assigned_technicians);
-                  return (
-                    <Link 
-                      key={wo.id} 
-                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-900 mb-1">{wo.title}</p>
-                          <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
-                            <Ship className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{jobInfo?.boat}</span>
-                            {jobInfo?.location && (
-                              <>
-                                <span>•</span>
-                                <MapPin className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{jobInfo.location}</span>
-                              </>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {wo.scheduled_start_time && (
-                              <Badge variant="outline" className="bg-white text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {wo.scheduled_start_time}
-                              </Badge>
-                            )}
-                            <Badge variant="outline" className={techDisplay.isUnassigned ? 'bg-amber-50 text-amber-700 border-amber-300 text-xs' : 'bg-white text-xs'}>
-                              <Users className="h-3 w-3 mr-1" />
-                              {techDisplay.display}
-                            </Badge>
-                          </div>
-                        </div>
-                        <Badge className={`${statusColors[wo.status] || 'bg-slate-100 text-slate-700'} text-xs flex-shrink-0`}>
-                          {wo.status}
-                        </Badge>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-indigo-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              This Week
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {thisWeekWorkOrders.length === 0 ? (
-              <p className="text-sm text-slate-500">No work orders scheduled this week</p>
-            ) : (
-              <div className="space-y-2">
-                {thisWeekWorkOrders.slice(0, 6).map(wo => {
-                  const jobInfo = getJobInfo(wo.job_id);
-                  const techDisplay = getTechnicianDisplay(wo.assigned_technicians);
-                  return (
-                    <Link 
-                      key={wo.id} 
-                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-900 mb-1">{wo.title}</p>
-                          <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
-                            <Ship className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{jobInfo?.boat}</span>
-                            <span>•</span>
-                            <Calendar className="h-3 w-3 flex-shrink-0" />
-                            <span>{format(parseISO(wo.scheduled_date), 'EEE, MMM d')}</span>
-                          </div>
-                          <Badge variant="outline" className={techDisplay.isUnassigned ? 'bg-amber-50 text-amber-700 border-amber-300 text-xs' : 'bg-white text-xs'}>
-                            <Users className="h-3 w-3 mr-1" />
-                            {techDisplay.display}
-                          </Badge>
-                        </div>
-                        <Badge className={`${statusColors[wo.status] || 'bg-slate-100 text-slate-700'} text-xs flex-shrink-0`}>
-                          {wo.status}
-                        </Badge>
-                      </div>
-                    </Link>
-                  );
-                })}
-                {thisWeekWorkOrders.length > 6 && (
-                  <Button variant="outline" size="sm" asChild className="w-full mt-2">
-                    <Link to={createPageUrl('WorkOrders')}>View All ({thisWeekWorkOrders.length})</Link>
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ACTION REQUIRED */}
+      {/* 1) ACTION REQUIRED */}
       {hasActionItems && (
         <Card className="border-red-200 bg-red-50/30">
           <CardHeader>
@@ -899,7 +780,101 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* PROJECT HEALTH */}
+      {/* 2) TODAY / THIS WEEK */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Today
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {todayWorkOrders.length === 0 ? (
+              <p className="text-sm text-slate-500">No work orders scheduled for today</p>
+            ) : (
+              <div className="space-y-2">
+                {todayWorkOrders.map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  return (
+                    <Link 
+                      key={wo.id} 
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{wo.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {jobInfo?.boat} • {jobInfo?.location}
+                          </p>
+                          {wo.scheduled_start_time && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              {wo.scheduled_start_time}
+                            </p>
+                          )}
+                        </div>
+                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                          {wo.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+              This Week
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {thisWeekWorkOrders.length === 0 ? (
+              <p className="text-sm text-slate-500">No work orders scheduled this week</p>
+            ) : (
+              <div className="space-y-2">
+                {thisWeekWorkOrders.slice(0, 5).map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  return (
+                    <Link 
+                      key={wo.id} 
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{wo.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {jobInfo?.boat} • {jobInfo?.location}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {format(parseISO(wo.scheduled_date), 'EEE, MMM d')}
+                          </p>
+                        </div>
+                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                          {wo.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+                {thisWeekWorkOrders.length > 5 && (
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <Link to={createPageUrl('WorkOrders')}>View All ({thisWeekWorkOrders.length})</Link>
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 3) PROJECT HEALTH */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -982,7 +957,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* SALES & ORGANISATION */}
+      {/* 4) SALES & ORGANISATION */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -1096,10 +1071,10 @@ export default function Dashboard() {
                 job_number: woNumber, 
                 intake_date: new Date().toISOString() 
               });
-              setJobs([newJob, ...jobs]);
               setShowProjectDialog(false);
               toast.success('Project created');
               await loadDashboardData();
+              await loadProjectHealth();
             }}
             onCancel={() => setShowProjectDialog(false)}
           />
@@ -1114,7 +1089,7 @@ export default function Dashboard() {
           </DialogHeader>
           <WorkOrderForm
             jobs={jobs}
-            technicians={technicians}
+            technicians={[]}
             customers={customers}
             boats={boats}
             onSave={async (workOrderData) => {
