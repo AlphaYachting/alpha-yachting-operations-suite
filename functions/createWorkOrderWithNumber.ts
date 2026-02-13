@@ -21,9 +21,13 @@ Deno.serve(async (req) => {
     }
 
     // Clean up empty strings to null for numeric fields
-    if (workOrderData.estimated_duration_hours === '' || workOrderData.estimated_duration_hours === undefined) {
-      workOrderData.estimated_duration_hours = null;
-    }
+    const numericFields = ['estimated_duration_hours', 'travel_time_minutes', 'work_time_minutes', 
+                           'break_time_minutes', 'mileage_km', 'sort_index'];
+    numericFields.forEach(field => {
+      if (workOrderData[field] === '' || workOrderData[field] === undefined) {
+        workOrderData[field] = null;
+      }
+    });
 
     const MAX_ATTEMPTS = 3;
     let attempt = 0;
