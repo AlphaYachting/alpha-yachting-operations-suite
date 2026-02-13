@@ -53,9 +53,16 @@ Deno.serve(async (req) => {
           throw new Error('Allocation returned no work_order_number');
         }
 
+        // Auto-set to Scheduled if planning is ready
+        const hasDate = !!workOrderData.scheduled_date;
+        const hasTechs = workOrderData.assigned_technicians?.length > 0;
+        const isPlannedReady = hasDate && hasTechs;
+        const finalStatus = (isPlannedReady && workOrderData.status === 'Draft') ? 'Scheduled' : workOrderData.status;
+
         // Immediately create WorkOrder with allocated number (use service role for creation)
         const workOrder = await base44.asServiceRole.entities.WorkOrder.create({
           ...workOrderData,
+          status: finalStatus,
           work_order_number: work_order_number
         });
 
