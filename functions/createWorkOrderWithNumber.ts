@@ -59,6 +59,9 @@ Deno.serve(async (req) => {
           work_order_number: work_order_number
         });
 
+        // Brief delay to ensure DB commit before automations trigger
+        await new Promise(resolve => setTimeout(resolve, 200));
+
         return Response.json({
           success: true,
           work_order: workOrder,
