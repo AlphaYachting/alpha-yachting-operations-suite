@@ -206,6 +206,8 @@ export default function WorkOrders() {
 
   const handleSave = async (workOrderData, templateId, suggestedTasks) => {
     console.log('handleSave called with:', { workOrderData, templateId, suggestedTasks });
+    const cameFromProject = !!preselectedJobId;
+    
     try {
       let createdWoId;
       let savedWorkOrder;
@@ -337,7 +339,13 @@ export default function WorkOrders() {
       console.log('Closing form...');
       setShowForm(false);
       setEditingWorkOrder(null);
-      setSearchParams({});
+      
+      // Navigate back to source if came from project
+      if (cameFromProject) {
+        window.location.href = createPageUrl('JobDetail') + `?id=${preselectedJobId}`;
+      } else {
+        setSearchParams({});
+      }
       console.log('Save complete!');
     } catch (error) {
       console.error('Error saving work order:', error);
