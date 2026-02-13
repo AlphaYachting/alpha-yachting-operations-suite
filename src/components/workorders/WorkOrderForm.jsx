@@ -174,17 +174,8 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       
       console.log('Submitting work order:', { formData, selectedTemplateId, suggestedTasks });
       
-      // Add timeout wrapper (30 seconds)
-      const saveWithTimeout = Promise.race([
-        onSave(formData, selectedTemplateId, suggestedTasks),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Save operation timed out. Please try again.')), 30000)
-        )
-      ]);
-      
-      await saveWithTimeout;
-       toast.success('Work order saved successfully');
-       // onSave will close the dialog if successful
+      await onSave(formData, selectedTemplateId, suggestedTasks);
+      // Success toast and navigation handled by parent
       } catch (err) {
        console.error('Work order save error:', err);
        const errorMsg = err.message || 'Failed to save work order. Please check all required fields.';
