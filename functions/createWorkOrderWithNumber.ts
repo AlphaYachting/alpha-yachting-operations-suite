@@ -28,9 +28,17 @@ Deno.serve(async (req) => {
       attempt++;
 
       try {
-        // Allocate candidate number
-        const allocationResponse = await base44.functions.invoke('allocateWorkOrderNumber', {});
-        const { work_order_number } = allocationResponse.data;
+        // Allocate candidate number inline (avoid function invoke permission issues)
+        const recentWorkOrders = await base44.asServiceRole.entities.WorkOrder.list('-created_date', 50);
+        const validNumbers = recentWorkOrders
+          .map(wo => wo.work_order_number)
+          .filter(num => num && /^WO\d{5}$/.test(num))
+          .map(num => parseInt(num.substring(2), 10))
+          .filter(num => !isNaN(num));
+        
+        const maxNumber = validNumbers.length > 0 ? Math.max(...validNumbers) : 0;
+        const nextNumber = maxNumber + attempt; // Increment by attempt for uniqueness
+        const work_order_number = `WO${String(nextNumber).padStart(5, '0')}`;
 
         if (!work_order_number) {
           throw new Error('Allocation returned no work_order_number');
