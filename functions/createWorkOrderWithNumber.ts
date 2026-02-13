@@ -28,8 +28,8 @@ Deno.serve(async (req) => {
       attempt++;
 
       try {
-        // STEP 1: Allocate candidate number inline (avoid function invoke overhead)
-        const recentWorkOrders = await base44.asServiceRole.entities.WorkOrder.list('-created_date', 50);
+        // STEP 1: Allocate candidate number inline (optimized for speed)
+        const recentWorkOrders = await base44.asServiceRole.entities.WorkOrder.list('-created_date', 20);
         const validNumbers = recentWorkOrders
           .map(wo => wo.work_order_number)
           .filter(num => num && /^WO\d{5}$/.test(num))
@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
         
         let maxNumber = validNumbers.length > 0 ? Math.max(...validNumbers) : 0;
         
-        const recentLocks = await base44.asServiceRole.entities.WorkOrderNumberLock.list('-created_date', 50);
+        // Also check recent locks
+        const recentLocks = await base44.asServiceRole.entities.WorkOrderNumberLock.list('-created_date', 20);
         const lockNumbers = recentLocks
           .map(lock => lock.work_order_number)
           .filter(num => num && /^WO\d{5}$/.test(num))
