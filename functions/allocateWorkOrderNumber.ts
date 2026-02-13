@@ -10,8 +10,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // STEP 1: Fetch all existing work order numbers
-    const allWorkOrders = await base44.entities.WorkOrder.list('-created_date', 10000);
+    // STEP 1: Fetch all existing work order numbers (limit to recent 1000 for performance)
+    const allWorkOrders = await base44.entities.WorkOrder.list('-created_date', 1000);
 
     // Extract and validate numbers matching canonical format WO00001
     const validNumbers = allWorkOrders
