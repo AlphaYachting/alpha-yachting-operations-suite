@@ -101,6 +101,7 @@ export default function WorkOrders() {
   const [expandedWorkOrders, setExpandedWorkOrders] = useState({});
   const [currentUser, setCurrentUser] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const preselectedJobId = searchParams.get('job');
 
   useEffect(() => {
@@ -205,19 +206,20 @@ export default function WorkOrders() {
   };
 
   const handleSave = async (workOrderData, templateId, suggestedTasks) => {
-    console.log('handleSave called with:', { workOrderData, templateId, suggestedTasks });
     const cameFromProject = !!preselectedJobId;
+    setIsCreating(true);
+    
+    // Close form immediately and show progress
+    setShowForm(false);
+    setEditingWorkOrder(null);
+    const toastId = toast.loading(editingWorkOrder ? 'Updating work order...' : 'Creating work order...');
     
     try {
       let createdWoId;
-      let savedWorkOrder;
       
       if (editingWorkOrder) {
-        console.log('Updating existing work order...');
         await base44.entities.WorkOrder.update(editingWorkOrder.id, workOrderData);
-        savedWorkOrder = { ...editingWorkOrder, ...workOrderData };
         
-        // Check if new technicians were assigned
         const oldTechIds = editingWorkOrder.assigned_technicians || [];
         const newTechIds = workOrderData.assigned_technicians || [];
         const newlyAssigned = newTechIds.filter(id => !oldTechIds.includes(id));
@@ -226,84 +228,66 @@ export default function WorkOrders() {
           const newlyAssignedTechs = technicians.filter(t => newlyAssigned.includes(t.id));
           for (const tech of newlyAssignedTechs) {
             if (tech.email) {
-              try {
-                await notifyWorkOrderAssignment(
-                  { ...savedWorkOrder, assigned_technicians: [tech.id] },
-                  [tech],
-                  workOrderData.title
-                );
-              } catch (notifyError) {
-                console.error('Failed to send notification:', notifyError);
-              }
+              await notifyWorkOrderAssignment(
+                { ...editingWorkOrder, ...workOrderData, assigned_technicians: [tech.id] },
+                [tech],
+                workOrderData.title
+              ).catch(console.error);
             }
           }
         }
         
-        toast.success('Work order updated');
+        toast.success('Work order updated', { id: toastId });
       } else {
-        console.log('Creating new work order...');
         const response = await base44.functions.invoke('createWorkOrderWithNumber', workOrderData);
         const result = response.data;
         if (!result.success) {
           throw new Error(result.error || 'Failed to create work order');
         }
-        const newWo = result.work_order;
-        createdWoId = newWo.id;
-        savedWorkOrder = newWo;
-        console.log('Work order created:', createdWoId, 'with number:', result.work_order_number);
+        createdWoId = result.work_order.id;
         
-        if (workOrderData.assigned_technicians && workOrderData.assigned_technicians.length > 0) {
-          try {
-            await notifyWorkOrderAssignment(newWo, technicians, workOrderData.title);
-          } catch (notifyError) {
-            console.error('Failed to send notifications:', notifyError);
-          }
+        // Notify technicians (non-blocking)
+        if (workOrderData.assigned_technicians?.length > 0) {
+          notifyWorkOrderAssignment(result.work_order, technicians, workOrderData.title).catch(console.error);
         }
 
-        // Process AI tasks and templates in parallel
-        const taskCreationPromises = [];
+        // Create tasks in parallel
+        const taskPromises = [];
 
-        if (suggestedTasks && suggestedTasks.length > 0) {
-          console.log('Adding AI-suggested tasks:', suggestedTasks.length);
-          taskCreationPromises.push(
-            ...suggestedTasks.map((task, idx) =>
-              base44.entities.Task.create({
-                work_order_id: createdWoId,
-                title: task.title,
-                description: task.description || '',
-                estimated_minutes: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
-                sequence_order: idx,
-                status: 'Not Started'
-              })
-            )
-          );
+        if (suggestedTasks?.length > 0) {
+          taskPromises.push(...suggestedTasks.map((task, idx) =>
+            base44.entities.Task.create({
+              work_order_id: createdWoId,
+              title: task.title,
+              description: task.description || '',
+              estimated_minutes: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
+              sequence_order: idx,
+              status: 'Not Started'
+            })
+          ));
         }
 
         if (templateId) {
-          console.log('Applying template:', templateId);
-          const user = await base44.auth.me();
-          const templateItems = await base44.entities.TaskTemplateItem.filter(
-            { template_list_id: templateId },
-            'sort_order'
-          );
+          const [user, templateItems] = await Promise.all([
+            base44.auth.me(),
+            base44.entities.TaskTemplateItem.filter({ template_list_id: templateId }, 'sort_order')
+          ]);
 
           if (templateItems.length > 0) {
-            taskCreationPromises.push(
-              ...templateItems.map((item, idx) =>
-                base44.entities.Task.create({
-                  work_order_id: createdWoId,
-                  title: item.title,
-                  description: item.description || '',
-                  estimated_minutes: item.default_estimated_hours ? Math.round(item.default_estimated_hours * 60) : null,
-                  sequence_order: (suggestedTasks?.length || 0) + idx,
-                  status: 'Not Started',
-                  notes: item.required_tools_note || '',
-                  requires_approval: item.requires_customer_approval || false
-                })
-              )
-            );
+            taskPromises.push(...templateItems.map((item, idx) =>
+              base44.entities.Task.create({
+                work_order_id: createdWoId,
+                title: item.title,
+                description: item.description || '',
+                estimated_minutes: item.default_estimated_hours ? Math.round(item.default_estimated_hours * 60) : null,
+                sequence_order: (suggestedTasks?.length || 0) + idx,
+                status: 'Not Started',
+                notes: item.required_tools_note || '',
+                requires_approval: item.requires_customer_approval || false
+              })
+            ));
 
-            taskCreationPromises.push(
+            taskPromises.push(
               base44.entities.WorkOrderTemplateUsage.create({
                 work_order_id: createdWoId,
                 template_list_id: templateId,
@@ -316,34 +300,29 @@ export default function WorkOrders() {
           }
         }
 
-        // Execute all task creations in parallel
-        if (taskCreationPromises.length > 0) {
-          await Promise.all(taskCreationPromises);
-          const taskCount = (suggestedTasks?.length || 0) + (templateId ? (await base44.entities.TaskTemplateItem.filter({ template_list_id: templateId })).length : 0);
-          toast.success(`Work order created with ${taskCount} tasks`);
+        if (taskPromises.length > 0) {
+          await Promise.all(taskPromises);
+          toast.success(`Work order created with ${taskPromises.length} tasks`, { id: toastId });
         } else {
-          toast.success('Work order created');
+          toast.success('Work order created', { id: toastId });
         }
       }
       
-      // Close form immediately for better UX
-      setShowForm(false);
-      setEditingWorkOrder(null);
-      
-      // Navigate back to source if came from project
+      // Navigate back to project or reload
       if (cameFromProject) {
-        toast.loading('Redirecting to project...', { id: 'redirect' });
-        // Use navigate with replace to avoid long reload
         window.location.href = createPageUrl('JobDetail') + `?id=${preselectedJobId}`;
       } else {
         setSearchParams({});
-        // Reload data in background
-        loadData();
+        await loadData();
       }
     } catch (error) {
       console.error('Error saving work order:', error);
-      toast.error(`Failed to save: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed: ${error.message || 'Unknown error'}`, { id: toastId });
+      setShowForm(true); // Reopen form on error
+      setIsCreating(false);
       throw error;
+    } finally {
+      setIsCreating(false);
     }
   };
 
