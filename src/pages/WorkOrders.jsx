@@ -241,15 +241,15 @@ export default function WorkOrders() {
         toast.success('Work order updated');
       } else {
         console.log('Creating new work order...');
-        // Generate sequential work order number
-        const { work_order_number } = await base44.functions.invoke('generateWorkOrderNumber', {});
-        const newWo = await base44.entities.WorkOrder.create({ 
-          ...workOrderData, 
-          work_order_number 
-        });
+        // Use createWorkOrderWithNumber to ensure unique WO number
+        const response = await base44.functions.invoke('createWorkOrderWithNumber', workOrderData);
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to create work order');
+        }
+        const newWo = response.work_order;
         createdWoId = newWo.id;
         savedWorkOrder = newWo;
-        console.log('Work order created:', createdWoId);
+        console.log('Work order created:', createdWoId, 'with number:', response.work_order_number);
         
         // Send notifications to assigned technicians
         if (workOrderData.assigned_technicians && workOrderData.assigned_technicians.length > 0) {

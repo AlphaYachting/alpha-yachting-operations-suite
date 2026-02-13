@@ -276,7 +276,8 @@ Deno.serve(async (req) => {
         scheduledDateStr = dateObj.toISOString().split('T')[0];
       }
 
-      workOrder = await base44.asServiceRole.entities.WorkOrder.create({
+      // Use createWorkOrderWithNumber to ensure unique WO number
+      const woResponse = await base44.asServiceRole.functions.invoke('createWorkOrderWithNumber', {
         job_id: job.id,
         offer_id: offer?.id || null,
         title: woTitle,
@@ -290,6 +291,11 @@ Deno.serve(async (req) => {
         status: 'Draft',
         billable: true
       });
+      
+      if (!woResponse.success) {
+        throw new Error(woResponse.message || 'Failed to create work order with number');
+      }
+      workOrder = woResponse.work_order;
 
       // Link Offer to WorkOrder if single WO conversion
       if (offer && !job) {
