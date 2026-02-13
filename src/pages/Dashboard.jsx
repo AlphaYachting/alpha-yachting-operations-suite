@@ -572,7 +572,123 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 1) ACTION REQUIRED */}
+      {/* TODAY / THIS WEEK - Priority sections */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="border-blue-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Today
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {todayWorkOrders.length === 0 ? (
+              <p className="text-sm text-slate-500">No work orders scheduled for today</p>
+            ) : (
+              <div className="space-y-2">
+                {todayWorkOrders.map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  const techDisplay = getTechnicianDisplay(wo.assigned_technicians);
+                  return (
+                    <Link 
+                      key={wo.id} 
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-900 mb-1">{wo.title}</p>
+                          <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
+                            <Ship className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{jobInfo?.boat}</span>
+                            {jobInfo?.location && (
+                              <>
+                                <span>•</span>
+                                <MapPin className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{jobInfo.location}</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {wo.scheduled_start_time && (
+                              <Badge variant="outline" className="bg-white text-xs">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {wo.scheduled_start_time}
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className={techDisplay.isUnassigned ? 'bg-amber-50 text-amber-700 border-amber-300 text-xs' : 'bg-white text-xs'}>
+                              <Users className="h-3 w-3 mr-1" />
+                              {techDisplay.display}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Badge className={`${statusColors[wo.status] || 'bg-slate-100 text-slate-700'} text-xs flex-shrink-0`}>
+                          {wo.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-indigo-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+              This Week
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {thisWeekWorkOrders.length === 0 ? (
+              <p className="text-sm text-slate-500">No work orders scheduled this week</p>
+            ) : (
+              <div className="space-y-2">
+                {thisWeekWorkOrders.slice(0, 6).map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  const techDisplay = getTechnicianDisplay(wo.assigned_technicians);
+                  return (
+                    <Link 
+                      key={wo.id} 
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-900 mb-1">{wo.title}</p>
+                          <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
+                            <Ship className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate">{jobInfo?.boat}</span>
+                            <span>•</span>
+                            <Calendar className="h-3 w-3 flex-shrink-0" />
+                            <span>{format(parseISO(wo.scheduled_date), 'EEE, MMM d')}</span>
+                          </div>
+                          <Badge variant="outline" className={techDisplay.isUnassigned ? 'bg-amber-50 text-amber-700 border-amber-300 text-xs' : 'bg-white text-xs'}>
+                            <Users className="h-3 w-3 mr-1" />
+                            {techDisplay.display}
+                          </Badge>
+                        </div>
+                        <Badge className={`${statusColors[wo.status] || 'bg-slate-100 text-slate-700'} text-xs flex-shrink-0`}>
+                          {wo.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+                {thisWeekWorkOrders.length > 6 && (
+                  <Button variant="outline" size="sm" asChild className="w-full mt-2">
+                    <Link to={createPageUrl('WorkOrders')}>View All ({thisWeekWorkOrders.length})</Link>
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ACTION REQUIRED */}
       {hasActionItems && (
         <Card className="border-red-200 bg-red-50/30">
           <CardHeader>
@@ -805,122 +921,6 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* TODAY / THIS WEEK - Priority sections */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card className="border-blue-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Clock className="h-5 w-5 text-blue-600" />
-              Today
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todayWorkOrders.length === 0 ? (
-              <p className="text-sm text-slate-500">No work orders scheduled for today</p>
-            ) : (
-              <div className="space-y-2">
-                {todayWorkOrders.map(wo => {
-                  const jobInfo = getJobInfo(wo.job_id);
-                  const techDisplay = getTechnicianDisplay(wo.assigned_technicians);
-                  return (
-                    <Link 
-                      key={wo.id} 
-                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-900 mb-1">{wo.title}</p>
-                          <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
-                            <Ship className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{jobInfo?.boat}</span>
-                            {jobInfo?.location && (
-                              <>
-                                <span>•</span>
-                                <MapPin className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{jobInfo.location}</span>
-                              </>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {wo.scheduled_start_time && (
-                              <Badge variant="outline" className="bg-white text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {wo.scheduled_start_time}
-                              </Badge>
-                            )}
-                            <Badge variant="outline" className={techDisplay.isUnassigned ? 'bg-amber-50 text-amber-700 border-amber-300 text-xs' : 'bg-white text-xs'}>
-                              <Users className="h-3 w-3 mr-1" />
-                              {techDisplay.display}
-                            </Badge>
-                          </div>
-                        </div>
-                        <Badge className={`${statusColors[wo.status] || 'bg-slate-100 text-slate-700'} text-xs flex-shrink-0`}>
-                          {wo.status}
-                        </Badge>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-indigo-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              This Week
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {thisWeekWorkOrders.length === 0 ? (
-              <p className="text-sm text-slate-500">No work orders scheduled this week</p>
-            ) : (
-              <div className="space-y-2">
-                {thisWeekWorkOrders.slice(0, 6).map(wo => {
-                  const jobInfo = getJobInfo(wo.job_id);
-                  const techDisplay = getTechnicianDisplay(wo.assigned_technicians);
-                  return (
-                    <Link 
-                      key={wo.id} 
-                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-slate-900 mb-1">{wo.title}</p>
-                          <div className="flex items-center gap-2 text-xs text-slate-600 mb-1">
-                            <Ship className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{jobInfo?.boat}</span>
-                            <span>•</span>
-                            <Calendar className="h-3 w-3 flex-shrink-0" />
-                            <span>{format(parseISO(wo.scheduled_date), 'EEE, MMM d')}</span>
-                          </div>
-                          <Badge variant="outline" className={techDisplay.isUnassigned ? 'bg-amber-50 text-amber-700 border-amber-300 text-xs' : 'bg-white text-xs'}>
-                            <Users className="h-3 w-3 mr-1" />
-                            {techDisplay.display}
-                          </Badge>
-                        </div>
-                        <Badge className={`${statusColors[wo.status] || 'bg-slate-100 text-slate-700'} text-xs flex-shrink-0`}>
-                          {wo.status}
-                        </Badge>
-                      </div>
-                    </Link>
-                  );
-                })}
-                {thisWeekWorkOrders.length > 6 && (
-                  <Button variant="outline" size="sm" asChild className="w-full mt-2">
-                    <Link to={createPageUrl('WorkOrders')}>View All ({thisWeekWorkOrders.length})</Link>
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
       {/* PROJECT HEALTH - Lazy loaded */}
       <Card>
         <CardHeader>
@@ -930,7 +930,13 @@ export default function Dashboard() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {activeJobs.length === 0 ? (
+          {healthLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+          ) : activeJobs.length === 0 ? (
             <p className="text-sm text-slate-500">No active projects</p>
           ) : (
             <div className="space-y-3">
