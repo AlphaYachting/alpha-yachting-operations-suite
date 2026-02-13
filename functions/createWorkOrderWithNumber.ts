@@ -20,6 +20,11 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
+    // Clean up empty strings to null for numeric fields
+    if (workOrderData.estimated_duration_hours === '' || workOrderData.estimated_duration_hours === undefined) {
+      workOrderData.estimated_duration_hours = null;
+    }
+
     const MAX_ATTEMPTS = 3;
     let attempt = 0;
     let lastError = null;
