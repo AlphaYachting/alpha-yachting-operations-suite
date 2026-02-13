@@ -44,8 +44,8 @@ Deno.serve(async (req) => {
           throw new Error('Allocation returned no work_order_number');
         }
 
-        // Immediately create WorkOrder with allocated number
-        const workOrder = await base44.entities.WorkOrder.create({
+        // Immediately create WorkOrder with allocated number (use service role for creation)
+        const workOrder = await base44.asServiceRole.entities.WorkOrder.create({
           ...workOrderData,
           work_order_number: work_order_number
         });
