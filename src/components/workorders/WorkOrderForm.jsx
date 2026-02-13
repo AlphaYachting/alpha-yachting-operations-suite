@@ -171,10 +171,19 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         setSaving(false);
         return;
       }
+
+      // Clean numeric fields - convert empty strings to null
+      const cleanedData = { ...formData };
+      const numericFields = ['estimated_duration_hours', 'travel_time_minutes', 'work_time_minutes', 'break_time_minutes', 'mileage_km', 'sort_index'];
+      numericFields.forEach(field => {
+        if (cleanedData[field] === '' || cleanedData[field] === undefined) {
+          cleanedData[field] = null;
+        }
+      });
       
-      console.log('Submitting work order:', { formData, selectedTemplateId, suggestedTasks });
+      console.log('Submitting work order:', { cleanedData, selectedTemplateId, suggestedTasks });
       
-      await onSave(formData, selectedTemplateId, suggestedTasks);
+      await onSave(cleanedData, selectedTemplateId, suggestedTasks);
       // Success toast and navigation handled by parent
       } catch (err) {
        console.error('Work order save error:', err);
