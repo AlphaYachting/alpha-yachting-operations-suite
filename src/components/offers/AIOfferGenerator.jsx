@@ -530,24 +530,24 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                   </Alert>
                 )}
 
-                <div className="border rounded-lg bg-white overflow-auto max-h-96">
+                <div className="border rounded-lg bg-white overflow-auto max-h-[500px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[180px]">Title</TableHead>
-                        <TableHead className="w-[60px]">Qty</TableHead>
-                        <TableHead className="w-[60px]">Unit</TableHead>
-                        <TableHead className="w-[90px]">Price</TableHead>
-                        <TableHead className="w-[90px]">Total</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="w-[80px]">Conf.</TableHead>
-                        <TableHead className="w-[80px]">Actions</TableHead>
+                        <TableHead className="min-w-[220px]">Title</TableHead>
+                        <TableHead className="w-[70px] text-center">Qty</TableHead>
+                        <TableHead className="w-[90px]">Unit</TableHead>
+                        <TableHead className="w-[110px] text-right">Price (€)</TableHead>
+                        <TableHead className="w-[110px] text-right">Total (€)</TableHead>
+                        <TableHead className="min-w-[200px]">Description</TableHead>
+                        <TableHead className="w-[90px] text-center">Conf.</TableHead>
+                        <TableHead className="w-[120px] text-center">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {extractedPositions.map((position) => (
                         <TableRow key={position.id}>
-                          <TableCell>
+                          <TableCell className="align-top">
                             {editingRow?.id === position.id ? (
                               <Input
                                 value={editingRow.title}
@@ -555,15 +555,17 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                 className="h-8"
                               />
                             ) : (
-                              <div className="font-medium text-sm">{position.title}</div>
-                            )}
-                            {position.group && (
-                              <Badge variant="outline" className="text-xs mt-1">
-                                {position.group}
-                              </Badge>
+                              <div>
+                                <div className="font-medium text-sm leading-tight">{position.title}</div>
+                                {position.group && (
+                                  <Badge variant="outline" className="text-xs mt-1">
+                                    {position.group}
+                                  </Badge>
+                                )}
+                              </div>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-center align-top">
                             {editingRow?.id === position.id ? (
                               <Input
                                 type="number"
@@ -572,21 +574,21 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                 className="h-8 w-16"
                               />
                             ) : (
-                              position.quantity
+                              <span className="font-medium">{position.quantity}</span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="align-top">
                             {editingRow?.id === position.id ? (
                               <Input
                                 value={editingRow.unit}
                                 onChange={(e) => setEditingRow({...editingRow, unit: e.target.value})}
-                                className="h-8 w-20"
+                                className="h-8"
                               />
                             ) : (
-                              position.unit
+                              <span className="text-sm text-slate-600">{position.unit}</span>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-right align-top">
                             {editingRow?.id === position.id ? (
                               <Input
                                 type="number"
@@ -600,15 +602,15 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                     total_amount: price * editingRow.quantity
                                   });
                                 }}
-                                className="h-8 w-20"
+                                className="h-8 text-right"
                               />
                             ) : (
-                              <div className="text-sm">
-                                €{position.unit_price.toFixed(2)}
+                              <div className="flex items-center justify-end gap-1">
+                                <span className="font-medium">{position.unit_price.toFixed(2)}</span>
                                 {position.price_confidence !== 'None' && (
                                   <Badge 
                                     variant={position.price_confidence === 'High' ? 'default' : 'secondary'}
-                                    className="ml-1 text-xs"
+                                    className="text-[10px] px-1 py-0"
                                   >
                                     {position.price_confidence === 'High' ? '✓' : position.price_confidence === 'Medium' ? '~' : '?'}
                                   </Badge>
@@ -616,12 +618,12 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                               </div>
                             )}
                           </TableCell>
-                          <TableCell>
-                            <div className="text-sm font-medium">
-                              €{position.total_amount.toFixed(2)}
-                            </div>
+                          <TableCell className="text-right align-top">
+                            <span className="font-semibold text-slate-900">
+                              {position.total_amount.toFixed(2)}
+                            </span>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="align-top">
                             {editingRow?.id === position.id ? (
                               <Textarea
                                 value={editingRow.description}
@@ -630,12 +632,12 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                 rows={2}
                               />
                             ) : (
-                              <div className="text-xs text-slate-600">
+                              <div className="text-xs text-slate-600 leading-relaxed">
                                 {position.description || '-'}
                               </div>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-center align-top">
                             <Badge
                               variant={
                                 position.confidence === 'High' ? 'default' :
@@ -646,14 +648,14 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                               {position.confidence}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
+                          <TableCell className="align-top">
+                            <div className="flex gap-1 justify-center">
                               {editingRow?.id === position.id ? (
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={handleSaveEdit}
-                                  className="h-8 px-2"
+                                  className="h-8 px-3"
                                 >
                                   Save
                                 </Button>
@@ -671,7 +673,7 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleDeletePosition(position.id)}
-                                className="h-8 px-2 text-red-600 hover:text-red-700"
+                                className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
                                 <Trash2 className="h-3 w-3" />
                               </Button>
