@@ -605,15 +605,19 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                 className="h-8 text-right"
                               />
                             ) : (
-                              <div className="flex items-center justify-end gap-1">
-                                <span className="font-medium">{position.unit_price.toFixed(2)}</span>
-                                {position.price_confidence !== 'None' && (
-                                  <Badge 
-                                    variant={position.price_confidence === 'High' ? 'default' : 'secondary'}
-                                    className="text-[10px] px-1 py-0"
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="font-medium tabular-nums">{position.unit_price.toFixed(2)}</span>
+                                {position.price_confidence !== 'None' && position.price_confidence !== 'Low' && (
+                                  <span 
+                                    className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs ${
+                                      position.price_confidence === 'High' 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : 'bg-amber-100 text-amber-700'
+                                    }`}
+                                    title={`Price confidence: ${position.price_confidence}`}
                                   >
-                                    {position.price_confidence === 'High' ? '✓' : position.price_confidence === 'Medium' ? '~' : '?'}
-                                  </Badge>
+                                    {position.price_confidence === 'High' ? '✓' : '~'}
+                                  </span>
                                 )}
                               </div>
                             )}
