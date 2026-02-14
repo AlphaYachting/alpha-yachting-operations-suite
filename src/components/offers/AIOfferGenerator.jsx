@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Sparkles, AlertCircle, FileText, Upload, Trash2, Edit2 } from 'lucide-react';
+import { Loader2, Sparkles, AlertCircle, FileText, Upload, Trash2, Edit2, DollarSign } from 'lucide-react';
+import { processExtractedPosition } from './priceParser';
 import {
   Table,
   TableBody,
@@ -206,6 +207,8 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                 description: { type: 'string' },
                 quantity: { type: 'number' },
                 unit: { type: 'string' },
+                unit_price_raw: { type: 'string' },
+                total_price_raw: { type: 'string' },
                 group: { type: 'string' },
                 source_excerpt: { type: 'string' },
                 confidence: { type: 'string', enum: ['High', 'Medium', 'Low'] }
@@ -237,19 +240,27 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
         return;
       }
 
-      // Normalize positions
-      const normalizedPositions = positions.map((pos, idx) => ({
-        id: `extracted-${idx}`,
-        title: pos.title || 'Untitled Position',
-        description: pos.description || '',
-        quantity: pos.quantity || 1,
-        unit: pos.unit || 'Piece',
-        group: pos.group || '',
-        source_excerpt: pos.source_excerpt || '',
-        confidence: pos.confidence || 'Medium',
-        unit_price: defaultUnitPrice,
-        total_amount: (pos.quantity || 1) * defaultUnitPrice
-      }));
+      // Normalize positions with price parsing
+      const normalizedPositions = positions.map((pos, idx) => {
+        const processed = processExtractedPosition(pos, defaultUnitPrice);
+        return {
+          id: `extracted-${idx}`,
+          title: pos.title || 'Untitled Position',
+          description: pos.description || '',
+          quantity: pos.quantity || 1,
+          unit: pos.unit || 'Piece',
+          group: pos.group || '',
+          source_excerpt: pos.source_excerpt || '',
+          confidence: pos.confidence || 'Medium',
+          unit_price: processed.unit_price,
+          total_amount: processed.total_amount,
+          unit_price_extracted: processed.unit_price_extracted,
+          total_price_extracted: processed.total_price_extracted,
+          price_confidence: processed.price_confidence,
+          price_source: processed.price_source,
+          currency_detected: processed.currency_detected
+        };
+      });
 
       setExtractedPositions(normalizedPositions);
       if (result.output?.general_description) {
@@ -507,16 +518,30 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                   </Button>
                 </div>
 
+                {/* Currency Warning */}
+                {extractedPositions.some(p => p.currency_detected && p.currency_detected !== 'EUR') && (
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <DollarSign className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-sm text-amber-800">
+                      <strong>Currency Detected:</strong> Some positions have non-EUR currency ({
+                        [...new Set(extractedPositions.map(p => p.currency_detected).filter(Boolean))].join(', ')
+                      }). Please review and convert prices manually if needed.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="border rounded-lg bg-white overflow-auto max-h-96">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[200px]">Title</TableHead>
-                        <TableHead className="w-[80px]">Qty</TableHead>
-                        <TableHead className="w-[80px]">Unit</TableHead>
+                        <TableHead className="w-[180px]">Title</TableHead>
+                        <TableHead className="w-[60px]">Qty</TableHead>
+                        <TableHead className="w-[60px]">Unit</TableHead>
+                        <TableHead className="w-[90px]">Price</TableHead>
+                        <TableHead className="w-[90px]">Total</TableHead>
                         <TableHead>Description</TableHead>
-                        <TableHead className="w-[100px]">Confidence</TableHead>
-                        <TableHead className="w-[100px]">Actions</TableHead>
+                        <TableHead className="w-[80px]">Conf.</TableHead>
+                        <TableHead className="w-[80px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -560,6 +585,41 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                             ) : (
                               position.unit
                             )}
+                          </TableCell>
+                          <TableCell>
+                            {editingRow?.id === position.id ? (
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={editingRow.unit_price}
+                                onChange={(e) => {
+                                  const price = parseFloat(e.target.value) || 0;
+                                  setEditingRow({
+                                    ...editingRow, 
+                                    unit_price: price,
+                                    total_amount: price * editingRow.quantity
+                                  });
+                                }}
+                                className="h-8 w-20"
+                              />
+                            ) : (
+                              <div className="text-sm">
+                                €{position.unit_price.toFixed(2)}
+                                {position.price_confidence !== 'None' && (
+                                  <Badge 
+                                    variant={position.price_confidence === 'High' ? 'default' : 'secondary'}
+                                    className="ml-1 text-xs"
+                                  >
+                                    {position.price_confidence === 'High' ? '✓' : position.price_confidence === 'Medium' ? '~' : '?'}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm font-medium">
+                              €{position.total_amount.toFixed(2)}
+                            </div>
                           </TableCell>
                           <TableCell>
                             {editingRow?.id === position.id ? (
