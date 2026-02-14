@@ -345,6 +345,16 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         showSettings={showPreviewMode} />
 
 
+      {/* Debug Info Badge */}
+      <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+        <div className="text-xs space-y-1">
+          <div>👤 User: {user?.email}</div>
+          <div>🔧 Tech ID: {resolvedTechnicianId || 'NOT FOUND'}</div>
+          <div>📦 Work Orders Loaded: {workOrders.length}</div>
+          <div>📅 Today: {sections.today.length} | Upcoming: {sections.upcoming.length} | Later: {sections.later.length}</div>
+        </div>
+      </div>
+
       {/* Test Mode Badge */}
       {previewUserId &&
       <div className="bg-orange-50 border-b border-orange-200 px-4 py-3 flex items-center justify-between">
