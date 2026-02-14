@@ -314,21 +314,29 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
       </>
     );
 
-    const handleClick = (e) => {
-      if (onNavigate) {
-        e.preventDefault();
-        e.stopPropagation();
-        onNavigate('workOrderDetail', { woId: workOrder.id });
-      }
-    };
+    // Navigation: use callback if available (modal mode), otherwise use Link (direct access)
+    if (onNavigate) {
+      return (
+        <div 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onNavigate('workOrderDetail', { woId: workOrder.id });
+          }}
+          className="bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden"
+        >
+          {cardContent}
+        </div>
+      );
+    }
 
     return (
-      <div 
-        onClick={handleClick}
-        className="bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all cursor-pointer overflow-hidden"
+      <Link 
+        to={createPageUrl('TeamWorkOrderDetail') + `?woId=${workOrder.id}`}
+        className="block bg-white my-3 rounded-lg border border-slate-200 hover:shadow-md transition-all overflow-hidden"
       >
         {cardContent}
-      </div>
+      </Link>
     );
 
   };
