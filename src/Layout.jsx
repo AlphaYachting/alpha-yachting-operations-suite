@@ -124,6 +124,7 @@ export default function Layout({ children, currentPageName }) {
 
   const isMobilePage = currentPageName?.startsWith('Mobile') || 
                        currentPageName === 'TeamMobileHome' || 
+                       currentPageName === 'TeamCalendar' || 
                        currentPageName === 'TeamWorkOrderDetail' || 
                        currentPageName === 'TeamTaskDetail' || 
                        currentPageName === 'TeamPreviewMode' ||

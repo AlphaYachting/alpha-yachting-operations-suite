@@ -24,23 +24,51 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
-      // Use preview user ID if provided, otherwise use current user
-      const effectiveUserId = previewUserId || currentUser.id;
-
       let workOrdersData, jobsData, boatsData;
 
       try {
-        // Try to load from server
+        // CRITICAL FIX: Map User.id → Technician.id (same as TeamMobileHome)
+        const allTechnicians = await base44.entities.Technician.list();
+        
+        let technicianId;
+        if (previewUserId) {
+          technicianId = previewUserId;
+        } else {
+          const matchedTech = allTechnicians.find(t => 
+            t.user_id === currentUser?.id || 
+            t.email === currentUser?.email
+          );
+          technicianId = matchedTech?.id;
+        }
+
+        console.log('🔍 DEBUG - Calendar Auth Mapping:', {
+          userEmail: currentUser?.email,
+          userId: currentUser?.id,
+          resolvedTechnicianId: technicianId
+        });
+
+        if (!technicianId) {
+          console.warn('⚠️ No Technician record found for calendar user:', currentUser?.email);
+          setWorkOrders([]);
+          setJobs([]);
+          setBoats([]);
+          setLoading(false);
+          return;
+        }
+
+        // Filter work orders by resolved Technician.id
         [workOrdersData, jobsData, boatsData] = await Promise.all([
           base44.entities.WorkOrder.filter({
             $or: [
-              { assigned_technicians: { $in: [effectiveUserId] } },
-              { lead_technician_id: effectiveUserId }
+              { assigned_technicians: { $in: [technicianId] } },
+              { lead_technician_id: technicianId }
             ]
           }),
           base44.entities.Job.list(),
           base44.entities.Boat.list()
         ]);
+
+        console.log('✅ Calendar Work Orders Found:', workOrdersData?.length || 0);
 
         // Cache for offline
         if (workOrdersData) await offlineStorage.saveMultiple(offlineStorage.STORES.workOrders, workOrdersData);
