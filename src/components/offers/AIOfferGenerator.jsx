@@ -526,19 +526,7 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
 
             {/* Preview Table */}
             {showPreview && extractedPositions.length > 0 && (
-              <div className="space-y-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">
-                    Extracted Positions ({extractedPositions.length})
-                  </h3>
-                  <Button
-                    onClick={handleCreateFromPreview}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    Create Positions from Preview
-                  </Button>
-                </div>
-
+              <div className="space-y-4">
                 {/* Currency Warning */}
                 {extractedPositions.some(p => p.currency_detected && p.currency_detected !== 'EUR') && (
                   <Alert className="bg-amber-50 border-amber-200">
@@ -551,73 +539,30 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                   </Alert>
                 )}
 
-                {/* Markup Controls */}
-                {extractedPositions.some(p => p.price_confidence !== 'None') && (
-                  <div className="bg-white border border-slate-200 rounded-lg p-4">
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          id="markup-toggle"
-                          checked={markupEnabled}
-                          onCheckedChange={setMarkupEnabled}
-                        />
-                        <Label htmlFor="markup-toggle" className="font-medium cursor-pointer">
-                          Apply Markup
-                        </Label>
-                      </div>
-
-                      {markupEnabled && (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <Percent className="h-4 w-4 text-slate-500" />
-                            <Input
-                              type="number"
-                              min="0"
-                              max="200"
-                              step="5"
-                              value={markupPercent}
-                              onChange={(e) => setMarkupPercent(parseFloat(e.target.value) || 0)}
-                              className="w-20 h-8"
-                            />
-                            <span className="text-sm text-slate-600">%</span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <Label className="text-sm text-slate-600">Round to:</Label>
-                            <Select value={rounding} onValueChange={setRounding}>
-                              <SelectTrigger className="w-24 h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="None">None</SelectItem>
-                                <SelectItem value="1€">1€</SelectItem>
-                                <SelectItem value="5€">5€</SelectItem>
-                                <SelectItem value="10€">10€</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="text-xs text-slate-500 ml-auto">
-                            Markup applied to unit prices only
-                          </div>
-                        </>
-                      )}
+                {/* Markup Status */}
+                {markupEnabled && markupPercent > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-sm text-blue-800">
+                      <Percent className="h-4 w-4" />
+                      <span className="font-medium">Markup Active: +{markupPercent}% {rounding !== 'None' && `(rounded to ${rounding})`}</span>
                     </div>
                   </div>
                 )}
 
-                <div className="border rounded-lg bg-white overflow-x-auto">
+                <div className="border rounded-lg bg-white overflow-x-auto max-h-[50vh] overflow-y-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50">
-                        <TableHead className="w-[200px] font-medium text-slate-700">Title</TableHead>
-                        <TableHead className="w-[60px] text-center font-medium text-slate-700">Qty</TableHead>
-                        <TableHead className="w-[80px] font-medium text-slate-700">Unit</TableHead>
-                        <TableHead className="w-[100px] text-right font-medium text-slate-700">Price (€)</TableHead>
-                        <TableHead className="w-[100px] text-right font-medium text-slate-700">Total (€)</TableHead>
-                        <TableHead className="w-[250px] font-medium text-slate-700">Description</TableHead>
-                        <TableHead className="w-[80px] text-center font-medium text-slate-700">Conf.</TableHead>
-                        <TableHead className="w-[100px] text-center font-medium text-slate-700">Actions</TableHead>
+                    <TableHeader className="sticky top-0 bg-slate-50 z-10">
+                      <TableRow>
+                        <TableHead className="w-[180px] font-medium text-slate-700">Title</TableHead>
+                        <TableHead className="w-[50px] text-center font-medium text-slate-700">Qty</TableHead>
+                        <TableHead className="w-[70px] font-medium text-slate-700">Unit</TableHead>
+                        <TableHead className="w-[90px] text-right font-medium text-slate-700">Orig. Price (€)</TableHead>
+                        <TableHead className="w-[90px] text-right font-medium text-slate-700">New Price (€)</TableHead>
+                        <TableHead className="w-[90px] text-right font-medium text-slate-700">Orig. Total (€)</TableHead>
+                        <TableHead className="w-[90px] text-right font-medium text-slate-700">New Total (€)</TableHead>
+                        <TableHead className="w-[200px] font-medium text-slate-700">Description</TableHead>
+                        <TableHead className="w-[70px] text-center font-medium text-slate-700">Conf.</TableHead>
+                        <TableHead className="w-[100px] text-center font-medium text-slate-700 sticky right-0 bg-slate-50">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -672,6 +617,11 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                             )}
                           </TableCell>
                           <TableCell className="text-right align-top">
+                            <span className="text-slate-600 tabular-nums text-sm">
+                              {position.price_confidence === 'None' ? '—' : position.unit_price.toFixed(2)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right align-top">
                             {editingRow?.id === position.id ? (
                               <Input
                                 type="number"
@@ -688,41 +638,34 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                 className="h-8 text-right"
                               />
                             ) : (
-                              <div className="space-y-0.5">
-                                <div className="flex items-center justify-end gap-2">
-                                  <span className="font-medium tabular-nums">{displayUnitPrice.toFixed(2)}</span>
-                                  {position.price_confidence !== 'None' && position.price_confidence !== 'Low' && (
-                                    <span 
-                                      className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs ${
-                                        position.price_confidence === 'High' 
-                                          ? 'bg-green-100 text-green-700' 
-                                          : 'bg-amber-100 text-amber-700'
-                                      }`}
-                                      title={`Price confidence: ${position.price_confidence}`}
-                                    >
-                                      {position.price_confidence === 'High' ? '✓' : '~'}
-                                    </span>
-                                  )}
-                                </div>
-                                {markupEnabled && displayUnitPrice !== position.unit_price && (
-                                  <div className="text-xs text-slate-400 line-through">
-                                    {position.unit_price.toFixed(2)}
-                                  </div>
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="font-medium tabular-nums text-slate-900">
+                                  {position.price_confidence === 'None' ? '—' : displayUnitPrice.toFixed(2)}
+                                </span>
+                                {position.price_confidence !== 'None' && position.price_confidence !== 'Low' && (
+                                  <span 
+                                    className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs ${
+                                      position.price_confidence === 'High' 
+                                        ? 'bg-green-100 text-green-700' 
+                                        : 'bg-amber-100 text-amber-700'
+                                    }`}
+                                    title={`Price confidence: ${position.price_confidence}`}
+                                  >
+                                    {position.price_confidence === 'High' ? '✓' : '~'}
+                                  </span>
                                 )}
                               </div>
                             )}
                           </TableCell>
                           <TableCell className="text-right align-top">
-                            <div className="space-y-0.5">
-                              <span className="font-semibold text-slate-900">
-                                {displayTotal.toFixed(2)}
-                              </span>
-                              {markupEnabled && displayTotal !== position.total_amount && (
-                                <div className="text-xs text-slate-400 line-through">
-                                  {position.total_amount.toFixed(2)}
-                                </div>
-                              )}
-                            </div>
+                            <span className="text-slate-600 tabular-nums text-sm">
+                              {position.price_confidence === 'None' ? '—' : position.total_amount.toFixed(2)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right align-top">
+                            <span className="font-semibold text-slate-900 tabular-nums">
+                              {position.price_confidence === 'None' ? '—' : displayTotal.toFixed(2)}
+                            </span>
                           </TableCell>
                           <TableCell className="align-top">
                             {editingRow?.id === position.id ? (
@@ -785,6 +728,17 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                       })}
                     </TableBody>
                   </Table>
+                </div>
+
+                {/* Sticky Footer with Action Button */}
+                <div className="sticky bottom-0 bg-white border-t border-slate-200 pt-4 pb-2 mt-4">
+                  <Button
+                    onClick={handleCreateFromPreview}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    size="lg"
+                  >
+                    Create {extractedPositions.length} Position{extractedPositions.length !== 1 ? 's' : ''} from Preview
+                  </Button>
                 </div>
               </div>
             )}
