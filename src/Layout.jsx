@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { base44 } from '@/api/base44Client';
 import MobileAppModal from '@/components/mobile/MobileAppModal';
+import SearchIndexManager from '@/components/search/SearchIndexManager';
+import HeaderSearch from '@/components/search/HeaderSearch';
 import { 
                     LayoutDashboard, 
                     Users, 
@@ -134,20 +136,31 @@ export default function Layout({ children, currentPageName }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-          <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
-            alt="Alpha Yachting"
-            className="h-6 object-contain"
-          />
+    <SearchIndexManager>
+      <div className="min-h-screen bg-slate-50">
+        {/* Desktop Header with Search */}
+        <div className="hidden lg:block fixed top-0 left-64 right-0 z-40 bg-white border-b border-slate-200 px-6 h-16">
+          <div className="h-full flex items-center justify-between gap-4">
+            <HeaderSearch />
+            <div className="flex items-center gap-3">
+              {user && <NotificationBell userEmail={user.email} />}
+            </div>
+          </div>
         </div>
-      </div>
+
+        {/* Mobile Header */}
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+              <Menu className="h-5 w-5" />
+            </Button>
+            <img 
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
+              alt="Alpha Yachting"
+              className="h-6 object-contain"
+            />
+          </div>
+        </div>
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -165,29 +178,26 @@ export default function Layout({ children, currentPageName }) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="h-16 px-3 flex items-center justify-between border-b border-slate-100">
-            <div className="flex items-center justify-between flex-1">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="relative group h-12 flex items-center hover:opacity-75 transition-opacity"
-              >
-                <img 
-                  src={logoUrl || "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"}
-                  alt="Company Logo"
-                  className="h-12 object-contain"
-                />
-                <div className="absolute inset-0 bg-black/30 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Camera className="h-4 w-4 text-white" />
-                </div>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleLogoUpload}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="relative group h-12 flex items-center hover:opacity-75 transition-opacity"
+            >
+              <img 
+                src={logoUrl || "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"}
+                alt="Company Logo"
+                className="h-12 object-contain"
               />
-              {user && <NotificationBell userEmail={user.email} />}
-            </div>
+              <div className="absolute inset-0 bg-black/30 rounded opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <Camera className="h-4 w-4 text-white" />
+              </div>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
             <Button 
               variant="ghost" 
               size="icon" 
@@ -304,15 +314,16 @@ export default function Layout({ children, currentPageName }) {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="lg:pl-64 pt-16 lg:pt-0 min-h-screen">
-        <div className="p-6 lg:p-8">
-          {children}
-        </div>
-      </main>
+        {/* Main Content */}
+        <main className="lg:pl-64 pt-16 min-h-screen">
+          <div className="p-6 lg:p-8">
+            {children}
+          </div>
+        </main>
 
-      {/* Mobile App Modal */}
-      <MobileAppModal open={mobileAppOpen} onOpenChange={setMobileAppOpen} />
-    </div>
+        {/* Mobile App Modal */}
+        <MobileAppModal open={mobileAppOpen} onOpenChange={setMobileAppOpen} />
+      </div>
+    </SearchIndexManager>
   );
 }
