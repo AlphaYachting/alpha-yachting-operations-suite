@@ -42,9 +42,10 @@ export default function HeaderSearch() {
     
     const filtered = searchIndex
       .filter(item => {
-        const nameMatch = item.name.toLowerCase().includes(lowerQuery);
-        const secondaryMatch = item.secondary?.toLowerCase().includes(lowerQuery);
-        return nameMatch || secondaryMatch;
+        // Use searchText if available, otherwise fall back to name + secondary
+        const searchTarget = item.searchText || 
+          `${item.name} ${item.secondary || ''}`.toLowerCase();
+        return searchTarget.includes(lowerQuery);
       })
       .slice(0, 10);
 
