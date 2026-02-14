@@ -1096,6 +1096,7 @@ Requirements:
                       <SelectItem value="5">5% (Reduced - Croatia)</SelectItem>
                       <SelectItem value="10">10% (Reduced - Austria)</SelectItem>
                       <SelectItem value="13">13% (Reduced - Austria/Croatia)</SelectItem>
+                      <SelectItem value="19">19% (Standard - Germany)</SelectItem>
                       <SelectItem value="20">20% (Standard - Austria)</SelectItem>
                       <SelectItem value="25">25% (Standard - Croatia)</SelectItem>
                     </SelectContent>

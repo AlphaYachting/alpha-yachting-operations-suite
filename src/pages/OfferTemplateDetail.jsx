@@ -238,6 +238,7 @@ export default function OfferTemplateDetail() {
                       <SelectItem value="5">5%</SelectItem>
                       <SelectItem value="10">10%</SelectItem>
                       <SelectItem value="13">13%</SelectItem>
+                      <SelectItem value="19">19%</SelectItem>
                       <SelectItem value="20">20%</SelectItem>
                       <SelectItem value="25">25%</SelectItem>
                     </SelectContent>
