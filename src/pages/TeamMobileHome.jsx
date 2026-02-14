@@ -26,6 +26,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showPreviewMode, setShowPreviewMode] = useState(false);
   const [previewTechnicianName, setPreviewTechnicianName] = useState(null);
+  const [resolvedTechnicianId, setResolvedTechnicianId] = useState(null);
 
   useEffect(() => {
     // Monitor connection status
@@ -78,6 +79,9 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           resolvedTechnicianId: technicianId,
           isPreviewMode: !!previewUserId
         });
+
+        // Store resolved technician ID for grouping function
+        setResolvedTechnicianId(technicianId);
 
         // If no technician found, show empty state (no work orders assigned)
         if (!technicianId) {
@@ -148,25 +152,36 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     const today = startOfDay(new Date());
     const sections = { today: [], upcoming: [], later: [] };
 
-    // Use preview user if in preview mode, otherwise use current user
-    const technicianId = previewUserId || user?.id;
+    // CRITICAL FIX: Work orders already filtered by technicianId in loadData
+    // No need to re-filter - just use all loaded work orders
+    const userWorkOrders = workOrders;
 
-    // Get unique work orders assigned to this technician
-    const userWorkOrders = workOrders.filter((wo) =>
-    wo.assigned_technicians?.includes(technicianId) || wo.lead_technician_id === technicianId
-    );
+    console.log('📊 DEBUG - Grouping:', {
+      totalWorkOrders: workOrders.length,
+      resolvedTechnicianId,
+      todayDate: today.toISOString()
+    });
 
+    const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    
     userWorkOrders.forEach((wo) => {
       const woDate = wo.scheduled_date ? startOfDay(parseISO(wo.scheduled_date)) : null;
+      
       if (!woDate) {
         sections.later.push(wo);
       } else if (woDate.getTime() === today.getTime()) {
         sections.today.push(wo);
-      } else if (woDate < new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)) {
+      } else if (woDate > today && woDate <= sevenDaysFromNow) {
         sections.upcoming.push(wo);
       } else {
         sections.later.push(wo);
       }
+    });
+
+    console.log('✅ Sections:', {
+      today: sections.today.length,
+      upcoming: sections.upcoming.length,
+      later: sections.later.length
     });
 
     // Sort each section by date and time
@@ -433,10 +448,11 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         }
 
         {/* No Work Orders */}
-        {workOrders.length === 0 &&
+        {sections.today.length === 0 && sections.upcoming.length === 0 && sections.later.length === 0 &&
         <div className="text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-500 text-sm">No work orders assigned yet</p>
+            <p className="text-slate-600 font-medium mb-1">No scheduled work orders</p>
+            <p className="text-slate-500 text-sm">You have no items assigned in the next 7 days</p>
           </div>
         }
       </div>
