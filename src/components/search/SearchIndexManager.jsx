@@ -23,14 +23,22 @@ export default function SearchIndexManager({ children }) {
     try {
       setLoading(true);
       
-      // Try to load from localStorage first
-      const cached = localStorage.getItem('search_index');
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          setSearchIndex(parsed);
-        } catch (e) {
-          console.error('Failed to parse cached index:', e);
+      // Check cache validity (max 10 minutes)
+      const cacheTimestamp = localStorage.getItem('search_index_timestamp');
+      const now = Date.now();
+      const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
+      const cacheValid = cacheAge < 10 * 60 * 1000; // 10 minutes
+      
+      // Try to load from localStorage if cache is valid
+      if (cacheValid) {
+        const cached = localStorage.getItem('search_index');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            setSearchIndex(parsed);
+          } catch (e) {
+            console.error('Failed to parse cached index:', e);
+          }
         }
       }
 
@@ -89,8 +97,9 @@ export default function SearchIndexManager({ children }) {
 
       setSearchIndex(index);
       
-      // Cache for next load
+      // Cache for next load with timestamp
       localStorage.setItem('search_index', JSON.stringify(index));
+      localStorage.setItem('search_index_timestamp', Date.now().toString());
     } catch (error) {
       console.error('Failed to load search index:', error);
     } finally {
