@@ -504,6 +504,58 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                 onChange={(e) => setDefaultUnitPrice(parseFloat(e.target.value) || 70)}
                 disabled={extracting}
               />
+              <p className="text-xs text-slate-500">
+                Used when prices cannot be extracted from PDF
+              </p>
+            </div>
+
+            {/* Markup Settings (Pre-Extraction) */}
+            <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Markup Settings</Label>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="pre-markup-toggle"
+                    checked={markupEnabled}
+                    onCheckedChange={setMarkupEnabled}
+                  />
+                  <Label htmlFor="pre-markup-toggle" className="text-xs cursor-pointer">
+                    Apply to extracted prices
+                  </Label>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-1">
+                  <Percent className="h-4 w-4 text-slate-500" />
+                  <Input
+                    type="number"
+                    min="0"
+                    max="200"
+                    step="5"
+                    value={markupPercent}
+                    onChange={(e) => setMarkupPercent(parseFloat(e.target.value) || 0)}
+                    className="h-8"
+                    placeholder="0"
+                  />
+                  <span className="text-sm text-slate-600">%</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-slate-600">Round:</Label>
+                  <Select value={rounding} onValueChange={setRounding}>
+                    <SelectTrigger className="w-24 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="None">None</SelectItem>
+                      <SelectItem value="1€">1€</SelectItem>
+                      <SelectItem value="5€">5€</SelectItem>
+                      <SelectItem value="10€">10€</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
             <Button
@@ -692,36 +744,45 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                               {position.confidence}
                             </Badge>
                           </TableCell>
-                          <TableCell className="align-top">
-                            <div className="flex gap-1 justify-center">
-                              {editingRow?.id === position.id ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={handleSaveEdit}
-                                  className="h-8 px-3"
-                                >
-                                  Save
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleEditPosition(position)}
-                                  className="h-8 px-2"
-                                >
-                                  <Edit2 className="h-3 w-3" />
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleDeletePosition(position.id)}
-                                className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
+                          <TableCell className="text-center align-top sticky right-0 bg-white">
+                           {editingRow?.id === position.id ? (
+                             <div className="flex items-center justify-center gap-2">
+                               <Button 
+                                 size="sm" 
+                                 onClick={handleSaveEdit}
+                                 className="h-7 px-2 bg-green-600 hover:bg-green-700"
+                               >
+                                 Save
+                               </Button>
+                               <Button 
+                                 size="sm" 
+                                 variant="outline" 
+                                 onClick={() => setEditingRow(null)}
+                                 className="h-7 px-2"
+                               >
+                                 Cancel
+                               </Button>
+                             </div>
+                           ) : (
+                             <div className="flex items-center justify-center gap-1">
+                               <Button
+                                 size="sm"
+                                 variant="ghost"
+                                 onClick={() => handleEditPosition(position)}
+                                 className="h-7 w-7 p-0"
+                               >
+                                 <Edit2 className="h-3 w-3" />
+                               </Button>
+                               <Button
+                                 size="sm"
+                                 variant="ghost"
+                                 onClick={() => handleDeletePosition(position.id)}
+                                 className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                               >
+                                 <Trash2 className="h-3 w-3" />
+                               </Button>
+                             </div>
+                           )}
                           </TableCell>
                         </TableRow>
                         );
