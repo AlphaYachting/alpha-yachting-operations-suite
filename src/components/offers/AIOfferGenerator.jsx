@@ -460,100 +460,103 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
         <>
           {/* PDF Upload Mode */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Upload PDF</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handlePdfUpload}
-                  disabled={extracting}
-                  className="flex-1"
-                />
+            {/* Compact 2-column grid for controls */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Upload PDF</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handlePdfUpload}
+                    disabled={extracting}
+                    className="w-full"
+                  />
+                  {pdfFile && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setPdfFile(null);
+                        setExtractedPositions([]);
+                        setShowPreview(false);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
                 {pdfFile && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      setPdfFile(null);
-                      setExtractedPositions([]);
-                      setShowPreview(false);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <p className="text-xs text-slate-600">
+                    Selected: {pdfFile.name} ({(pdfFile.size / 1024).toFixed(1)} KB)
+                  </p>
                 )}
-              </div>
-              {pdfFile && (
-                <p className="text-xs text-slate-600">
-                  Selected: {pdfFile.name} ({(pdfFile.size / 1024).toFixed(1)} KB)
+                <p className="text-xs text-slate-500">
+                  Text-based PDF only. Image/scanned PDFs may not work.
                 </p>
-              )}
-              <p className="text-xs text-slate-500">
-                Upload a text-based PDF (offer, specification, or email export). Image-based/scanned PDFs may not work.
-              </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Default Unit Price (€)</Label>
+                <Input
+                  type="number"
+                  step="1"
+                  min="0"
+                  value={defaultUnitPrice}
+                  onChange={(e) => setDefaultUnitPrice(parseFloat(e.target.value) || 70)}
+                  disabled={extracting}
+                  className="w-full"
+                />
+                <p className="text-xs text-slate-500">
+                  Used when prices cannot be extracted
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Default Unit Price (€)</Label>
-              <Input
-                type="number"
-                step="1"
-                min="0"
-                value={defaultUnitPrice}
-                onChange={(e) => setDefaultUnitPrice(parseFloat(e.target.value) || 70)}
-                disabled={extracting}
-              />
-              <p className="text-xs text-slate-500">
-                Used when prices cannot be extracted from PDF
-              </p>
-            </div>
-
-            {/* Markup Settings (Pre-Extraction) */}
-            <div className="bg-slate-100 border border-slate-200 rounded-lg p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Markup Settings</Label>
+            {/* Markup Settings (Pre-Extraction) - Full Width */}
+            <div className="bg-slate-100 border border-slate-200 rounded-lg p-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Switch
                     id="pre-markup-toggle"
                     checked={markupEnabled}
                     onCheckedChange={setMarkupEnabled}
                   />
-                  <Label htmlFor="pre-markup-toggle" className="text-xs cursor-pointer">
-                    Apply to extracted prices
+                  <Label htmlFor="pre-markup-toggle" className="text-sm font-medium cursor-pointer">
+                    Apply Markup to Extracted Prices
                   </Label>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 flex-1">
-                  <Percent className="h-4 w-4 text-slate-500" />
-                  <Input
-                    type="number"
-                    min="0"
-                    max="200"
-                    step="5"
-                    value={markupPercent}
-                    onChange={(e) => setMarkupPercent(parseFloat(e.target.value) || 0)}
-                    className="h-8"
-                    placeholder="0"
-                  />
-                  <span className="text-sm text-slate-600">%</span>
-                </div>
+                
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Percent className="h-4 w-4 text-slate-500" />
+                    <Input
+                      type="number"
+                      min="0"
+                      max="200"
+                      step="5"
+                      value={markupPercent}
+                      onChange={(e) => setMarkupPercent(parseFloat(e.target.value) || 0)}
+                      className="h-8 w-20"
+                      placeholder="0"
+                    />
+                    <span className="text-sm text-slate-600">%</span>
+                  </div>
 
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-slate-600">Round:</Label>
-                  <Select value={rounding} onValueChange={setRounding}>
-                    <SelectTrigger className="w-24 h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="None">None</SelectItem>
-                      <SelectItem value="1€">1€</SelectItem>
-                      <SelectItem value="5€">5€</SelectItem>
-                      <SelectItem value="10€">10€</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-slate-600">Round:</Label>
+                    <Select value={rounding} onValueChange={setRounding}>
+                      <SelectTrigger className="w-24 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="None">None</SelectItem>
+                        <SelectItem value="1€">1€</SelectItem>
+                        <SelectItem value="5€">5€</SelectItem>
+                        <SelectItem value="10€">10€</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -601,22 +604,23 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                   </div>
                 )}
 
-                <div className="border rounded-lg bg-white overflow-x-auto max-h-[50vh] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-slate-50 z-10">
-                      <TableRow>
-                        <TableHead className="w-[180px] font-medium text-slate-700">Title</TableHead>
-                        <TableHead className="w-[50px] text-center font-medium text-slate-700">Qty</TableHead>
-                        <TableHead className="w-[70px] font-medium text-slate-700">Unit</TableHead>
-                        <TableHead className="w-[90px] text-right font-medium text-slate-700">Orig. Price (€)</TableHead>
-                        <TableHead className="w-[90px] text-right font-medium text-slate-700">New Price (€)</TableHead>
-                        <TableHead className="w-[90px] text-right font-medium text-slate-700">Orig. Total (€)</TableHead>
-                        <TableHead className="w-[90px] text-right font-medium text-slate-700">New Total (€)</TableHead>
-                        <TableHead className="w-[200px] font-medium text-slate-700">Description</TableHead>
-                        <TableHead className="w-[70px] text-center font-medium text-slate-700">Conf.</TableHead>
-                        <TableHead className="w-[100px] text-center font-medium text-slate-700 sticky right-0 bg-slate-50">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                <div className="border rounded-lg bg-white overflow-x-auto">
+                  <div className="max-h-[55vh] overflow-y-auto">
+                    <Table className="min-w-[1100px]">
+                      <TableHeader className="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                        <TableRow>
+                          <TableHead className="w-[180px] font-medium text-slate-700 text-xs">Title</TableHead>
+                          <TableHead className="w-[50px] text-center font-medium text-slate-700 text-xs">Qty</TableHead>
+                          <TableHead className="w-[70px] font-medium text-slate-700 text-xs">Unit</TableHead>
+                          <TableHead className="w-[90px] text-right font-medium text-slate-700 text-xs">Orig. Price (€)</TableHead>
+                          <TableHead className="w-[90px] text-right font-medium text-slate-700 text-xs">New Price (€)</TableHead>
+                          <TableHead className="w-[90px] text-right font-medium text-slate-700 text-xs">Orig. Total (€)</TableHead>
+                          <TableHead className="w-[90px] text-right font-medium text-slate-700 text-xs">New Total (€)</TableHead>
+                          <TableHead className="w-[220px] font-medium text-slate-700 text-xs">Description</TableHead>
+                          <TableHead className="w-[70px] text-center font-medium text-slate-700 text-xs">Conf.</TableHead>
+                          <TableHead className="w-[100px] text-center font-medium text-slate-700 text-xs sticky right-0 bg-slate-50 border-l border-slate-200">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
                     <TableBody>
                       {extractedPositions.map((position) => {
                         // Calculate display prices with markup if enabled
@@ -720,18 +724,18 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                             </span>
                           </TableCell>
                           <TableCell className="align-top">
-                            {editingRow?.id === position.id ? (
-                              <Textarea
-                                value={editingRow.description}
-                                onChange={(e) => setEditingRow({...editingRow, description: e.target.value})}
-                                className="min-h-[60px] text-xs"
-                                rows={2}
-                              />
-                            ) : (
-                              <div className="text-xs text-slate-600 leading-relaxed max-w-[250px] break-words">
-                                {position.description || '-'}
-                              </div>
-                            )}
+                           {editingRow?.id === position.id ? (
+                             <Textarea
+                               value={editingRow.description}
+                               onChange={(e) => setEditingRow({...editingRow, description: e.target.value})}
+                               className="min-h-[60px] text-xs"
+                               rows={2}
+                             />
+                           ) : (
+                             <div className="text-xs text-slate-600 leading-relaxed max-w-[220px] break-words line-clamp-3">
+                               {position.description || '-'}
+                             </div>
+                           )}
                           </TableCell>
                           <TableCell className="text-center align-top">
                             <Badge
@@ -744,13 +748,13 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                               {position.confidence}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-center align-top sticky right-0 bg-white">
+                          <TableCell className="text-center align-top sticky right-0 bg-white border-l border-slate-200">
                            {editingRow?.id === position.id ? (
-                             <div className="flex items-center justify-center gap-2">
+                             <div className="flex items-center justify-center gap-1">
                                <Button 
                                  size="sm" 
                                  onClick={handleSaveEdit}
-                                 className="h-7 px-2 bg-green-600 hover:bg-green-700"
+                                 className="h-7 px-2 bg-green-600 hover:bg-green-700 text-xs"
                                >
                                  Save
                                </Button>
@@ -758,7 +762,7 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                  size="sm" 
                                  variant="outline" 
                                  onClick={() => setEditingRow(null)}
-                                 className="h-7 px-2"
+                                 className="h-7 px-2 text-xs"
                                >
                                  Cancel
                                </Button>
@@ -770,6 +774,7 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                  variant="ghost"
                                  onClick={() => handleEditPosition(position)}
                                  className="h-7 w-7 p-0"
+                                 title="Edit"
                                >
                                  <Edit2 className="h-3 w-3" />
                                </Button>
@@ -778,6 +783,7 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                                  variant="ghost"
                                  onClick={() => handleDeletePosition(position.id)}
                                  className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                 title="Delete"
                                >
                                  <Trash2 className="h-3 w-3" />
                                </Button>
@@ -788,21 +794,22 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                         );
                       })}
                     </TableBody>
-                  </Table>
-                </div>
+                    </Table>
+                    </div>
+                    </div>
 
-                {/* Sticky Footer with Action Button */}
-                <div className="sticky bottom-0 bg-white border-t border-slate-200 pt-4 pb-2 mt-4">
-                  <Button
+                    {/* Sticky Footer with Action Button */}
+                    <div className="sticky bottom-0 bg-white border-t-2 border-slate-300 pt-3 pb-2 mt-4 shadow-lg">
+                    <Button
                     onClick={handleCreateFromPreview}
                     className="w-full bg-green-600 hover:bg-green-700"
                     size="lg"
-                  >
+                    >
                     Create {extractedPositions.length} Position{extractedPositions.length !== 1 ? 's' : ''} from Preview
-                  </Button>
-                </div>
-              </div>
-            )}
+                    </Button>
+                    </div>
+                    </div>
+                    )}
           </div>
         </>
       )}

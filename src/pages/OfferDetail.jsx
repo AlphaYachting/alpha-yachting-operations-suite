@@ -1266,7 +1266,7 @@ Requirements:
 
       {/* AI Generator Dialog */}
       <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>AI Task Generator</DialogTitle>
             <DialogDescription>
