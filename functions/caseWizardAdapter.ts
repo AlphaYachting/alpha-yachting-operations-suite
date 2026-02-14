@@ -292,10 +292,10 @@ Deno.serve(async (req) => {
         billable: true
       });
       
-      if (!woResponse.success) {
-        throw new Error(woResponse.message || 'Failed to create work order with number');
+      if (!woResponse.data?.success) {
+        throw new Error(woResponse.data?.message || 'Failed to create work order with number');
       }
-      workOrder = woResponse.work_order;
+      workOrder = woResponse.data.work_order;
 
       // Link Offer to WorkOrder if single WO conversion
       if (offer && !job) {
