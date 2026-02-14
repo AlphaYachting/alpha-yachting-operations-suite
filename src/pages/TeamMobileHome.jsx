@@ -54,21 +54,58 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
       let tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData;
 
       try {
-        // Try to load from server - filter work orders by assigned technician
-        const technicianId = previewUserId || currentUser?.id;
-        [tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData] = await Promise.all([
-        base44.entities.Task.list(),
-        base44.entities.WorkOrder.filter({
-          $or: [
-          { assigned_technicians: { $in: [technicianId] } },
-          { lead_technician_id: technicianId }]
+        // CRITICAL FIX: Map User.id → Technician.id
+        // Load all technicians first to find the match
+        const allTechnicians = await base44.entities.Technician.list();
+        
+        // Find technician linked to current user
+        let technicianId;
+        if (previewUserId) {
+          // Preview mode: use provided technician ID directly
+          technicianId = previewUserId;
+        } else {
+          // Production mode: find technician by user_id OR email
+          const matchedTech = allTechnicians.find(t => 
+            t.user_id === currentUser?.id || 
+            t.email === currentUser?.email
+          );
+          technicianId = matchedTech?.id;
+        }
 
-        }),
-        base44.entities.Location.list(),
-        base44.entities.Technician.list(),
-        base44.entities.Boat.list(),
-        base44.entities.Job.list()]
-        );
+        console.log('🔍 DEBUG - Mobile Auth Mapping:', {
+          userEmail: currentUser?.email,
+          userId: currentUser?.id,
+          resolvedTechnicianId: technicianId,
+          isPreviewMode: !!previewUserId
+        });
+
+        // If no technician found, show empty state (no work orders assigned)
+        if (!technicianId) {
+          console.warn('⚠️ No Technician record found for user:', currentUser?.email);
+          setWorkOrders([]);
+          setLocations([]);
+          setBoats([]);
+          setJobs([]);
+          setTasks([]);
+          setLoading(false);
+          return;
+        }
+
+        // Filter work orders by resolved Technician.id
+        [tasksData, workOrdersData, locationsData, boatsData, jobsData] = await Promise.all([
+          base44.entities.Task.list(),
+          base44.entities.WorkOrder.filter({
+            $or: [
+              { assigned_technicians: { $in: [technicianId] } },
+              { lead_technician_id: technicianId }
+            ]
+          }),
+          base44.entities.Location.list(),
+          base44.entities.Boat.list(),
+          base44.entities.Job.list()
+        ]);
+
+        console.log('✅ Work Orders Found:', workOrdersData?.length || 0);
 
         // Cache all data for offline access
         if (workOrdersData) {
