@@ -646,7 +646,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-        <Button variant="ghost" size="icon" onClick={handleBack}>
+        <Button variant="outline" size="icon" onClick={handleBack} className="border-slate-300 hover:bg-slate-100">
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
