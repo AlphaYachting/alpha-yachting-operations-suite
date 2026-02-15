@@ -109,6 +109,7 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
+import InviteAccept from './pages/InviteAccept';
 import __Layout from './Layout.jsx';
 
 
@@ -175,6 +176,7 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
+    "InviteAccept": InviteAccept,
 }
 
 export const pagesConfig = {
