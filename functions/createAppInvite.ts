@@ -66,11 +66,11 @@ Deno.serve(async (req) => {
     const invite = await base44.asServiceRole.entities.AppInvite.create(inviteData);
     console.log('✓ Invite created:', invite.id);
 
-    // Generate magic link
+    // Generate magic link - use correct invite-accept page
     // Use APP_DOMAIN env variable if set, otherwise fall back to request host
     const appDomain = Deno.env.get('APP_DOMAIN') || req.headers.get('host');
     const protocol = 'https';
-    const magicLink = `${protocol}://${appDomain}/invite?token=${rawToken}`;
+    const magicLink = `${protocol}://${appDomain}/invite-accept?token=${rawToken}`;
 
     // Get recipient name if available
     let recipientName = null;
