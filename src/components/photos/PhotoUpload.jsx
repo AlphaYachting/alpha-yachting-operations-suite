@@ -75,7 +75,7 @@ export default function PhotoUpload({ workOrderId, tasks, onSuccess }) {
         file_size_bytes: main.blob.size,
         width: main.width,
         height: main.height,
-        is_customer_visible: false
+        is_customer_visible: queueItem.category === 'Expenses' ? false : false
       });
 
       updateQueueItem(queueItem.id, { status: 'success', progress: 100 });
@@ -199,6 +199,7 @@ export default function PhotoUpload({ workOrderId, tasks, onSuccess }) {
                           <SelectItem value="During">During</SelectItem>
                           <SelectItem value="After">After</SelectItem>
                           <SelectItem value="Damage">Damage</SelectItem>
+                          <SelectItem value="Expenses">Expenses</SelectItem>
                           <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                       </Select>
