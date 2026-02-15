@@ -95,9 +95,12 @@ Deno.serve(async (req) => {
     const sendgridKey = Deno.env.get('SENDGRID_API_KEY');
     const customFromEmail = Deno.env.get('CUSTOM_EMAIL_FROM') || 'noreply@alpha-jachting.hr';
 
-    try {
-      if (resendKey) {
-        // Use Resend for custom email
+    let emailSent = false;
+    let lastError = null;
+    
+    // Try Resend first
+    if (resendKey && !emailSent) {
+      try {
         const resendResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -112,18 +115,22 @@ Deno.serve(async (req) => {
           })
         });
 
-        if (!resendResponse.ok) {
+        if (resendResponse.ok) {
+          emailSent = true;
+        } else {
           const errorData = await resendResponse.text();
-          console.error('Resend error:', resendResponse.status, errorData);
-          
-          if (resendResponse.status === 429) {
-            throw new Error('Rate limit reached. Resend free tier: 100 emails/day, 1/sec. Upgrade at resend.com or wait and retry.');
-          }
-          
-          throw new Error(`Resend error (${resendResponse.status}): ${errorData}`);
+          console.warn('Resend failed, trying fallback:', resendResponse.status, errorData);
+          lastError = `Resend ${resendResponse.status === 429 ? 'rate limit' : 'error'}`;
         }
-      } else if (sendgridKey) {
-        // Use SendGrid for custom email
+      } catch (resendError) {
+        console.warn('Resend exception, trying fallback:', resendError);
+        lastError = 'Resend exception';
+      }
+    }
+    
+    // Try SendGrid if Resend failed
+    if (sendgridKey && !emailSent) {
+      try {
         const sgResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
           method: 'POST',
           headers: {
@@ -138,23 +145,26 @@ Deno.serve(async (req) => {
           })
         });
 
-        if (!sgResponse.ok) {
+        if (sgResponse.ok) {
+          emailSent = true;
+        } else {
           const errorData = await sgResponse.text();
-          console.error('SendGrid error:', sgResponse.status, errorData);
-          
-          if (sgResponse.status === 429) {
-            throw new Error('Rate limit reached. Check your SendGrid plan limits.');
-          }
-          
-          throw new Error(`SendGrid error (${sgResponse.status}): ${errorData}`);
+          console.warn('SendGrid failed, trying fallback:', sgResponse.status, errorData);
+          lastError = `SendGrid ${sgResponse.status === 429 ? 'rate limit' : 'error'}`;
         }
-      } else {
-        // Fallback to Base44 built-in email (formatted plain text)
-        const getPlainTextEmail = (link, name, role) => {
-          const greeting = name ? `Hello ${name},` : 'Hello,';
-          
-          if (role === 'CUSTOMER') {
-            return `${greeting}
+      } catch (sgError) {
+        console.warn('SendGrid exception, trying fallback:', sgError);
+        lastError = 'SendGrid exception';
+      }
+    }
+    
+    // Fallback to Base44 built-in email
+    if (!emailSent) {
+      const getPlainTextEmail = (link, name, role) => {
+        const greeting = name ? `Hello ${name},` : 'Hello,';
+        
+        if (role === 'CUSTOMER') {
+          return `${greeting}
 
 You've been invited to access your yacht service projects through our secure mobile app.
 
@@ -176,8 +186,8 @@ Alfons Pirker
 Alpha Yachting
 📧 info@alpha-yachting.hr
 📞 +385 52 757 907`;
-          } else {
-            return `${greeting}
+        } else {
+          return `${greeting}
 
 Welcome to the Alpha Team! You've been invited to access our mobile technician app.
 
@@ -200,31 +210,38 @@ Alfons Pirker
 Alpha Yachting
 📧 info@alpha-yachting.hr
 📞 +385 52 757 907`;
-          }
-        };
-        
-        try {
-          await base44.asServiceRole.integrations.Core.SendEmail({
-            from_name: 'Alpha Yachting',
-            to: email,
-            subject: emailContent.subject,
-            body: getPlainTextEmail(magicLink, recipientName, role)
-          });
-        } catch (base44EmailError) {
-          console.error('Base44 email error:', base44EmailError);
-          throw new Error('Base44 email service rate limit reached (429). Please wait a few minutes and try again, or configure Resend/SendGrid for unlimited sends.');
         }
-      }
-    } catch (emailError) {
-      console.error('Email send error:', emailError);
+      };
       
-      // Return the invite but with error info
+      try {
+        await base44.asServiceRole.integrations.Core.SendEmail({
+          from_name: 'Alpha Yachting',
+          to: email,
+          subject: emailContent.subject,
+          body: getPlainTextEmail(magicLink, recipientName, role)
+        });
+        emailSent = true;
+        if (lastError) {
+          console.log('Email sent via Base44 fallback after:', lastError);
+        }
+      } catch (base44EmailError) {
+        console.error('All email services failed:', base44EmailError);
+        return Response.json({ 
+          success: false,
+          invite_id: invite.id,
+          error: 'All email services rate-limited. Please wait and try resending later.',
+          message: 'Invite created but email could not be sent due to rate limits.'
+        }, { status: 207 });
+      }
+    }
+    
+    if (!emailSent) {
       return Response.json({ 
         success: false,
         invite_id: invite.id,
-        error: emailError.message,
-        message: 'Invite created but email failed to send. You can resend from the invitations page.'
-      }, { status: 207 }); // 207 = Multi-Status (partial success)
+        error: 'Failed to send email through any service',
+        message: 'Invite created but email failed to send.'
+      }, { status: 207 });
     }
 
     // Update invite status
