@@ -142,19 +142,19 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
         <div className="flex items-center gap-3 mb-4">
 {onNavigate ? (
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={() => onNavigate('home')}
-              className="h-9 w-9 hover:bg-white/20"
+              className="h-9 w-9 border-white/30 hover:bg-white/20 text-white"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
           ) : (
             <Button
               asChild
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="h-9 w-9 hover:bg-white/20"
+              className="h-9 w-9 border-white/30 hover:bg-white/20 text-white"
             >
               <Link to={createPageUrl('TeamMobileHome')}>
                 <ArrowLeft className="h-5 w-5" />
