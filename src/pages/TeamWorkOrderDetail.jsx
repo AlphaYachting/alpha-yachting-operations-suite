@@ -212,6 +212,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
   const [commentText, setCommentText] = useState('');
   const [accessLogId, setAccessLogId] = useState(null);
   const [showRequirements, setShowRequirements] = useState(false);
+  const [requirementsCount, setRequirementsCount] = useState(0);
 
   useEffect(() => {
     logAccessStart();
