@@ -17,12 +17,19 @@ Deno.serve(async (req) => {
     const { email, role, customer_id, technician_id, job_id, work_order_id } = await req.json();
     console.log('✓ Payload:', { email, role });
 
+    // Validate required fields
     if (!email || !role) {
       return Response.json({ error: 'Email and role are required' }, { status: 400 });
     }
 
     if (!['CUSTOMER', 'TECHNICIAN'].includes(role)) {
       return Response.json({ error: 'Invalid role. Must be CUSTOMER or TECHNICIAN' }, { status: 400 });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return Response.json({ error: 'Invalid email format' }, { status: 400 });
     }
 
     // Generate secure random token (32 bytes = 256 bits)
