@@ -84,10 +84,12 @@ export default function SendInviteButton({
 
       if (response.data.success) {
         setStatus('success');
-        setMessage('Invite sent successfully!');
-        setTimeout(() => {
-          setOpen(false);
-        }, 2000);
+        setMessage(response.data.warning || response.data.message || 'Invite sent successfully!');
+        if (!response.data.warning) {
+          setTimeout(() => {
+            setOpen(false);
+          }, 2000);
+        }
       } else {
         throw new Error(response.data.error || 'Failed to send invite');
       }
