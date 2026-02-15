@@ -431,8 +431,17 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
           ]);
         }
 
-        // Cache data for offline access
-        await Promise.all([
+        // Update UI with fresh data (silent background refresh)
+        setWorkOrder(wo);
+        setJob(job || null);
+        setLocation(locationData?.[0] || null);
+        setBoat(boatData?.[0] || null);
+        setTasks(tasksData || []);
+        setPhotos(photosData || []);
+        setComments(commentsData || []);
+
+        // Cache in background (non-blocking)
+        Promise.all([
           offlineStorage.saveData(offlineStorage.STORES.workOrders, wo),
           job ? offlineStorage.saveData(offlineStorage.STORES.jobs, job) : Promise.resolve(),
           offlineStorage.saveMultiple(offlineStorage.STORES.tasks, tasksData || []),
@@ -440,57 +449,22 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
           offlineStorage.saveMultiple(offlineStorage.STORES.comments, commentsData || []),
           locationData?.[0] ? offlineStorage.saveData(offlineStorage.STORES.locations, locationData[0]) : Promise.resolve(),
           boatData?.[0] ? offlineStorage.saveData(offlineStorage.STORES.boats, boatData[0]) : Promise.resolve()
-        ]);
+        ]).catch(e => console.error('Cache save error:', e));
+
+        // Load requirements count (non-blocking)
+        base44.entities.WorkOrderRequirementItem.filter({ work_order_id: effectiveWoId })
+          .then(data => setRequirementsCount(data?.length || 0))
+          .catch(() => setRequirementsCount(0));
       } catch (error) {
-        // Fall back to offline data
-        const cachedWo = await offlineStorage.getData(offlineStorage.STORES.workOrders, effectiveWoId);
+        // Network error - already showing cached data
         if (!cachedWo) {
           if (onNavigate) {
             onNavigate('home');
           } else {
             navigate(createPageUrl('TeamMobileHome'));
           }
-          return;
-        }
-        woData = [cachedWo];
-        const cachedJob = await offlineStorage.getData(offlineStorage.STORES.jobs, cachedWo.job_id);
-        jobData = cachedJob ? [cachedJob] : [];
-        tasksData = await offlineStorage.getByIndex(offlineStorage.STORES.tasks, 'work_order_id', effectiveWoId) || [];
-        photosData = await offlineStorage.getByIndex(offlineStorage.STORES.photos, 'work_order_id', effectiveWoId) || [];
-        commentsData = await offlineStorage.getByIndex(offlineStorage.STORES.comments, 'work_order_id', effectiveWoId) || [];
-        
-        if (cachedJob?.location_id) {
-          const loc = await offlineStorage.getData(offlineStorage.STORES.locations, cachedJob.location_id);
-          locationData = loc ? [loc] : [];
-        }
-        if (cachedJob?.boat_id) {
-          const boat = await offlineStorage.getData(offlineStorage.STORES.boats, cachedJob.boat_id);
-          boatData = boat ? [boat] : [];
         }
       }
-
-      if (!woData || woData.length === 0) {
-        if (onNavigate) {
-          onNavigate('home');
-        } else {
-          navigate(createPageUrl('TeamMobileHome'));
-        }
-        return;
-      }
-
-      const wo = woData[0];
-      setWorkOrder(wo);
-      setJob(jobData?.[0] || null);
-      setLocation(locationData?.[0] || null);
-      setBoat(boatData?.[0] || null);
-      setTasks(tasksData || []);
-      setPhotos(photosData || []);
-      setComments(commentsData || []);
-
-      // Load requirements count (non-blocking)
-      base44.entities.WorkOrderRequirementItem.filter({ work_order_id: effectiveWoId })
-        .then(data => setRequirementsCount(data?.length || 0))
-        .catch(() => setRequirementsCount(0));
     } catch (error) {
       console.error('Error loading work order detail:', error);
     } finally {
