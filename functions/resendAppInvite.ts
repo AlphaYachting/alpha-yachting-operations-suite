@@ -106,14 +106,7 @@ Alpha Yachting
 info@alpha-jachting.hr`
         };
 
-    await base44.asServiceRole.integrations.Core.SendEmail({
-      from_name: 'Alpha Yachting',
-      to: invite.email,
-      subject: emailContent.subject,
-      body: emailContent.body
-    });
-
-    // Update invite
+    // Update invite record first (don't block on email)
     const now = new Date().toISOString();
     await base44.asServiceRole.entities.AppInvite.update(invite_id, {
       token_hash,
@@ -122,9 +115,20 @@ info@alpha-jachting.hr`
       status: 'SENT'
     });
 
+    // Try to send email (fire-and-forget, don't block response)
+    base44.asServiceRole.integrations.Core.SendEmail({
+      from_name: 'Alpha Yachting',
+      to: invite.email,
+      subject: emailContent.subject,
+      body: emailContent.body
+    }).catch(error => {
+      console.error('Background: Email send failed:', error.message);
+      // Don't fail the request if email fails - invite record was already updated
+    });
+
     return Response.json({ 
       success: true,
-      message: 'Invite resent successfully'
+      message: 'Invite resent successfully. Email sending in background.'
     });
   } catch (error) {
     console.error('Error resending invite:', error);
