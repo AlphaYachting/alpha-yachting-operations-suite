@@ -114,8 +114,13 @@ Deno.serve(async (req) => {
 
         if (!resendResponse.ok) {
           const errorData = await resendResponse.text();
-          console.error('Resend error:', errorData);
-          throw new Error('Failed to send email via Resend');
+          console.error('Resend error:', resendResponse.status, errorData);
+          
+          if (resendResponse.status === 429) {
+            throw new Error('Rate limit reached. Resend free tier: 100 emails/day, 1/sec. Upgrade at resend.com or wait and retry.');
+          }
+          
+          throw new Error(`Resend error (${resendResponse.status}): ${errorData}`);
         }
       } else if (sendgridKey) {
         // Use SendGrid for custom email
@@ -135,8 +140,13 @@ Deno.serve(async (req) => {
 
         if (!sgResponse.ok) {
           const errorData = await sgResponse.text();
-          console.error('SendGrid error:', errorData);
-          throw new Error('Failed to send email via SendGrid');
+          console.error('SendGrid error:', sgResponse.status, errorData);
+          
+          if (sgResponse.status === 429) {
+            throw new Error('Rate limit reached. Check your SendGrid plan limits.');
+          }
+          
+          throw new Error(`SendGrid error (${sgResponse.status}): ${errorData}`);
         }
       } else {
         // Fallback to Base44 built-in email (formatted plain text)
@@ -202,8 +212,14 @@ Alpha Yachting
       }
     } catch (emailError) {
       console.error('Email send error:', emailError);
-      // Don't fail the invite creation, just log the error
-      // The invite can be resent manually
+      
+      // Return the invite but with error info
+      return Response.json({ 
+        success: false,
+        invite_id: invite.id,
+        error: emailError.message,
+        message: 'Invite created but email failed to send. You can resend from the invitations page.'
+      }, { status: 207 }); // 207 = Multi-Status (partial success)
     }
 
     // Update invite status
