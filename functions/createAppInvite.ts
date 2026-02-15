@@ -2,14 +2,20 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   try {
+    console.log('=== INVITE CREATE START ===');
     const base44 = createClientFromRequest(req);
+    console.log('✓ SDK initialized');
+    
     const user = await base44.auth.me();
+    console.log('✓ User authenticated:', user?.email);
 
     if (!user || user.role !== 'admin') {
+      console.log('✗ Unauthorized user');
       return Response.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
     }
 
     const { email, role, customer_id, technician_id, job_id, work_order_id } = await req.json();
+    console.log('✓ Payload:', { email, role });
 
     if (!email || !role) {
       return Response.json({ error: 'Email and role are required' }, { status: 400 });
