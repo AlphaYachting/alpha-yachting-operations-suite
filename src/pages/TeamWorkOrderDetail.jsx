@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { ChevronLeft, MapPin, Ship, Clock, AlertCircle, CheckCircle2, WifiOff, Send, Trash2, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, MapPin, Ship, Clock, AlertCircle, CheckCircle2, WifiOff, Send, ShoppingCart } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -556,24 +556,33 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
     window.open(mapUrl, '_blank');
   };
 
-  const handleIndividualTaskStatusToggle = async (taskId, currentStatus) => {
+  const handleCompleteTask = async (taskId) => {
     try {
       setUpdatingTaskId(taskId);
-      const newStatus = currentStatus === 'In Progress' ? 'Completed' : 'In Progress';
-      const updatedTask = { ...tasks.find(t => t.id === taskId), status: newStatus };
+      const now = new Date().toISOString();
+      const updatedTask = { 
+        ...tasks.find(t => t.id === taskId), 
+        status: 'Completed',
+        completed_at: now
+      };
+
+      // Optimistic update
+      setTasks(tasks.map((t) => t.id === taskId ? updatedTask : t));
 
       if (isOnline) {
-        await base44.entities.Task.update(taskId, { status: newStatus });
+        await base44.entities.Task.update(taskId, { 
+          status: 'Completed',
+          completed_at: now
+        });
       } else {
         // Queue for offline sync
-        await syncQueue.addToQueue('Task', 'update', { status: newStatus }, taskId);
+        await syncQueue.addToQueue('Task', 'update', { status: 'Completed', completed_at: now }, taskId);
         setPendingChanges(prev => [...prev, { entity: 'Task', id: taskId }]);
       }
 
-      setTasks(tasks.map((t) => t.id === taskId ? updatedTask : t));
       await offlineStorage.saveData(offlineStorage.STORES.tasks, updatedTask);
     } catch (error) {
-      console.error('Error updating task status:', error);
+      console.error('Error completing task:', error);
     } finally {
       setUpdatingTaskId(null);
     }
@@ -622,28 +631,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
     }
   };
 
-  const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) return;
 
-    try {
-      setUpdatingTaskId(taskId);
-
-      if (isOnline) {
-        await base44.entities.Task.delete(taskId);
-      } else {
-        // Queue for offline sync
-        await syncQueue.addToQueue('Task', 'delete', {}, taskId);
-        setPendingChanges(prev => [...prev, { entity: 'Task', id: taskId }]);
-      }
-
-      setTasks(tasks.filter(t => t.id !== taskId));
-      await offlineStorage.deleteData(offlineStorage.STORES.tasks, taskId);
-    } catch (error) {
-      console.error('Error deleting task:', error);
-    } finally {
-      setUpdatingTaskId(null);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -853,76 +841,66 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         <div>
             <h2 className="text-sm font-semibold text-slate-900 mb-3">Tasks ({tasks.length})</h2>
             <div className="space-y-3">
-              {tasks.map((task) => (
-              <Card key={task.id}>
+              {tasks.map((task) => {
+                const isCompleted = task.status === 'Completed';
+                return (
+              <Card key={task.id} className={isCompleted ? 'opacity-60' : ''}>
               <CardContent className="p-4 relative">
-                {/* Task Title & Status */}
+                {/* Task Title */}
                  <div className="mb-4 pr-32">
                    <p className="text-slate-900 text-base font-semibold">{task.title}</p>
                  </div>
+                 
+                 {/* Action Button & Status Icon */}
                  <div className="absolute top-4 right-4 flex items-center gap-2">
-                   {user?.role === 'admin' && (
-                     <Button
-                       onClick={() => handleDeleteTask(task.id)}
-                       disabled={updatingTaskId === task.id}
-                       variant="ghost"
-                       size="icon"
-                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                       title="Delete task"
-                     >
-                       <Trash2 className="h-4 w-4" />
-                     </Button>
-                   )}
                    <Button
-                  onClick={() => handleIndividualTaskStatusToggle(task.id, task.status)}
-                  disabled={updatingTaskId === task.id}
-                  className={`text-sm font-semibold px-3 py-1.5 rounded text-white ${
-                  task.status === 'In Progress' ?
-                  'bg-blue-600 hover:bg-blue-700' :
-                  task.status === 'Completed' ?
-                  'bg-green-600 hover:bg-green-700' :
-                  'bg-slate-600 hover:bg-slate-700'}`
-                  }>
+                     onClick={() => handleCompleteTask(task.id)}
+                     disabled={isCompleted || updatingTaskId === task.id}
+                     className={`text-sm font-semibold px-3 py-1.5 rounded text-white ${
+                       isCompleted
+                         ? 'bg-green-600 cursor-not-allowed'
+                         : 'bg-slate-600 hover:bg-slate-700'
+                     }`}
+                   >
+                     {isCompleted ? 'Completed' : 'Start'}
+                   </Button>
+                   <div className="flex-shrink-0">
+                     {isCompleted ? (
+                       <CheckCircle2 className="h-5 w-5 text-green-600 fill-green-600" />
+                     ) : (
+                       <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
+                     )}
+                   </div>
+                 </div>
 
-                        {task.status === 'Completed' ? 'Done' : task.status === 'In Progress' ? 'Finish' : 'Start'}
-                     </Button>
-                     <div className="flex-shrink-0">
-                           {task.status === 'Completed' ?
-                      <CheckCircle2 className="h-5 w-5 text-green-600" /> :
-                      task.status === 'In Progress' ?
-                      <div className="h-5 w-5 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" /> :
-                      <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
-                      }
-                     </div>
-                     </div>
-
-                    {/* Task Description */}
-                    {task.description &&
-                    <p className="text-xs text-slate-600 leading-relaxed mb-2">{task.description}</p>
+                {/* Task Description */}
+                {task.description &&
+                  <p className="text-xs text-slate-600 leading-relaxed mb-2">{task.description}</p>
                 }
 
-                    {/* Task Status Badge */}
-                    <Badge variant="outline" className="text-xs">
-                      {task.status}
-                    </Badge>
+                {/* Task Status Badge */}
+                <Badge variant="outline" className="text-xs">
+                  {task.status}
+                </Badge>
 
-                    {/* Task Notes */}
-                    {task.notes &&
-                    <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
-                        <p className="font-medium mb-1">Notes:</p>
-                        <p>{task.notes}</p>
-                      </div>
+                {/* Task Notes */}
+                {task.notes &&
+                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+                    <p className="font-medium mb-1">Notes:</p>
+                    <p>{task.notes}</p>
+                  </div>
                 }
 
-                    {/* Estimated Time */}
-                    {task.estimated_minutes &&
-                    <div className="mt-2 text-xs text-slate-600">
-                        <span className="font-medium">Estimated:</span> {Math.round(task.estimated_minutes / 60)} min
-                      </div>
+                {/* Estimated Time */}
+                {task.estimated_minutes &&
+                  <div className="mt-2 text-xs text-slate-600">
+                    <span className="font-medium">Estimated:</span> {Math.round(task.estimated_minutes / 60)} min
+                  </div>
                 }
               </CardContent>
             </Card>
-            ))}
+            );
+              })}
             </div>
           </div>
         }
