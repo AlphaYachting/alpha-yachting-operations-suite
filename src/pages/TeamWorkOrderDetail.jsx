@@ -672,16 +672,18 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         <p className="text-sm font-bold text-slate-900">#{workOrder.work_order_number || workOrder.id}</p>
       </div>
 
-      {/* Requirements Button */}
-      <div className="px-4 pt-4">
-        <Button
-          onClick={() => setShowRequirements(!showRequirements)}
-          className="w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white shadow-lg"
-        >
-          <ShoppingCart className="h-5 w-5 mr-2" />
-          Requirements & Shopping List
-        </Button>
-      </div>
+      {/* Requirements Button - Only show if requirements exist */}
+      {requirementsCount > 0 && (
+        <div className="px-4 pt-4">
+          <Button
+            onClick={() => setShowRequirements(!showRequirements)}
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white shadow-lg"
+          >
+            <ShoppingCart className="h-5 w-5 mr-2" />
+            Requirements & Shopping List ({requirementsCount})
+          </Button>
+        </div>
+      )}
 
       {/* Requirements Modal */}
       {showRequirements && (
