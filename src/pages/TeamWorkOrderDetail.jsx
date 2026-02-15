@@ -691,7 +691,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
           <div className="bg-white w-full max-h-[90vh] rounded-t-lg flex flex-col overflow-hidden">
             <div className="sticky top-0 flex items-center justify-between p-4 border-b border-slate-200 bg-white">
               <h2 className="text-lg font-semibold text-slate-900">Requirements & Shopping List</h2>
-              <Button variant="ghost" size="icon" onClick={() => setShowRequirements(false)}>
+              <Button variant="outline" size="icon" onClick={() => setShowRequirements(false)} className="border-slate-300 hover:bg-slate-100">
                 <ChevronLeft className="h-5 w-5" />
               </Button>
             </div>
