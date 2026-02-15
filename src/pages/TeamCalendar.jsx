@@ -145,7 +145,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
               variant="outline"
               size="icon"
               onClick={() => onNavigate('home')}
-              className="h-9 w-9 bg-white/90 border-white hover:bg-white text-slate-900"
+              className="h-9 w-9 bg-transparent border-white hover:bg-white/20 text-white"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -154,7 +154,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
               asChild
               variant="outline"
               size="icon"
-              className="h-9 w-9 bg-white/90 border-white hover:bg-white text-slate-900"
+              className="h-9 w-9 bg-transparent border-white hover:bg-white/20 text-white"
             >
               <Link to={createPageUrl('TeamMobileHome')}>
                 <ArrowLeft className="h-5 w-5" />
@@ -170,7 +170,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
             onClick={goToPreviousMonth}
             variant="outline"
             size="icon"
-            className="h-10 w-10 bg-white/90 border-white hover:bg-white text-slate-900"
+            className="h-10 w-10 bg-transparent border-white hover:bg-white/20 text-white"
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -183,7 +183,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
             onClick={goToNextMonth}
             variant="outline"
             size="icon"
-            className="h-10 w-10 bg-white/90 border-white hover:bg-white text-slate-900"
+            className="h-10 w-10 bg-transparent border-white hover:bg-white/20 text-white"
           >
             <ChevronRight className="h-5 w-5" />
           </Button>
@@ -194,7 +194,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
             onClick={goToToday}
             variant="outline"
             size="sm"
-            className="w-full bg-white/90 border-white hover:bg-white text-slate-900"
+            className="w-full bg-transparent border-white hover:bg-white/20 text-white"
           >
             Today
           </Button>
