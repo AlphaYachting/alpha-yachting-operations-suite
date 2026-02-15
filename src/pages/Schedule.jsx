@@ -93,15 +93,30 @@ export default function Schedule() {
 
   const loadData = async () => {
     try {
-      const [woData, jobsData, techData, custData, boatsData, locData, invResData] = await Promise.all([
-        base44.entities.WorkOrder.list('-scheduled_date'),
-        base44.entities.Job.list(),
+      // Load only scheduled work orders and minimal related data
+      const woData = await base44.entities.WorkOrder.filter({
+        status: { $nin: ['Completed', 'Cancelled'] }
+      });
+
+      // Extract unique IDs to fetch only needed related data
+      const jobIds = [...new Set(woData.map(wo => wo.job_id).filter(Boolean))];
+
+      const [jobsData, techData, locData, invResData] = await Promise.all([
+        jobIds.length > 0 ? base44.entities.Job.filter({ id: { $in: jobIds } }) : Promise.resolve([]),
         base44.entities.Technician.list(),
-        base44.entities.Customer.list(),
-        base44.entities.Boat.list(),
         base44.entities.Location.list(),
         base44.entities.InventoryReservation.list()
       ]);
+
+      // Extract boat and customer IDs from jobs
+      const boatIds = [...new Set(jobsData.map(j => j.boat_id).filter(Boolean))];
+      const customerIds = [...new Set(jobsData.map(j => j.customer_id).filter(Boolean))];
+
+      const [boatsData, custData] = await Promise.all([
+        boatIds.length > 0 ? base44.entities.Boat.filter({ id: { $in: boatIds } }) : Promise.resolve([]),
+        customerIds.length > 0 ? base44.entities.Customer.filter({ id: { $in: customerIds } }) : Promise.resolve([])
+      ]);
+
       setWorkOrders(woData);
       setJobs(jobsData);
       setTechnicians(techData);
