@@ -52,8 +52,9 @@ Deno.serve(async (req) => {
     const invite = await base44.asServiceRole.entities.AppInvite.create(inviteData);
 
     // Generate magic link
-    const appDomain = req.headers.get('host');
-    const protocol = req.headers.get('x-forwarded-proto') || 'https';
+    // Use APP_DOMAIN env variable if set, otherwise fall back to request host
+    const appDomain = Deno.env.get('APP_DOMAIN') || req.headers.get('host');
+    const protocol = 'https';
     const magicLink = `${protocol}://${appDomain}/invite?token=${rawToken}`;
 
     // Get recipient name if available
@@ -140,12 +141,55 @@ Deno.serve(async (req) => {
       } else {
         // Fallback to Base44 built-in email (formatted plain text)
         const getPlainTextEmail = (link, name, role) => {
-          const greeting = name ? `Hello ${name},\n\n` : '';
+          const greeting = name ? `Hello ${name},` : 'Hello,';
           
           if (role === 'CUSTOMER') {
-            return `${greeting}You've been invited to access your yacht service projects through our secure mobile app.\n\nTrack work orders, view photos, and stay updated on your boat's maintenance - all in one place.\n\nACCESS YOUR PROJECTS:\n${link}\n\n📱 INSTALL ON YOUR PHONE (Recommended):\n• iPhone (Safari): Tap Share → "Add to Home Screen"\n• Android (Chrome): Tap Menu → "Install app"\n\n🔒 This link is personal and secure. It expires in 7 days.\n\nQuestions? Reply to this email.\n\n---\nAlfons Pirker\nAlpha Yachting\n📧 info@alpha-yachting.hr | 📞 +385 52 757 907`;
+            return `${greeting}
+
+You've been invited to access your yacht service projects through our secure mobile app.
+
+Track work orders, view photos, and stay updated on your boat's maintenance - all in one place.
+
+🔗 ACCESS YOUR PROJECTS:
+${link}
+
+📱 INSTALL ON YOUR PHONE (Recommended):
+• iPhone (Safari): Tap Share → "Add to Home Screen"
+• Android (Chrome): Tap Menu → "Install app"
+
+🔒 This link is personal and secure. It expires in 7 days.
+
+Questions? Reply to this email.
+
+---
+Alfons Pirker
+Alpha Yachting
+📧 info@alpha-yachting.hr
+📞 +385 52 757 907`;
           } else {
-            return `${greeting}Welcome to the Alpha Team! You've been invited to access our mobile technician app.\n\nManage your work orders, complete tasks, log time, and capture photos - all from your phone.\n\nACCESS TEAM APP:\n${link}\n\n📱 INSTALL ON YOUR PHONE (Required):\n• iPhone (Safari): Tap Share → "Add to Home Screen"\n• Android (Chrome): Tap Menu → "Install app"\n\n✅ What you can do:\nView assignments, complete tasks, log hours, upload photos, add notes, and track your work - all offline-ready.\n\n🔒 This link is personal and secure. It expires in 7 days.\n\n---\nAlfons Pirker\nAlpha Yachting\n📧 info@alpha-yachting.hr | 📞 +385 52 757 907`;
+            return `${greeting}
+
+Welcome to the Alpha Team! You've been invited to access our mobile technician app.
+
+Manage your work orders, complete tasks, log time, and capture photos - all from your phone.
+
+🔗 ACCESS TEAM APP:
+${link}
+
+📱 INSTALL ON YOUR PHONE (Required):
+• iPhone (Safari): Tap Share → "Add to Home Screen"
+• Android (Chrome): Tap Menu → "Install app"
+
+✅ What you can do:
+View assignments, complete tasks, log hours, upload photos, add notes, and track your work - all offline-ready.
+
+🔒 This link is personal and secure. It expires in 7 days.
+
+---
+Alfons Pirker
+Alpha Yachting
+📧 info@alpha-yachting.hr
+📞 +385 52 757 907`;
           }
         };
         
