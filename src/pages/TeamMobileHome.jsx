@@ -238,11 +238,10 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
   }
 
-  const WorkOrderCard = ({ workOrder, woTasks }) => {
+  const WorkOrderCard = ({ workOrder, woTasks, showDateHeader }) => {
     const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
     const dayName = woDate ? format(woDate, 'EEE').toUpperCase() : '—';
     const dateString = woDate ? format(woDate, 'd') : '—';
-    const monthString = woDate ? format(woDate, 'MMM') : '—';
     const timeString = workOrder.scheduled_start_time || '—';
     const job = jobs.find((j) => j.id === workOrder.job_id);
     const boat = job?.boat_id ? boats.find((b) => b.id === job.boat_id) : null;
@@ -254,54 +253,54 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
     const cardContent = (
       <>
-        <div className="flex items-stretch">
-          <div className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white pt-2 pr-5 pb-3 pl-4 rounded-lg flex flex-col items-center justify-center min-w-fit shadow-md flex-shrink-0">
-            <p className="text-xs font-bold uppercase tracking-wider">{dayName}</p>
-            <p className="text-2xl font-bold leading-tight mt-1">{dateString}</p>
-            <p className="text-xs opacity-90 mt-0.5">{monthString}</p>
-            {timeString !== '—' && <p className="mt-2 text-sm font-bold">{timeString}</p>}
+        {/* Top Meta Row: Date/Time + Status Badge */}
+        <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-slate-600">
+            <Clock className="h-4 w-4" />
+            <span className="text-xs font-medium">{dayName} {dateString} • {timeString}</span>
           </div>
-
-          <div className="flex-1 p-4 flex flex-col justify-between">
-            <div>
-              <p className="text-xs text-slate-500 font-medium mb-1">#{workOrder.work_order_number || workOrder.id}</p>
-              <p className="text-base font-bold text-slate-900 leading-tight">{workOrder.title}</p>
-              {boat?.vessel_name &&
-                <p className="text-sm text-slate-600 mt-1">{boat.vessel_name}</p>
-              }
-            </div>
-          </div>
-
-          <div className="p-4 flex items-start">
-            <Badge className={`text-xs whitespace-nowrap ${statusBadgeColor}`}>
-              {workOrder.status}
-            </Badge>
-          </div>
+          <Badge className={`text-xs whitespace-nowrap ${statusBadgeColor}`}>
+            {workOrder.status}
+          </Badge>
         </div>
 
-        {location &&
-          <div className="px-4 py-3 border-t border-slate-200">
-            <div className="flex items-center gap-3">
-              <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0" />
-              <p className="text-sm font-medium text-slate-700">{location}</p>
-            </div>
-          </div>
-        }
+        {/* Title Section */}
+        <div className="px-4 pb-3">
+          <p className="text-xs text-slate-500 font-medium mb-1">#{workOrder.work_order_number || workOrder.id}</p>
+          <p className="text-base font-bold text-slate-900 leading-tight">{workOrder.title}</p>
+        </div>
 
-        <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+        {/* Boat & Location */}
+        <div className="px-4 pb-3 space-y-2">
+          {boat?.vessel_name &&
+            <div className="flex items-center gap-2 text-slate-700">
+              <Ship className="h-4 w-4 text-slate-400" />
+              <span className="text-sm">{boat.vessel_name}</span>
+            </div>
+          }
+          {location &&
+            <div className="flex items-center gap-2 text-slate-700">
+              <MapPin className="h-4 w-4 text-slate-400" />
+              <span className="text-sm">{location}</span>
+            </div>
+          }
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-slate-100" />
+
+        {/* Bottom Meta Row: Tasks + Notes */}
+        <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-700">
-            <CheckCircle2 className="h-5 w-5 text-slate-400" />
+            <CheckCircle2 className="h-4 w-4 text-slate-400" />
             <span className="text-sm font-medium">{taskCount} {taskCount === 1 ? 'task' : 'tasks'}</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            {workOrder.internal_notes &&
-              <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-semibold">
-                <span>📝</span>
-                <span>Notes</span>
-              </div>
-            }
-          </div>
+          {workOrder.internal_notes &&
+            <Button variant="outline" size="sm" className="h-7 text-xs">
+              📝 Notes
+            </Button>
+          }
         </div>
       </>
     );
@@ -432,10 +431,26 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         {sections.upcoming.length > 0 &&
           <div>
             <h2 className="text-lg font-bold text-slate-900 mb-3">Upcoming (Next 7 days)</h2>
-            <div className="space-y-3">
-              {sections.upcoming.slice(0, 3).map((wo) =>
-                <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
-              )}
+            <div className="space-y-4">
+              {(() => {
+                const grouped = sections.upcoming.slice(0, 3).reduce((acc, wo) => {
+                  const woDate = wo.scheduled_date ? format(parseISO(wo.scheduled_date), 'EEE d') : 'No date';
+                  if (!acc[woDate]) acc[woDate] = [];
+                  acc[woDate].push(wo);
+                  return acc;
+                }, {});
+
+                return Object.entries(grouped).map(([dateLabel, wos]) => (
+                  <div key={dateLabel}>
+                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">{dateLabel}</h3>
+                    <div className="space-y-3">
+                      {wos.map((wo) =>
+                        <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} showDateHeader={false} />
+                      )}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
         }
