@@ -141,27 +141,70 @@ Alpha Yachting
       }
     };
     
-    // Try to send email via Base44
+    // Try to send email via Resend (if API key is set)
     let emailSent = false;
-    console.log('→ Attempting to send email via Base44...');
-    try {
-      await base44.asServiceRole.integrations.Core.SendEmail({
-        from_name: 'Alpha Yachting',
-        to: email,
-        subject: emailSubject,
-        body: getPlainTextEmail(magicLink, recipientName, role)
-      });
-      emailSent = true;
-      console.log('✓ Email sent successfully');
-    } catch (base44EmailError) {
-      console.error('✗ Base44 email failed:', {
-        name: base44EmailError.name,
-        message: base44EmailError.message,
-        status: base44EmailError.status,
-        response: base44EmailError.response?.data,
-        stack: base44EmailError.stack
-      });
-      // Email failed but invite is created - don't throw error
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const customEmailFrom = Deno.env.get('CUSTOM_EMAIL_FROM');
+    
+    if (resendApiKey) {
+      console.log('→ Attempting to send email via Resend...');
+      try {
+        const resend = new Resend(resendApiKey);
+        await resend.emails.send({
+          from: customEmailFrom || 'noreply@alpha-yachting.hr',
+          to: email,
+          subject: emailSubject,
+          text: getPlainTextEmail(magicLink, recipientName, role)
+        });
+        emailSent = true;
+        console.log('✓ Email sent successfully via Resend');
+      } catch (resendError) {
+        console.error('✗ Resend email failed:', {
+          name: resendError.name,
+          message: resendError.message,
+          stack: resendError.stack
+        });
+        // Fall back to Base44 if Resend fails
+        console.log('→ Falling back to Base44 email...');
+        try {
+          await base44.asServiceRole.integrations.Core.SendEmail({
+            from_name: 'Alpha Yachting',
+            to: email,
+            subject: emailSubject,
+            body: getPlainTextEmail(magicLink, recipientName, role)
+          });
+          emailSent = true;
+          console.log('✓ Email sent successfully via Base44');
+        } catch (base44EmailError) {
+          console.error('✗ Base44 email also failed:', {
+            name: base44EmailError.name,
+            message: base44EmailError.message,
+            status: base44EmailError.status,
+            response: base44EmailError.response?.data,
+            stack: base44EmailError.stack
+          });
+        }
+      }
+    } else {
+      console.log('→ RESEND_API_KEY not set, attempting Base44...');
+      try {
+        await base44.asServiceRole.integrations.Core.SendEmail({
+          from_name: 'Alpha Yachting',
+          to: email,
+          subject: emailSubject,
+          body: getPlainTextEmail(magicLink, recipientName, role)
+        });
+        emailSent = true;
+        console.log('✓ Email sent successfully via Base44');
+      } catch (base44EmailError) {
+        console.error('✗ Base44 email failed:', {
+          name: base44EmailError.name,
+          message: base44EmailError.message,
+          status: base44EmailError.status,
+          response: base44EmailError.response?.data,
+          stack: base44EmailError.stack
+        });
+      }
     }
 
     // Update invite status
