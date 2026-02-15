@@ -55,7 +55,9 @@ Deno.serve(async (req) => {
       send_count: 0
     };
 
+    console.log('→ Creating invite record...');
     const invite = await base44.asServiceRole.entities.AppInvite.create(inviteData);
+    console.log('✓ Invite created:', invite.id);
 
     // Generate magic link
     // Use APP_DOMAIN env variable if set, otherwise fall back to request host
