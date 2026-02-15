@@ -138,12 +138,22 @@ Deno.serve(async (req) => {
           throw new Error('Failed to send email via SendGrid');
         }
       } else {
-        // Fallback to Base44 built-in email (plain text only)
+        // Fallback to Base44 built-in email (formatted plain text)
+        const getPlainTextEmail = (link, name, role) => {
+          const greeting = name ? `Hello ${name},\n\n` : '';
+          
+          if (role === 'CUSTOMER') {
+            return `${greeting}You've been invited to access your yacht service projects through our secure mobile app.\n\nTrack work orders, view photos, and stay updated on your boat's maintenance - all in one place.\n\nACCESS YOUR PROJECTS:\n${link}\n\n📱 INSTALL ON YOUR PHONE (Recommended):\n• iPhone (Safari): Tap Share → "Add to Home Screen"\n• Android (Chrome): Tap Menu → "Install app"\n\n🔒 This link is personal and secure. It expires in 7 days.\n\nQuestions? Reply to this email.\n\n---\nAlfons Pirker\nAlpha Yachting\n📧 info@alpha-yachting.hr | 📞 +385 52 757 907`;
+          } else {
+            return `${greeting}Welcome to the Alpha Team! You've been invited to access our mobile technician app.\n\nManage your work orders, complete tasks, log time, and capture photos - all from your phone.\n\nACCESS TEAM APP:\n${link}\n\n📱 INSTALL ON YOUR PHONE (Required):\n• iPhone (Safari): Tap Share → "Add to Home Screen"\n• Android (Chrome): Tap Menu → "Install app"\n\n✅ What you can do:\nView assignments, complete tasks, log hours, upload photos, add notes, and track your work - all offline-ready.\n\n🔒 This link is personal and secure. It expires in 7 days.\n\n---\nAlfons Pirker\nAlpha Yachting\n📧 info@alpha-yachting.hr | 📞 +385 52 757 907`;
+          }
+        };
+        
         await base44.asServiceRole.integrations.Core.SendEmail({
           from_name: 'Alpha Yachting',
           to: email,
           subject: emailContent.subject,
-          body: emailContent.html.replace(/<[^>]*>/g, '') // Strip HTML for fallback
+          body: getPlainTextEmail(magicLink, recipientName, role)
         });
       }
     } catch (emailError) {
