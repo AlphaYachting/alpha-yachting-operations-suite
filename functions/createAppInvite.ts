@@ -132,42 +132,45 @@ Alpha Yachting
       }
     };
     
+    // Try to send email via Base44
+    let emailSent = false;
     try {
       await base44.asServiceRole.integrations.Core.SendEmail({
         from_name: 'Alpha Yachting',
         to: email,
-        subject: emailContent.subject,
+        subject: emailSubject,
         body: getPlainTextEmail(magicLink, recipientName, role)
       });
+      emailSent = true;
     } catch (base44EmailError) {
       console.error('Base44 email failed:', base44EmailError);
-      
+      // Email failed but invite is created - don't throw error
+    }
+
+    // Update invite status
+    const now = new Date().toISOString();
+    if (emailSent) {
       await base44.asServiceRole.entities.AppInvite.update(invite.id, {
-        status: 'CREATED'
+        status: 'SENT',
+        sent_at: now,
+        last_sent_at: now,
+        send_count: 1
       });
       
       return Response.json({ 
-        success: false,
+        success: true, 
         invite_id: invite.id,
-        error: 'Email rate limit reached. Please wait 5 minutes and resend from the invitations page.',
-        message: 'Invite created but email could not be sent.'
-      }, { status: 207 });
+        message: 'Invite sent successfully'
+      });
+    } else {
+      // Keep status as CREATED - can be resent later
+      return Response.json({ 
+        success: true,
+        invite_id: invite.id,
+        magic_link: magicLink,
+        warning: 'Invite created but email rate limited. You can copy the link above or resend from the invitations page in a few minutes.'
+      }, { status: 201 });
     }
-
-    // Update invite status to SENT
-    const now = new Date().toISOString();
-    await base44.asServiceRole.entities.AppInvite.update(invite.id, {
-      status: 'SENT',
-      sent_at: now,
-      last_sent_at: now,
-      send_count: 1
-    });
-
-    return Response.json({ 
-      success: true, 
-      invite_id: invite.id,
-      message: 'Invite sent successfully'
-    });
   } catch (error) {
     console.error('Error creating invite:', error);
     return Response.json({ error: error.message }, { status: 500 });
