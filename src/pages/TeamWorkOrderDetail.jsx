@@ -442,6 +442,14 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
       setTasks(tasksData || []);
       setPhotos(photosData || []);
 
+      // Load requirements count
+      try {
+        const requirementsData = await base44.entities.WorkOrderRequirementItem.filter({ work_order_id: effectiveWoId });
+        setRequirementsCount(requirementsData?.length || 0);
+      } catch (error) {
+        setRequirementsCount(0);
+      }
+
       // Load comments
       let commentsData = [];
       try {
