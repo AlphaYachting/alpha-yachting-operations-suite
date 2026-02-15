@@ -142,6 +142,7 @@ Alpha Yachting
     
     // Try to send email via Base44
     let emailSent = false;
+    console.log('→ Attempting to send email via Base44...');
     try {
       await base44.asServiceRole.integrations.Core.SendEmail({
         from_name: 'Alpha Yachting',
@@ -150,8 +151,15 @@ Alpha Yachting
         body: getPlainTextEmail(magicLink, recipientName, role)
       });
       emailSent = true;
+      console.log('✓ Email sent successfully');
     } catch (base44EmailError) {
-      console.error('Base44 email failed:', base44EmailError);
+      console.error('✗ Base44 email failed:', {
+        name: base44EmailError.name,
+        message: base44EmailError.message,
+        status: base44EmailError.status,
+        response: base44EmailError.response?.data,
+        stack: base44EmailError.stack
+      });
       // Email failed but invite is created - don't throw error
     }
 
