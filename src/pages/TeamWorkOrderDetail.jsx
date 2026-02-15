@@ -212,8 +212,6 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
   const [requirementsCount, setRequirementsCount] = useState(0);
 
   useEffect(() => {
-    logAccessStart();
-    loadData();
     const loadUser = async () => {
       try {
         const userData = await base44.auth.me();
@@ -223,6 +221,8 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
       }
     };
     loadUser();
+    loadData(); // Cache-first loading
+    logAccessStart();
 
     // Monitor connection status
     const unsubscribe = connectionMonitor.subscribe((status) => {
@@ -368,6 +368,38 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         return;
       }
 
+      // INSTANT DISPLAY: Load all cached data first
+      const cachedWo = await offlineStorage.getData(offlineStorage.STORES.workOrders, effectiveWoId);
+      if (cachedWo) {
+        setWorkOrder(cachedWo);
+        
+        // Load all cached data in parallel
+        Promise.all([
+          cachedWo.job_id ? offlineStorage.getData(offlineStorage.STORES.jobs, cachedWo.job_id) : Promise.resolve(null),
+          offlineStorage.getByIndex(offlineStorage.STORES.tasks, 'work_order_id', effectiveWoId),
+          offlineStorage.getByIndex(offlineStorage.STORES.photos, 'work_order_id', effectiveWoId),
+          offlineStorage.getByIndex(offlineStorage.STORES.comments, 'work_order_id', effectiveWoId)
+        ]).then(async ([cachedJob, cachedTasks, cachedPhotos, cachedComments]) => {
+          setJob(cachedJob || null);
+          setTasks(cachedTasks || []);
+          setPhotos(cachedPhotos || []);
+          setComments(cachedComments || []);
+
+          // Load cached location and boat
+          if (cachedJob?.location_id) {
+            const loc = await offlineStorage.getData(offlineStorage.STORES.locations, cachedJob.location_id);
+            setLocation(loc || null);
+          }
+          if (cachedJob?.boat_id) {
+            const boat = await offlineStorage.getData(offlineStorage.STORES.boats, cachedJob.boat_id);
+            setBoat(boat || null);
+          }
+
+          setLoading(false); // Show cached data immediately
+        });
+      }
+
+      // Then refresh with server data in background
       let woData, jobData, tasksData, photosData, locationData, boatData, commentsData;
 
       try {
