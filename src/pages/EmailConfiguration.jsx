@@ -27,7 +27,11 @@ export default function EmailConfiguration() {
           <strong>Current Status:</strong> Without custom email setup, the system uses Base44's built-in email (from noreply@base44.com). 
           Configure a custom email service below for branded emails from your domain.
           <br /><br />
-          <strong>To add API keys:</strong> Open your Base44 builder → Click the ⚙️ icon in the bottom left → Settings → Environment Variables
+          <strong>To add API keys:</strong> Open your Base44 dashboard at{' '}
+          <a href="https://www.base44.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
+            base44.com
+          </a>
+          {' '}→ Select your app → Code → Functions → Click "Set Secrets" button (or use the set_secrets tool via the AI assistant)
         </AlertDescription>
       </Alert>
 
@@ -86,7 +90,7 @@ export default function EmailConfiguration() {
                   <h3 className="font-semibold text-slate-900">Add Secrets to Base44</h3>
                 </div>
                 <div className="ml-9 space-y-3">
-                  <p className="text-sm text-slate-600">Go to your Base44 app Dashboard → Settings → Environment Variables and add:</p>
+                  <p className="text-sm text-slate-600">Go to <a href="https://www.base44.com" target="_blank" rel="noopener noreferrer" className="underline text-blue-600">base44.com</a> → Your App → Code → Functions → "Set Secrets" and add:</p>
                   
                   <div className="space-y-2">
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
@@ -189,7 +193,7 @@ export default function EmailConfiguration() {
                   <h3 className="font-semibold text-slate-900">Add Secrets to Base44</h3>
                 </div>
                 <div className="ml-9 space-y-3">
-                  <p className="text-sm text-slate-600">Go to Base44 Dashboard → Settings → Environment Variables and add:</p>
+                  <p className="text-sm text-slate-600">Go to <a href="https://www.base44.com" target="_blank" rel="noopener noreferrer" className="underline text-blue-600">base44.com</a> → Your App → Code → Functions → "Set Secrets" and add:</p>
                   
                   <div className="space-y-2">
                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
