@@ -176,21 +176,18 @@ function RequirementsModal({ workOrderId }) {
   );
 }
 
-// Get IP address info
-const getClientInfo = async () => {
-  try {
-    const response = await fetch('https://api.ipify.org?format=json');
-    const data = await response.json();
-    return {
-      ip_address: data.ip,
-      device_info: `${navigator.userAgent.substring(0, 200)}`
-    };
-  } catch (error) {
-    return {
-      ip_address: null,
-      device_info: navigator.userAgent.substring(0, 200)
-    };
-  }
+// Get IP address info (non-blocking)
+const getClientInfo = () => {
+  // Start fetch but don't block on it
+  const ipPromise = fetch('https://api.ipify.org?format=json')
+    .then(res => res.json())
+    .then(data => data.ip)
+    .catch(() => null);
+
+  return {
+    ip_address_promise: ipPromise,
+    device_info: navigator.userAgent.substring(0, 200)
+  };
 };
 
 export default function TeamWorkOrderDetail({ woId, onNavigate }) {
@@ -279,23 +276,23 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
 
   const logAccessStart = async () => {
     try {
-      if (!user?.id) return; // Validate user is authenticated
+      if (!user?.id) return;
       
       const params = new URLSearchParams(window.location.search);
       const woId = params.get('woId');
       
       if (!woId) return;
 
-      // Get client info silently (don't block UI)
-      const clientInfo = await getClientInfo();
+      // Get client info (non-blocking)
+      const clientInfo = getClientInfo();
       
-      // Create access log entry
+      // Create log entry immediately with device info
       const logEntry = {
         work_order_id: woId,
         technician_id: user.id,
         technician_email: user.email,
         accessed_at: new Date().toISOString(),
-        ip_address: clientInfo.ip_address,
+        ip_address: null, // Will update async
         device_info: clientInfo.device_info
       };
 
@@ -303,14 +300,18 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         try {
           const savedLog = await base44.entities.WorkOrderAccessLog.create(logEntry);
           setAccessLogId(savedLog.id);
-          // Store backup ID in sessionStorage for recovery
           sessionStorage.setItem(`accessLog_${woId}`, savedLog.id);
+          
+          // Update IP async (non-blocking)
+          clientInfo.ip_address_promise.then(ip => {
+            if (ip && savedLog.id) {
+              base44.entities.WorkOrderAccessLog.update(savedLog.id, { ip_address: ip }).catch(() => {});
+            }
+          });
         } catch (error) {
           console.error('Error logging access:', error);
-          // Fallback: store in local state for potential retry
         }
       } else {
-        // Offline: queue for sync
         await offlineStorage.save(offlineStorage.STORES.workOrderAccessLogs, logEntry);
       }
     } catch (error) {
@@ -367,30 +368,47 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         return;
       }
 
-      let woData, jobData, tasksData, photosData;
+      let woData, jobData, tasksData, photosData, locationData, boatData, commentsData;
 
       try {
-        // Try to load from server
-        [woData, jobData, tasksData, photosData] = await Promise.all([
-          base44.entities.WorkOrder.filter({ id: effectiveWoId }),
-          base44.entities.Job.filter({ id: await offlineStorage.getData(offlineStorage.STORES.workOrders, effectiveWoId).then(wo => wo?.job_id) }),
+        // Optimize: Fetch WO first, then batch related data
+        woData = await base44.entities.WorkOrder.filter({ id: effectiveWoId });
+        
+        if (!woData || woData.length === 0) {
+          throw new Error('Work order not found');
+        }
+
+        const wo = woData[0];
+        const jobId = wo.job_id;
+
+        // Batch all related data in one parallel fetch
+        [jobData, tasksData, photosData, commentsData] = await Promise.all([
+          jobId ? base44.entities.Job.filter({ id: jobId }) : Promise.resolve([]),
           base44.entities.Task.filter({ work_order_id: effectiveWoId }),
-          base44.entities.WorkOrderPhoto.filter({ work_order_id: effectiveWoId })
+          base44.entities.WorkOrderPhoto.filter({ work_order_id: effectiveWoId }),
+          base44.entities.WorkOrderComment.filter({ work_order_id: effectiveWoId })
         ]);
 
+        const job = jobData?.[0];
+        
+        // Fetch location and boat in parallel only if needed
+        if (job) {
+          [locationData, boatData] = await Promise.all([
+            job.location_id ? base44.entities.Location.filter({ id: job.location_id }) : Promise.resolve([]),
+            job.boat_id ? base44.entities.Boat.filter({ id: job.boat_id }) : Promise.resolve([])
+          ]);
+        }
+
         // Cache data for offline access
-        if (woData && woData.length > 0) {
-          await offlineStorage.saveData(offlineStorage.STORES.workOrders, woData[0]);
-        }
-        if (jobData && jobData.length > 0) {
-          await offlineStorage.saveData(offlineStorage.STORES.jobs, jobData[0]);
-        }
-        if (tasksData) {
-          await offlineStorage.saveMultiple(offlineStorage.STORES.tasks, tasksData);
-        }
-        if (photosData) {
-          await offlineStorage.saveMultiple(offlineStorage.STORES.photos, photosData);
-        }
+        await Promise.all([
+          offlineStorage.saveData(offlineStorage.STORES.workOrders, wo),
+          job ? offlineStorage.saveData(offlineStorage.STORES.jobs, job) : Promise.resolve(),
+          offlineStorage.saveMultiple(offlineStorage.STORES.tasks, tasksData || []),
+          offlineStorage.saveMultiple(offlineStorage.STORES.photos, photosData || []),
+          offlineStorage.saveMultiple(offlineStorage.STORES.comments, commentsData || []),
+          locationData?.[0] ? offlineStorage.saveData(offlineStorage.STORES.locations, locationData[0]) : Promise.resolve(),
+          boatData?.[0] ? offlineStorage.saveData(offlineStorage.STORES.boats, boatData[0]) : Promise.resolve()
+        ]);
       } catch (error) {
         // Fall back to offline data
         const cachedWo = await offlineStorage.getData(offlineStorage.STORES.workOrders, effectiveWoId);
@@ -403,9 +421,20 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
           return;
         }
         woData = [cachedWo];
-        jobData = [await offlineStorage.getData(offlineStorage.STORES.jobs, cachedWo.job_id)];
+        const cachedJob = await offlineStorage.getData(offlineStorage.STORES.jobs, cachedWo.job_id);
+        jobData = cachedJob ? [cachedJob] : [];
         tasksData = await offlineStorage.getByIndex(offlineStorage.STORES.tasks, 'work_order_id', effectiveWoId) || [];
         photosData = await offlineStorage.getByIndex(offlineStorage.STORES.photos, 'work_order_id', effectiveWoId) || [];
+        commentsData = await offlineStorage.getByIndex(offlineStorage.STORES.comments, 'work_order_id', effectiveWoId) || [];
+        
+        if (cachedJob?.location_id) {
+          const loc = await offlineStorage.getData(offlineStorage.STORES.locations, cachedJob.location_id);
+          locationData = loc ? [loc] : [];
+        }
+        if (cachedJob?.boat_id) {
+          const boat = await offlineStorage.getData(offlineStorage.STORES.boats, cachedJob.boat_id);
+          boatData = boat ? [boat] : [];
+        }
       }
 
       if (!woData || woData.length === 0) {
@@ -419,46 +448,17 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
 
       const wo = woData[0];
       setWorkOrder(wo);
-
-      if (jobData && jobData.length > 0) {
-        const j = jobData[0];
-        setJob(j);
-
-        if (j?.location_id) {
-          const cachedLoc = await offlineStorage.getData(offlineStorage.STORES.locations, j.location_id);
-          if (cachedLoc) {
-            setLocation(cachedLoc);
-          }
-        }
-
-        if (j?.boat_id) {
-          const cachedBoat = await offlineStorage.getData(offlineStorage.STORES.boats, j.boat_id);
-          if (cachedBoat) {
-            setBoat(cachedBoat);
-          }
-        }
-      }
-
+      setJob(jobData?.[0] || null);
+      setLocation(locationData?.[0] || null);
+      setBoat(boatData?.[0] || null);
       setTasks(tasksData || []);
       setPhotos(photosData || []);
+      setComments(commentsData || []);
 
-      // Load requirements count
-      try {
-        const requirementsData = await base44.entities.WorkOrderRequirementItem.filter({ work_order_id: effectiveWoId });
-        setRequirementsCount(requirementsData?.length || 0);
-      } catch (error) {
-        setRequirementsCount(0);
-      }
-
-      // Load comments
-      let commentsData = [];
-      try {
-        commentsData = await base44.entities.WorkOrderComment.filter({ work_order_id: effectiveWoId });
-        await offlineStorage.saveMultiple(offlineStorage.STORES.comments, commentsData);
-      } catch (error) {
-        commentsData = await offlineStorage.getByIndex(offlineStorage.STORES.comments, 'work_order_id', effectiveWoId) || [];
-      }
-      setComments(commentsData);
+      // Load requirements count (non-blocking)
+      base44.entities.WorkOrderRequirementItem.filter({ work_order_id: effectiveWoId })
+        .then(data => setRequirementsCount(data?.length || 0))
+        .catch(() => setRequirementsCount(0));
     } catch (error) {
       console.error('Error loading work order detail:', error);
     } finally {
@@ -575,23 +575,26 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         completed_at: now
       };
 
-      // Optimistic update
+      // Optimistic update (no reload needed)
       setTasks(tasks.map((t) => t.id === taskId ? updatedTask : t));
 
+      // Save to cache first
+      await offlineStorage.saveData(offlineStorage.STORES.tasks, updatedTask);
+
+      // Sync to server
       if (isOnline) {
         await base44.entities.Task.update(taskId, { 
           status: 'Completed',
           completed_at: now
         });
       } else {
-        // Queue for offline sync
         await syncQueue.addToQueue('Task', 'update', { status: 'Completed', completed_at: now }, taskId);
         setPendingChanges(prev => [...prev, { entity: 'Task', id: taskId }]);
       }
-
-      await offlineStorage.saveData(offlineStorage.STORES.tasks, updatedTask);
     } catch (error) {
       console.error('Error completing task:', error);
+      // Revert optimistic update on error
+      setTasks(tasks.map((t) => t.id === taskId ? tasks.find(t => t.id === taskId) : t));
     } finally {
       setUpdatingTaskId(null);
     }

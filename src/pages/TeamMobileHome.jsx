@@ -52,38 +52,26 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
-      let tasksData, workOrdersData, locationsData, techniciansData, boatsData, jobsData;
+      let tasksData, workOrdersData, locationsData, boatsData, jobsData;
 
       try {
-        // CRITICAL FIX: Map User.id → Technician.id
-        // Load all technicians first to find the match
-        const allTechnicians = await base44.entities.Technician.list();
-        
-        // Find technician linked to current user
+        // Optimize: Find technician without loading full list
         let technicianId;
         if (previewUserId) {
-          // Preview mode: use provided technician ID directly
           technicianId = previewUserId;
         } else {
-          // Production mode: find technician by user_id OR email
-          const matchedTech = allTechnicians.find(t => 
-            t.user_id === currentUser?.id || 
-            t.email === currentUser?.email
-          );
-          technicianId = matchedTech?.id;
+          // Fetch only matching technician by email filter
+          const matchedTechs = await base44.entities.Technician.filter({
+            $or: [
+              { user_id: currentUser?.id },
+              { email: currentUser?.email }
+            ]
+          });
+          technicianId = matchedTechs?.[0]?.id;
         }
 
-        console.log('🔍 DEBUG - Mobile Auth Mapping:', {
-          userEmail: currentUser?.email,
-          userId: currentUser?.id,
-          resolvedTechnicianId: technicianId,
-          isPreviewMode: !!previewUserId
-        });
-
-        // Store resolved technician ID for grouping function
         setResolvedTechnicianId(technicianId);
 
-        // If no technician found, show empty state (no work orders assigned)
         if (!technicianId) {
           console.warn('⚠️ No Technician record found for user:', currentUser?.email);
           setWorkOrders([]);
@@ -95,18 +83,32 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           return;
         }
 
-        // Filter work orders by resolved Technician.id
-        [tasksData, workOrdersData, locationsData, boatsData, jobsData] = await Promise.all([
-          base44.entities.Task.list(),
-          base44.entities.WorkOrder.filter({
-            $or: [
-              { assigned_technicians: { $in: [technicianId] } },
-              { lead_technician_id: technicianId }
-            ]
-          }),
-          base44.entities.Location.list(),
-          base44.entities.Boat.list(),
-          base44.entities.Job.list()
+        // Fetch work orders first to know what we need
+        workOrdersData = await base44.entities.WorkOrder.filter({
+          $or: [
+            { assigned_technicians: { $in: [technicianId] } },
+            { lead_technician_id: technicianId }
+          ]
+        });
+
+        // Extract unique IDs from work orders to fetch only needed data
+        const jobIds = [...new Set(workOrdersData.map(wo => wo.job_id).filter(Boolean))];
+        const woIds = workOrdersData.map(wo => wo.id);
+
+        // Fetch only related data in parallel
+        [tasksData, jobsData] = await Promise.all([
+          base44.entities.Task.filter({ work_order_id: { $in: woIds } }),
+          jobIds.length > 0 ? base44.entities.Job.filter({ id: { $in: jobIds } }) : Promise.resolve([])
+        ]);
+
+        // Extract location and boat IDs from jobs
+        const locationIds = [...new Set(jobsData.map(j => j.location_id).filter(Boolean))];
+        const boatIds = [...new Set(jobsData.map(j => j.boat_id).filter(Boolean))];
+
+        // Fetch only needed locations and boats
+        [locationsData, boatsData] = await Promise.all([
+          locationIds.length > 0 ? base44.entities.Location.filter({ id: { $in: locationIds } }) : Promise.resolve([]),
+          boatIds.length > 0 ? base44.entities.Boat.filter({ id: { $in: boatIds } }) : Promise.resolve([])
         ]);
 
         console.log('✅ Work Orders Found:', workOrdersData?.length || 0);
@@ -238,14 +240,20 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
   }
 
-  const WorkOrderCard = ({ workOrder, woTasks, showDateHeader }) => {
-    const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
-    const dayName = woDate ? format(woDate, 'EEE').toUpperCase() : '—';
-    const dateString = woDate ? format(woDate, 'd') : '—';
-    const timeString = workOrder.scheduled_start_time || '—';
-    const job = jobs.find((j) => j.id === workOrder.job_id);
-    const boat = job?.boat_id ? boats.find((b) => b.id === job.boat_id) : null;
-    const location = getLocationName(job?.location_id);
+  const WorkOrderCard = React.memo(({ workOrder, woTasks, showDateHeader }) => {
+    // Memoize expensive date operations
+    const { dayName, dateString, timeString } = React.useMemo(() => {
+      const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
+      return {
+        dayName: woDate ? format(woDate, 'EEE').toUpperCase() : '—',
+        dateString: woDate ? format(woDate, 'd') : '—',
+        timeString: workOrder.scheduled_start_time || '—'
+      };
+    }, [workOrder.scheduled_date, workOrder.scheduled_start_time]);
+
+    const job = React.useMemo(() => jobs.find((j) => j.id === workOrder.job_id), [workOrder.job_id]);
+    const boat = React.useMemo(() => job?.boat_id ? boats.find((b) => b.id === job.boat_id) : null, [job?.boat_id]);
+    const location = React.useMemo(() => getLocationName(job?.location_id), [job?.location_id]);
     const taskCount = woTasks?.length || 0;
     const statusBadgeColor = workOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
     workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
@@ -328,7 +336,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         {cardContent}
       </Link>
     );
-  };
+  });
 
 
 

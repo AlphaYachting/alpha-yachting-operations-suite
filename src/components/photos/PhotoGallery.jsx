@@ -132,6 +132,7 @@ export default function PhotoGallery({ photos, tasks, onPhotoDeleted, onPhotoUpd
                 src={photo.thumb_url || photo.file_url}
                 alt={photo.caption || 'Work order photo'}
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all" />
               <Badge 
@@ -189,6 +190,7 @@ export default function PhotoGallery({ photos, tasks, onPhotoDeleted, onPhotoUpd
                   src={currentPhoto.file_url}
                   alt={currentPhoto.caption || 'Work order photo'}
                   className="max-w-full max-h-full object-contain"
+                  loading="eager"
                 />
               )}
             </div>

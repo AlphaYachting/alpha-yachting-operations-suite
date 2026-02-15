@@ -56,16 +56,22 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
           return;
         }
 
-        // Filter work orders by resolved Technician.id
-        [workOrdersData, jobsData, boatsData] = await Promise.all([
-          base44.entities.WorkOrder.filter({
-            $or: [
-              { assigned_technicians: { $in: [technicianId] } },
-              { lead_technician_id: technicianId }
-            ]
-          }),
-          base44.entities.Job.list(),
-          base44.entities.Boat.list()
+        // Fetch work orders first
+        workOrdersData = await base44.entities.WorkOrder.filter({
+          $or: [
+            { assigned_technicians: { $in: [technicianId] } },
+            { lead_technician_id: technicianId }
+          ]
+        });
+
+        // Only fetch jobs and boats that are referenced
+        const jobIds = [...new Set(workOrdersData.map(wo => wo.job_id).filter(Boolean))];
+
+        [jobsData, boatsData] = await Promise.all([
+          jobIds.length > 0 ? base44.entities.Job.filter({ id: { $in: jobIds } }) : Promise.resolve([]),
+          jobIds.length > 0 ? base44.entities.Boat.filter({ 
+            id: { $in: [...new Set(jobsData?.map(j => j.boat_id).filter(Boolean) || [])] } 
+          }) : Promise.resolve([])
         ]);
 
         console.log('✅ Calendar Work Orders Found:', workOrdersData?.length || 0);
