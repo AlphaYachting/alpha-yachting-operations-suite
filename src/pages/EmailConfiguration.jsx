@@ -27,11 +27,7 @@ export default function EmailConfiguration() {
           <strong>Current Status:</strong> Without custom email setup, the system uses Base44's built-in email (from noreply@base44.com). 
           Configure a custom email service below for branded emails from your domain.
           <br /><br />
-          <strong>To add API keys:</strong> Open your Base44 dashboard at{' '}
-          <a href="https://www.base44.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
-            base44.com
-          </a>
-          {' '}→ Select your app → Code → Functions → Click "Set Secrets" button (or use the set_secrets tool via the AI assistant)
+          <strong>To add API keys:</strong> Ask your AI assistant to "set up email secrets" or use the form that appears when you request email configuration. The secrets are already configured in your app - you just need to provide the values.
         </AlertDescription>
       </Alert>
 
