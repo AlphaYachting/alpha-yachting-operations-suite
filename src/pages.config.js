@@ -111,6 +111,7 @@ import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
 import AppInvites from './pages/AppInvites';
+import EmailConfiguration from './pages/EmailConfiguration';
 import __Layout from './Layout.jsx';
 
 
@@ -179,6 +180,7 @@ export const PAGES = {
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
     "AppInvites": AppInvites,
+    "EmailConfiguration": EmailConfiguration,
 }
 
 export const pagesConfig = {

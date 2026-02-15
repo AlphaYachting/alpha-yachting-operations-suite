@@ -24,6 +24,12 @@ export default function Settings() {
 
   const settingsCategories = [
     {
+      title: 'Email Configuration',
+      description: 'Setup custom email service for app invitations',
+      icon: Mail,
+      page: 'EmailConfiguration'
+    },
+    {
       title: 'Notification Preferences',
       description: 'Configure when and how you receive notifications',
       icon: Bell,
