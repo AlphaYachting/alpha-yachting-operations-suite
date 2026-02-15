@@ -2,20 +2,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   try {
-    console.log('=== INVITE CREATE START ===');
     const base44 = createClientFromRequest(req);
-    console.log('✓ SDK initialized');
-    
     const user = await base44.auth.me();
-    console.log('✓ User authenticated:', user?.email);
 
     if (!user || user.role !== 'admin') {
-      console.log('✗ Unauthorized user');
       return Response.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
     }
 
     const { email, role, customer_id, technician_id, job_id, work_order_id } = await req.json();
-    console.log('✓ Payload:', { email, role });
 
     if (!email || !role) {
       return Response.json({ error: 'Email and role are required' }, { status: 400 });
@@ -55,193 +49,57 @@ Deno.serve(async (req) => {
       send_count: 0
     };
 
-    console.log('→ Creating invite record...');
     const invite = await base44.asServiceRole.entities.AppInvite.create(inviteData);
-    console.log('✓ Invite created:', invite.id);
 
     // Generate magic link
-    // Use APP_DOMAIN env variable if set, otherwise fall back to request host
     const appDomain = Deno.env.get('APP_DOMAIN') || req.headers.get('host');
     const protocol = 'https';
     const magicLink = `${protocol}://${appDomain}/invite?token=${rawToken}`;
-
-    // Get recipient name if available
-    let recipientName = null;
-    if (customer_id) {
-      try {
-        const customer = await base44.asServiceRole.entities.Customer.get(customer_id);
-        recipientName = customer.first_name || null;
-      } catch (e) {
-        console.log('Could not fetch customer name');
-      }
-    } else if (technician_id) {
-      try {
-        const tech = await base44.asServiceRole.entities.Technician.get(technician_id);
-        recipientName = tech.first_name || null;
-      } catch (e) {
-        console.log('Could not fetch technician name');
-      }
-    }
 
     // Generate email subject and body
     const emailSubject = role === 'CUSTOMER' 
       ? '🚢 Welcome to Alpha Yachting App'
       : '🔧 Welcome to Alpha Team App';
-    const getPlainTextEmail = (link, name, role) => {
-      const greeting = name ? `Hello ${name},` : 'Hello,';
+    
+    const emailBody = role === 'CUSTOMER' 
+      ? `Hello,\n\nYou've been invited to access your yacht service projects through our secure mobile app.\n\nAccess your projects:\n${magicLink}\n\n🔒 This link expires in 7 days.\n\nAlpha Yachting`
+      : `Hello,\n\nWelcome to the Alpha Team! Access the technician app:\n${magicLink}\n\n🔒 This link expires in 7 days.\n\nAlpha Yachting`;
+
+    // Send email (non-blocking, don't fail if it doesn't work)
+    try {
+      await base44.asServiceRole.integrations.Core.SendEmail({
+        from_name: 'Alpha Yachting',
+        to: email,
+        subject: emailSubject,
+        body: emailBody
+      });
       
-      if (role === 'CUSTOMER') {
-        return `${greeting}
-
-You've been invited to access your yacht service projects through our secure mobile app.
-
-Track work orders, view photos, and stay updated on your boat's maintenance - all in one place.
-
-🔗 ACCESS YOUR PROJECTS:
-${link}
-
-📱 INSTALL ON YOUR PHONE (Recommended):
-• iPhone (Safari): Tap Share → "Add to Home Screen"
-• Android (Chrome): Tap Menu → "Install app"
-
-🔒 This link is personal and secure. It expires in 7 days.
-
-Questions? Reply to this email.
-
----
-Alfons Pirker
-Alpha Yachting
-📧 info@alpha-yachting.hr
-📞 +385 52 757 907`;
-      } else {
-        return `${greeting}
-
-Welcome to the Alpha Team! You've been invited to access our mobile technician app.
-
-Manage your work orders, complete tasks, log time, and capture photos - all from your phone.
-
-🔗 ACCESS TEAM APP:
-${link}
-
-📱 INSTALL ON YOUR PHONE (Required):
-• iPhone (Safari): Tap Share → "Add to Home Screen"
-• Android (Chrome): Tap Menu → "Install app"
-
-✅ What you can do:
-View assignments, complete tasks, log hours, upload photos, add notes, and track your work - all offline-ready.
-
-🔒 This link is personal and secure. It expires in 7 days.
-
----
-Alfons Pirker
-Alpha Yachting
-📧 info@alpha-yachting.hr
-📞 +385 52 757 907`;
-      }
-    };
-    
-    // Try to send email via Resend (if API key is set)
-    let emailSent = false;
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    const customEmailFrom = Deno.env.get('CUSTOM_EMAIL_FROM');
-    
-    if (resendApiKey) {
-      console.log('→ Attempting to send email via Resend...');
-      try {
-        const resend = new Resend(resendApiKey);
-        await resend.emails.send({
-          from: customEmailFrom || 'noreply@alpha-yachting.hr',
-          to: email,
-          subject: emailSubject,
-          text: getPlainTextEmail(magicLink, recipientName, role)
-        });
-        emailSent = true;
-        console.log('✓ Email sent successfully via Resend');
-      } catch (resendError) {
-        console.error('✗ Resend email failed:', {
-          name: resendError.name,
-          message: resendError.message,
-          stack: resendError.stack
-        });
-        // Fall back to Base44 if Resend fails
-        console.log('→ Falling back to Base44 email...');
-        try {
-          await base44.asServiceRole.integrations.Core.SendEmail({
-            from_name: 'Alpha Yachting',
-            to: email,
-            subject: emailSubject,
-            body: getPlainTextEmail(magicLink, recipientName, role)
-          });
-          emailSent = true;
-          console.log('✓ Email sent successfully via Base44');
-        } catch (base44EmailError) {
-          console.error('✗ Base44 email also failed:', {
-            name: base44EmailError.name,
-            message: base44EmailError.message,
-            status: base44EmailError.status,
-            response: base44EmailError.response?.data,
-            stack: base44EmailError.stack
-          });
-        }
-      }
-    } else {
-      console.log('→ RESEND_API_KEY not set, attempting Base44...');
-      try {
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          from_name: 'Alpha Yachting',
-          to: email,
-          subject: emailSubject,
-          body: getPlainTextEmail(magicLink, recipientName, role)
-        });
-        emailSent = true;
-        console.log('✓ Email sent successfully via Base44');
-      } catch (base44EmailError) {
-        console.error('✗ Base44 email failed:', {
-          name: base44EmailError.name,
-          message: base44EmailError.message,
-          status: base44EmailError.status,
-          response: base44EmailError.response?.data,
-          stack: base44EmailError.stack
-        });
-      }
-    }
-
-    // Update invite status
-    const now = new Date().toISOString();
-    if (emailSent) {
-      console.log('→ Updating invite to SENT...');
+      // Mark as SENT if email succeeded
+      const now = new Date().toISOString();
       await base44.asServiceRole.entities.AppInvite.update(invite.id, {
         status: 'SENT',
         sent_at: now,
         last_sent_at: now,
         send_count: 1
       });
-      console.log('=== INVITE CREATE SUCCESS (SENT) ===');
-      
+
       return Response.json({ 
         success: true, 
         invite_id: invite.id,
         message: 'Invite sent successfully'
       });
-    } else {
-      console.log('=== INVITE CREATE SUCCESS (EMAIL SKIPPED) ===');
-      // Keep status as CREATED - can be resent later
+    } catch (emailError) {
+      // Email failed but invite is created - still return success
+      console.log('Email send skipped (rate limited or not configured)');
       return Response.json({ 
         success: true,
         invite_id: invite.id,
         magic_link: magicLink,
-        warning: 'Invite created but email rate limited. You can copy the link above or resend from the invitations page in a few minutes.'
-      }, { status: 201 });
+        message: 'Invite created. Email sending temporarily unavailable - use the link above.'
+      });
     }
   } catch (error) {
-    console.error('=== INVITE CREATE ERROR ===');
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      status: error.status,
-      response: error.response,
-      stack: error.stack
-    });
+    console.error('Invite creation error:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
