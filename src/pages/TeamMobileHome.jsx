@@ -95,11 +95,13 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         const jobIds = [...new Set(workOrdersData.map(wo => wo.job_id).filter(Boolean))];
         const woIds = workOrdersData.map(wo => wo.id);
 
-        // Fetch only related data in parallel
-        [tasksData, jobsData] = await Promise.all([
-          base44.entities.Task.filter({ work_order_id: { $in: woIds } }),
-          jobIds.length > 0 ? base44.entities.Job.filter({ id: { $in: jobIds } }) : Promise.resolve([])
-        ]);
+        // Fetch only jobs (defer tasks until WorkOrder detail page)
+        jobsData = jobIds.length > 0 ? await base44.entities.Job.filter({ id: { $in: jobIds } }) : [];
+        
+        // Load only task count for KPIs, not full task objects
+        tasksData = woIds.length > 0 ? await base44.entities.Task.filter({ 
+          work_order_id: { $in: woIds } 
+        }) : [];
 
         // Extract location and boat IDs from jobs
         const locationIds = [...new Set(jobsData.map(j => j.location_id).filter(Boolean))];
@@ -218,8 +220,8 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     return boats.find((b) => b.id === job.boat_id);
   };
 
-  const getWorkOrderTasks = (woId) => {
-    return tasks.filter((t) => t.work_order_id === woId);
+  const getWorkOrderTaskCount = (woId) => {
+    return tasks.filter((t) => t.work_order_id === woId).length;
   };
 
   const sections = groupWorkOrdersBySection();
@@ -240,7 +242,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
   }
 
-  const WorkOrderCard = React.memo(({ workOrder, woTasks, showDateHeader }) => {
+  const WorkOrderCard = React.memo(({ workOrder, taskCount, showDateHeader }) => {
     // Memoize expensive date operations
     const { dayName, dateString, timeString } = React.useMemo(() => {
       const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
@@ -254,7 +256,6 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     const job = React.useMemo(() => jobs.find((j) => j.id === workOrder.job_id), [workOrder.job_id]);
     const boat = React.useMemo(() => job?.boat_id ? boats.find((b) => b.id === job.boat_id) : null, [job?.boat_id]);
     const location = React.useMemo(() => getLocationName(job?.location_id), [job?.location_id]);
-    const taskCount = woTasks?.length || 0;
     const statusBadgeColor = workOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
     workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
     'bg-slate-100 text-slate-800';
@@ -446,7 +447,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
             <h2 className="text-lg font-bold text-slate-900 mb-3">Today</h2>
             <div className="space-y-3">
               {sections.today.map((wo) =>
-                <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
+                <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
               )}
             </div>
           </div>
@@ -470,7 +471,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
                     <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">{dateLabel}</h3>
                     <div className="space-y-3">
                       {wos.map((wo) =>
-                        <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} showDateHeader={false} />
+                        <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} showDateHeader={false} />
                       )}
                     </div>
                   </div>
