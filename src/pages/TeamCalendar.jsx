@@ -170,7 +170,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
             onClick={goToPreviousMonth}
             variant="outline"
             size="icon"
-            className="h-10 w-10 border-white/30 hover:bg-white/20 text-white"
+            className="h-10 w-10 bg-white/90 border-white hover:bg-white text-slate-900"
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -183,7 +183,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
             onClick={goToNextMonth}
             variant="outline"
             size="icon"
-            className="h-10 w-10 border-white/30 hover:bg-white/20 text-white"
+            className="h-10 w-10 bg-white/90 border-white hover:bg-white text-slate-900"
           >
             <ChevronRight className="h-5 w-5" />
           </Button>
