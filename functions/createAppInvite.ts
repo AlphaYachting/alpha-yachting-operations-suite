@@ -90,60 +90,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Generate email subject and body
+    // Generate email subject
     const emailSubject = role === 'CUSTOMER' 
-      ? '🚢 Welcome to Alpha Yachting App'
-      : '🔧 Welcome to Alpha Team App';
+      ? 'Accept Your Invitation - Alpha Yachting'
+      : 'Accept Your Team Invitation - Alpha Yachting';
+    
+    // Properly formatted email body with correct line breaks
     const getPlainTextEmail = (link, name, role) => {
       const greeting = name ? `Hello ${name},` : 'Hello,';
       
       if (role === 'CUSTOMER') {
-        return `${greeting}
-
-You've been invited to access your yacht service projects through our secure mobile app.
-
-Track work orders, view photos, and stay updated on your boat's maintenance - all in one place.
-
-🔗 ACCESS YOUR PROJECTS:
-${link}
-
-📱 INSTALL ON YOUR PHONE (Recommended):
-• iPhone (Safari): Tap Share → "Add to Home Screen"
-• Android (Chrome): Tap Menu → "Install app"
-
-🔒 This link is personal and secure. It expires in 7 days.
-
-Questions? Reply to this email.
-
----
-Alfons Pirker
-Alpha Yachting
-📧 info@alpha-yachting.hr
-📞 +385 52 757 907`;
+        return `${greeting}\n\nYou have been invited to access your yacht service projects on the Alpha Yachting platform.\n\nACCEPT YOUR INVITATION:\n${link}\n\nIf the link above doesn't work, copy and paste this URL into your browser:\n${link}\n\nIMPORTANT:\n• This link is valid for 7 days\n• You'll need to create a password after accepting\n• Keep this link confidential - don't share it\n\nTROUBLESHOOTING:\nIf you cannot access the link, please contact us at info@alpha-yachting.hr\n\nBest regards,\nAlpha Yachting Team\n📧 info@alpha-yachting.hr\n📞 +385 52 757 907`;
       } else {
-        return `${greeting}
-
-Welcome to the Alpha Team! You've been invited to access our mobile technician app.
-
-Manage your work orders, complete tasks, log time, and capture photos - all from your phone.
-
-🔗 ACCESS TEAM APP:
-${link}
-
-📱 INSTALL ON YOUR PHONE (Required):
-• iPhone (Safari): Tap Share → "Add to Home Screen"
-• Android (Chrome): Tap Menu → "Install app"
-
-✅ What you can do:
-View assignments, complete tasks, log hours, upload photos, add notes, and track your work - all offline-ready.
-
-🔒 This link is personal and secure. It expires in 7 days.
-
----
-Alfons Pirker
-Alpha Yachting
-📧 info@alpha-yachting.hr
-📞 +385 52 757 907`;
+        return `${greeting}\n\nWelcome to the Alpha Yachting Team! You have been invited to access the technician management platform.\n\nACCEPT YOUR INVITATION:\n${link}\n\nIf the link above doesn't work, copy and paste this URL into your browser:\n${link}\n\nIMPORTANT:\n• This link is valid for 7 days\n• You'll need to create a password after accepting\n• Keep this link confidential - don't share it\n\nONCE YOU JOIN:\n• View your assigned work orders\n• Manage daily tasks\n• Log work hours and expenses\n• Upload photos and notes\n• Access offline\n\nTROUBLESHOOTING:\nIf you cannot access the link, please contact your supervisor.\n\nBest regards,\nAlpha Yachting Management\n📧 info@alpha-yachting.hr\n📞 +385 52 757 907`;
       }
     };
     
