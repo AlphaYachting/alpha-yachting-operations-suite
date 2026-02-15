@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import CustomerForm from '@/components/customers/CustomerForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
+import SendInviteButton from '@/components/invites/SendInviteButton';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -183,6 +184,13 @@ export default function CustomerDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <SendInviteButton
+            email={customer.email}
+            role="CUSTOMER"
+            customerId={customerId}
+            variant="outline"
+            className="border-green-600 text-green-600 hover:bg-green-50"
+          />
           <Button 
             variant="outline" 
             className="border-indigo-600 text-indigo-600 hover:bg-indigo-50"

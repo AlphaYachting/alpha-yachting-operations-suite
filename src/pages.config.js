@@ -67,6 +67,7 @@ import Inventory from './pages/Inventory';
 import InventoryDashboard from './pages/InventoryDashboard';
 import InventoryExportSchema from './pages/InventoryExportSchema';
 import InventoryImport from './pages/InventoryImport';
+import InviteAccept from './pages/InviteAccept';
 import InvoiceDetail from './pages/InvoiceDetail';
 import Invoices from './pages/Invoices';
 import JobDetail from './pages/JobDetail';
@@ -109,7 +110,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import InviteAccept from './pages/InviteAccept';
 import __Layout from './Layout.jsx';
 
 
@@ -134,6 +134,7 @@ export const PAGES = {
     "InventoryDashboard": InventoryDashboard,
     "InventoryExportSchema": InventoryExportSchema,
     "InventoryImport": InventoryImport,
+    "InviteAccept": InviteAccept,
     "InvoiceDetail": InvoiceDetail,
     "Invoices": Invoices,
     "JobDetail": JobDetail,
@@ -176,7 +177,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "InviteAccept": InviteAccept,
 }
 
 export const pagesConfig = {

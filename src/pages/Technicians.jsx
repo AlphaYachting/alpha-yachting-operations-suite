@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import TechnicianForm from '@/components/technicians/TechnicianForm';
+import SendInviteButton from '@/components/invites/SendInviteButton';
 
 const roleColors = {
   'Lead Technician': 'bg-purple-100 text-purple-700',
@@ -245,6 +246,14 @@ export default function Technicians() {
 
                   {/* Action Buttons */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <SendInviteButton
+                      email={tech.email}
+                      role="TECHNICIAN"
+                      technicianId={tech.id}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                    />
                     <Button
                       size="sm"
                       variant="outline"
