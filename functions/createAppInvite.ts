@@ -203,12 +203,17 @@ Alpha Yachting
           }
         };
         
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          from_name: 'Alpha Yachting',
-          to: email,
-          subject: emailContent.subject,
-          body: getPlainTextEmail(magicLink, recipientName, role)
-        });
+        try {
+          await base44.asServiceRole.integrations.Core.SendEmail({
+            from_name: 'Alpha Yachting',
+            to: email,
+            subject: emailContent.subject,
+            body: getPlainTextEmail(magicLink, recipientName, role)
+          });
+        } catch (base44EmailError) {
+          console.error('Base44 email error:', base44EmailError);
+          throw new Error('Base44 email service rate limit reached (429). Please wait a few minutes and try again, or configure Resend/SendGrid for unlimited sends.');
+        }
       }
     } catch (emailError) {
       console.error('Email send error:', emailError);
