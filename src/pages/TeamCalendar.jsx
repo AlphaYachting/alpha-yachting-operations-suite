@@ -145,7 +145,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
               variant="outline"
               size="icon"
               onClick={() => onNavigate('home')}
-              className="h-9 w-9 border-white/30 hover:bg-white/20 text-white"
+              className="h-9 w-9 bg-white/90 border-white hover:bg-white text-slate-900"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -154,7 +154,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
               asChild
               variant="outline"
               size="icon"
-              className="h-9 w-9 border-white/30 hover:bg-white/20 text-white"
+              className="h-9 w-9 bg-white/90 border-white hover:bg-white text-slate-900"
             >
               <Link to={createPageUrl('TeamMobileHome')}>
                 <ArrowLeft className="h-5 w-5" />
