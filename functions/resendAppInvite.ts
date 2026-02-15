@@ -1,4 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { Resend } from 'npm:resend@4.0.0';
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 Deno.serve(async (req) => {
   try {
@@ -59,9 +62,9 @@ Deno.serve(async (req) => {
     const token_hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     // Generate magic link
-    const appDomain = req.headers.get('host');
-    const protocol = req.headers.get('x-forwarded-proto') || 'https';
-    const magicLink = `${protocol}://${appDomain}/invite?token=${rawToken}`;
+    const appDomain = Deno.env.get('APP_DOMAIN') || req.headers.get('host');
+    const protocol = 'https';
+    const magicLink = `${protocol}://${appDomain}/invite-accept?token=${rawToken}`;
 
     // Send email
     const emailContent = invite.role === 'CUSTOMER' 
