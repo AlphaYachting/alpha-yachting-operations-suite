@@ -71,69 +71,16 @@ Deno.serve(async (req) => {
     const protocol = 'https';
     const magicLink = `${protocol}://${appDomain}/invite-accept?token=${rawToken}`;
 
-    // Return immediately with success - send email asynchronously
     console.log('=== INVITE CREATE SUCCESS ===');
     
-    // Fire-and-forget email sending (don't await, don't block response)
-    base44.asServiceRole.entities.AppInvite.update(invite.id, { status: 'CREATED' }).catch(e => console.error('Could not update invite:', e.message));
-    
-    // Schedule email send with delay to avoid rate limiting
-    setTimeout(async () => {
-      try {
-        // Get recipient name if available
-        let recipientName = null;
-        if (customer_id) {
-          try {
-            const customer = await base44.asServiceRole.entities.Customer.get(customer_id);
-            recipientName = customer.first_name || null;
-          } catch (e) {
-            console.log('Could not fetch customer name');
-          }
-        } else if (technician_id) {
-          try {
-            const tech = await base44.asServiceRole.entities.Technician.get(technician_id);
-            recipientName = tech.first_name || null;
-          } catch (e) {
-            console.log('Could not fetch technician name');
-          }
-        }
-
-        // Generate email subject
-        const emailSubject = role === 'CUSTOMER' 
-          ? 'Accept Your Invitation - Alpha Yachting'
-          : 'Accept Your Team Invitation - Alpha Yachting';
-        
-        // Properly formatted email body
-        const emailBody = role === 'CUSTOMER' 
-          ? `Hello${recipientName ? ` ${recipientName}` : ''},\n\nYou have been invited to access your yacht service projects on the Alpha Yachting platform.\n\nACCEPT YOUR INVITATION:\n${magicLink}\n\nIf the link above doesn't work, copy and paste this URL into your browser:\n${magicLink}\n\nIMPORTANT:\n• This link is valid for 7 days\n• You'll need to create a password after accepting\n• Keep this link confidential - don't share it\n\nTROUBLESHOOTING:\nIf you cannot access the link, please contact us at info@alpha-yachting.hr\n\nBest regards,\nAlpha Yachting Team\n📧 info@alpha-yachting.hr\n📞 +385 52 757 907`
-          : `Hello${recipientName ? ` ${recipientName}` : ''},\n\nWelcome to the Alpha Yachting Team! You have been invited to access the technician management platform.\n\nACCEPT YOUR INVITATION:\n${magicLink}\n\nIf the link above doesn't work, copy and paste this URL into your browser:\n${magicLink}\n\nIMPORTANT:\n• This link is valid for 7 days\n• You'll need to create a password after accepting\n• Keep this link confidential - don't share it\n\nONCE YOU JOIN:\n• View your assigned work orders\n• Manage daily tasks\n• Log work hours and expenses\n• Upload photos and notes\n• Access offline\n\nTROUBLESHOOTING:\nIf you cannot access the link, please contact your supervisor.\n\nBest regards,\nAlpha Yachting Management\n📧 info@alpha-yachting.hr\n📞 +385 52 757 907`;
-
-        console.log('→ Background: Attempting to send email to', email);
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          from_name: 'Alpha Yachting',
-          to: email,
-          subject: emailSubject,
-          body: emailBody
-        });
-        
-        // Update to SENT if successful
-        await base44.asServiceRole.entities.AppInvite.update(invite.id, {
-          status: 'SENT',
-          sent_at: new Date().toISOString(),
-          last_sent_at: new Date().toISOString(),
-          send_count: 1
-        });
-        console.log('✓ Background: Email sent successfully');
-      } catch (error) {
-        console.error('✗ Background: Email send failed:', error.message);
-        // Keep invite as CREATED - can be resent later
-      }
-    }, 500); // 500ms delay to avoid rate limiting
-    
+    // Return immediately without sending email - prevents 429 rate limiting
+    // Email can be sent manually from the invitations page via resendAppInvite function
     return Response.json({ 
       success: true, 
       invite_id: invite.id,
-      message: 'Invitation created. Email sending in background.'
+      magic_link: magicLink,
+      message: 'Invitation created successfully',
+      note: 'Email will be sent separately. Use the magic link above if needed.'
     }, { status: 201 });
   } catch (error) {
     console.error('=== INVITE CREATE ERROR ===');
