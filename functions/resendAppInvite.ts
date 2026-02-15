@@ -66,48 +66,73 @@ Deno.serve(async (req) => {
     const protocol = 'https';
     const magicLink = `${protocol}://${appDomain}/invite-accept?token=${rawToken}`;
 
-    // Send email
+    // Send email via Resend
+    const fromEmail = Deno.env.get('CUSTOM_EMAIL_FROM') || 'onboarding@resend.dev';
     const emailContent = invite.role === 'CUSTOMER' 
       ? {
-          subject: 'Welcome to Alpha Yachting App',
+          subject: 'Accept Your Invitation - Alpha Yachting',
           body: `Hello,
 
-You've been invited to access your Alpha Yachting project via the Alpha App.
+You have been invited to access your yacht service projects on the Alpha Yachting platform.
 
-Open your secure link here:
+ACCEPT YOUR INVITATION:
 ${magicLink}
 
-Install on your phone (recommended):
-• iPhone (Safari): Share → "Add to Home Screen"
-• Android (Chrome): Menu → "Install app" / "Add to Home Screen"
+If the link above doesn't work, copy and paste this URL into your browser:
+${magicLink}
 
-This link is personal and expires in 7 days. If you have any questions, just reply to this email.
+IMPORTANT:
+• This link is valid for 7 days
+• You'll need to create a password after accepting
+• Keep this link confidential - don't share it
+
+TROUBLESHOOTING:
+If you cannot access the link, please contact us at info@alpha-yachting.hr
 
 Best regards,
-Alfons
-Alpha Yachting
-info@alpha-jachting.hr`
+Alpha Yachting Team
+📧 info@alpha-yachting.hr
+📞 +385 52 757 907`
         }
       : {
-          subject: 'Welcome to Alpha Team App',
+          subject: 'Accept Your Team Invitation - Alpha Yachting',
           body: `Hello,
 
-You've been invited to the Alpha Team App to manage WorkOrders and tasks.
+Welcome to the Alpha Yachting Team! You have been invited to access the technician management platform.
 
-Open your secure link here:
+ACCEPT YOUR INVITATION:
 ${magicLink}
 
-Install on your phone (recommended):
-• iPhone (Safari): Share → "Add to Home Screen"
-• Android (Chrome): Menu → "Install app" / "Add to Home Screen"
+If the link above doesn't work, copy and paste this URL into your browser:
+${magicLink}
 
-This link is personal and expires in 7 days. If anything doesn't work, reply to this email.
+IMPORTANT:
+• This link is valid for 7 days
+• You'll need to create a password after accepting
+• Keep this link confidential - don't share it
+
+ONCE YOU JOIN:
+• View your assigned work orders
+• Manage daily tasks
+• Log work hours and expenses
+• Upload photos and notes
+• Access offline
+
+TROUBLESHOOTING:
+If you cannot access the link, please contact your supervisor.
 
 Best regards,
-Alfons
-Alpha Yachting
-info@alpha-jachting.hr`
+Alpha Yachting Management
+📧 info@alpha-yachting.hr
+📞 +385 52 757 907`
         };
+
+    await resend.emails.send({
+      from: fromEmail,
+      to: invite.email,
+      subject: emailContent.subject,
+      text: emailContent.body
+    });
 
     // Update invite record
     const now = new Date().toISOString();
@@ -120,7 +145,7 @@ info@alpha-jachting.hr`
 
     return Response.json({ 
       success: true,
-      message: 'Invite updated. You can copy the magic link from the invitations page or send email manually.'
+      message: 'Invite resent successfully'
     });
   } catch (error) {
     console.error('Error resending invite:', error);
