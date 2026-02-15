@@ -192,9 +192,9 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
         <div className="mt-3">
           <Button
             onClick={goToToday}
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="w-full hover:bg-white/20 text-white"
+            className="w-full bg-white/90 border-white hover:bg-white text-slate-900"
           >
             Today
           </Button>
