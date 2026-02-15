@@ -222,29 +222,40 @@ Alpha Yachting
         });
         emailSent = true;
         if (lastError) {
-          console.log('Email sent via Base44 fallback after:', lastError);
+          console.log('✅ Email sent via Base44 fallback after:', lastError);
         }
       } catch (base44EmailError) {
-        console.error('All email services failed:', base44EmailError);
+        console.error('❌ Base44 email also failed:', base44EmailError.message || base44EmailError);
+        
+        // Update invite status to CREATED (email failed)
+        await base44.asServiceRole.entities.AppInvite.update(invite.id, {
+          status: 'CREATED'
+        });
+        
         return Response.json({ 
           success: false,
           invite_id: invite.id,
-          error: 'All email services rate-limited. Please wait and try resending later.',
-          message: 'Invite created but email could not be sent due to rate limits.'
+          error: '⚠️ Email rate limit reached on all services (Resend + Base44). Please wait 5 minutes and resend from the invitations page.',
+          message: 'Invite created but email could not be sent. Resend later.'
         }, { status: 207 });
       }
     }
     
+    // Final check if email was sent
     if (!emailSent) {
+      await base44.asServiceRole.entities.AppInvite.update(invite.id, {
+        status: 'CREATED'
+      });
+      
       return Response.json({ 
         success: false,
         invite_id: invite.id,
-        error: 'Failed to send email through any service',
+        error: 'Email service unavailable',
         message: 'Invite created but email failed to send.'
       }, { status: 207 });
     }
 
-    // Update invite status
+    // Update invite status to SENT
     const now = new Date().toISOString();
     await base44.asServiceRole.entities.AppInvite.update(invite.id, {
       status: 'SENT',
