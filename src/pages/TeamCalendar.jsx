@@ -168,9 +168,9 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
         <div className="flex items-center justify-between">
           <Button
             onClick={goToPreviousMonth}
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-10 w-10 hover:bg-white/20"
+            className="h-10 w-10 border-white/30 hover:bg-white/20 text-white"
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -181,9 +181,9 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
 
           <Button
             onClick={goToNextMonth}
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-10 w-10 hover:bg-white/20"
+            className="h-10 w-10 border-white/30 hover:bg-white/20 text-white"
           >
             <ChevronRight className="h-5 w-5" />
           </Button>
