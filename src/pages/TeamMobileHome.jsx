@@ -33,12 +33,11 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     const unsubscribe = connectionMonitor.subscribe((status) => {
       setIsOnline(status.isOnline);
       if (status.isOnline) {
-        // Auto sync when connection restored
         syncPendingChanges();
       }
     });
 
-    loadData();
+    loadData(true); // Show cached data first
     return unsubscribe;
   }, [previewUserId]);
 
@@ -47,20 +46,39 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     await syncQueue.clearCompletedItems();
   };
 
-  const loadData = async () => {
+  const loadData = async (showCachedFirst = false) => {
     try {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
 
+      // Show cached data immediately for instant load
+      if (showCachedFirst) {
+        const cachedData = await Promise.all([
+          offlineStorage.getAllData(offlineStorage.STORES.workOrders),
+          offlineStorage.getAllData(offlineStorage.STORES.jobs),
+          offlineStorage.getAllData(offlineStorage.STORES.locations),
+          offlineStorage.getAllData(offlineStorage.STORES.boats),
+          offlineStorage.getAllData(offlineStorage.STORES.tasks)
+        ]);
+
+        if (cachedData[0]?.length > 0) {
+          setWorkOrders(cachedData[0]);
+          setJobs(cachedData[1] || []);
+          setLocations(cachedData[2] || []);
+          setBoats(cachedData[3] || []);
+          setTasks(cachedData[4] || []);
+          setLoading(false); // Show immediately
+        }
+      }
+
       let tasksData, workOrdersData, locationsData, boatsData, jobsData;
 
       try {
-        // Optimize: Find technician without loading full list
+        // Find technician efficiently
         let technicianId;
         if (previewUserId) {
           technicianId = previewUserId;
         } else {
-          // Fetch only matching technician by email filter
           const matchedTechs = await base44.entities.Technician.filter({
             $or: [
               { user_id: currentUser?.id },
@@ -73,7 +91,6 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         setResolvedTechnicianId(technicianId);
 
         if (!technicianId) {
-          console.warn('⚠️ No Technician record found for user:', currentUser?.email);
           setWorkOrders([]);
           setLocations([]);
           setBoats([]);
@@ -83,7 +100,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           return;
         }
 
-        // Fetch work orders first to know what we need
+        // Fetch work orders
         workOrdersData = await base44.entities.WorkOrder.filter({
           $or: [
             { assigned_technicians: { $in: [technicianId] } },
@@ -91,60 +108,54 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           ]
         });
 
-        // Extract unique IDs from work orders to fetch only needed data
         const jobIds = [...new Set(workOrdersData.map(wo => wo.job_id).filter(Boolean))];
         const woIds = workOrdersData.map(wo => wo.id);
 
-        // Fetch only jobs (defer tasks until WorkOrder detail page)
+        // Fetch related data
         jobsData = jobIds.length > 0 ? await base44.entities.Job.filter({ id: { $in: jobIds } }) : [];
-        
-        // Load only task count for KPIs, not full task objects
         tasksData = woIds.length > 0 ? await base44.entities.Task.filter({ 
           work_order_id: { $in: woIds } 
         }) : [];
 
-        // Extract location and boat IDs from jobs
         const locationIds = [...new Set(jobsData.map(j => j.location_id).filter(Boolean))];
         const boatIds = [...new Set(jobsData.map(j => j.boat_id).filter(Boolean))];
 
-        // Fetch only needed locations and boats
         [locationsData, boatsData] = await Promise.all([
           locationIds.length > 0 ? base44.entities.Location.filter({ id: { $in: locationIds } }) : Promise.resolve([]),
           boatIds.length > 0 ? base44.entities.Boat.filter({ id: { $in: boatIds } }) : Promise.resolve([])
         ]);
 
-        console.log('✅ Work Orders Found:', workOrdersData?.length || 0);
+        // Update state with fresh data
+        setWorkOrders(workOrdersData || []);
+        setJobs(jobsData || []);
+        setLocations(locationsData || []);
+        setBoats(boatsData || []);
+        setTasks(tasksData || []);
 
-        // Cache all data for offline access
-        if (workOrdersData) {
-          await offlineStorage.saveMultiple(offlineStorage.STORES.workOrders, workOrdersData);
-        }
-        if (tasksData) {
-          await offlineStorage.saveMultiple(offlineStorage.STORES.tasks, tasksData);
-        }
-        if (locationsData) {
-          await offlineStorage.saveMultiple(offlineStorage.STORES.locations, locationsData);
-        }
-        if (boatsData) {
-          await offlineStorage.saveMultiple(offlineStorage.STORES.boats, boatsData);
-        }
-        if (jobsData) {
-          await offlineStorage.saveMultiple(offlineStorage.STORES.jobs, jobsData);
-        }
+        // Cache in background (non-blocking)
+        Promise.all([
+          offlineStorage.saveMultiple(offlineStorage.STORES.workOrders, workOrdersData || []),
+          offlineStorage.saveMultiple(offlineStorage.STORES.jobs, jobsData || []),
+          offlineStorage.saveMultiple(offlineStorage.STORES.locations, locationsData || []),
+          offlineStorage.saveMultiple(offlineStorage.STORES.boats, boatsData || []),
+          offlineStorage.saveMultiple(offlineStorage.STORES.tasks, tasksData || [])
+        ]).catch(e => console.error('Cache save error:', e));
       } catch (error) {
-        // Fall back to offline cache
-        workOrdersData = await offlineStorage.getAllData(offlineStorage.STORES.workOrders);
-        tasksData = await offlineStorage.getAllData(offlineStorage.STORES.tasks);
-        locationsData = await offlineStorage.getAllData(offlineStorage.STORES.locations);
-        boatsData = await offlineStorage.getAllData(offlineStorage.STORES.boats);
-        jobsData = await offlineStorage.getAllData(offlineStorage.STORES.jobs);
+        // Network error - use cache only
+        if (!showCachedFirst) {
+          workOrdersData = await offlineStorage.getAllData(offlineStorage.STORES.workOrders);
+          tasksData = await offlineStorage.getAllData(offlineStorage.STORES.tasks);
+          locationsData = await offlineStorage.getAllData(offlineStorage.STORES.locations);
+          boatsData = await offlineStorage.getAllData(offlineStorage.STORES.boats);
+          jobsData = await offlineStorage.getAllData(offlineStorage.STORES.jobs);
+          
+          setWorkOrders(workOrdersData || []);
+          setLocations(locationsData || []);
+          setBoats(boatsData || []);
+          setJobs(jobsData || []);
+          setTasks(tasksData || []);
+        }
       }
-
-      setWorkOrders(workOrdersData || []);
-      setLocations(locationsData || []);
-      setBoats(boatsData || []);
-      setJobs(jobsData || []);
-      setTasks(tasksData || []);
     } catch (error) {
       console.error('Error loading team data:', error);
     } finally {
