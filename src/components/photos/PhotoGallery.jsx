@@ -32,6 +32,7 @@ const categoryColors = {
   During: 'bg-amber-100 text-amber-700',
   After: 'bg-green-100 text-green-700',
   Damage: 'bg-red-100 text-red-700',
+  Expenses: 'bg-purple-100 text-purple-700',
   Other: 'bg-slate-100 text-slate-700'
 };
 
@@ -110,6 +111,7 @@ export default function PhotoGallery({ photos, tasks, onPhotoDeleted, onPhotoUpd
               <SelectItem value="During">During</SelectItem>
               <SelectItem value="After">After</SelectItem>
               <SelectItem value="Damage">Damage</SelectItem>
+              <SelectItem value="Expenses">Expenses</SelectItem>
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>
