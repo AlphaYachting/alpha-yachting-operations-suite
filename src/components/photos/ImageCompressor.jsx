@@ -73,41 +73,70 @@ async function compressImage(file, maxSize, maxDimension, quality = 0.82) {
   const img = await loadImage(file);
   const orientation = await getOrientation(file);
   
-  // Calculate new dimensions
+  // Get original dimensions
   let { width, height } = img;
-  const longEdge = Math.max(width, height);
   
+  // Determine target dimensions based on orientation
+  let targetWidth = width;
+  let targetHeight = height;
+  
+  // For orientations 5-8, dimensions are swapped
+  if (orientation >= 5 && orientation <= 8) {
+    targetWidth = height;
+    targetHeight = width;
+  }
+  
+  // Scale down if needed
+  const longEdge = Math.max(targetWidth, targetHeight);
   if (longEdge > maxDimension) {
     const scale = maxDimension / longEdge;
-    width = Math.round(width * scale);
-    height = Math.round(height * scale);
+    targetWidth = Math.round(targetWidth * scale);
+    targetHeight = Math.round(targetHeight * scale);
   }
 
-  // Create canvas with orientation correction
+  // Create canvas with corrected dimensions
   const canvas = document.createElement('canvas');
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
   const ctx = canvas.getContext('2d');
 
-  // Apply orientation transforms
-  if (orientation > 4) {
-    canvas.width = height;
-    canvas.height = width;
-  } else {
-    canvas.width = width;
-    canvas.height = height;
-  }
-
-  // Transform based on EXIF orientation
+  // Apply orientation transforms to bake in the rotation
   switch (orientation) {
-    case 2: ctx.transform(-1, 0, 0, 1, width, 0); break;
-    case 3: ctx.transform(-1, 0, 0, -1, width, height); break;
-    case 4: ctx.transform(1, 0, 0, -1, 0, height); break;
-    case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;
-    case 6: ctx.transform(0, 1, -1, 0, height, 0); break;
-    case 7: ctx.transform(0, -1, -1, 0, height, width); break;
-    case 8: ctx.transform(0, -1, 1, 0, 0, width); break;
+    case 1:
+      // Normal - no transform needed
+      break;
+    case 2:
+      // Horizontal flip
+      ctx.transform(-1, 0, 0, 1, targetWidth, 0);
+      break;
+    case 3:
+      // 180° rotation
+      ctx.transform(-1, 0, 0, -1, targetWidth, targetHeight);
+      break;
+    case 4:
+      // Vertical flip
+      ctx.transform(1, 0, 0, -1, 0, targetHeight);
+      break;
+    case 5:
+      // Horizontal flip + 90° CCW
+      ctx.transform(0, 1, 1, 0, 0, 0);
+      break;
+    case 6:
+      // 90° CW rotation
+      ctx.transform(0, 1, -1, 0, targetHeight, 0);
+      break;
+    case 7:
+      // Horizontal flip + 90° CW
+      ctx.transform(0, -1, -1, 0, targetHeight, targetWidth);
+      break;
+    case 8:
+      // 90° CCW rotation
+      ctx.transform(0, -1, 1, 0, 0, targetWidth);
+      break;
   }
 
-  ctx.drawImage(img, 0, 0, width, height);
+  // Draw with original dimensions
+  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
   // Try compression with current quality
   let blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
