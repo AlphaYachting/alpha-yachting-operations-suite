@@ -2,16 +2,85 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, CheckCircle2, ExternalLink, Code, Settings } from 'lucide-react';
+import { Mail, CheckCircle2, ExternalLink, Code, Settings, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 
 export default function EmailConfiguration() {
   const [copiedText, setCopiedText] = useState('');
+  const [resendKey, setResendKey] = useState('');
+  const [sendgridKey, setSendgridKey] = useState('');
+  const [customFrom, setCustomFrom] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const copyToClipboard = (text, label) => {
     navigator.clipboard.writeText(text);
     setCopiedText(label);
     setTimeout(() => setCopiedText(''), 2000);
+  };
+
+  const saveResendConfig = async () => {
+    if (!resendKey || !customFrom) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      // Store in user profile as custom data
+      const user = await base44.auth.me();
+      const currentConfig = user.email_config || {};
+      
+      await base44.auth.updateMe({
+        email_config: {
+          ...currentConfig,
+          resend_api_key: resendKey,
+          custom_email_from: customFrom,
+          provider: 'resend'
+        }
+      });
+      
+      toast.success('Resend configuration saved successfully!');
+      setResendKey('');
+      setCustomFrom('');
+    } catch (error) {
+      toast.error('Failed to save configuration: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveSendgridConfig = async () => {
+    if (!sendgridKey || !customFrom) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      const user = await base44.auth.me();
+      const currentConfig = user.email_config || {};
+      
+      await base44.auth.updateMe({
+        email_config: {
+          ...currentConfig,
+          sendgrid_api_key: sendgridKey,
+          custom_email_from: customFrom,
+          provider: 'sendgrid'
+        }
+      });
+      
+      toast.success('SendGrid configuration saved successfully!');
+      setSendgridKey('');
+      setCustomFrom('');
+    } catch (error) {
+      toast.error('Failed to save configuration: ' + error.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -26,8 +95,6 @@ export default function EmailConfiguration() {
         <AlertDescription className="text-blue-900">
           <strong>Current Status:</strong> Without custom email setup, the system uses Base44's built-in email (from noreply@base44.com). 
           Configure a custom email service below for branded emails from your domain.
-          <br /><br />
-          <strong>To add API keys:</strong> Ask your AI assistant to "set up email secrets" or use the form that appears when you request email configuration. The secrets are already configured in your app - you just need to provide the values.
         </AlertDescription>
       </Alert>
 
@@ -83,39 +150,42 @@ export default function EmailConfiguration() {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold">3</div>
-                  <h3 className="font-semibold text-slate-900">Add Secrets to Base44</h3>
+                  <h3 className="font-semibold text-slate-900">Enter Your API Keys</h3>
                 </div>
-                <div className="ml-9 space-y-3">
-                  <p className="text-sm text-slate-600">Go to <a href="https://www.base44.com" target="_blank" rel="noopener noreferrer" className="underline text-blue-600">base44.com</a> → Your App → Code → Functions → "Set Secrets" and add:</p>
-                  
-                  <div className="space-y-2">
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <code className="text-sm font-mono text-slate-700">RESEND_API_KEY</code>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => copyToClipboard('RESEND_API_KEY', 'key1')}
-                        >
-                          {copiedText === 'key1' ? <CheckCircle2 className="h-3 w-3 text-green-600" /> : <Code className="h-3 w-3" />}
-                        </Button>
-                      </div>
-                      <p className="text-xs text-slate-500">Value: Your Resend API key (re_...)</p>
+                <div className="ml-9 space-y-4">
+                  <div className="bg-white border-2 border-slate-200 rounded-lg p-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="resend-key">Resend API Key</Label>
+                      <Input 
+                        id="resend-key"
+                        type="password"
+                        placeholder="re_..."
+                        value={resendKey}
+                        onChange={(e) => setResendKey(e.target.value)}
+                      />
+                      <p className="text-xs text-slate-500">Get this from https://resend.com/api-keys</p>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <code className="text-sm font-mono text-slate-700">CUSTOM_EMAIL_FROM</code>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => copyToClipboard('CUSTOM_EMAIL_FROM', 'key2')}
-                        >
-                          {copiedText === 'key2' ? <CheckCircle2 className="h-3 w-3 text-green-600" /> : <Code className="h-3 w-3" />}
-                        </Button>
-                      </div>
-                      <p className="text-xs text-slate-500">Value: noreply@alpha-jachting.hr (or your domain)</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="custom-from">Custom Email Address</Label>
+                      <Input 
+                        id="custom-from"
+                        type="email"
+                        placeholder="noreply@alpha-jachting.hr"
+                        value={customFrom}
+                        onChange={(e) => setCustomFrom(e.target.value)}
+                      />
+                      <p className="text-xs text-slate-500">Must be verified in Resend</p>
                     </div>
+
+                    <Button 
+                      onClick={saveResendConfig} 
+                      disabled={saving || !resendKey || !customFrom}
+                      className="w-full"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {saving ? 'Saving...' : 'Save Configuration'}
+                    </Button>
                   </div>
 
                   <Alert className="bg-amber-50 border-amber-200">
@@ -186,39 +256,42 @@ export default function EmailConfiguration() {
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-semibold">3</div>
-                  <h3 className="font-semibold text-slate-900">Add Secrets to Base44</h3>
+                  <h3 className="font-semibold text-slate-900">Enter Your API Keys</h3>
                 </div>
-                <div className="ml-9 space-y-3">
-                  <p className="text-sm text-slate-600">Go to <a href="https://www.base44.com" target="_blank" rel="noopener noreferrer" className="underline text-blue-600">base44.com</a> → Your App → Code → Functions → "Set Secrets" and add:</p>
-                  
-                  <div className="space-y-2">
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <code className="text-sm font-mono text-slate-700">SENDGRID_API_KEY</code>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => copyToClipboard('SENDGRID_API_KEY', 'sgkey1')}
-                        >
-                          {copiedText === 'sgkey1' ? <CheckCircle2 className="h-3 w-3 text-green-600" /> : <Code className="h-3 w-3" />}
-                        </Button>
-                      </div>
-                      <p className="text-xs text-slate-500">Value: Your SendGrid API key (SG.)</p>
+                <div className="ml-9 space-y-4">
+                  <div className="bg-white border-2 border-slate-200 rounded-lg p-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="sendgrid-key">SendGrid API Key</Label>
+                      <Input 
+                        id="sendgrid-key"
+                        type="password"
+                        placeholder="SG..."
+                        value={sendgridKey}
+                        onChange={(e) => setSendgridKey(e.target.value)}
+                      />
+                      <p className="text-xs text-slate-500">Get this from SendGrid Settings → API Keys</p>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <code className="text-sm font-mono text-slate-700">CUSTOM_EMAIL_FROM</code>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => copyToClipboard('CUSTOM_EMAIL_FROM', 'sgkey2')}
-                        >
-                          {copiedText === 'sgkey2' ? <CheckCircle2 className="h-3 w-3 text-green-600" /> : <Code className="h-3 w-3" />}
-                        </Button>
-                      </div>
-                      <p className="text-xs text-slate-500">Value: noreply@alpha-jachting.hr (or your domain)</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="sendgrid-from">Custom Email Address</Label>
+                      <Input 
+                        id="sendgrid-from"
+                        type="email"
+                        placeholder="noreply@alpha-jachting.hr"
+                        value={customFrom}
+                        onChange={(e) => setCustomFrom(e.target.value)}
+                      />
+                      <p className="text-xs text-slate-500">Must be verified in SendGrid</p>
                     </div>
+
+                    <Button 
+                      onClick={saveSendgridConfig} 
+                      disabled={saving || !sendgridKey || !customFrom}
+                      className="w-full"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {saving ? 'Saving...' : 'Save Configuration'}
+                    </Button>
                   </div>
                 </div>
               </div>
