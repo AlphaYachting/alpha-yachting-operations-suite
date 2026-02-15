@@ -166,12 +166,14 @@ Alpha Yachting
     // Update invite status
     const now = new Date().toISOString();
     if (emailSent) {
+      console.log('→ Updating invite to SENT...');
       await base44.asServiceRole.entities.AppInvite.update(invite.id, {
         status: 'SENT',
         sent_at: now,
         last_sent_at: now,
         send_count: 1
       });
+      console.log('=== INVITE CREATE SUCCESS (SENT) ===');
       
       return Response.json({ 
         success: true, 
@@ -179,6 +181,7 @@ Alpha Yachting
         message: 'Invite sent successfully'
       });
     } else {
+      console.log('=== INVITE CREATE SUCCESS (EMAIL SKIPPED) ===');
       // Keep status as CREATED - can be resent later
       return Response.json({ 
         success: true,
@@ -188,7 +191,14 @@ Alpha Yachting
       }, { status: 201 });
     }
   } catch (error) {
-    console.error('Error creating invite:', error);
+    console.error('=== INVITE CREATE ERROR ===');
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      status: error.status,
+      response: error.response,
+      stack: error.stack
+    });
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
