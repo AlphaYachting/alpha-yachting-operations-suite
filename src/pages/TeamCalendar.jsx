@@ -27,25 +27,19 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
       let workOrdersData, jobsData, boatsData;
 
       try {
-        // CRITICAL FIX: Map User.id → Technician.id (same as TeamMobileHome)
-        const allTechnicians = await base44.entities.Technician.list();
-        
+        // Optimize: Filter technician instead of loading all
         let technicianId;
         if (previewUserId) {
           technicianId = previewUserId;
         } else {
-          const matchedTech = allTechnicians.find(t => 
-            t.user_id === currentUser?.id || 
-            t.email === currentUser?.email
-          );
-          technicianId = matchedTech?.id;
+          const matchedTechs = await base44.entities.Technician.filter({
+            $or: [
+              { user_id: currentUser?.id },
+              { email: currentUser?.email }
+            ]
+          });
+          technicianId = matchedTechs?.[0]?.id;
         }
-
-        console.log('🔍 DEBUG - Calendar Auth Mapping:', {
-          userEmail: currentUser?.email,
-          userId: currentUser?.id,
-          resolvedTechnicianId: technicianId
-        });
 
         if (!technicianId) {
           console.warn('⚠️ No Technician record found for calendar user:', currentUser?.email);
@@ -67,12 +61,9 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
         // Only fetch jobs and boats that are referenced
         const jobIds = [...new Set(workOrdersData.map(wo => wo.job_id).filter(Boolean))];
 
-        [jobsData, boatsData] = await Promise.all([
-          jobIds.length > 0 ? base44.entities.Job.filter({ id: { $in: jobIds } }) : Promise.resolve([]),
-          jobIds.length > 0 ? base44.entities.Boat.filter({ 
-            id: { $in: [...new Set(jobsData?.map(j => j.boat_id).filter(Boolean) || [])] } 
-          }) : Promise.resolve([])
-        ]);
+        jobsData = jobIds.length > 0 ? await base44.entities.Job.filter({ id: { $in: jobIds } }) : [];
+        const boatIds = [...new Set(jobsData.map(j => j.boat_id).filter(Boolean))];
+        boatsData = boatIds.length > 0 ? await base44.entities.Boat.filter({ id: { $in: boatIds } }) : [];
 
         console.log('✅ Calendar Work Orders Found:', workOrdersData?.length || 0);
 
