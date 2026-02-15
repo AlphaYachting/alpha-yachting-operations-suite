@@ -46,6 +46,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import { Toaster } from '@/components/ui/sonner';
 
 const navItems = [
   // OPERATIONS
@@ -326,6 +327,9 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Mobile App Modal */}
         <MobileAppModal open={mobileAppOpen} onOpenChange={setMobileAppOpen} />
+        
+        {/* Toast Notifications */}
+        <Toaster />
       </div>
     </SearchIndexManager>
   );

@@ -28,29 +28,12 @@ export default function EmailConfiguration() {
       return;
     }
     
-    setSaving(true);
-    try {
-      // Store in user profile as custom data
-      const user = await base44.auth.me();
-      const currentConfig = user.email_config || {};
-      
-      await base44.auth.updateMe({
-        email_config: {
-          ...currentConfig,
-          resend_api_key: resendKey,
-          custom_email_from: customFrom,
-          provider: 'resend'
-        }
-      });
-      
-      toast.success('Resend configuration saved successfully!');
-      setResendKey('');
-      setCustomFrom('');
-    } catch (error) {
-      toast.error('Failed to save configuration: ' + error.message);
-    } finally {
-      setSaving(false);
-    }
+    toast.info('⚠️ Important: These keys must be entered through the AI assistant or Base44 platform secrets management. Storing them here is not secure and will not work for backend functions.');
+    
+    // Show instructions
+    setTimeout(() => {
+      toast.info(`Ask your AI assistant: "Set RESEND_API_KEY to ${resendKey.substring(0, 10)}... and CUSTOM_EMAIL_FROM to ${customFrom}"`);
+    }, 2000);
   };
 
   const saveSendgridConfig = async () => {
@@ -59,28 +42,12 @@ export default function EmailConfiguration() {
       return;
     }
     
-    setSaving(true);
-    try {
-      const user = await base44.auth.me();
-      const currentConfig = user.email_config || {};
-      
-      await base44.auth.updateMe({
-        email_config: {
-          ...currentConfig,
-          sendgrid_api_key: sendgridKey,
-          custom_email_from: customFrom,
-          provider: 'sendgrid'
-        }
-      });
-      
-      toast.success('SendGrid configuration saved successfully!');
-      setSendgridKey('');
-      setCustomFrom('');
-    } catch (error) {
-      toast.error('Failed to save configuration: ' + error.message);
-    } finally {
-      setSaving(false);
-    }
+    toast.info('⚠️ Important: These keys must be entered through the AI assistant or Base44 platform secrets management. Storing them here is not secure and will not work for backend functions.');
+    
+    // Show instructions
+    setTimeout(() => {
+      toast.info(`Ask your AI assistant: "Set SENDGRID_API_KEY to ${sendgridKey.substring(0, 10)}... and CUSTOM_EMAIL_FROM to ${customFrom}"`);
+    }, 2000);
   };
 
   return (
@@ -95,6 +62,8 @@ export default function EmailConfiguration() {
         <AlertDescription className="text-blue-900">
           <strong>Current Status:</strong> Without custom email setup, the system uses Base44's built-in email (from noreply@base44.com). 
           Configure a custom email service below for branded emails from your domain.
+          <br /><br />
+          <strong>How to configure:</strong> Enter your API keys below, then ask your AI assistant to save them securely. Example: "Save my Resend API key re_xxx and email noreply@alpha-jachting.hr"
         </AlertDescription>
       </Alert>
 
