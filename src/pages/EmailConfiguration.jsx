@@ -26,6 +26,13 @@ export default function EmailConfiguration() {
         <AlertDescription>
           <strong>Current Status:</strong> Without custom email setup, the system uses Base44's built-in email (from noreply@base44.com). 
           Configure a custom email service below for branded emails from your domain.
+          <br /><br />
+          <Button variant="outline" size="sm" asChild className="mt-2">
+            <a href="https://www.base44.com/dashboard" target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3 w-3 mr-2" />
+              Open Base44 Dashboard → Settings → Environment Variables
+            </a>
+          </Button>
         </AlertDescription>
       </Alert>
 
