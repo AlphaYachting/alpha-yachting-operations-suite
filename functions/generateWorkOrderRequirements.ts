@@ -16,12 +16,12 @@ Deno.serve(async (req) => {
     }
 
     // Load work order and related data
-    const [workOrders] = await base44.entities.WorkOrder.filter({ id: work_order_id });
-    if (!workOrders) {
+    const workOrders = await base44.entities.WorkOrder.filter({ id: work_order_id });
+    if (!workOrders || workOrders.length === 0) {
       return Response.json({ error: 'Work order not found' }, { status: 404 });
     }
 
-    const workOrder = workOrders;
+    const workOrder = workOrders[0];
 
     // Validate description length (minimum 5 words)
     const descriptionWordCount = (workOrder.description || '').trim().split(/\s+/).filter(w => w.length > 0).length;
