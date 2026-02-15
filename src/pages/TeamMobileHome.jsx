@@ -238,85 +238,85 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
   }
 
-  const CompactWorkOrderItem = ({ workOrder, woTasks, priority }) => {
+  const WorkOrderCard = ({ workOrder, woTasks }) => {
+    const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
+    const dayName = woDate ? format(woDate, 'EEE').toUpperCase() : '—';
+    const dateString = woDate ? format(woDate, 'd') : '—';
+    const monthString = woDate ? format(woDate, 'MMM') : '—';
     const timeString = workOrder.scheduled_start_time || '—';
     const job = jobs.find((j) => j.id === workOrder.job_id);
     const boat = job?.boat_id ? boats.find((b) => b.id === job.boat_id) : null;
     const location = getLocationName(job?.location_id);
     const taskCount = woTasks?.length || 0;
-    const isInProgress = workOrder.status === 'In Progress' || workOrder.actual_start_time;
-    
-    const itemContent = (
-      <div className="px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors">
-        {/* Line 1: Time + Job Title */}
-        <div className="flex items-baseline gap-2 mb-1">
-          <span className="text-sm font-bold text-slate-900">{timeString}</span>
-          <span className="text-sm font-semibold text-slate-800 flex-1">{workOrder.title}</span>
+    const statusBadgeColor = workOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
+    workOrder.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+    'bg-slate-100 text-slate-800';
+
+    const cardContent = (
+      <>
+        <div className="flex items-stretch">
+          <div className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white pt-2 pr-5 pb-3 pl-4 rounded-lg flex flex-col items-center justify-center min-w-fit shadow-md flex-shrink-0">
+            <p className="text-xs font-bold uppercase tracking-wider">{dayName}</p>
+            <p className="text-2xl font-bold leading-tight mt-1">{dateString}</p>
+            <p className="text-xs opacity-90 mt-0.5">{monthString}</p>
+            {timeString !== '—' && <p className="mt-2 text-sm font-bold">{timeString}</p>}
+          </div>
+
+          <div className="flex-1 p-4 flex flex-col justify-between">
+            <div>
+              <p className="text-xs text-slate-500 font-medium mb-1">#{workOrder.work_order_number || workOrder.id}</p>
+              <p className="text-base font-bold text-slate-900 leading-tight">{workOrder.title}</p>
+              {boat?.vessel_name &&
+                <p className="text-sm text-slate-600 mt-1">{boat.vessel_name}</p>
+              }
+            </div>
+          </div>
+
+          <div className="p-4 flex items-start">
+            <Badge className={`text-xs whitespace-nowrap ${statusBadgeColor}`}>
+              {workOrder.status}
+            </Badge>
+          </div>
         </div>
-        
-        {/* Line 2: Boat - Marina */}
-        <div className="text-sm text-slate-600 mb-1">
-          {boat?.vessel_name || 'No boat'} – {location || 'No location'}
-        </div>
-        
-        {/* Line 3: Tasks */}
-        <div className="text-xs text-slate-500 mb-2">
-          {taskCount} {taskCount === 1 ? 'task' : 'tasks'}
-        </div>
-        
-        {/* Line 4: Action Button */}
-        <Button 
-          size="sm" 
-          className={isInProgress ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (onNavigate) {
-              onNavigate('workOrderDetail', { woId: workOrder.id });
+
+        {location &&
+          <div className="px-4 py-3 border-t border-slate-200">
+            <div className="flex items-center gap-3">
+              <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0" />
+              <p className="text-sm font-medium text-slate-700">{location}</p>
+            </div>
+          </div>
+        }
+
+        <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-slate-700">
+            <CheckCircle2 className="h-5 w-5 text-slate-400" />
+            <span className="text-sm font-medium">{taskCount} {taskCount === 1 ? 'task' : 'tasks'}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {workOrder.internal_notes &&
+              <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 text-amber-700 px-3 py-1.5 rounded-lg text-xs font-semibold">
+                <span>📝</span>
+                <span>Notes</span>
+              </div>
             }
-          }}
-        >
-          {isInProgress ? 'CONTINUE' : 'START'}
-        </Button>
-      </div>
-    );
-
-    if (onNavigate) {
-      return <div className="cursor-pointer">{itemContent}</div>;
-    }
-
-    return (
-      <Link 
-        to={createPageUrl('TeamWorkOrderDetail') + `?woId=${workOrder.id}`}
-        className="block"
-      >
-        {itemContent}
-      </Link>
-    );
-  };
-
-  const UpcomingJobItem = ({ workOrder }) => {
-    const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
-    const dayName = woDate ? format(woDate, 'EEE d') : '—';
-    const timeString = workOrder.scheduled_start_time || '—';
-    const job = jobs.find((j) => j.id === workOrder.job_id);
-    const location = getLocationName(job?.location_id);
-    
-    const itemContent = (
-      <div className="px-4 py-2.5 border-b border-slate-100 hover:bg-slate-50 transition-colors">
-        <div className="text-sm text-slate-700">
-          <span className="font-semibold">{dayName}</span> – {timeString} – {workOrder.title} – {location || 'No location'}
+          </div>
         </div>
-      </div>
+      </>
     );
 
     if (onNavigate) {
       return (
         <div 
-          onClick={() => onNavigate('workOrderDetail', { woId: workOrder.id })}
-          className="cursor-pointer"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onNavigate('workOrderDetail', { woId: workOrder.id });
+          }}
+          className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden"
         >
-          {itemContent}
+          {cardContent}
         </div>
       );
     }
@@ -324,9 +324,9 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     return (
       <Link 
         to={createPageUrl('TeamWorkOrderDetail') + `?woId=${workOrder.id}`}
-        className="block"
+        className="block bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all overflow-hidden"
       >
-        {itemContent}
+        {cardContent}
       </Link>
     );
   };
@@ -343,16 +343,26 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         showSettings={showPreviewMode} />
 
 
-      {/* Date, Time & KPI Row */}
-      <div className="bg-white border-b border-slate-200 px-4 py-2">
-        <div className="text-center space-y-1">
-          <div className="text-sm font-medium text-slate-900">
-            {format(new Date(), 'EEE, MMM d')} – {format(new Date(), 'HH:mm')}
-          </div>
-          <div className="text-xs text-slate-600">
-            Today: {sections.today.length} | Upcoming: {sections.upcoming.length} | Open Tasks: {tasks.filter(t => t.status !== 'Completed').length}
-          </div>
-        </div>
+      {/* KPI Mini Cards */}
+      <div className="px-4 py-3 grid grid-cols-3 gap-2 bg-slate-50">
+        <Card className="bg-white shadow-sm">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-slate-900">{sections.today.length}</div>
+            <div className="text-xs text-slate-600 mt-1">Today</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white shadow-sm">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-slate-900">{sections.upcoming.length}</div>
+            <div className="text-xs text-slate-600 mt-1">Upcoming</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white shadow-sm">
+          <CardContent className="p-3 text-center">
+            <div className="text-2xl font-bold text-slate-900">{tasks.filter(t => t.status !== 'Completed').length}</div>
+            <div className="text-xs text-slate-600 mt-1">Open Tasks</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Test Mode Badge */}
@@ -395,94 +405,40 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
 
       {/* Content */}
-      <div className="bg-white">
+      <div className="p-4 space-y-4">
         {/* Connection Status */}
         {!isOnline &&
-          <div className="bg-orange-50 border-b border-orange-200 px-4 py-2 flex items-center gap-2">
-            <WifiOff className="h-4 w-4 text-orange-600" />
-            <span className="text-xs font-medium text-orange-900">Offline mode</span>
-          </div>
+          <Card className="bg-orange-50 border-orange-200 shadow-sm">
+            <CardContent className="p-3 flex items-center gap-2">
+              <WifiOff className="h-5 w-5 text-orange-600 flex-shrink-0" />
+              <span className="text-sm font-medium text-orange-900">You're offline. Data is cached.</span>
+            </CardContent>
+          </Card>
         }
 
         {/* TODAY Section */}
-        {sections.today.length > 0 ? (
+        {sections.today.length > 0 &&
           <div>
-            <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wide">TODAY</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-3">Today</h2>
+            <div className="space-y-3">
+              {sections.today.map((wo) =>
+                <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
+              )}
             </div>
-            
-            {/* Priority grouping */}
-            {(() => {
-              const now = new Date();
-              const currentTime = now.getHours() * 60 + now.getMinutes();
-              
-              const nowJobs = sections.today.filter(wo => {
-                if (wo.status === 'Completed') return false;
-                if (!wo.scheduled_start_time) return false;
-                const [hours, minutes] = wo.scheduled_start_time.split(':').map(Number);
-                const woTime = hours * 60 + minutes;
-                return woTime <= currentTime;
-              });
-              
-              const laterJobs = sections.today.filter(wo => !nowJobs.includes(wo));
-              const nextJob = laterJobs[0];
-              const remainingJobs = laterJobs.slice(1);
-              
-              return (
-                <>
-                  {nowJobs.length > 0 && (
-                    <div>
-                      <div className="px-4 py-2 bg-red-50 border-b border-red-100">
-                        <span className="text-xs font-bold text-red-700 uppercase">NOW</span>
-                      </div>
-                      {nowJobs.map(wo => (
-                        <CompactWorkOrderItem key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} priority="now" />
-                      ))}
-                    </div>
-                  )}
-                  
-                  {nextJob && (
-                    <div>
-                      <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
-                        <span className="text-xs font-bold text-blue-700 uppercase">NEXT</span>
-                      </div>
-                      <CompactWorkOrderItem workOrder={nextJob} woTasks={getWorkOrderTasks(nextJob.id)} priority="next" />
-                    </div>
-                  )}
-                  
-                  {remainingJobs.length > 0 && (
-                    <div>
-                      <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                        <span className="text-xs font-bold text-slate-600 uppercase">LATER TODAY</span>
-                      </div>
-                      {remainingJobs.map(wo => (
-                        <CompactWorkOrderItem key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} priority="later" />
-                      ))}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
           </div>
-        ) : (
-          <div className="px-4 py-8 text-center">
-            <p className="text-sm text-slate-500">No work orders scheduled for today</p>
-          </div>
-        )}
+        }
 
-        {/* NEXT Section */}
-        {sections.upcoming.length > 0 && (
-          <div className="mt-6">
-            <div className="px-4 py-3 bg-slate-50 border-y border-slate-200">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wide">NEXT</h2>
-            </div>
-            <div>
-              {sections.upcoming.slice(0, 3).map(wo => (
-                <UpcomingJobItem key={wo.id} workOrder={wo} />
-              ))}
+        {/* UPCOMING Section */}
+        {sections.upcoming.length > 0 &&
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 mb-3">Upcoming (Next 7 days)</h2>
+            <div className="space-y-3">
+              {sections.upcoming.slice(0, 3).map((wo) =>
+                <WorkOrderCard key={wo.id} workOrder={wo} woTasks={getWorkOrderTasks(wo.id)} />
+              )}
             </div>
           </div>
-        )}
+        }
 
         {/* ATTENTION Section */}
         {(() => {
@@ -509,38 +465,42 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           if (!hasAlerts) return null;
           
           return (
-            <div className="mt-6 border-t-4 border-amber-400">
-              <div className="px-4 py-3 bg-amber-50 border-b border-amber-200">
-                <h2 className="text-xs font-bold text-amber-900 uppercase tracking-wide">⚠ ATTENTION</h2>
-              </div>
-              <div className="bg-amber-50/50">
-                {overdueTasks.length > 0 && (
-                  <div className="px-4 py-2.5 border-b border-amber-100 text-sm text-amber-900">
-                    ⚠ {overdueTasks.length} overdue {overdueTasks.length === 1 ? 'task' : 'tasks'}
-                  </div>
-                )}
-                {jobsWithoutTech.length > 0 && (
-                  <div className="px-4 py-2.5 border-b border-amber-100 text-sm text-amber-900">
-                    ⚠ {jobsWithoutTech.length} {jobsWithoutTech.length === 1 ? 'job' : 'jobs'} without technician
-                  </div>
-                )}
-                {jobsWithoutLocation.length > 0 && (
-                  <div className="px-4 py-2.5 text-sm text-amber-900">
-                    ⚠ {jobsWithoutLocation.length} {jobsWithoutLocation.length === 1 ? 'job' : 'jobs'} without location
-                  </div>
-                )}
-              </div>
-            </div>
+            <Card className="bg-amber-50 border-amber-200 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertCircle className="h-5 w-5 text-amber-600" />
+                  <h3 className="text-sm font-bold text-amber-900 uppercase">Attention Required</h3>
+                </div>
+                <div className="space-y-2">
+                  {overdueTasks.length > 0 && (
+                    <div className="text-sm text-amber-900">
+                      ⚠️ {overdueTasks.length} overdue {overdueTasks.length === 1 ? 'task' : 'tasks'}
+                    </div>
+                  )}
+                  {jobsWithoutTech.length > 0 && (
+                    <div className="text-sm text-amber-900">
+                      ⚠️ {jobsWithoutTech.length} {jobsWithoutTech.length === 1 ? 'job' : 'jobs'} without technician
+                    </div>
+                  )}
+                  {jobsWithoutLocation.length > 0 && (
+                    <div className="text-sm text-amber-900">
+                      ⚠️ {jobsWithoutLocation.length} {jobsWithoutLocation.length === 1 ? 'job' : 'jobs'} without location
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           );
         })()}
 
         {/* Empty State */}
-        {sections.today.length === 0 && sections.upcoming.length === 0 && (
-          <div className="px-4 py-12 text-center">
-            <AlertCircle className="h-10 w-10 mx-auto text-slate-300 mb-2" />
-            <p className="text-sm text-slate-600 font-medium">No work orders assigned</p>
+        {sections.today.length === 0 && sections.upcoming.length === 0 &&
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-600 font-medium mb-1">No scheduled work orders</p>
+            <p className="text-slate-500 text-sm">You have no items assigned in the next 7 days</p>
           </div>
-        )}
+        }
       </div>
 
       {/* Sync Status Component */}
