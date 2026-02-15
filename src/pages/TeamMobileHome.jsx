@@ -356,9 +356,26 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
             <div className="text-xs text-slate-600 mt-1">Upcoming</div>
           </CardContent>
         </Card>
-        <Card className="bg-white shadow-sm">
+        <Card 
+          className="bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => {
+            if (onNavigate) {
+              onNavigate('calendar');
+            } else {
+              window.location.href = createPageUrl('TeamCalendar');
+            }
+          }}
+        >
           <CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-slate-900">{tasks.filter(t => t.status !== 'Completed').length}</div>
+            <div className="flex items-center justify-center gap-1">
+              <div className="text-2xl font-bold text-slate-900">
+                {(() => {
+                  const workOrderIds = workOrders.map(wo => wo.id);
+                  return tasks.filter(t => workOrderIds.includes(t.work_order_id) && t.status !== 'Completed').length;
+                })()}
+              </div>
+              <Calendar className="h-4 w-4 text-slate-400" />
+            </div>
             <div className="text-xs text-slate-600 mt-1">Open Tasks</div>
           </CardContent>
         </Card>
