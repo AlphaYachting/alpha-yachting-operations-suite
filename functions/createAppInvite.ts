@@ -1,4 +1,7 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { Resend } from 'npm:resend@4.0.0';
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 Deno.serve(async (req) => {
   try {
@@ -66,21 +69,96 @@ Deno.serve(async (req) => {
     const invite = await base44.asServiceRole.entities.AppInvite.create(inviteData);
     console.log('✓ Invite created:', invite.id);
 
-    // Generate magic link - use correct invite-accept page
+    // Generate magic link
     const appDomain = Deno.env.get('APP_DOMAIN') || req.headers.get('host');
     const protocol = 'https';
     const magicLink = `${protocol}://${appDomain}/invite-accept?token=${rawToken}`;
 
+    // Send email via Resend
+    const fromEmail = Deno.env.get('CUSTOM_EMAIL_FROM') || 'onboarding@resend.dev';
+    const emailContent = role === 'CUSTOMER' 
+      ? {
+          subject: 'Accept Your Invitation - Alpha Yachting',
+          body: `Hello,
+
+You have been invited to access your yacht service projects on the Alpha Yachting platform.
+
+ACCEPT YOUR INVITATION:
+${magicLink}
+
+If the link above doesn't work, copy and paste this URL into your browser:
+${magicLink}
+
+IMPORTANT:
+• This link is valid for 7 days
+• You'll need to create a password after accepting
+• Keep this link confidential - don't share it
+
+TROUBLESHOOTING:
+If you cannot access the link, please contact us at info@alpha-yachting.hr
+
+Best regards,
+Alpha Yachting Team
+📧 info@alpha-yachting.hr
+📞 +385 52 757 907`
+        }
+      : {
+          subject: 'Accept Your Team Invitation - Alpha Yachting',
+          body: `Hello,
+
+Welcome to the Alpha Yachting Team! You have been invited to access the technician management platform.
+
+ACCEPT YOUR INVITATION:
+${magicLink}
+
+If the link above doesn't work, copy and paste this URL into your browser:
+${magicLink}
+
+IMPORTANT:
+• This link is valid for 7 days
+• You'll need to create a password after accepting
+• Keep this link confidential - don't share it
+
+ONCE YOU JOIN:
+• View your assigned work orders
+• Manage daily tasks
+• Log work hours and expenses
+• Upload photos and notes
+• Access offline
+
+TROUBLESHOOTING:
+If you cannot access the link, please contact your supervisor.
+
+Best regards,
+Alpha Yachting Management
+📧 info@alpha-yachting.hr
+📞 +385 52 757 907`
+        };
+
+    console.log('→ Sending email via Resend...');
+    await resend.emails.send({
+      from: fromEmail,
+      to: email,
+      subject: emailContent.subject,
+      text: emailContent.body
+    });
+    console.log('✓ Email sent successfully');
+
+    // Update invite status to SENT
+    const now = new Date().toISOString();
+    await base44.asServiceRole.entities.AppInvite.update(invite.id, {
+      status: 'SENT',
+      sent_at: now,
+      last_sent_at: now,
+      send_count: 1
+    });
+
     console.log('=== INVITE CREATE SUCCESS ===');
     
-    // Return immediately without sending email - prevents 429 rate limiting
-    // Email can be sent manually from the invitations page via resendAppInvite function
     return Response.json({ 
       success: true, 
       invite_id: invite.id,
-      magic_link: magicLink,
-      message: 'Invitation created successfully',
-      note: 'Email will be sent separately. Use the magic link above if needed.'
+      message: 'Invitation sent successfully'
     }, { status: 201 });
   } catch (error) {
     console.error('=== INVITE CREATE ERROR ===');
@@ -88,7 +166,6 @@ Deno.serve(async (req) => {
       name: error.name,
       message: error.message,
       status: error.status,
-      response: error.response,
       stack: error.stack
     });
     return Response.json({ error: error.message }, { status: 500 });
