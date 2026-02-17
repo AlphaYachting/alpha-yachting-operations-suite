@@ -29,9 +29,10 @@ export default function AITaskSuggestions({
       const customer = customers?.find(c => c.id === job?.customer_id);
 
       const prompt = `You are a marine service expert. Based on the following work order details, suggest:
-1. A list of 4-6 specific tasks to be completed
-2. Safety precautions or notes
-3. Internal notes for technicians
+1. A list of 4-6 specific technical tasks to be completed
+2. A list of 2-4 organizational/preparation tasks (material ordering, tools preparation, access coordination, etc.)
+3. Safety precautions or notes
+4. Internal notes for technicians
 
 Work Order Details:
 - Title: ${formData.title}
@@ -44,10 +45,22 @@ Work Order Details:
 - Electrical System: ${boat?.electrical_system || 'N/A'}
 - Service Category: ${job?.service_category || 'General Service'}
 
+IMPORTANT: Always include organizational tasks such as:
+- Order required materials/parts
+- Prepare necessary tools and equipment
+- Coordinate marina/location access
+- Check availability of required resources
+- Prepare work area
+- Any pre-work organization needed
+
 Return a JSON object with this structure:
 {
   "suggested_tasks": [
     { "title": "Task title", "description": "Brief description of what needs to be done", "estimated_hours": 1.5 },
+    ...
+  ],
+  "organizational_tasks": [
+    { "title": "Organizational task title", "description": "What needs to be organized/prepared", "estimated_hours": 0.5 },
     ...
   ],
   "safety_notes": "Important safety considerations for this work",
@@ -71,6 +84,17 @@ Return a JSON object with this structure:
                 }
               }
             },
+            organizational_tasks: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  estimated_hours: { type: 'number' }
+                }
+              }
+            },
             safety_notes: { type: 'string' },
             internal_notes: { type: 'string' }
           }
@@ -78,7 +102,13 @@ Return a JSON object with this structure:
       });
 
       setSuggestions(result);
-      setSelectedTasks(result.suggested_tasks?.map((_, i) => i) || []);
+      // Pre-select all tasks (technical + organizational)
+      const techTasksCount = result.suggested_tasks?.length || 0;
+      const orgTasksCount = result.organizational_tasks?.length || 0;
+      setSelectedTasks([
+        ...Array.from({ length: techTasksCount }, (_, i) => i),
+        ...Array.from({ length: orgTasksCount }, (_, i) => techTasksCount + i)
+      ]);
       setSelectedNotes({
         safety: !!result.safety_notes,
         internal: !!result.internal_notes
@@ -94,7 +124,13 @@ Return a JSON object with this structure:
   const handleAddSuggestions = () => {
     if (!suggestions) return;
 
-    const tasksToAdd = selectedTasks.map(idx => suggestions.suggested_tasks[idx]);
+    // Combine technical and organizational tasks
+    const allTasks = [
+      ...(suggestions.suggested_tasks || []),
+      ...(suggestions.organizational_tasks || [])
+    ];
+    
+    const tasksToAdd = selectedTasks.map(idx => allTasks[idx]);
     
     if (tasksToAdd.length > 0) {
       onTasksAdd?.(tasksToAdd);
@@ -151,9 +187,9 @@ Return a JSON object with this structure:
             </div>
           ) : suggestions ? (
             <div className="space-y-6">
-              {/* Suggested Tasks */}
+              {/* Technical Tasks */}
               <div>
-                <h3 className="font-semibold text-slate-900 mb-3">Suggested Tasks</h3>
+                <h3 className="font-semibold text-slate-900 mb-3">🔧 Technical Tasks</h3>
                 <div className="space-y-2">
                   {suggestions.suggested_tasks?.map((task, idx) => (
                     <label 
@@ -182,6 +218,43 @@ Return a JSON object with this structure:
                   ))}
                 </div>
               </div>
+
+              {/* Organizational Tasks */}
+              {suggestions.organizational_tasks && suggestions.organizational_tasks.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-slate-900 mb-3">📋 Organizational Tasks</h3>
+                  <div className="space-y-2">
+                    {suggestions.organizational_tasks.map((task, idx) => {
+                      const actualIdx = (suggestions.suggested_tasks?.length || 0) + idx;
+                      return (
+                        <label 
+                          key={actualIdx}
+                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            selectedTasks.includes(actualIdx)
+                              ? 'border-blue-300 bg-blue-50'
+                              : 'border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <Checkbox
+                            checked={selectedTasks.includes(actualIdx)}
+                            onCheckedChange={() => toggleTask(actualIdx)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{task.title}</p>
+                            <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+                            {task.estimated_hours && (
+                              <Badge variant="outline" className="mt-2 text-xs">
+                                ~{task.estimated_hours}h
+                              </Badge>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Safety Notes */}
               {suggestions.safety_notes && (
