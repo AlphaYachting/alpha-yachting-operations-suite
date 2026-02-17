@@ -188,7 +188,19 @@ export default function ProjectDetail() {
 
     try {
       if (editingWorkOrder) {
-        await base44.entities.WorkOrder.update(editingWorkOrder.id, woData);
+        // Preserve sort_index and work_order_number when updating
+        const updateData = {
+          ...woData,
+          sort_index: editingWorkOrder.sort_index,
+          work_order_number: editingWorkOrder.work_order_number
+        };
+        await base44.entities.WorkOrder.update(editingWorkOrder.id, updateData);
+        
+        // Update local state without full reload to preserve sorting
+        setWorkOrders(prev => prev.map(wo => 
+          wo.id === editingWorkOrder.id ? { ...wo, ...updateData } : wo
+        ));
+        
         setShowWorkOrderDialog(false);
         setEditingWorkOrder(null);
         toast.success('Work order updated', { id: toastId });
@@ -258,9 +270,8 @@ export default function ProjectDetail() {
         }
 
         setShowNewWorkOrderDialog(false);
+        await loadProjectData();
       }
-
-      await loadProjectData();
     } catch (error) {
       console.error('Error saving work order:', error);
       toast.error(`Failed: ${error.message || 'Unknown error'}`, { id: toastId });
