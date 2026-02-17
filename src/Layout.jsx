@@ -74,6 +74,7 @@ const navItems = [
   { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
   { name: 'Tools & Inventory', icon: Package, page: 'Inventory' },
   { name: 'Inventory Stats', icon: BarChart3, page: 'InventoryDashboard', subLevel: true },
+  { name: 'Suppliers', icon: Briefcase, page: 'Suppliers' },
   { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates', adminOnly: true },
   { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates', adminOnly: true },
   
