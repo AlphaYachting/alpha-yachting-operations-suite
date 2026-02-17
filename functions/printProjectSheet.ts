@@ -201,20 +201,17 @@ Deno.serve(async (req) => {
       y += 5;
     }
 
-    // Footer
-    checkPageBreak(15);
-    y = pageHeight - margin - 10;
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Generated: ${new Date().toLocaleString('en-GB')}`, margin, y);
-    doc.text(`Page 1 of ${doc.getNumberOfPages()}`, pageWidth - margin - 30, y);
-
-    // Update page numbers on all pages
+    // P3 fix: Footer pagination - render only once per page at the end
     const totalPages = doc.getNumberOfPages();
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
-      doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 30, pageHeight - margin - 10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Generated: ${timestamp}`, margin, pageHeight - margin - 5);
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 30, pageHeight - margin - 5);
     }
 
     const pdfBytes = doc.output('arraybuffer');
