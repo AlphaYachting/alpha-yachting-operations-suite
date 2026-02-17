@@ -811,14 +811,12 @@ export default function ProjectDetail() {
                                   if (task.status !== 'Completed') {
                                     const updateData = { 
                                       status: 'Completed', 
-                                      completed_at: new Date().toISOString()
+                                      completed_at: new Date().toISOString(),
+                                      work_order_id: wo.id,
+                                      sequence_order: task.sequence_order || 0
                                     };
-                                    // Preserve work_order_id if missing
-                                    if (!task.work_order_id) {
-                                      updateData.work_order_id = wo.id;
-                                    }
                                     await base44.entities.Task.update(task.id, updateData);
-                                    // Update local state without full reload to preserve sorting
+                                    // Update local state without full reload to preserve work order sorting
                                     setTasks(prev => prev.map(t => 
                                       t.id === task.id ? { ...t, ...updateData } : t
                                     ));
