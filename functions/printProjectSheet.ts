@@ -152,10 +152,7 @@ Deno.serve(async (req) => {
       doc.setFont(undefined, 'normal');
 
       if (wo.scheduled_date) {
-        let scheduleText = `Scheduled: ${new Date(wo.scheduled_date).toLocaleDateString('en-GB')}`;
-        if (wo.scheduled_start_time) {
-          scheduleText += ` at ${wo.scheduled_start_time}`;
-        }
+        const scheduleText = `Scheduled: ${formatDateTime(wo.scheduled_date, wo.scheduled_start_time)}`;
         doc.text(scheduleText, margin + 3, y);
         y += 4;
       }
