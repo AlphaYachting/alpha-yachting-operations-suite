@@ -114,6 +114,22 @@ export default function SupplierDetail() {
                     <div className="font-medium">{supplier.supplier_name}</div>
                   </div>
                   <div>
+                    <div className="text-sm text-slate-500">Phone</div>
+                    <a href={`tel:${supplier.phone}`} className="font-medium text-blue-600 hover:underline flex items-center gap-1">
+                      <Phone className="w-4 h-4" />
+                      {supplier.phone}
+                    </a>
+                  </div>
+                  {supplier.email && (
+                    <div>
+                      <div className="text-sm text-slate-500">Email</div>
+                      <a href={`mailto:${supplier.email}`} className="font-medium text-blue-600 hover:underline flex items-center gap-1">
+                        <Mail className="w-4 h-4" />
+                        {supplier.email}
+                      </a>
+                    </div>
+                  )}
+                  <div>
                     <div className="text-sm text-slate-500">Type</div>
                     <Badge className={typeColors[supplier.type]}>{supplier.type}</Badge>
                   </div>

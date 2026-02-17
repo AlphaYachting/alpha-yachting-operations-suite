@@ -72,6 +72,7 @@ export default function Suppliers() {
     const searchLower = search.toLowerCase();
     const matchesSearch = !search || 
       supplier.supplier_name?.toLowerCase().includes(searchLower) ||
+      supplier.phone?.toLowerCase().includes(searchLower) ||
       supplier.tags?.some(tag => tag.toLowerCase().includes(searchLower)) ||
       contacts.filter(c => c.supplier_id === supplier.id)
         .some(c => c.name?.toLowerCase().includes(searchLower)) ||
@@ -125,7 +126,7 @@ export default function Suppliers() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <Input
-                  placeholder="Search suppliers, tags, contacts, portals..."
+                  placeholder="Search by name, phone, tags, contacts..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10"
@@ -213,6 +214,14 @@ export default function Suppliers() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                        <div>
+                          <div className="text-xs text-slate-500 mb-1">Phone</div>
+                          <a href={`tel:${supplier.phone}`} className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            {supplier.phone}
+                          </a>
+                        </div>
+
                         <div>
                           <div className="text-xs text-slate-500 mb-1">Country</div>
                           <div className="text-sm font-medium">{supplier.country}</div>

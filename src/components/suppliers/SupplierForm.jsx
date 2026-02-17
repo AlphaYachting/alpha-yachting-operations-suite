@@ -14,6 +14,8 @@ export default function SupplierForm({ supplier, onSuccess, onCancel }) {
     type: supplier?.type || 'PRODUCT',
     status: supplier?.status || 'ACTIVE',
     country: supplier?.country || '',
+    phone: supplier?.phone || '',
+    email: supplier?.email || '',
     tags: supplier?.tags || [],
     website_url: supplier?.website_url || '',
     address: supplier?.address || '',
@@ -98,6 +100,27 @@ export default function SupplierForm({ supplier, onSuccess, onCancel }) {
             value={formData.country}
             onChange={(e) => setFormData({ ...formData, country: e.target.value })}
             placeholder="e.g., Croatia, Italy, Germany"
+          />
+        </div>
+
+        <div>
+          <Label>Phone *</Label>
+          <Input
+            required
+            type="tel"
+            value={formData.phone}
+            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            placeholder="+385 52 757 907"
+          />
+        </div>
+
+        <div>
+          <Label>Email</Label>
+          <Input
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            placeholder="contact@supplier.com"
           />
         </div>
 
