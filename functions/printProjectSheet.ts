@@ -191,7 +191,8 @@ Deno.serve(async (req) => {
         for (const task of woTasks) {
           checkPageBreak(5);
           doc.setFont(undefined, 'normal');
-          const taskText = `☐ ${task.title} — ${task.status}`;
+          // P2 fix: use safe bullet (hyphen instead of Unicode checkbox)
+          const taskText = `- ${task.title} - ${task.status}`;
           doc.text(taskText, margin + 6, y);
           y += 4;
         }
