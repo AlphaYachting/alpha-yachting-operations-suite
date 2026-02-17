@@ -272,7 +272,7 @@ export default function Suppliers() {
 
       {/* Add Supplier Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Supplier</DialogTitle>
           </DialogHeader>
