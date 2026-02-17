@@ -141,10 +141,11 @@ Deno.serve(async (req) => {
     for (const wo of sortedWOs) {
       checkPageBreak(30);
       
-      // Work Order header
+      // Work Order header (P4 fix: consistent fallback)
       doc.setFontSize(11);
       doc.setFont(undefined, 'bold');
-      doc.text(`${wo.work_order_number || 'WO'}: ${wo.title}`, margin, y);
+      const woNumber = wo.work_order_number || 'WO (no number)';
+      doc.text(`${woNumber}: ${wo.title}`, margin, y);
       y += 6;
 
       // Work order details
