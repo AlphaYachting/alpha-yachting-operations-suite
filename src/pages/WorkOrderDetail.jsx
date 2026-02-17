@@ -267,27 +267,37 @@ export default function WorkOrderDetail() {
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
     if (result.source.index === result.destination.index) return;
+    if (!canEditTasks) return; // Only admins can reorder
 
-    // Optimistically update UI first
+    // Sort tasks by current sequence_order
     const sortedTasks = [...tasks].sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
+    
+    // Create reordered array
     const reorderedTasks = Array.from(sortedTasks);
     const [movedTask] = reorderedTasks.splice(result.source.index, 1);
     reorderedTasks.splice(result.destination.index, 0, movedTask);
 
-    // Update local state immediately
-    setTasks(reorderedTasks);
+    // Assign new sequence_order values
+    const tasksWithNewOrder = reorderedTasks.map((task, index) => ({
+      ...task,
+      sequence_order: index
+    }));
+
+    // Update local state immediately for instant feedback
+    setTasks(tasksWithNewOrder);
 
     try {
-      // Update sequence_order for all tasks in background
-      const updatePromises = reorderedTasks.map((task, index) => 
-        base44.entities.Task.update(task.id, { sequence_order: index })
+      // Update all tasks with new sequence_order
+      await Promise.all(
+        tasksWithNewOrder.map((task) => 
+          base44.entities.Task.update(task.id, { sequence_order: task.sequence_order })
+        )
       );
-      await Promise.all(updatePromises);
-      toast.success('Tasks reordered');
+      toast.success('Task order saved');
     } catch (error) {
       console.error('Error reordering tasks:', error);
-      toast.error('Failed to save order');
-      // Reload on failure
+      toast.error('Failed to save new order');
+      // Reload to restore correct order
       await loadWorkOrderDetails();
     }
   };
@@ -917,7 +927,7 @@ export default function WorkOrderDetail() {
             </div>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="tasks">
+              <Droppable droppableId="tasks" isDropDisabled={!canEditTasks}>
                 {(provided, snapshot) => (
                   <div 
                     className="space-y-3"
@@ -927,24 +937,35 @@ export default function WorkOrderDetail() {
                     {tasks
                       .sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0))
                       .map((task, index) => (
-                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                        <Draggable 
+                          key={task.id} 
+                          draggableId={task.id} 
+                          index={index}
+                          isDragDisabled={!canEditTasks}
+                        >
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className={`p-4 border border-slate-200 rounded-lg transition-colors ${snapshot.isDragging ? 'bg-blue-50 border-blue-400 shadow-lg' : 'hover:border-slate-300'}`}
+                              className={`p-4 border border-slate-200 rounded-lg transition-all ${
+                                snapshot.isDragging 
+                                  ? 'bg-blue-50 border-blue-400 shadow-lg scale-105' 
+                                  : 'hover:border-slate-300 hover:shadow-sm'
+                              }`}
                             >
                               <div className="flex items-start justify-between gap-4">
-                                <div 
-                                  {...provided.dragHandleProps}
-                                  className="cursor-grab active:cursor-grabbing mt-0.5"
-                                >
-                                  <div className="text-slate-400 hover:text-slate-600">
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                      <path d="M7 2a2 2 0 11-4 0 2 2 0 014 0zM7 6a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0zM17 2a2 2 0 11-4 0 2 2 0 014 0zM17 6a2 2 0 11-4 0 2 2 0 014 0zM17 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
+                                {canEditTasks && (
+                                  <div 
+                                    {...provided.dragHandleProps}
+                                    className="cursor-grab active:cursor-grabbing mt-0.5 touch-none"
+                                  >
+                                    <div className="text-slate-400 hover:text-slate-600">
+                                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M7 2a2 2 0 11-4 0 2 2 0 014 0zM7 6a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0zM17 2a2 2 0 11-4 0 2 2 0 014 0zM17 6a2 2 0 11-4 0 2 2 0 014 0zM17 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                      </svg>
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                                 <div className="flex items-start gap-3 flex-1">
                                   <div className="mt-0.5">
                                     {task.status === 'Completed' ? (
