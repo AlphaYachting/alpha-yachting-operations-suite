@@ -561,12 +561,36 @@ export default function ProjectDetail() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-slate-500">Total Planned Hours</p>
-                <p className="font-medium text-slate-900">
+                <p className={`font-medium ${
+                  (() => {
+                    const totalPlannedHours = workOrders.reduce((sum, wo) => {
+                      const hours = parseFloat(wo.estimated_duration_hours);
+                      return sum + (isNaN(hours) ? 0 : hours);
+                    }, 0);
+                    const calculatedAmount = totalPlannedHours * 70;
+                    return calculatedAmount > (project?.quote_amount || 0) ? 'text-red-600' : 'text-slate-900';
+                  })()
+                }`}>
                   {workOrders.reduce((sum, wo) => {
                     const hours = parseFloat(wo.estimated_duration_hours);
                     return sum + (isNaN(hours) ? 0 : hours);
                   }, 0).toFixed(1)} h
                 </p>
+                {(() => {
+                  const totalPlannedHours = workOrders.reduce((sum, wo) => {
+                    const hours = parseFloat(wo.estimated_duration_hours);
+                    return sum + (isNaN(hours) ? 0 : hours);
+                  }, 0);
+                  const calculatedAmount = totalPlannedHours * 70;
+                  if (calculatedAmount > (project?.quote_amount || 0)) {
+                    return (
+                      <p className="text-xs text-red-600 mt-1">
+                        €{calculatedAmount.toFixed(0)} exceeds budget
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </CardContent>
@@ -645,12 +669,36 @@ export default function ProjectDetail() {
             </div>
             <div>
               <p className="text-sm text-slate-500">Total Planned Hours (from Workorders)</p>
-              <p className="font-medium">
+              <p className={`font-medium ${
+                (() => {
+                  const totalPlannedHours = workOrders.reduce((sum, wo) => {
+                    const hours = parseFloat(wo.estimated_duration_hours);
+                    return sum + (isNaN(hours) ? 0 : hours);
+                  }, 0);
+                  const calculatedAmount = totalPlannedHours * 70;
+                  return calculatedAmount > (project?.quote_amount || 0) ? 'text-red-600' : 'text-slate-900';
+                })()
+              }`}>
                 {workOrders.reduce((sum, wo) => {
                   const hours = parseFloat(wo.estimated_duration_hours);
                   return sum + (isNaN(hours) ? 0 : hours);
                 }, 0).toFixed(1)} h
               </p>
+              {(() => {
+                const totalPlannedHours = workOrders.reduce((sum, wo) => {
+                  const hours = parseFloat(wo.estimated_duration_hours);
+                  return sum + (isNaN(hours) ? 0 : hours);
+                }, 0);
+                const calculatedAmount = totalPlannedHours * 70;
+                if (calculatedAmount > (project?.quote_amount || 0)) {
+                  return (
+                    <p className="text-xs text-red-600 mt-1">
+                      Calculated: €{calculatedAmount.toFixed(0)} (exceeds budget)
+                    </p>
+                  );
+                }
+                return null;
+              })()}
             </div>
             {project.quote_amount && (
               <div>
