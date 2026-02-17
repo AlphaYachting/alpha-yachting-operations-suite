@@ -51,6 +51,7 @@ import AccessLogs from './pages/AccessLogs';
 import AppInvites from './pages/AppInvites';
 import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
+import CalendarFeeds from './pages/CalendarFeeds';
 import CustomerBoatDetail from './pages/CustomerBoatDetail';
 import CustomerBoatDetailSimulate from './pages/CustomerBoatDetailSimulate';
 import CustomerDashboard from './pages/CustomerDashboard';
@@ -114,7 +115,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import CalendarFeeds from './pages/CalendarFeeds';
 import __Layout from './Layout.jsx';
 
 
@@ -123,6 +123,7 @@ export const PAGES = {
     "AppInvites": AppInvites,
     "BoatDetail": BoatDetail,
     "Boats": Boats,
+    "CalendarFeeds": CalendarFeeds,
     "CustomerBoatDetail": CustomerBoatDetail,
     "CustomerBoatDetailSimulate": CustomerBoatDetailSimulate,
     "CustomerDashboard": CustomerDashboard,
@@ -186,7 +187,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "CalendarFeeds": CalendarFeeds,
 }
 
 export const pagesConfig = {
