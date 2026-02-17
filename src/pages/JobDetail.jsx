@@ -334,6 +334,32 @@ export default function ProjectDetail() {
     }
   };
 
+  const handlePrintProjectSheet = async () => {
+    setPrintLoading(true);
+    try {
+      const response = await base44.functions.invoke('printProjectSheet', {
+        job_id: projectId
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Project_${project.job_number || project.id}_WorkSheet.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      
+      toast.success('Project worksheet downloaded');
+    } catch (error) {
+      console.error('Error generating project sheet:', error);
+      toast.error('Failed to generate project sheet');
+    } finally {
+      setPrintLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
