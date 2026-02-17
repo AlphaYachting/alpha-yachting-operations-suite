@@ -59,21 +59,58 @@ Deno.serve(async (req) => {
   let queryCount = 0;
 
   try {
+    // Initialize base44 with service role (public endpoint)
     const base44 = createClientFromRequest(req);
     const url = new URL(req.url);
     
     // Parse query params
+    const token = url.searchParams.get('token');
     const techId = url.searchParams.get('tech');
     const daysParam = parseInt(url.searchParams.get('days') || '90');
     const days = Math.min(Math.max(daysParam, 7), 180); // Clamp between 7-180
     const includeUnassigned = url.searchParams.get('include_unassigned') === 'true';
+    
+    // Token validation - REQUIRED
+    if (!token) {
+      return Response.json({
+        error: 'Missing token',
+        message: 'Feed access requires a valid token parameter. Generate one in Settings > Calendar Feeds.'
+      }, { status: 401 });
+    }
+    
+    // Validate token and get config
+    const feedConfigs = await base44.asServiceRole.entities.CalendarFeedConfig.filter({ 
+      feed_token: token,
+      enabled: true
+    });
+    queryCount++;
+    
+    if (feedConfigs.length === 0) {
+      return Response.json({
+        error: 'Invalid or disabled token',
+        message: 'This feed token is not valid or has been disabled.'
+      }, { status: 403 });
+    }
+    
+    const feedConfig = feedConfigs[0];
+    
+    // Update access tracking
+    await base44.asServiceRole.entities.CalendarFeedConfig.update(feedConfig.id, {
+      last_accessed: new Date().toISOString(),
+      access_count: (feedConfig.access_count || 0) + 1
+    });
+    
+    // Use config settings if not overridden by query params
+    const effectiveTechId = techId || feedConfig.technician_id;
+    const effectiveDays = url.searchParams.has('days') ? days : (feedConfig.time_window_days || 90);
+    const effectiveIncludeUnassigned = url.searchParams.has('include_unassigned') ? includeUnassigned : (feedConfig.include_unassigned || false);
     
     // Calculate date window
     const today = new Date();
     const fromDate = new Date(today);
     fromDate.setDate(today.getDate() - 7);
     const toDate = new Date(today);
-    toDate.setDate(today.getDate() + (days - 7));
+    toDate.setDate(today.getDate() + (effectiveDays - 7));
     
     const fromDateStr = fromDate.toISOString().split('T')[0];
     const toDateStr = toDate.toISOString().split('T')[0];
@@ -84,17 +121,17 @@ Deno.serve(async (req) => {
       status: { $nin: ['Completed', 'Cancelled'] }
     };
     
-    const workOrders = await base44.entities.WorkOrder.filter(woQuery);
+    const workOrders = await base44.asServiceRole.entities.WorkOrder.filter(woQuery);
     queryCount++;
     
     // Filter by technician if specified
     let filteredWOs = workOrders;
-    if (techId) {
+    if (effectiveTechId) {
       filteredWOs = workOrders.filter(wo => {
         const assignedTechs = wo.assigned_technicians || [];
-        return assignedTechs.includes(techId) || wo.lead_technician_id === techId;
+        return assignedTechs.includes(effectiveTechId) || wo.lead_technician_id === effectiveTechId;
       });
-    } else if (!includeUnassigned) {
+    } else if (!effectiveIncludeUnassigned) {
       // Exclude unassigned if not explicitly requested
       filteredWOs = workOrders.filter(wo => {
         const assignedTechs = wo.assigned_technicians || [];
@@ -110,7 +147,7 @@ Deno.serve(async (req) => {
     let locations = [];
     
     if (jobIds.length > 0) {
-      jobs = await base44.entities.Job.filter({ id: { $in: jobIds } });
+      jobs = await base44.asServiceRole.entities.Job.filter({ id: { $in: jobIds } });
       queryCount++;
       
       const boatIds = [...new Set(jobs.map(j => j.boat_id).filter(Boolean))];
@@ -118,9 +155,9 @@ Deno.serve(async (req) => {
       const locationIds = [...new Set(jobs.map(j => j.location_id).filter(Boolean))];
       
       [boats, customers, locations] = await Promise.all([
-        boatIds.length > 0 ? base44.entities.Boat.filter({ id: { $in: boatIds } }) : Promise.resolve([]),
-        customerIds.length > 0 ? base44.entities.Customer.filter({ id: { $in: customerIds } }) : Promise.resolve([]),
-        locationIds.length > 0 ? base44.entities.Location.filter({ id: { $in: locationIds } }) : Promise.resolve([])
+        boatIds.length > 0 ? base44.asServiceRole.entities.Boat.filter({ id: { $in: boatIds } }) : Promise.resolve([]),
+        customerIds.length > 0 ? base44.asServiceRole.entities.Customer.filter({ id: { $in: customerIds } }) : Promise.resolve([]),
+        locationIds.length > 0 ? base44.asServiceRole.entities.Location.filter({ id: { $in: locationIds } }) : Promise.resolve([])
       ]);
       queryCount += 3;
     }

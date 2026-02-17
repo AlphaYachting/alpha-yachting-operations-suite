@@ -87,6 +87,7 @@ const navItems = [
   // ADMIN
   { header: 'ADMIN' },
   { name: 'Settings', icon: Settings, page: 'Settings' },
+  { name: 'Calendar Feeds', icon: CalendarIcon, page: 'CalendarFeeds', adminOnly: true },
   { name: 'App Invitations', icon: Mail, page: 'AppInvites', adminOnly: true },
   { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
   { name: 'Customer Portal Test', icon: Users, page: 'CustomerPortalTest', adminOnly: true },
