@@ -44,6 +44,23 @@ Deno.serve(async (req) => {
     const woIds = workOrders.map(wo => wo.id);
     const projectTasks = tasks.filter(t => woIds.includes(t.work_order_id));
 
+    // Date/time formatters (P5 fix: consistent formatting)
+    const formatDate = (dateStr) => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const formatDateTime = (dateStr, timeStr) => {
+      if (!dateStr) return '';
+      const dateFormatted = formatDate(dateStr);
+      if (!timeStr) return dateFormatted;
+      return `${dateFormatted} ${timeStr}`;
+    };
+
     // Generate PDF
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
