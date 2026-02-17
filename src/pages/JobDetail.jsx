@@ -21,7 +21,9 @@ import {
   Edit,
   GripVertical,
   MoreVertical,
-  Trash2
+  Trash2,
+  Printer,
+  Loader2
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {

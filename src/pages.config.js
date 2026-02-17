@@ -48,6 +48,7 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import AccessLogs from './pages/AccessLogs';
+import AppInvites from './pages/AppInvites';
 import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
 import CustomerBoatDetail from './pages/CustomerBoatDetail';
@@ -63,6 +64,7 @@ import CustomerProjectDetailSimulate from './pages/CustomerProjectDetailSimulate
 import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import DatabaseBackup from './pages/DatabaseBackup';
+import EmailConfiguration from './pages/EmailConfiguration';
 import Inventory from './pages/Inventory';
 import InventoryDashboard from './pages/InventoryDashboard';
 import InventoryExportSchema from './pages/InventoryExportSchema';
@@ -110,13 +112,12 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import AppInvites from './pages/AppInvites';
-import EmailConfiguration from './pages/EmailConfiguration';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AccessLogs": AccessLogs,
+    "AppInvites": AppInvites,
     "BoatDetail": BoatDetail,
     "Boats": Boats,
     "CustomerBoatDetail": CustomerBoatDetail,
@@ -132,6 +133,7 @@ export const PAGES = {
     "Customers": Customers,
     "Dashboard": Dashboard,
     "DatabaseBackup": DatabaseBackup,
+    "EmailConfiguration": EmailConfiguration,
     "Inventory": Inventory,
     "InventoryDashboard": InventoryDashboard,
     "InventoryExportSchema": InventoryExportSchema,
@@ -179,8 +181,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "AppInvites": AppInvites,
-    "EmailConfiguration": EmailConfiguration,
 }
 
 export const pagesConfig = {
