@@ -98,6 +98,7 @@ export default function ProjectDetail() {
    const [deleteWorkOrder, setDeleteWorkOrder] = useState(null);
    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
    const [showNewWorkOrderDialog, setShowNewWorkOrderDialog] = useState(false);
+   const [printLoading, setPrintLoading] = useState(false);
 
    useEffect(() => {
      if (projectId) {
