@@ -606,6 +606,9 @@ export default function WorkOrders() {
     return groups;
   }, [filteredWorkOrders, jobMap]);
 
+  // Safety: Force list view if data not ready for boat grouping
+  const safeViewMode = (viewMode === 'byboat' && (loading || jobs.length === 0 || boats.length === 0)) ? 'list' : viewMode;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -618,19 +621,21 @@ export default function WorkOrders() {
           {/* View Toggle */}
           <div className="flex items-center bg-slate-100 rounded-lg p-1">
             <Button
-              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              variant={safeViewMode === 'list' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => handleViewModeChange('list')}
-              className={viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}
+              className={safeViewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}
             >
               <LayoutList className="h-4 w-4 mr-2" />
               List
             </Button>
             <Button
-              variant={viewMode === 'byboat' ? 'secondary' : 'ghost'}
+              variant={safeViewMode === 'byboat' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => handleViewModeChange('byboat')}
-              className={viewMode === 'byboat' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}
+              disabled={loading || jobs.length === 0 || boats.length === 0}
+              className={safeViewMode === 'byboat' ? 'bg-white shadow-sm' : 'hover:bg-slate-200'}
+              title={loading || jobs.length === 0 || boats.length === 0 ? 'Loading data for boat view...' : ''}
             >
               <Ship className="h-4 w-4 mr-2" />
               By Boat
@@ -733,7 +738,7 @@ export default function WorkOrders() {
             <p className="text-slate-500 mt-1">Create your first work order to get started</p>
           </CardContent>
         </Card>
-      ) : viewMode === 'list' ? (
+      ) : safeViewMode === 'list' ? (
         <div className="grid gap-4">
           {filteredWorkOrders.map((wo) => {
             const projectInfo = getProjectInfo(wo.job_id);
@@ -999,7 +1004,22 @@ export default function WorkOrders() {
             const boatInfo = getBoatInfo(boatId);
             const isExpanded = expandedBoats[boatId] !== false; // Default expanded
             
-            if (!boatInfo) return null;
+            if (!boatInfo) {
+              // Safety: Show unknown boat instead of hiding
+              return (
+                <Card key={boatId} className="border-amber-200 bg-amber-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <AlertCircle className="h-5 w-5" />
+                      <span className="font-medium">Unknown Boat (ID: {boatId})</span>
+                      <span className="text-sm text-amber-600">
+                        {boatWorkOrders.length} work order{boatWorkOrders.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
             
             const customerName = boatInfo.customer?.company_name || 
               `${boatInfo.customer?.first_name || ''} ${boatInfo.customer?.last_name || ''}`.trim() || 
