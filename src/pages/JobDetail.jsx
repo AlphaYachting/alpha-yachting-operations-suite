@@ -279,29 +279,36 @@ export default function ProjectDetail() {
   };
 
   const handleDragEnd = async (result) => {
-    if (!result.destination) return;
-    if (result.source.index === result.destination.index) return;
+   if (!result.destination) return;
+   if (result.source.index === result.destination.index) return;
 
-    const items = Array.from(workOrders);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
+   const items = Array.from(workOrders);
+   const [reorderedItem] = items.splice(result.source.index, 1);
+   items.splice(result.destination.index, 0, reorderedItem);
 
-    // Update local state immediately for UI responsiveness
-    setWorkOrders(items);
+   // Assign new sort_index values
+   const updatedItems = items.map((wo, index) => ({
+     ...wo,
+     sort_index: index + 1
+   }));
 
-    // Batch update sort_index for all workorders
-    try {
-      const updates = items.map((wo, index) => 
-        base44.entities.WorkOrder.update(wo.id, { sort_index: index + 1 })
-      );
-      await Promise.all(updates);
-      toast.success('Work order order updated');
-    } catch (error) {
-      console.error('Error updating work order order:', error);
-      toast.error('Failed to update order');
-      // Reload on error to restore correct state
-      await loadProjectData();
-    }
+   // Update local state immediately for UI responsiveness
+   setWorkOrders(updatedItems);
+
+   // Batch update sort_index for all workorders
+   try {
+     await Promise.all(
+       updatedItems.map((wo) => 
+         base44.entities.WorkOrder.update(wo.id, { sort_index: wo.sort_index })
+       )
+     );
+     toast.success('Work order order saved');
+   } catch (error) {
+     console.error('Error updating work order order:', error);
+     toast.error('Failed to save order');
+     // Reload on error to restore correct state
+     await loadProjectData();
+   }
   };
 
   const handleDeleteWorkOrder = async () => {
@@ -802,8 +809,19 @@ export default function ProjectDetail() {
                               <button
                                 onClick={async () => {
                                   if (task.status !== 'Completed') {
-                                    await base44.entities.Task.update(task.id, { status: 'Completed', completed_at: new Date().toISOString() });
-                                    loadProjectData();
+                                    const updateData = { 
+                                      status: 'Completed', 
+                                      completed_at: new Date().toISOString()
+                                    };
+                                    // Preserve work_order_id if missing
+                                    if (!task.work_order_id) {
+                                      updateData.work_order_id = wo.id;
+                                    }
+                                    await base44.entities.Task.update(task.id, updateData);
+                                    // Update local state without full reload to preserve sorting
+                                    setTasks(prev => prev.map(t => 
+                                      t.id === task.id ? { ...t, ...updateData } : t
+                                    ));
                                   }
                                 }}
                                 disabled={task.status === 'Completed'}
