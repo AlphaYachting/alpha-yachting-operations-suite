@@ -57,7 +57,14 @@ export default function LeadsV2() {
   };
 
   if (isLoading) {
-    return <div className="p-6 text-center">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent mb-4"></div>
+          <p className="text-slate-600">Loading leads...</p>
+        </div>
+      </div>
+    );
   }
 
   // Stats
