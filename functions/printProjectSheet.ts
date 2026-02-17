@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     }
 
     if (job.requested_date) {
-      doc.text(`Due Date: ${new Date(job.requested_date).toLocaleDateString('en-GB')}`, margin, y);
+      doc.text(`Due Date: ${formatDate(job.requested_date)}`, margin, y);
       y += 5;
     }
 
