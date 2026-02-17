@@ -438,10 +438,25 @@ export default function ProjectDetail() {
           </div>
           <p className="text-slate-500 mt-1">{project.service_category} • {project.job_type}</p>
         </div>
-        <Button onClick={() => setShowEditDialog(true)} className="gap-2">
-          <Edit className="h-4 w-4" />
-          Edit Project
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handlePrintProjectSheet}
+            disabled={printLoading}
+            className="gap-2"
+          >
+            {printLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4" />
+            )}
+            Print Project Sheet
+          </Button>
+          <Button onClick={() => setShowEditDialog(true)} className="gap-2">
+            <Edit className="h-4 w-4" />
+            Edit Project
+          </Button>
+        </div>
       </div>
 
       {/* Overview Cards */}
