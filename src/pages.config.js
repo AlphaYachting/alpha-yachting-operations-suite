@@ -112,6 +112,8 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
+import Suppliers from './pages/Suppliers';
+import SupplierDetail from './pages/SupplierDetail';
 import __Layout from './Layout.jsx';
 
 
@@ -181,6 +183,8 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
+    "Suppliers": Suppliers,
+    "SupplierDetail": SupplierDetail,
 }
 
 export const pagesConfig = {
