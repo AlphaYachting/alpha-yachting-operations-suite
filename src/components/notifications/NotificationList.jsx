@@ -61,9 +61,10 @@ export default function NotificationList({ notifications, onNotificationClick, o
                 <p className={`font-medium text-sm ${!notification.is_read ? 'text-slate-900' : 'text-slate-600'}`}>
                   {notification.title}
                 </p>
-                <p className="text-sm text-slate-500 mt-1">
-                  {notification.message}
-                </p>
+                <div 
+                  className="text-sm text-slate-500 mt-1"
+                  dangerouslySetInnerHTML={{ __html: notification.message }}
+                />
                 <p className="text-xs text-slate-400 mt-2">
                   {notification.created_date ? formatDistanceToNow(new Date(notification.created_date), { addSuffix: true }) : 'Just now'}
                 </p>
