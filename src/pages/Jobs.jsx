@@ -536,15 +536,19 @@ export default function Projects() {
             const dueDate = project.requested_date ? parseISO(project.requested_date) : null;
             const daysUntilDue = dueDate ? differenceInDays(dueDate, today) : null;
             
-            const isDueOverdue = dueDate && isPast(dueDate) && !isToday(dueDate);
-            const isDueToday = dueDate && isToday(dueDate);
-            const isDueSoon = daysUntilDue !== null && daysUntilDue > 0 && daysUntilDue <= 7;
+            // Warning styles only apply if NOT completed/cancelled
+            const isCompleted = ['Completed', 'Invoiced', 'Cancelled'].includes(project.status);
+            
+            const isDueOverdue = !isCompleted && dueDate && isPast(dueDate) && !isToday(dueDate);
+            const isDueToday = !isCompleted && dueDate && isToday(dueDate);
+            const isDueWithin3Days = !isCompleted && daysUntilDue !== null && daysUntilDue > 0 && daysUntilDue <= 3;
+            const isDueWithin7Days = !isCompleted && daysUntilDue !== null && daysUntilDue > 3 && daysUntilDue <= 7;
 
             return (
             <Card key={project.id} className={`hover:shadow-md transition-shadow ${
-              isDueOverdue ? 'border-red-500 border-2 bg-red-50/30' : 
-              isDueToday ? 'border-amber-500 border-2 bg-amber-50/30' : 
-              isDueSoon ? 'border-yellow-400 border-2 bg-yellow-50/30' : ''
+              isDueOverdue ? 'border-red-600 border-2 bg-red-50/40' : 
+              isDueToday || isDueWithin3Days ? 'border-red-500 border-2 bg-red-50/20' : 
+              isDueWithin7Days ? 'border-yellow-400 border-2 bg-yellow-50/30' : ''
             }`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -561,11 +565,13 @@ export default function Projects() {
                       {project.requested_date && (
                         <Badge className={`${
                           isDueOverdue ? 'bg-red-600 text-white border-red-700' : 
-                          isDueToday ? 'bg-amber-600 text-white border-amber-700' : 
-                          isDueSoon ? 'bg-yellow-500 text-white border-yellow-600' : 
+                          isDueToday || isDueWithin3Days ? 'bg-red-500 text-white border-red-600' : 
+                          isDueWithin7Days ? 'bg-yellow-500 text-white border-yellow-600' : 
                           'bg-slate-100 text-slate-700'
                         }`}>
-                          <AlertTriangle className={`h-3 w-3 mr-1 text-red-600 ${isDueOverdue || isDueToday || isDueSoon ? 'animate-pulse' : ''}`} />
+                          {(isDueOverdue || isDueToday || isDueWithin3Days || isDueWithin7Days) && (
+                            <AlertTriangle className="h-3 w-3 mr-1 animate-pulse" />
+                          )}
                           {isDueOverdue ? 'OVERDUE' : isDueToday ? 'DUE TODAY' : `Due ${format(parseISO(project.requested_date), 'MMM d')}`}
                         </Badge>
                       )}
@@ -596,8 +602,8 @@ export default function Projects() {
                       {project.requested_date && (
                         <div className={`flex items-center gap-1 font-medium ${
                           isDueOverdue ? 'text-red-700' : 
-                          isDueToday ? 'text-amber-700' : 
-                          isDueSoon ? 'text-yellow-700' : 
+                          isDueToday || isDueWithin3Days ? 'text-red-600' : 
+                          isDueWithin7Days ? 'text-yellow-700' : 
                           'text-slate-600'
                         }`}>
                           <AlertTriangle className="h-3 w-3" />
