@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, parseISO, isPast, isToday, differenceInDays, startOfDay } from 'date-fns';
+import UserSimulator from '@/components/admin/UserSimulator';
 
 // FIELD MAPPING (Task entity):
 // - status values: "Not Started", "In Progress", "Completed", "Not Possible", "Needs Approval", "Skipped"
@@ -105,6 +106,8 @@ const statusColors = {
   'Skipped': 'bg-slate-100 text-slate-500'
 };
 
+const SIMULATION_KEY = 'admin_simulate_user_id';
+
 export default function MyTasks() {
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
@@ -112,6 +115,7 @@ export default function MyTasks() {
   const [jobs, setJobs] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [effectiveUser, setEffectiveUser] = useState(null);
   const [mode, setMode] = useState('open'); // 'open' or 'all'
 
   useEffect(() => {
@@ -122,9 +126,26 @@ export default function MyTasks() {
     try {
       setLoading(true);
       
-      // Get current user
+      // Get current user (real user)
       const user = await base44.auth.me();
       setCurrentUser(user);
+      
+      // Check for simulation (admin only)
+      let effectiveUserId = user.id;
+      if (user.role === 'admin') {
+        const simulatedId = localStorage.getItem(SIMULATION_KEY);
+        if (simulatedId) {
+          effectiveUserId = simulatedId;
+        }
+      }
+      
+      // Load effective user
+      if (effectiveUserId !== user.id) {
+        const [simulatedUser] = await base44.entities.User.filter({ id: effectiveUserId });
+        setEffectiveUser(simulatedUser || user);
+      } else {
+        setEffectiveUser(user);
+      }
       
       // Load all tasks (no limit to ensure we get all user's tasks)
       const [allTasks, allWorkOrders, allJobs, allTechnicians] = await Promise.all([
@@ -145,29 +166,35 @@ export default function MyTasks() {
     }
   };
 
-  // Filter tasks belonging to current user
+  // Filter tasks belonging to effective user (respects simulation)
   const myTechnicianProfile = technicians.find(tech => 
-    tech.user_id === currentUser?.id || tech.email === currentUser?.email
+    tech.user_id === effectiveUser?.id || tech.email === effectiveUser?.email
   );
   
   const myTasks = tasks.filter(task => {
-    if (!currentUser) return false;
-    return isMyTask(task, workOrders, technicians, currentUser);
+    if (!effectiveUser) return false;
+    return isMyTask(task, workOrders, technicians, effectiveUser);
   });
 
-  // Debug info
-  console.log('My Tasks Debug:', {
-    currentUserId: currentUser?.id,
-    currentUserEmail: currentUser?.email,
-    myTechnicianProfile,
-    totalTasks: tasks.length,
-    totalWorkOrders: workOrders.length,
-    myTasksFound: myTasks.length,
-    workOrdersWithMyTech: workOrders.filter(wo => 
-      wo.lead_technician_id === myTechnicianProfile?.id || 
-      wo.assigned_technicians?.includes(myTechnicianProfile?.id)
-    ).length
-  });
+  // Debug info (admin only)
+  const isSimulating = currentUser?.role === 'admin' && effectiveUser?.id !== currentUser?.id;
+  if (currentUser?.role === 'admin') {
+    console.log('My Tasks Debug:', {
+      realUserId: currentUser?.id,
+      realUserEmail: currentUser?.email,
+      effectiveUserId: effectiveUser?.id,
+      effectiveUserEmail: effectiveUser?.email,
+      simulation: isSimulating ? 'ON' : 'OFF',
+      myTechnicianProfile,
+      totalTasks: tasks.length,
+      totalWorkOrders: workOrders.length,
+      myTasksFound: myTasks.length,
+      workOrdersWithMyTech: workOrders.filter(wo => 
+        wo.lead_technician_id === myTechnicianProfile?.id || 
+        wo.assigned_technicians?.includes(myTechnicianProfile?.id)
+      ).length
+    });
+  }
 
   // Apply mode filter (open vs all)
   const filteredTasks = myTasks.filter(task => {
@@ -209,7 +236,17 @@ export default function MyTasks() {
           <p className="text-slate-500 mt-1">
             {sortedTasks.length} {mode === 'open' ? 'open' : 'total'} tasks assigned to you
           </p>
+          {currentUser?.role === 'admin' && isSimulating && (
+            <div className="text-xs text-amber-700 mt-1 font-medium">
+              ⚠️ Simulation Active | Real: {currentUser.email} | Viewing as: {effectiveUser?.email}
+            </div>
+          )}
         </div>
+        {currentUser?.role === 'admin' && (
+          <div className="w-80">
+            <UserSimulator currentUser={currentUser} />
+          </div>
+        )}
       </div>
 
       {/* Mode Toggle */}
