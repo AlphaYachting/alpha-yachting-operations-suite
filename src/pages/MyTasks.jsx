@@ -25,17 +25,23 @@ import { format, parseISO, isPast, isToday, differenceInDays, startOfDay } from 
 
 /**
  * Helper: Check if a task belongs to current user
- * A task belongs to user if the parent WorkOrder has user in assigned_technicians or as lead_technician_id
+ * A task belongs to user if the parent WorkOrder has user's technician in assigned_technicians or as lead_technician_id
  */
-function isMyTask(task, workOrders, currentUserId) {
+function isMyTask(task, workOrders, technicians, currentUserId) {
   const workOrder = workOrders.find(wo => wo.id === task.work_order_id);
   if (!workOrder) return false;
   
+  // Find technician profile for current user
+  const myTechnicianProfile = technicians.find(tech => tech.user_id === currentUserId);
+  if (!myTechnicianProfile) return false;
+  
+  const myTechnicianId = myTechnicianProfile.id;
+  
   // Check if user is lead technician
-  if (workOrder.lead_technician_id === currentUserId) return true;
+  if (workOrder.lead_technician_id === myTechnicianId) return true;
   
   // Check if user is in assigned technicians
-  if (workOrder.assigned_technicians && workOrder.assigned_technicians.includes(currentUserId)) {
+  if (workOrder.assigned_technicians && workOrder.assigned_technicians.includes(myTechnicianId)) {
     return true;
   }
   
@@ -102,6 +108,7 @@ export default function MyTasks() {
   const [tasks, setTasks] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [mode, setMode] = useState('open'); // 'open' or 'all'
 
@@ -118,15 +125,17 @@ export default function MyTasks() {
       setCurrentUser(user);
       
       // Load all tasks (no limit to ensure we get all user's tasks)
-      const [allTasks, allWorkOrders, allJobs] = await Promise.all([
+      const [allTasks, allWorkOrders, allJobs, allTechnicians] = await Promise.all([
         base44.entities.Task.list('-created_date', 500),
         base44.entities.WorkOrder.list('-created_date', 500),
-        base44.entities.Job.list('-created_date', 200)
+        base44.entities.Job.list('-created_date', 200),
+        base44.entities.Technician.list('-created_date', 200)
       ]);
       
       setTasks(allTasks);
       setWorkOrders(allWorkOrders);
       setJobs(allJobs);
+      setTechnicians(allTechnicians);
     } catch (error) {
       console.error('Error loading my tasks:', error);
     } finally {
@@ -137,7 +146,7 @@ export default function MyTasks() {
   // Filter tasks belonging to current user
   const myTasks = tasks.filter(task => {
     if (!currentUser) return false;
-    return isMyTask(task, workOrders, currentUser.id);
+    return isMyTask(task, workOrders, technicians, currentUser.id);
   });
 
   // Apply mode filter (open vs all)
