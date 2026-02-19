@@ -144,9 +144,25 @@ export default function MyTasks() {
   };
 
   // Filter tasks belonging to current user
+  const myTechnicianProfile = technicians.find(tech => tech.user_id === currentUser?.id);
+  
   const myTasks = tasks.filter(task => {
     if (!currentUser) return false;
     return isMyTask(task, workOrders, technicians, currentUser.id);
+  });
+
+  // Debug info
+  console.log('My Tasks Debug:', {
+    currentUserId: currentUser?.id,
+    currentUserEmail: currentUser?.email,
+    myTechnicianProfile,
+    totalTasks: tasks.length,
+    totalWorkOrders: workOrders.length,
+    myTasksFound: myTasks.length,
+    workOrdersWithMyTech: workOrders.filter(wo => 
+      wo.lead_technician_id === myTechnicianProfile?.id || 
+      wo.assigned_technicians?.includes(myTechnicianProfile?.id)
+    ).length
   });
 
   // Apply mode filter (open vs all)
@@ -217,6 +233,17 @@ export default function MyTasks() {
                 ? 'You have no open tasks assigned to you' 
                 : 'You have no tasks assigned to you'}
             </p>
+            {!myTechnicianProfile && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-left">
+                <p className="text-sm text-amber-800">
+                  <strong>Note:</strong> You don't have a Technician profile linked to your account. 
+                  Tasks are assigned to technicians, not directly to users.
+                </p>
+                <p className="text-xs text-amber-700 mt-2">
+                  Contact an admin to create a Technician profile with your email: {currentUser?.email}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
