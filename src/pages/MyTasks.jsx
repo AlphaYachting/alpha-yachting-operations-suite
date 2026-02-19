@@ -27,12 +27,14 @@ import { format, parseISO, isPast, isToday, differenceInDays, startOfDay } from 
  * Helper: Check if a task belongs to current user
  * A task belongs to user if the parent WorkOrder has user's technician in assigned_technicians or as lead_technician_id
  */
-function isMyTask(task, workOrders, technicians, currentUserId) {
+function isMyTask(task, workOrders, technicians, currentUser) {
   const workOrder = workOrders.find(wo => wo.id === task.work_order_id);
   if (!workOrder) return false;
   
-  // Find technician profile for current user
-  const myTechnicianProfile = technicians.find(tech => tech.user_id === currentUserId);
+  // Find technician profile for current user (match by user_id OR by email)
+  const myTechnicianProfile = technicians.find(tech => 
+    tech.user_id === currentUser.id || tech.email === currentUser.email
+  );
   if (!myTechnicianProfile) return false;
   
   const myTechnicianId = myTechnicianProfile.id;
@@ -144,11 +146,13 @@ export default function MyTasks() {
   };
 
   // Filter tasks belonging to current user
-  const myTechnicianProfile = technicians.find(tech => tech.user_id === currentUser?.id);
+  const myTechnicianProfile = technicians.find(tech => 
+    tech.user_id === currentUser?.id || tech.email === currentUser?.email
+  );
   
   const myTasks = tasks.filter(task => {
     if (!currentUser) return false;
-    return isMyTask(task, workOrders, technicians, currentUser.id);
+    return isMyTask(task, workOrders, technicians, currentUser);
   });
 
   // Debug info
