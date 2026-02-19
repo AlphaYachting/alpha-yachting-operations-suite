@@ -230,38 +230,41 @@ export default function MyTasks() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Tasks</h1>
-          <p className="text-slate-500 mt-1">
-            {sortedTasks.length} {mode === 'open' ? 'open' : 'total'} tasks assigned to you
+      <div className="flex items-start justify-between gap-6">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold text-slate-900">My Tasks</h1>
+          <p className="text-sm text-slate-500 mt-2">
+            {sortedTasks.length} {mode === 'open' ? 'open' : 'total'} tasks • Sorted by due date (earliest first)
           </p>
-          {currentUser?.role === 'admin' && isSimulating && (
-            <div className="text-xs text-amber-700 mt-1 font-medium">
-              ⚠️ Simulation Active | Real: {currentUser.email} | Viewing as: {effectiveUser?.email}
-            </div>
-          )}
         </div>
+        
         {currentUser?.role === 'admin' && (
-          <div className="w-80">
+          <div className="w-80 flex-shrink-0">
             <UserSimulator currentUser={currentUser} />
           </div>
         )}
       </div>
 
-      {/* Mode Toggle */}
-      <Tabs value={mode} onValueChange={setMode}>
-        <TabsList>
-          <TabsTrigger value="open">
-            <ListTodo className="h-4 w-4 mr-2" />
-            Open Tasks
-          </TabsTrigger>
-          <TabsTrigger value="all">
-            <Filter className="h-4 w-4 mr-2" />
-            All Tasks
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Filter Bar */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <Tabs value={mode} onValueChange={setMode}>
+            <TabsList>
+              <TabsTrigger value="open">
+                <ListTodo className="h-4 w-4 mr-2" />
+                Open
+              </TabsTrigger>
+              <TabsTrigger value="all">
+                All Tasks
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          <div className="text-xs text-slate-500">
+            {myTasks.length} total tasks assigned
+          </div>
+        </div>
+      </div>
 
       {/* Tasks List */}
       {sortedTasks.length === 0 ? (
@@ -288,63 +291,81 @@ export default function MyTasks() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-3">
+        <div className="space-y-2">
           {sortedTasks.map((task) => {
             const { workOrder, job } = getTaskContext(task);
             const timeStatus = getTaskTimeStatus(workOrder);
             
             return (
-              <Card key={task.id} className="hover:shadow-md transition-shadow">
+              <Card key={task.id} className="hover:bg-slate-50 transition-colors border-slate-200">
                 <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start justify-between gap-6">
+                    {/* Left: Task Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                      {/* Primary Line */}
+                      <div className="flex items-center gap-2 mb-1">
                         <Link
                           to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}
-                          className="font-medium text-slate-900 hover:text-blue-600 transition-colors"
+                          className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
                         >
                           {task.title}
                         </Link>
-                        <Badge className={statusColors[task.status]}>
-                          {task.status}
-                        </Badge>
-                        <Badge variant={timeStatus.variant} className={timeStatus.color}>
-                          <Clock className="h-3 w-3 mr-1" />
-                          {timeStatus.label}
-                        </Badge>
                       </div>
 
+                      {/* Secondary Line */}
+                      <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
+                        {workOrder && (
+                          <span>{workOrder.title || workOrder.work_order_number}</span>
+                        )}
+                        {job && workOrder && <span>•</span>}
+                        {job && (
+                          <span className="text-slate-500">{job.title}</span>
+                        )}
+                      </div>
+
+                      {/* Description */}
                       {task.description && (
-                        <p className="text-sm text-slate-600 mb-2 line-clamp-2">
+                        <p className="text-sm text-slate-600 line-clamp-1 mb-2">
                           {task.description}
                         </p>
                       )}
 
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
-                        {workOrder && (
-                          <span>WO: {workOrder.title || workOrder.work_order_number}</span>
-                        )}
-                        {job && (
-                          <span>• Project: {job.title}</span>
-                        )}
-                        {workOrder?.scheduled_date && (
-                          <div className="flex items-center gap-1">
-                            • <Calendar className="h-3 w-3" />
-                            {format(parseISO(workOrder.scheduled_date), 'MMM d, yyyy')}
-                          </div>
-                        )}
+                      {/* Badges Row */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge className={statusColors[task.status]} variant="outline">
+                          {task.status}
+                        </Badge>
                       </div>
                     </div>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      asChild
-                    >
-                      <Link to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}>
-                        View
-                      </Link>
-                    </Button>
+                    {/* Right: Meta */}
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <Badge 
+                        variant={timeStatus.variant === 'destructive' ? 'destructive' : 'secondary'}
+                        className={`${timeStatus.variant === 'destructive' ? '' : timeStatus.color}`}
+                      >
+                        <Clock className="h-3 w-3 mr-1" />
+                        {timeStatus.label}
+                      </Badge>
+                      
+                      {workOrder?.scheduled_date && (
+                        <div className="flex items-center gap-1 text-xs text-slate-500">
+                          <Calendar className="h-3 w-3" />
+                          {format(parseISO(workOrder.scheduled_date), 'MMM d, yyyy')}
+                        </div>
+                      )}
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mt-1"
+                        asChild
+                      >
+                        <Link to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}>
+                          View WO →
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

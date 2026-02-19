@@ -4,18 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, RotateCcw, Eye } from 'lucide-react';
+import { RotateCcw, Eye, AlertCircle } from 'lucide-react';
 
 const SIMULATION_KEY = 'admin_simulate_user_id';
 
 export default function UserSimulator({ currentUser }) {
   const [users, setUsers] = useState([]);
   const [simulatedUserId, setSimulatedUserId] = useState(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadUsers();
-    // Load simulation state from localStorage
     const saved = localStorage.getItem(SIMULATION_KEY);
     if (saved) {
       setSimulatedUserId(saved);
@@ -34,7 +32,6 @@ export default function UserSimulator({ currentUser }) {
   const handleEnableSimulation = (userId) => {
     setSimulatedUserId(userId);
     localStorage.setItem(SIMULATION_KEY, userId);
-    // Reload page to apply changes
     window.location.reload();
   };
 
@@ -47,23 +44,28 @@ export default function UserSimulator({ currentUser }) {
   const simulatedUser = users.find(u => u.id === simulatedUserId);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Eye className="h-4 w-4" />
+    <Card className="border-slate-200">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <Eye className="h-4 w-4 text-slate-500" />
           Simulate User (View-As)
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {simulatedUserId && simulatedUser ? (
-          <div className="space-y-3">
-            <Badge variant="default" className="bg-amber-500 hover:bg-amber-600">
-              <Eye className="h-3 w-3 mr-1" />
-              Viewing as: {simulatedUser.full_name || simulatedUser.email}
-            </Badge>
-            <div className="text-xs text-slate-600 space-y-1">
-              <div>Real User: {currentUser?.full_name} ({currentUser?.id})</div>
-              <div>Effective User: {simulatedUser.full_name} ({simulatedUser.id})</div>
+          <>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-amber-900">
+                    Viewing as: {simulatedUser.full_name || simulatedUser.email}
+                  </p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Real user: {currentUser?.full_name} • UI-only simulation
+                  </p>
+                </div>
+              </div>
             </div>
             <Button
               onClick={handleReset}
@@ -74,9 +76,9 @@ export default function UserSimulator({ currentUser }) {
               <RotateCcw className="h-3 w-3 mr-2" />
               Reset to Me
             </Button>
-          </div>
+          </>
         ) : (
-          <div className="space-y-3">
+          <>
             <Select onValueChange={handleEnableSimulation}>
               <SelectTrigger>
                 <SelectValue placeholder="Select user to simulate..." />
@@ -84,15 +86,15 @@ export default function UserSimulator({ currentUser }) {
               <SelectContent>
                 {users.map(user => (
                   <SelectItem key={user.id} value={user.id}>
-                    {user.full_name || user.email} ({user.email})
+                    {user.full_name || user.email}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-slate-500">
-              Select a user to view My Tasks from their perspective
+              UI-only simulation • No auth changes
             </p>
-          </div>
+          </>
         )}
       </CardContent>
     </Card>
