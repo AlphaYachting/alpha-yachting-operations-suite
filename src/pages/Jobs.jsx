@@ -532,9 +532,13 @@ export default function Projects() {
         <div className="grid gap-4">
           {filteredProjects.map((project) => {
             const taskStats = getProjectTaskStats(project.id);
-            const isDueOverdue = project.requested_date && isPast(parseISO(project.requested_date)) && !isToday(parseISO(project.requested_date));
-            const isDueToday = project.requested_date && isToday(parseISO(project.requested_date));
-            const isDueSoon = project.requested_date && differenceInDays(parseISO(project.requested_date), new Date()) <= 7 && differenceInDays(parseISO(project.requested_date), new Date()) > 0;
+            const today = new Date();
+            const dueDate = project.requested_date ? parseISO(project.requested_date) : null;
+            const daysUntilDue = dueDate ? differenceInDays(dueDate, today) : null;
+            
+            const isDueOverdue = dueDate && isPast(dueDate) && !isToday(dueDate);
+            const isDueToday = dueDate && isToday(dueDate);
+            const isDueSoon = daysUntilDue !== null && daysUntilDue > 0 && daysUntilDue <= 7;
 
             return (
             <Card key={project.id} className={`hover:shadow-md transition-shadow ${
