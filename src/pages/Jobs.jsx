@@ -131,50 +131,52 @@ export default function Projects() {
       setLoading(true);
       setLoadError(null);
       console.log('[Jobs] Starting data load...');
-      // Load ONLY projects - no related data on initial load
-      const projectsData = await base44.entities.Job.list('-created_date', 30);
+      
+      // FIELD MAPPING (page-scoped):
+      // PROJECT_ENTITY = Job
+      // DUE_DATE_FIELD = requested_date
+      // STATUS_FIELD = status
+      // COMPLETED_STATUS_VALUES = ['Completed', 'Invoiced', 'Cancelled']
+      
+      // Load all projects with increased limit to ensure older due-date projects are visible
+      // Changed from 30 to 500 to include all projects with due dates (page-scoped change only)
+      const projectsData = await base44.entities.Job.list('-created_date', 500);
       console.log('[Jobs] Loaded projects:', projectsData.length);
 
-      // Sort projects: overdue first, then due today, then due soon, then by priority, then by due date, then by created date
+      // Sort projects: overdue first, then by due date ascending (earliest first)
+      // Client-side sorting ensures correct order regardless of server response
       const sortedProjects = projectsData.sort((a, b) => {
         const today = new Date();
         const aDate = a.requested_date ? parseISO(a.requested_date) : null;
         const bDate = b.requested_date ? parseISO(b.requested_date) : null;
         
-        const aOverdue = aDate && isPast(aDate) && !isToday(aDate);
-        const bOverdue = bDate && isPast(bDate) && !isToday(bDate);
-        const aDueToday = aDate && isToday(aDate);
-        const bDueToday = bDate && isToday(bDate);
-        const aDueSoon = aDate && differenceInDays(aDate, today) <= 7 && differenceInDays(aDate, today) > 0;
-        const bDueSoon = bDate && differenceInDays(bDate, today) <= 7 && differenceInDays(bDate, today) > 0;
+        // Check if completed/cancelled (no warning markers)
+        const aCompleted = ['Completed', 'Invoiced', 'Cancelled'].includes(a.status);
+        const bCompleted = ['Completed', 'Invoiced', 'Cancelled'].includes(b.status);
         
-        // Overdue first
+        const aOverdue = !aCompleted && aDate && isPast(aDate) && !isToday(aDate);
+        const bOverdue = !bCompleted && bDate && isPast(bDate) && !isToday(bDate);
+        
+        // Overdue projects first (highest priority)
         if (aOverdue && !bOverdue) return -1;
         if (!aOverdue && bOverdue) return 1;
         
-        // Due today second
-        if (aDueToday && !bDueToday) return -1;
-        if (!aDueToday && bDueToday) return 1;
+        // Then sort by due date ascending (earliest due first)
+        if (aDate && bDate) {
+          const diff = aDate - bDate;
+          if (diff !== 0) return diff;
+        }
+        // Projects with due dates before those without
+        if (aDate && !bDate) return -1;
+        if (!aDate && bDate) return 1;
         
-        // Due soon third
-        if (aDueSoon && !bDueSoon) return -1;
-        if (!aDueSoon && bDueSoon) return 1;
-        
-        // Priority order
+        // Finally by priority for same due dates
         const priorityOrder = { Express: 0, Urgent: 1, High: 2, Normal: 3, Low: 4 };
         const aPriority = priorityOrder[a.priority] ?? 5;
         const bPriority = priorityOrder[b.priority] ?? 5;
         if (aPriority !== bPriority) return aPriority - bPriority;
         
-        // By due date
-        if (aDate && bDate) {
-          if (aDate < bDate) return -1;
-          if (aDate > bDate) return 1;
-        }
-        if (aDate && !bDate) return -1;
-        if (!aDate && bDate) return 1;
-        
-        // By created date (newest first)
+        // By created date (newest first) as last resort
         return new Date(b.created_date) - new Date(a.created_date);
       });
 
