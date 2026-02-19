@@ -45,13 +45,13 @@ function isMyTask(task, workOrders, currentUserId) {
 /**
  * Get time-based status label for a task
  */
-function getTaskTimeStatus(task) {
-  if (!task.scheduled_date) {
+function getTaskTimeStatus(workOrder) {
+  if (!workOrder || !workOrder.scheduled_date) {
     return { label: 'No Due Date', variant: 'outline', color: 'text-slate-500' };
   }
   
   const today = startOfDay(new Date());
-  const dueDate = startOfDay(parseISO(task.scheduled_date));
+  const dueDate = startOfDay(parseISO(workOrder.scheduled_date));
   const daysUntil = differenceInDays(dueDate, today);
   
   if (daysUntil < 0) {
@@ -68,12 +68,15 @@ function getTaskTimeStatus(task) {
 }
 
 /**
- * Sort tasks: due date ascending (nulls last)
+ * Sort tasks: by parent WorkOrder due date ascending (nulls last)
  */
-function sortMyTasks(tasks) {
+function sortMyTasks(tasks, workOrders) {
   return tasks.sort((a, b) => {
-    const aDate = a.scheduled_date ? parseISO(a.scheduled_date) : null;
-    const bDate = b.scheduled_date ? parseISO(b.scheduled_date) : null;
+    const woA = workOrders.find(wo => wo.id === a.work_order_id);
+    const woB = workOrders.find(wo => wo.id === b.work_order_id);
+    
+    const aDate = woA?.scheduled_date ? parseISO(woA.scheduled_date) : null;
+    const bDate = woB?.scheduled_date ? parseISO(woB.scheduled_date) : null;
     
     // Tasks with due dates come first
     if (aDate && !bDate) return -1;
@@ -145,8 +148,8 @@ export default function MyTasks() {
     return true; // 'all' mode
   });
 
-  // Sort by due date
-  const sortedTasks = sortMyTasks([...filteredTasks]);
+  // Sort by parent WorkOrder due date
+  const sortedTasks = sortMyTasks([...filteredTasks], workOrders);
 
   // Get work order and job info for a task
   const getTaskContext = (task) => {
@@ -211,7 +214,7 @@ export default function MyTasks() {
         <div className="grid gap-3">
           {sortedTasks.map((task) => {
             const { workOrder, job } = getTaskContext(task);
-            const timeStatus = getTaskTimeStatus(task);
+            const timeStatus = getTaskTimeStatus(workOrder);
             
             return (
               <Card key={task.id} className="hover:shadow-md transition-shadow">
@@ -247,10 +250,10 @@ export default function MyTasks() {
                         {job && (
                           <span>• Project: {job.title}</span>
                         )}
-                        {task.scheduled_date && (
+                        {workOrder?.scheduled_date && (
                           <div className="flex items-center gap-1">
                             • <Calendar className="h-3 w-3" />
-                            {format(parseISO(task.scheduled_date), 'MMM d, yyyy')}
+                            {format(parseISO(workOrder.scheduled_date), 'MMM d, yyyy')}
                           </div>
                         )}
                       </div>

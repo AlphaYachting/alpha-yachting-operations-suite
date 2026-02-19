@@ -54,6 +54,7 @@ const navItems = [
   { header: 'OPERATIONS' },
   { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard', primary: true },
   { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
+  { name: 'My Tasks', icon: ClipboardList, page: 'MyTasks' },
   { name: 'Schedule', icon: Clock, page: 'Schedule' },
   { name: 'Projects', icon: Briefcase, page: 'Jobs' },
   { name: 'Work Orders', icon: ClipboardList, page: 'WorkOrders' },
