@@ -690,6 +690,8 @@ Requirements:
   const getPDFDocument = () => {
     const customer = customers.find(c => c.id === formData.customer_id);
     const boat = boats.find(b => b.id === formData.boat_id);
+    const subtotalBeforeDiscount = tasks.reduce((sum, t) => t.is_optional ? sum : sum + (t.total_amount || 0), 0);
+    const discountAmount = formData.discount_amount || 0;
     const subtotal = formData.total_amount || 0;
     const vatRate = formData.vat_rate || 0;
     const taxTotal = subtotal * (vatRate / 100);
@@ -722,7 +724,8 @@ Requirements:
       retention_of_title_text: formData.retention_of_title_text,
       show_marina_fees_notice: formData.show_marina_fees_notice,
       vat_rate: vatRate,
-      subtotal: subtotal,
+      subtotal: subtotalBeforeDiscount,
+      discount_amount: discountAmount,
       tax_amount: taxTotal,
       total: total,
       public_notes: formData.customer_notes,
