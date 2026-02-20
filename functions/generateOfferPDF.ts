@@ -679,6 +679,16 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
             <span>Subtotal (Net):</span>
             <span>${currency}${(document.subtotal || 0).toFixed(2)}</span>
           </div>
+          ${discountAmount > 0 ? `
+            <div class="total-row">
+              <span>Discount:</span>
+              <span>-${currency}${discountAmount.toFixed(2)}</span>
+            </div>
+            <div class="total-row">
+              <span>Total After Discount:</span>
+              <span>${currency}${totalAfterDiscount.toFixed(2)}</span>
+            </div>
+          ` : ''}
           ${vatRate > 0 ? `
             <div class="total-row">
               <span>VAT ${vatRate}%:</span>
@@ -687,7 +697,7 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
           ` : ''}
           <div class="total-row final">
             <span>Total (Gross):</span>
-            <span>${currency}${(document.total || 0).toFixed(2)}</span>
+            <span>${currency}${(totalAfterDiscount + taxTotal).toFixed(2)}</span>
           </div>
           ${isInvoice && document.paid_amount > 0 ? `
             <div class="total-row paid">
