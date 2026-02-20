@@ -1228,6 +1228,118 @@ Requirements:
             />
           )}
 
+          {/* Discount Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Discount</CardTitle>
+              <CardDescription>Apply percentage or target total discount</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Discount Mode</Label>
+                <Select
+                  value={formData.discount_mode || 'NONE'}
+                  onValueChange={(val) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      discount_mode: val,
+                      discount_percent: val === 'PERCENT' ? prev.discount_percent : null,
+                      discount_target_total: val === 'TARGET_TOTAL' ? prev.discount_target_total : null,
+                      discount_amount: null
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">No Discount</SelectItem>
+                    <SelectItem value="PERCENT">Percentage Discount</SelectItem>
+                    <SelectItem value="TARGET_TOTAL">Target Total</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.discount_mode === 'PERCENT' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Discount %</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={formData.discount_percent || ''}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (isNaN(val) || val < 0 || val > 100) return;
+                        updateField('discount_percent', val);
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <Label>Discount Amount (calculated)</Label>
+                    <Input
+                      type="text"
+                      value={formData.discount_amount != null ? `€ ${formData.discount_amount.toFixed(2)}` : '€ 0.00'}
+                      disabled
+                    />
+                  </div>
+                </div>
+              )}
+
+              {formData.discount_mode === 'TARGET_TOTAL' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Target Total €</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.discount_target_total || ''}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (isNaN(val) || val < 0) return;
+                        updateField('discount_target_total', val);
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <Label>Discount % (calculated)</Label>
+                    <Input
+                      type="text"
+                      value={formData.discount_percent != null ? `${formData.discount_percent.toFixed(2)}%` : '0.00%'}
+                      disabled
+                    />
+                  </div>
+                </div>
+              )}
+
+              {formData.discount_mode !== 'NONE' && (
+                <div className="pt-3 border-t">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Subtotal (before discount):</span>
+                    <span className="font-medium">
+                      € {tasks.reduce((sum, t) => t.is_optional ? sum : sum + (t.total_amount || 0), 0).toFixed(2)}
+                    </span>
+                  </div>
+                  {formData.discount_amount != null && formData.discount_amount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Discount:</span>
+                      <span className="font-medium">- € {formData.discount_amount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-base font-semibold mt-2 pt-2 border-t">
+                    <span>Total After Discount:</span>
+                    <span>€ {formData.total_amount.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Payment Terms & Legal Section */}
           <PaymentTermsSection 
             formData={formData} 
@@ -1269,9 +1381,23 @@ Requirements:
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-3 border-b">
-                  <span className="text-slate-600">Subtotal (excl. VAT)</span>
-                  <span className="font-semibold">€{(formData.total_amount || 0).toFixed(2)}</span>
+                  <span className="text-slate-600">Subtotal</span>
+                  <span className="font-semibold">
+                    €{tasks.reduce((sum, t) => t.is_optional ? sum : sum + (t.total_amount || 0), 0).toFixed(2)}
+                  </span>
                 </div>
+                {formData.discount_mode !== 'NONE' && formData.discount_amount > 0 && (
+                  <>
+                    <div className="flex justify-between items-center py-2 text-green-600">
+                      <span>Discount</span>
+                      <span className="font-semibold">-€{formData.discount_amount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b">
+                      <span className="text-slate-600">After Discount</span>
+                      <span className="font-semibold">€{(formData.total_amount || 0).toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between items-center py-3 border-b">
                   <span className="text-slate-600">VAT ({formData.vat_rate || 0}%)</span>
                   <span className="font-semibold">€{((formData.total_amount || 0) * (formData.vat_rate || 0) / 100).toFixed(2)}</span>
