@@ -159,6 +159,10 @@ export default function OfferDetail() {
         boat_id: offer.boat_id || '',
         job_id: offer.job_id || '',
         vat_rate: offer.vat_rate || 0,
+        discount_mode: offer.discount_mode || 'NONE',
+        discount_percent: offer.discount_percent || null,
+        discount_amount: offer.discount_amount || null,
+        discount_target_total: offer.discount_target_total || null,
       });
     }
   }, [offer]);
