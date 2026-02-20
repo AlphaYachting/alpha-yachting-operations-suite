@@ -77,6 +77,10 @@ export default function OfferDetail() {
    customer_notes: '',
    safety_compliance_clause: '',
    total_amount: 0,
+   discount_mode: 'NONE',
+   discount_percent: null,
+   discount_amount: null,
+   discount_target_total: null,
    payment_terms_type: 'Full',
    downpayment_percent: 0,
    downpayment_amount: 0,
@@ -167,12 +171,32 @@ export default function OfferDetail() {
 
   useEffect(() => {
     // Recalculate total whenever tasks change - exclude optional items
-    const total = tasks.reduce((sum, task) => {
+    const subtotal = tasks.reduce((sum, task) => {
       if (task.is_optional) return sum;
       return sum + (task.total_amount || 0);
     }, 0);
-    setFormData(prev => ({ ...prev, total_amount: total }));
-  }, [tasks]);
+    
+    // Apply discount based on mode
+    let newFormData = { total_amount: subtotal };
+    
+    if (formData.discount_mode === 'PERCENT' && formData.discount_percent != null) {
+      const discountAmount = Math.round(subtotal * (formData.discount_percent / 100) * 100) / 100;
+      newFormData.discount_amount = discountAmount;
+      newFormData.total_amount = Math.round((subtotal - discountAmount) * 100) / 100;
+    } else if (formData.discount_mode === 'TARGET_TOTAL' && formData.discount_target_total != null) {
+      const targetTotal = Math.max(0, Math.min(formData.discount_target_total, subtotal));
+      const discountAmount = Math.round((subtotal - targetTotal) * 100) / 100;
+      const discountPercent = subtotal > 0 ? Math.round((discountAmount / subtotal) * 10000) / 100 : 0;
+      newFormData.discount_amount = discountAmount;
+      newFormData.discount_percent = discountPercent;
+      newFormData.total_amount = Math.round(targetTotal * 100) / 100;
+    } else {
+      newFormData.discount_amount = null;
+      newFormData.discount_percent = null;
+    }
+    
+    setFormData(prev => ({ ...prev, ...newFormData }));
+  }, [tasks, formData.discount_mode, formData.discount_percent, formData.discount_target_total]);
 
   // Load template data if coming from template selector
   useEffect(() => {
