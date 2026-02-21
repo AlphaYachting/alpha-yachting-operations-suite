@@ -40,12 +40,26 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
     total: 'right'
   };
 
-  // Calculate totals - VAT is calculated once at document level, not per line item
+  // Calculate totals - discount applied BEFORE VAT calculation
   const vatRate = document.vat_rate || 0;
   const subtotal = document.subtotal || 0;
-  const discountAmount = document.discount_amount || 0;
-  const totalAfterDiscount = subtotal - discountAmount;
-  const taxTotal = totalAfterDiscount * (vatRate / 100);
+  
+  // Discount calculation
+  const discountMode = document.discount_mode || 'NONE';
+  let discountAmount = 0;
+  
+  if (discountMode === 'PERCENT' && document.discount_percent > 0) {
+    discountAmount = Math.round(subtotal * document.discount_percent / 100 * 100) / 100;
+  } else if (discountMode === 'TARGET_TOTAL' && document.discount_target_total > 0) {
+    discountAmount = Math.max(0, Math.min(
+      subtotal,
+      Math.round((subtotal - document.discount_target_total) * 100) / 100
+    ));
+  }
+  
+  // Apply discount BEFORE VAT
+  const taxableBase = Math.max(0, subtotal - discountAmount);
+  const taxTotal = Math.round(taxableBase * (vatRate / 100) * 100) / 100;
 
   const outstanding = isInvoice ? (document.total || 0) - (document.paid_amount || 0) : 0;
 
@@ -676,17 +690,13 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
 
         <div class="totals">
           <div class="total-row">
-            <span>Subtotal (Net):</span>
+            <span>Subtotal (excl. VAT):</span>
             <span>${currency}${(document.subtotal || 0).toFixed(2)}</span>
           </div>
           ${discountAmount > 0 ? `
             <div class="total-row">
-              <span>Discount:</span>
+              <span>Discount ${discountMode === 'PERCENT' ? `(${document.discount_percent}%)` : ''}:</span>
               <span>-${currency}${discountAmount.toFixed(2)}</span>
-            </div>
-            <div class="total-row">
-              <span>Total After Discount:</span>
-              <span>${currency}${totalAfterDiscount.toFixed(2)}</span>
             </div>
           ` : ''}
           ${vatRate > 0 ? `
@@ -696,8 +706,8 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
             </div>
           ` : ''}
           <div class="total-row final">
-            <span>Total (Gross):</span>
-            <span>${currency}${(totalAfterDiscount + taxTotal).toFixed(2)}</span>
+            <span>Total (incl. VAT):</span>
+            <span>${currency}${(taxableBase + taxTotal).toFixed(2)}</span>
           </div>
           ${isInvoice && document.paid_amount > 0 ? `
             <div class="total-row paid">
