@@ -476,6 +476,27 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   doc.text(formatCurrency(document.subtotal), totalsX + totalsWidth, yPos, { align: 'right' });
   yPos += 6;
 
+  // Discount handling
+  const discountMode = document.discount_mode || 'NONE';
+  const discountPercent = document.discount_percent;
+  const discountAmount = document.discount_amount || 0;
+  const discountActive = discountMode !== 'NONE' && 
+                         discountAmount != null && 
+                         Math.abs(discountAmount) > 0.005;
+
+  if (discountActive) {
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Discount${discountMode === 'PERCENT' && discountPercent != null ? ` (${discountPercent.toFixed(1)}%)` : ''}:`, totalsX, yPos);
+    doc.text(`-${formatCurrency(discountAmount)}`, totalsX + totalsWidth, yPos, { align: 'right' });
+    yPos += 6;
+    
+    const taxableBase = Math.max(0, (document.subtotal || 0) - discountAmount);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Taxable Base (Net):', totalsX, yPos);
+    doc.text(formatCurrency(taxableBase), totalsX + totalsWidth, yPos, { align: 'right' });
+    yPos += 6;
+  }
+
   // Tax - use document-level calculation
   const vatRate = document.vat_rate || 0;
   const taxAmount = document.tax_amount || ((document.subtotal || 0) * (vatRate / 100));
