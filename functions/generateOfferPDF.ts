@@ -695,6 +695,10 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
               <span>Discount${discountMode === 'PERCENT' && discountPercent != null ? ` (${discountPercent.toFixed(1)}%)` : ''}:</span>
               <span>-${currency}${discountAmount.toFixed(2)}</span>
             </div>
+            <div class="total-row">
+              <span>Taxable Base (Net):</span>
+              <span>${currency}${taxableBase.toFixed(2)}</span>
+            </div>
           ` : ''}
           ${vatRate > 0 ? `
             <div class="total-row">
