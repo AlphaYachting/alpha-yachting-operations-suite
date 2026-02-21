@@ -46,6 +46,7 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
   
   // Discount calculation
   const discountMode = document.discount_mode || 'NONE';
+  const discountPercent = document.discount_percent;
   let discountAmount = 0;
   
   if (discountMode === 'PERCENT' && document.discount_percent > 0) {
@@ -56,6 +57,11 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
       Math.round((subtotal - document.discount_target_total) * 100) / 100
     ));
   }
+  
+  // Deterministic discount active flag
+  const discountActive = discountMode !== 'NONE' && 
+                         discountAmount != null && 
+                         Math.abs(discountAmount) > 0.005;
   
   // Apply discount BEFORE VAT
   const taxableBase = Math.max(0, subtotal - discountAmount);
@@ -693,9 +699,9 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
             <span>Subtotal (excl. VAT):</span>
             <span>${currency}${(document.subtotal || 0).toFixed(2)}</span>
           </div>
-          ${discountAmount > 0 ? `
+          ${discountActive ? `
             <div class="total-row">
-              <span>Discount ${discountMode === 'PERCENT' ? `(${document.discount_percent}%)` : ''}:</span>
+              <span>Discount${discountMode === 'PERCENT' && discountPercent != null ? ` (${discountPercent.toFixed(1)}%)` : ''}:</span>
               <span>-${currency}${discountAmount.toFixed(2)}</span>
             </div>
           ` : ''}

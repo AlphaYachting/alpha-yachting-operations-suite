@@ -39,12 +39,18 @@ export function computeOfferTotals(offer, tasks) {
     ? Math.round((discount_amount_excl_tax / subtotal_excl_tax * 100) * 100) / 100
     : 0;
 
+  // Deterministic discount active flag
+  const discount_active = mode !== 'NONE' && 
+                          discount_amount_excl_tax != null && 
+                          Math.abs(discount_amount_excl_tax) > 0.005;
+
   return {
     subtotal_excl_tax,
     discount_mode: mode,
     discount_percent: mode === 'PERCENT' ? offer.discount_percent : derived_percent,
     discount_target_total: offer.discount_target_total,
     discount_amount_excl_tax,
+    discount_active,
     taxable_base_excl_tax,
     vat_rate,
     vat_amount,

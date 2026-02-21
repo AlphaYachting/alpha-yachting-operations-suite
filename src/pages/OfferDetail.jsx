@@ -1310,25 +1310,25 @@ Requirements:
                </div>
               )}
 
-              {formData.discount_mode !== 'NONE' && (
-               <div className="pt-3 border-t">
-                 <div className="flex justify-between text-sm">
-                   <span className="text-slate-600">Subtotal (excl. VAT):</span>
-                   <span className="font-medium">
-                     € {totals.subtotal_excl_tax.toFixed(2)}
-                   </span>
-                 </div>
-                 {totals.discount_amount_excl_tax > 0 && (
-                   <div className="flex justify-between text-sm text-red-600">
-                     <span>Discount ({totals.discount_percent.toFixed(1)}%):</span>
-                     <span className="font-medium">- € {totals.discount_amount_excl_tax.toFixed(2)}</span>
-                   </div>
-                 )}
-                 <div className="flex justify-between text-base font-semibold mt-2 pt-2 border-t">
-                   <span>Taxable Base (excl. VAT):</span>
-                   <span>€ {totals.taxable_base_excl_tax.toFixed(2)}</span>
-                 </div>
-               </div>
+              {totals.discount_active && (
+                <div className="pt-3 border-t">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Subtotal (excl. VAT):</span>
+                    <span className="font-medium">
+                      € {totals.subtotal_excl_tax.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-red-600">
+                    <span>
+                      Discount{totals.discount_mode === 'PERCENT' && totals.discount_percent != null ? ` (${totals.discount_percent.toFixed(1)}%)` : ''}:
+                    </span>
+                    <span className="font-medium">- € {totals.discount_amount_excl_tax.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-semibold mt-2 pt-2 border-t">
+                    <span>Taxable Base (excl. VAT):</span>
+                    <span>€ {totals.taxable_base_excl_tax.toFixed(2)}</span>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -1379,10 +1379,12 @@ Requirements:
                     €{totals.subtotal_excl_tax.toFixed(2)}
                   </span>
                 </div>
-                {totals.discount_amount_excl_tax > 0 && (
+                {totals.discount_active && (
                   <>
                     <div className="flex justify-between items-center py-2 text-red-600">
-                      <span>Discount ({totals.discount_percent.toFixed(1)}%)</span>
+                      <span>
+                        Discount{totals.discount_mode === 'PERCENT' && totals.discount_percent != null ? ` (${totals.discount_percent.toFixed(1)}%)` : ''}
+                      </span>
                       <span className="font-semibold">-€{totals.discount_amount_excl_tax.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center py-3 border-b">
