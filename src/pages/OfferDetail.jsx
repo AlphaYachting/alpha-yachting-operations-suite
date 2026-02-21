@@ -50,6 +50,7 @@ import PaymentTermsSection from '@/components/offers/PaymentTermsSection';
 import OfferGallery from '@/components/offers/OfferGallery';
 import PDFExportButton from '@/components/pdf/PDFExportButton';
 import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
+import { computeOfferTotals } from '@/components/offers/offerTotals';
 
 export default function OfferDetail() {
   const navigate = useNavigate();
@@ -173,34 +174,16 @@ export default function OfferDetail() {
     }
   }, [offerTasks]);
 
-  useEffect(() => {
-    // Recalculate total whenever tasks change - exclude optional items
-    const subtotal = tasks.reduce((sum, task) => {
-      if (task.is_optional) return sum;
-      return sum + (task.total_amount || 0);
-    }, 0);
-    
-    // Apply discount based on mode
-    let newFormData = { total_amount: subtotal };
-    
-    if (formData.discount_mode === 'PERCENT' && formData.discount_percent != null) {
-      const discountAmount = Math.round(subtotal * (formData.discount_percent / 100) * 100) / 100;
-      newFormData.discount_amount = discountAmount;
-      newFormData.total_amount = Math.round((subtotal - discountAmount) * 100) / 100;
-    } else if (formData.discount_mode === 'TARGET_TOTAL' && formData.discount_target_total != null) {
-      const targetTotal = Math.max(0, Math.min(formData.discount_target_total, subtotal));
-      const discountAmount = Math.round((subtotal - targetTotal) * 100) / 100;
-      const discountPercent = subtotal > 0 ? Math.round((discountAmount / subtotal) * 10000) / 100 : 0;
-      newFormData.discount_amount = discountAmount;
-      newFormData.discount_percent = discountPercent;
-      newFormData.total_amount = Math.round(targetTotal * 100) / 100;
-    } else {
-      newFormData.discount_amount = null;
-      newFormData.discount_percent = null;
-    }
-    
-    setFormData(prev => ({ ...prev, ...newFormData }));
-  }, [tasks, formData.discount_mode, formData.discount_percent, formData.discount_target_total]);
+  // Calculate totals using the single source of truth
+  const totals = computeOfferTotals(
+    {
+      vat_rate: formData.vat_rate,
+      discount_mode: formData.discount_mode,
+      discount_percent: formData.discount_percent,
+      discount_target_total: formData.discount_target_total
+    },
+    tasks
+  );
 
   // Load template data if coming from template selector
   useEffect(() => {
@@ -485,6 +468,8 @@ Requirements:
         const newOffer = await base44.entities.Offer.create({
           ...formData,
           offer_number: offerNumber,
+          total_amount: totals.taxable_base_excl_tax,
+          discount_amount: totals.discount_amount_excl_tax
         });
         savedOfferId = newOffer.id;
 
@@ -503,8 +488,12 @@ Requirements:
         queryClient.invalidateQueries(['offers']);
         navigate(createPageUrl('OfferDetail') + `?id=${savedOfferId}`);
       } else {
-        // Update existing offer
-        await base44.entities.Offer.update(offerId, formData);
+        // Update existing offer with calculated totals
+        await base44.entities.Offer.update(offerId, {
+          ...formData,
+          total_amount: totals.taxable_base_excl_tax,
+          discount_amount: totals.discount_amount_excl_tax
+        });
 
         // Delete existing tasks and recreate
         const existingTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
@@ -694,12 +683,6 @@ Requirements:
   const getPDFDocument = () => {
     const customer = customers.find(c => c.id === formData.customer_id);
     const boat = boats.find(b => b.id === formData.boat_id);
-    const subtotalBeforeDiscount = tasks.reduce((sum, t) => t.is_optional ? sum : sum + (t.total_amount || 0), 0);
-    const discountAmount = formData.discount_amount || 0;
-    const subtotal = formData.total_amount || 0;
-    const vatRate = formData.vat_rate || 0;
-    const taxTotal = subtotal * (vatRate / 100);
-    const total = subtotal + taxTotal;
     
     return {
       id: offerId,
@@ -727,11 +710,14 @@ Requirements:
       retention_of_title_enabled: formData.retention_of_title_enabled,
       retention_of_title_text: formData.retention_of_title_text,
       show_marina_fees_notice: formData.show_marina_fees_notice,
-      vat_rate: vatRate,
-      subtotal: subtotalBeforeDiscount,
-      discount_amount: discountAmount,
-      tax_amount: taxTotal,
-      total: total,
+      vat_rate: totals.vat_rate,
+      subtotal: totals.subtotal_excl_tax,
+      discount_mode: totals.discount_mode,
+      discount_percent: totals.discount_percent,
+      discount_target_total: formData.discount_target_total,
+      discount_amount: totals.discount_amount_excl_tax,
+      tax_amount: totals.vat_amount,
+      total: totals.total_incl_tax,
       public_notes: formData.customer_notes,
       safety_compliance_clause: formData.safety_compliance_clause,
       currency: 'EUR',
@@ -1268,81 +1254,81 @@ Requirements:
               </div>
 
               {formData.discount_mode === 'PERCENT' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Discount %</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      value={formData.discount_percent || ''}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        if (isNaN(val) || val < 0 || val > 100) return;
-                        updateField('discount_percent', val);
-                      }}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <Label>Discount Amount (calculated)</Label>
-                    <Input
-                      type="text"
-                      value={formData.discount_amount != null ? `€ ${formData.discount_amount.toFixed(2)}` : '€ 0.00'}
-                      disabled
-                    />
-                  </div>
-                </div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <Label>Discount %</Label>
+                   <Input
+                     type="number"
+                     min="0"
+                     max="100"
+                     step="0.01"
+                     value={formData.discount_percent || ''}
+                     onChange={(e) => {
+                       const val = parseFloat(e.target.value);
+                       if (isNaN(val) || val < 0 || val > 100) return;
+                       updateField('discount_percent', val);
+                     }}
+                     placeholder="0.00"
+                   />
+                 </div>
+                 <div>
+                   <Label>Discount Amount (calculated)</Label>
+                   <Input
+                     type="text"
+                     value={`€ ${totals.discount_amount_excl_tax.toFixed(2)}`}
+                     disabled
+                   />
+                 </div>
+               </div>
               )}
 
               {formData.discount_mode === 'TARGET_TOTAL' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Target Total €</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.discount_target_total || ''}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        if (isNaN(val) || val < 0) return;
-                        updateField('discount_target_total', val);
-                      }}
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <Label>Discount % (calculated)</Label>
-                    <Input
-                      type="text"
-                      value={formData.discount_percent != null ? `${formData.discount_percent.toFixed(2)}%` : '0.00%'}
-                      disabled
-                    />
-                  </div>
-                </div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <Label>Target Total (excl. VAT)</Label>
+                   <Input
+                     type="number"
+                     min="0"
+                     step="0.01"
+                     value={formData.discount_target_total || ''}
+                     onChange={(e) => {
+                       const val = parseFloat(e.target.value);
+                       if (isNaN(val) || val < 0) return;
+                       updateField('discount_target_total', val);
+                     }}
+                     placeholder="0.00"
+                   />
+                 </div>
+                 <div>
+                   <Label>Discount % (calculated)</Label>
+                   <Input
+                     type="text"
+                     value={`${totals.discount_percent.toFixed(2)}%`}
+                     disabled
+                   />
+                 </div>
+               </div>
               )}
 
               {formData.discount_mode !== 'NONE' && (
-                <div className="pt-3 border-t">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Subtotal (before discount):</span>
-                    <span className="font-medium">
-                      € {tasks.reduce((sum, t) => t.is_optional ? sum : sum + (t.total_amount || 0), 0).toFixed(2)}
-                    </span>
-                  </div>
-                  {formData.discount_amount != null && formData.discount_amount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Discount:</span>
-                      <span className="font-medium">- € {formData.discount_amount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-base font-semibold mt-2 pt-2 border-t">
-                    <span>Total After Discount:</span>
-                    <span>€ {formData.total_amount.toFixed(2)}</span>
-                  </div>
-                </div>
+               <div className="pt-3 border-t">
+                 <div className="flex justify-between text-sm">
+                   <span className="text-slate-600">Subtotal (excl. VAT):</span>
+                   <span className="font-medium">
+                     € {totals.subtotal_excl_tax.toFixed(2)}
+                   </span>
+                 </div>
+                 {totals.discount_amount_excl_tax > 0 && (
+                   <div className="flex justify-between text-sm text-red-600">
+                     <span>Discount ({totals.discount_percent.toFixed(1)}%):</span>
+                     <span className="font-medium">- € {totals.discount_amount_excl_tax.toFixed(2)}</span>
+                   </div>
+                 )}
+                 <div className="flex justify-between text-base font-semibold mt-2 pt-2 border-t">
+                   <span>Taxable Base (excl. VAT):</span>
+                   <span>€ {totals.taxable_base_excl_tax.toFixed(2)}</span>
+                 </div>
+               </div>
               )}
             </CardContent>
           </Card>
@@ -1351,7 +1337,7 @@ Requirements:
           <PaymentTermsSection 
             formData={formData} 
             updateField={updateField}
-            totalAmount={formData.total_amount}
+            totalAmount={totals.total_incl_tax}
           />
 
           {/* Bottom Save Button */}
@@ -1388,31 +1374,31 @@ Requirements:
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-3 border-b">
-                  <span className="text-slate-600">Subtotal</span>
+                  <span className="text-slate-600">Subtotal (excl. VAT)</span>
                   <span className="font-semibold">
-                    €{tasks.reduce((sum, t) => t.is_optional ? sum : sum + (t.total_amount || 0), 0).toFixed(2)}
+                    €{totals.subtotal_excl_tax.toFixed(2)}
                   </span>
                 </div>
-                {formData.discount_mode !== 'NONE' && formData.discount_amount > 0 && (
+                {totals.discount_amount_excl_tax > 0 && (
                   <>
-                    <div className="flex justify-between items-center py-2 text-green-600">
-                      <span>Discount</span>
-                      <span className="font-semibold">-€{formData.discount_amount.toFixed(2)}</span>
+                    <div className="flex justify-between items-center py-2 text-red-600">
+                      <span>Discount ({totals.discount_percent.toFixed(1)}%)</span>
+                      <span className="font-semibold">-€{totals.discount_amount_excl_tax.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center py-3 border-b">
-                      <span className="text-slate-600">After Discount</span>
-                      <span className="font-semibold">€{(formData.total_amount || 0).toFixed(2)}</span>
+                      <span className="text-slate-600">Taxable Base</span>
+                      <span className="font-semibold">€{totals.taxable_base_excl_tax.toFixed(2)}</span>
                     </div>
                   </>
                 )}
                 <div className="flex justify-between items-center py-3 border-b">
-                  <span className="text-slate-600">VAT ({formData.vat_rate || 0}%)</span>
-                  <span className="font-semibold">€{((formData.total_amount || 0) * (formData.vat_rate || 0) / 100).toFixed(2)}</span>
+                  <span className="text-slate-600">VAT ({totals.vat_rate}%)</span>
+                  <span className="font-semibold">€{totals.vat_amount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center py-4 bg-blue-50 px-4 rounded-lg">
-                  <span className="text-lg font-semibold text-slate-900">Total Amount</span>
+                  <span className="text-lg font-semibold text-slate-900">Total (incl. VAT)</span>
                   <span className="text-2xl font-bold text-blue-600">
-                    €{((formData.total_amount || 0) * (1 + (formData.vat_rate || 0) / 100)).toFixed(2)}
+                    €{totals.total_incl_tax.toFixed(2)}
                   </span>
                 </div>
               </div>
