@@ -44,19 +44,10 @@ function buildPDFHTML(document, lineItems, template, payments = []) {
   const vatRate = document.vat_rate || 0;
   const subtotal = document.subtotal || 0;
   
-  // Discount calculation
+  // Use pre-calculated discount from frontend (single source of truth)
   const discountMode = document.discount_mode || 'NONE';
   const discountPercent = document.discount_percent;
-  let discountAmount = 0;
-  
-  if (discountMode === 'PERCENT' && document.discount_percent > 0) {
-    discountAmount = Math.round(subtotal * document.discount_percent / 100 * 100) / 100;
-  } else if (discountMode === 'TARGET_TOTAL' && document.discount_target_total > 0) {
-    discountAmount = Math.max(0, Math.min(
-      subtotal,
-      Math.round((subtotal - document.discount_target_total) * 100) / 100
-    ));
-  }
+  const discountAmount = document.discount_amount || 0;
   
   // Deterministic discount active flag
   const discountActive = discountMode !== 'NONE' && 
