@@ -124,11 +124,19 @@ Return a JSON object with this structure:
   const handleAddSuggestions = () => {
     if (!suggestions) return;
 
-    // Combine technical and organizational tasks
-    const allTasks = [
-      ...(suggestions.suggested_tasks || []),
-      ...(suggestions.organizational_tasks || [])
-    ];
+    // Preserve task stream classification
+    const executionTasks = (suggestions.suggested_tasks || []).map(t => ({
+      ...t,
+      task_stream: "EXECUTION"
+    }));
+
+    const organizationTasks = (suggestions.organizational_tasks || []).map(t => ({
+      ...t,
+      task_stream: "ORGANIZATION"
+    }));
+
+    // Organization tasks first, then execution
+    const allTasks = [...organizationTasks, ...executionTasks];
     
     const tasksToAdd = selectedTasks.map(idx => allTasks[idx]);
     

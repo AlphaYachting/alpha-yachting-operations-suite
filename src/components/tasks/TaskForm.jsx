@@ -22,6 +22,8 @@ export default function TaskForm({ task, workOrderId, technicians, onSave, onCan
     notes: '',
     issue_notes: '',
     requires_approval: false,
+    task_stream: 'EXECUTION',
+    assigned_user_id: null,
     ...task
   });
   const [saving, setSaving] = useState(false);
@@ -101,6 +103,23 @@ export default function TaskForm({ task, workOrderId, technicians, onSave, onCan
             min="0"
           />
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="task_stream">Task Type</Label>
+        <Select
+          value={formData.task_stream}
+          onValueChange={(value) => setFormData({ ...formData, task_stream: value })}
+        >
+          <SelectTrigger id="task_stream">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ORGANIZATION">📋 Organization</SelectItem>
+            <SelectItem value="EXECUTION">🔧 Execution</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-slate-500 mt-1">Organization tasks block execution until complete</p>
       </div>
 
       <div>
