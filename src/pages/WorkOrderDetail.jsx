@@ -980,14 +980,14 @@ export default function WorkOrderDetail() {
                     </Badge>
                   </div>
             <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="tasks" isDropDisabled={!canEditTasks}>
+              <Droppable droppableId="organization-tasks" isDropDisabled={!canEditTasks}>
                 {(provided, snapshot) => (
                   <div 
                     className="space-y-3"
                     {...provided.droppableProps}
                     ref={provided.innerRef}
                   >
-                    {tasks
+                    {organizationTasks
                       .sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0))
                       .map((task, index) => (
                         <Draggable 
@@ -1100,14 +1100,183 @@ export default function WorkOrderDetail() {
                           )}
                         </Draggable>
                       ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-          )}
-        </CardContent>
-      </Card>
+                      {provided.placeholder}
+                      </div>
+                      )}
+                      </Droppable>
+                      </DragDropContext>
+                      </div>
+                      )}
+
+                      {/* Execution Tasks Section */}
+                      {executionTasks.length > 0 && (
+                      <div>
+                      <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-purple-200">
+                      <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <span className="text-lg">🔧</span>
+                      </div>
+                      <div>
+                      <h3 className="font-semibold text-slate-900">Execution</h3>
+                      <p className="text-xs text-slate-500">
+                        Technical work tasks
+                      </p>
+                      </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                      {!allOrganizationCompleted && (
+                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                        🔒 Blocked - Organization incomplete
+                      </Badge>
+                      )}
+                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
+                      {executionTasks.filter(t => t.status === 'Completed').length}/{executionTasks.length} complete
+                      </Badge>
+                      </div>
+                      </div>
+
+                      <DragDropContext onDragEnd={handleDragEnd}>
+                      <Droppable droppableId="execution-tasks" isDropDisabled={!canEditTasks}>
+                      {(provided, snapshot) => (
+                      <div 
+                      className="space-y-3"
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      >
+                      {executionTasks
+                      .sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0))
+                      .map((task, index) => {
+                      const isBlocked = !allOrganizationCompleted && task.task_stream === 'EXECUTION';
+                      return (
+                      <Draggable 
+                        key={task.id} 
+                        draggableId={task.id} 
+                        index={index}
+                        isDragDisabled={!canEditTasks}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className={`p-4 border rounded-lg transition-all ${
+                              isBlocked 
+                                ? 'border-amber-300 bg-amber-50/50 opacity-70'
+                                : snapshot.isDragging 
+                                  ? 'bg-blue-50 border-blue-400 shadow-lg scale-105' 
+                                  : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              {canEditTasks && (
+                                <div 
+                                  {...provided.dragHandleProps}
+                                  className="cursor-grab active:cursor-grabbing mt-0.5 touch-none"
+                                >
+                                  <div className="text-slate-400 hover:text-slate-600">
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                      <path d="M7 2a2 2 0 11-4 0 2 2 0 014 0zM7 6a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0zM17 2a2 2 0 11-4 0 2 2 0 014 0zM17 6a2 2 0 11-4 0 2 2 0 014 0zM17 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                  </div>
+                                </div>
+                              )}
+                              <div className="flex items-start gap-3 flex-1">
+                                <div className="mt-0.5">
+                                  {task.status === 'Completed' ? (
+                                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                                  ) : task.status === 'In Progress' ? (
+                                    <Clock className="h-5 w-5 text-blue-500" />
+                                  ) : (
+                                    <Circle className="h-5 w-5 text-slate-300" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium text-slate-900">{task.title}</p>
+                                    {task.sequence_order > 0 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        #{task.sequence_order}
+                                      </Badge>
+                                    )}
+                                    {isBlocked && (
+                                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                                        Blocked
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {task.description && (
+                                    <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+                                  )}
+                                  {task.notes && (
+                                    <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-100">
+                                      <p className="text-xs font-medium text-blue-900">Notes:</p>
+                                      <p className="text-sm text-blue-800 mt-0.5">{task.notes}</p>
+                                    </div>
+                                  )}
+                                  {task.issue_notes && (
+                                    <div className="mt-2 p-2 bg-red-50 rounded border border-red-100">
+                                      <p className="text-xs font-medium text-red-900">Issues:</p>
+                                      <p className="text-sm text-red-800 mt-0.5">{task.issue_notes}</p>
+                                    </div>
+                                  )}
+                                  {task.estimated_minutes && (
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <Clock className="h-3 w-3 text-slate-400" />
+                                      <span className="text-xs text-slate-500">
+                                        Est: {Math.floor(task.estimated_minutes / 60)}h {task.estimated_minutes % 60}m
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge className={taskStatusColors[task.status]}>
+                                  {task.status}
+                                </Badge>
+                                {canEditTasks && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setEditingTask(task);
+                                          setShowTaskForm(true);
+                                        }}
+                                      >
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Edit Task
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleDeleteTask(task.id)}
+                                        className="text-red-600"
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete Task
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                      );
+                      })}
+                      {provided.placeholder}
+                      </div>
+                      )}
+                      </Droppable>
+                      </DragDropContext>
+                      </div>
+                      )}
+                      </div>
+                      )}
+                      </CardContent>
+                      </Card>
 
       {/* Requirements / Shopping List Section */}
       <RequirementsSection
