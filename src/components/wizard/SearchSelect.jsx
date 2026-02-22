@@ -74,7 +74,7 @@ export function SearchSelect({
             autoFocus
           />
         </div>
-        <Command>
+        <Command className="max-h-[300px] overflow-y-auto">
           {isLoading ? (
             <div className="p-4 text-sm text-slate-500">Loading...</div>
           ) : filtered.length === 0 ? (
