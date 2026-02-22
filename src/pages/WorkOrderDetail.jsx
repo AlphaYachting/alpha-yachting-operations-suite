@@ -723,12 +723,18 @@ export default function WorkOrderDetail() {
                 <Users className="h-5 w-5 text-violet-600" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Lead Technician</p>
+                <p className="text-xs text-slate-500 font-medium">Assigned Team</p>
                 <p className="text-sm font-semibold text-slate-900 truncate">
-                  {getLeadTechnicianName(workOrder.lead_technician_id)}
+                  {workOrder.assigned_technicians?.length > 0 
+                    ? getTechnicianNames(workOrder.assigned_technicians)
+                    : job?.lead_technician_id 
+                      ? `${getLeadTechnicianName(job.lead_technician_id)} (from project)`
+                      : 'Not assigned'}
                 </p>
-                {workOrder.assigned_technicians?.length > 0 && (
-                  <p className="text-xs text-slate-500">{workOrder.assigned_technicians.length} assigned</p>
+                {workOrder.lead_technician_id && (
+                  <p className="text-xs text-slate-500">
+                    Lead: {getLeadTechnicianName(workOrder.lead_technician_id)}
+                  </p>
                 )}
               </div>
             </div>
