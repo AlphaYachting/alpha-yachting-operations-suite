@@ -565,6 +565,32 @@ export default function MyTasks() {
                                   {task.description}
                                 </p>
                               )}
+                              
+                              {/* Assigned technicians */}
+                              {workOrder && (workOrder.assigned_technicians?.length > 0 || workOrder.lead_technician_id) && (
+                                <div className="flex items-center gap-1 text-xs text-slate-500 mt-2">
+                                  <Users className="h-3 w-3" />
+                                  <span>
+                                    {workOrder.lead_technician_id && (() => {
+                                      const leadTech = technicians.find(t => t.id === workOrder.lead_technician_id);
+                                      return leadTech ? `${leadTech.first_name} ${leadTech.last_name} (Lead)` : '';
+                                    })()}
+                                    {workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 && (
+                                      <>
+                                        {workOrder.lead_technician_id && ', '}
+                                        {workOrder.assigned_technicians
+                                          .filter(techId => techId !== workOrder.lead_technician_id)
+                                          .map(techId => {
+                                            const tech = technicians.find(t => t.id === techId);
+                                            return tech ? `${tech.first_name} ${tech.last_name}` : null;
+                                          })
+                                          .filter(Boolean)
+                                          .join(', ')}
+                                      </>
+                                    )}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                             
                             {/* Right side: due date + actions */}
