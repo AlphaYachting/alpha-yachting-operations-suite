@@ -83,7 +83,7 @@ export default function UserSimulator({ currentUser }) {
               <SelectTrigger>
                 <SelectValue placeholder="Select user to simulate..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[300px] overflow-y-auto">
                 {users.map(user => (
                   <SelectItem key={user.id} value={user.id}>
                     {user.full_name || user.email}
