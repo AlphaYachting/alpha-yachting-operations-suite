@@ -492,6 +492,20 @@ export default function WorkOrderDetail() {
       }));
   };
 
+  const handleGoBack = () => {
+    // Check if we can go back in history (not first page)
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      // Fallback: go to project if we have one, otherwise work orders list
+      if (workOrder?.job_id) {
+        navigate(createPageUrl('JobDetail') + `?id=${workOrder.job_id}`);
+      } else {
+        navigate(createPageUrl('WorkOrders'));
+      }
+    }
+  };
+
   const handleDeleteWorkOrder = async () => {
     if (!window.confirm('Are you absolutely sure? This will permanently delete the work order and ALL associated data (tasks, photos, time entries, comments, etc.) with no recovery possible.')) {
       return;
@@ -614,7 +628,7 @@ export default function WorkOrderDetail() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <Button variant="ghost" size="sm" className="mb-3" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="sm" className="mb-3" onClick={handleGoBack}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
