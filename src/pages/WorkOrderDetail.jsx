@@ -614,11 +614,9 @@ export default function WorkOrderDetail() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <Button asChild variant="ghost" size="sm" className="mb-3">
-            <Link to={createPageUrl('WorkOrders')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Work Orders
-            </Link>
+          <Button variant="ghost" size="sm" className="mb-3" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
           </Button>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-slate-900">{workOrder.title}</h1>
