@@ -104,10 +104,10 @@ function sortMyTasks(tasks, workOrders) {
 
 const statusColors = {
   'Not Started': 'bg-slate-100 text-slate-700',
-  'In Progress': 'bg-blue-100 text-blue-700',
+  'In Progress': 'bg-amber-100 text-amber-700',
   'Completed': 'bg-green-100 text-green-700',
   'Not Possible': 'bg-red-100 text-red-700',
-  'Needs Approval': 'bg-amber-100 text-amber-700',
+  'Needs Approval': 'bg-yellow-100 text-yellow-700',
   'Skipped': 'bg-slate-100 text-slate-500'
 };
 
