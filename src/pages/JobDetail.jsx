@@ -52,6 +52,7 @@ import { format, isPast, isToday, parseISO, differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
+import { notifyWorkOrderAssignment } from '@/components/notifications/notificationUtils';
 
 const statusColors = {
   New: 'bg-slate-100 text-slate-700',
@@ -196,6 +197,23 @@ export default function ProjectDetail() {
         };
         await base44.entities.WorkOrder.update(editingWorkOrder.id, updateData);
         
+        // Notify newly assigned technicians
+        const oldTechs = editingWorkOrder.assigned_technicians || [];
+        const newTechs = updateData.assigned_technicians || [];
+        const addedTechs = newTechs.filter(id => !oldTechs.includes(id));
+        
+        if (addedTechs.length > 0) {
+          try {
+            await notifyWorkOrderAssignment(
+              { ...editingWorkOrder, ...updateData },
+              allTechnicians,
+              updateData.title
+            );
+          } catch (notifyError) {
+            console.error('Failed to send work order assignment notifications:', notifyError);
+          }
+        }
+        
         // Update local state without full reload to preserve sorting
         setWorkOrders(prev => prev.map(wo => 
           wo.id === editingWorkOrder.id ? { ...wo, ...updateData } : wo
@@ -267,6 +285,19 @@ export default function ProjectDetail() {
           toast.success(`Work order created with ${taskPromises.length} tasks`, { id: toastId });
         } else {
           toast.success('Work order created', { id: toastId });
+        }
+
+        // Notify assigned technicians
+        if (woData.assigned_technicians?.length > 0) {
+          try {
+            await notifyWorkOrderAssignment(
+              { ...result.work_order, ...woData },
+              allTechnicians,
+              woData.title
+            );
+          } catch (notifyError) {
+            console.error('Failed to send work order assignment notifications:', notifyError);
+          }
         }
 
         setShowNewWorkOrderDialog(false);

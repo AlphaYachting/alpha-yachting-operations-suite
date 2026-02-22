@@ -62,7 +62,7 @@ import QuickTaskUpdate from '@/components/tasks/QuickTaskUpdate';
 import TemplateSelector from '@/components/templates/TemplateSelector';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import TeamOrderCard from '@/components/teamorder/TeamOrderCard';
-import { notifyTaskStatusChange } from '@/components/notifications/notificationUtils';
+import { notifyTaskStatusChange, notifyWorkOrderAssignment } from '@/components/notifications/notificationUtils';
 import RequirementsSection from '@/components/requirements/RequirementsSection';
 import PDFExportButton from '@/components/pdf/PDFExportButton';
 
@@ -1319,7 +1319,27 @@ export default function WorkOrderDetail() {
                 console.log('WorkOrderDetail onSave called with:', formData);
                 try {
                   console.log('Updating work order:', workOrderId);
+                  
+                  // Detect newly assigned technicians
+                  const oldTechs = workOrder.assigned_technicians || [];
+                  const newTechs = formData.assigned_technicians || [];
+                  const addedTechs = newTechs.filter(id => !oldTechs.includes(id));
+                  
                   await base44.entities.WorkOrder.update(workOrderId, formData);
+                  
+                  // Notify newly assigned technicians
+                  if (addedTechs.length > 0) {
+                    try {
+                      await notifyWorkOrderAssignment(
+                        { ...workOrder, ...formData },
+                        technicians,
+                        formData.title
+                      );
+                    } catch (notifyError) {
+                      console.error('Failed to send work order assignment notifications:', notifyError);
+                    }
+                  }
+                  
                   console.log('Update successful, reloading details');
                   await loadWorkOrderDetails();
                   setShowEditWorkOrder(false);
