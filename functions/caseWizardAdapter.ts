@@ -120,6 +120,9 @@ Deno.serve(async (req) => {
           customer_id: customer.id,
           vessel_name: wizardData.vessel.new.vessel_name,
           vessel_type: wizardData.vessel.new.vessel_type || 'Sailboat',
+          manufacturer: wizardData.vessel.new.manufacturer || null,
+          model: wizardData.vessel.new.model || null,
+          year: wizardData.vessel.new.year || null,
           current_location_id: wizardData.location?.existing || null,
           status: 'Active'
         });
@@ -135,6 +138,9 @@ Deno.serve(async (req) => {
         customer_id: customer.id,
         vessel_name: wizardData.vessel.new.vessel_name,
         vessel_type: wizardData.vessel.new.vessel_type || 'Sailboat',
+        manufacturer: wizardData.vessel.new.manufacturer || null,
+        model: wizardData.vessel.new.model || null,
+        year: wizardData.vessel.new.year || null,
         current_location_id: wizardData.location?.existing || null,
         status: 'Active'
       });

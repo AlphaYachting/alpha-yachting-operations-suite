@@ -108,7 +108,16 @@ export function Step3VesselSelection() {
                 <Label>Vessel Name *</Label>
                 <Input
                   value={wizardData.vessel?.new?.vessel_name || ''}
-                  onChange={(e) => updateWizardData('vessel.new.vessel_name', e.target.value)}
+                  onChange={(e) => {
+                    const currentNew = wizardData.vessel?.new || {};
+                    updateWizardData('vessel.new', {
+                      ...currentNew,
+                      vessel_name: e.target.value,
+                      vessel_type: currentNew.vessel_type || 'Sailboat',
+                      status: 'Active'
+                    });
+                    updateWizardData('vessel.existing', null);
+                  }}
                   placeholder="e.g., Serenity, Blue Moon"
                 />
               </div>
@@ -117,7 +126,13 @@ export function Step3VesselSelection() {
                 <Label>Vessel Type</Label>
                 <Select
                   value={wizardData.vessel?.new?.vessel_type || 'Sailboat'}
-                  onValueChange={(value) => updateWizardData('vessel.new.vessel_type', value)}
+                  onValueChange={(value) => {
+                    const currentNew = wizardData.vessel?.new || {};
+                    updateWizardData('vessel.new', {
+                      ...currentNew,
+                      vessel_type: value
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -137,7 +152,13 @@ export function Step3VesselSelection() {
                 <Label>Manufacturer</Label>
                 <Input
                   value={wizardData.vessel?.new?.manufacturer || ''}
-                  onChange={(e) => updateWizardData('vessel.new.manufacturer', e.target.value)}
+                  onChange={(e) => {
+                    const currentNew = wizardData.vessel?.new || {};
+                    updateWizardData('vessel.new', {
+                      ...currentNew,
+                      manufacturer: e.target.value
+                    });
+                  }}
                   placeholder="e.g., Jeanneau"
                 />
               </div>
@@ -146,7 +167,13 @@ export function Step3VesselSelection() {
                 <Label>Model</Label>
                 <Input
                   value={wizardData.vessel?.new?.model || ''}
-                  onChange={(e) => updateWizardData('vessel.new.model', e.target.value)}
+                  onChange={(e) => {
+                    const currentNew = wizardData.vessel?.new || {};
+                    updateWizardData('vessel.new', {
+                      ...currentNew,
+                      model: e.target.value
+                    });
+                  }}
                   placeholder="e.g., Sun Odyssey 42"
                 />
               </div>
@@ -156,7 +183,13 @@ export function Step3VesselSelection() {
                 <Input
                   type="number"
                   value={wizardData.vessel?.new?.year || ''}
-                  onChange={(e) => updateWizardData('vessel.new.year', e.target.value ? parseInt(e.target.value) : null)}
+                  onChange={(e) => {
+                    const currentNew = wizardData.vessel?.new || {};
+                    updateWizardData('vessel.new', {
+                      ...currentNew,
+                      year: e.target.value ? parseInt(e.target.value) : null
+                    });
+                  }}
                   placeholder="e.g., 2015"
                 />
               </div>
