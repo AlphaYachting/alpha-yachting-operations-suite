@@ -320,40 +320,20 @@ export default function Projects() {
     if (!deletingProject || isDeleting) return;
 
     setIsDeleting(true);
-    console.log('[Jobs] Starting delete for project:', deletingProject.id);
+    console.log('[Jobs] Starting cascade delete for project:', deletingProject.id);
     
     try {
-      if (deleteRelated) {
-        console.log('[Jobs] Deleting related data...');
-        // Find all work orders for this project
-        const projectWorkOrders = workOrders.filter(wo => wo.job_id === deletingProject.id);
-        const workOrderIds = projectWorkOrders.map(wo => wo.id);
-        console.log('[Jobs] Found work orders to delete:', projectWorkOrders.length);
-
-        // Delete all tasks associated with these work orders
-        const projectTasks = tasks.filter(task => workOrderIds.includes(task.work_order_id));
-        console.log('[Jobs] Found tasks to delete:', projectTasks.length);
-        
-        for (const task of projectTasks) {
-          console.log('[Jobs] Deleting task:', task.id);
-          await base44.entities.Task.delete(task.id);
-        }
-
-        // Delete all work orders
-        for (const wo of projectWorkOrders) {
-          console.log('[Jobs] Deleting work order:', wo.id);
-          await base44.entities.WorkOrder.delete(wo.id);
-        }
-      }
-
-      // Delete the project
-      console.log('[Jobs] Deleting project:', deletingProject.id);
-      await base44.entities.Job.delete(deletingProject.id);
-      console.log('[Jobs] Project deleted successfully');
+      // Use cascade delete function
+      const result = await base44.functions.invoke('deleteJobCascade', { job_id: deletingProject.id });
       
-      // Remove from local state instead of reloading
-      setProjects(prev => prev.filter(p => p.id !== deletingProject.id));
-      setDeletingProject(null);
+      if (result.data.success) {
+        console.log('[Jobs] Cascade delete successful:', result.data.deleted);
+        // Remove from local state
+        setProjects(prev => prev.filter(p => p.id !== deletingProject.id));
+        setDeletingProject(null);
+      } else {
+        throw new Error('Delete operation failed');
+      }
     } catch (error) {
       console.error('[Jobs] CRITICAL ERROR deleting project:', error);
       console.error('[Jobs] Error details:', { 
