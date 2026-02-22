@@ -48,6 +48,7 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import AccessLogs from './pages/AccessLogs';
+import AdminCleanup from './pages/AdminCleanup';
 import AppInvites from './pages/AppInvites';
 import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
@@ -116,12 +117,12 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import AdminCleanup from './pages/AdminCleanup';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AccessLogs": AccessLogs,
+    "AdminCleanup": AdminCleanup,
     "AppInvites": AppInvites,
     "BoatDetail": BoatDetail,
     "Boats": Boats,
@@ -190,7 +191,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "AdminCleanup": AdminCleanup,
 }
 
 export const pagesConfig = {

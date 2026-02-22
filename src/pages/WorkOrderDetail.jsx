@@ -619,8 +619,23 @@ export default function WorkOrderDetail() {
   }
 
   const customerName = customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown';
-  const completedTasks = tasks.filter(t => t.status === 'Completed').length;
-  const totalTasks = tasks.length;
+  
+  // Backward compatibility: default to EXECUTION if task_stream not set
+  const enrichedTasks = tasks.map(t => ({
+    ...t,
+    task_stream: t.task_stream || 'EXECUTION'
+  }));
+  
+  // Separate tasks by stream
+  const organizationTasks = enrichedTasks.filter(t => t.task_stream === 'ORGANIZATION');
+  const executionTasks = enrichedTasks.filter(t => t.task_stream === 'EXECUTION');
+  
+  // Gate logic: check if all organizational tasks are complete
+  const allOrganizationCompleted = organizationTasks.length === 0 || 
+    organizationTasks.every(t => t.status === 'Completed');
+  
+  const completedTasks = enrichedTasks.filter(t => t.status === 'Completed').length;
+  const totalTasks = enrichedTasks.length;
   const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   return (
@@ -900,10 +915,10 @@ export default function WorkOrderDetail() {
         </Card>
       )}
 
-      {/* Tasks Section */}
+      {/* Tasks Section - Split by Stream */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Tasks ({tasks.length})</CardTitle>
+          <CardTitle className="text-lg font-semibold">Tasks ({enrichedTasks.length})</CardTitle>
           {canEditTasks && (
             <div className="flex gap-2">
               <Button
@@ -914,7 +929,7 @@ export default function WorkOrderDetail() {
                 <ClipboardList className="h-4 w-4 mr-2" />
                 From Template
               </Button>
-              {tasks.length > 0 && (
+              {enrichedTasks.length > 0 && (
                 <Button
                   onClick={() => setShowSaveAsTemplate(true)}
                   variant="outline"
@@ -939,11 +954,31 @@ export default function WorkOrderDetail() {
           )}
         </CardHeader>
         <CardContent>
-          {tasks.length === 0 ? (
+          {enrichedTasks.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
               <p>No tasks yet. {canEditTasks && 'Click "Add Task" to create one.'}</p>
             </div>
           ) : (
+            <div className="space-y-6">
+              {/* Organization Tasks Section */}
+              {organizationTasks.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-blue-200">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <span className="text-lg">📋</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900">Organization</h3>
+                        <p className="text-xs text-slate-500">
+                          Prep tasks (must complete before execution)
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={allOrganizationCompleted ? "bg-green-50 text-green-700 border-green-300" : "bg-blue-50 text-blue-700 border-blue-300"}>
+                      {organizationTasks.filter(t => t.status === 'Completed').length}/{organizationTasks.length} complete
+                    </Badge>
+                  </div>
             <DragDropContext onDragEnd={handleDragEnd}>
               <Droppable droppableId="tasks" isDropDisabled={!canEditTasks}>
                 {(provided, snapshot) => (
