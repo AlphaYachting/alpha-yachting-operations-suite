@@ -310,6 +310,13 @@ export default function MyTasks() {
 
   return (
     <div className="space-y-6">
+      {/* User Simulator (Admin Only) */}
+      {currentUser?.role === 'admin' && (
+        <div className="mb-6">
+          <UserSimulator currentUser={currentUser} />
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-6">
         <div className="flex-1">
@@ -318,12 +325,6 @@ export default function MyTasks() {
             {filteredTasks.length} {mode === 'open' ? 'open' : 'total'} tasks • Grouped by boat, sorted by due date
           </p>
         </div>
-        
-        {currentUser?.role === 'admin' && (
-          <div className="w-80 flex-shrink-0">
-            <UserSimulator currentUser={currentUser} />
-          </div>
-        )}
       </div>
 
       {/* Filter Bar */}
