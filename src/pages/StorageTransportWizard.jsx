@@ -10,7 +10,7 @@ import { ArrowRight, ArrowLeft, CheckCircle2, Package, MapPin, Settings } from '
 import { toast } from 'sonner';
 import { calculateOffer } from '@/components/utils/pricingEngine';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/Layout/utils';
+import { createPageUrl } from '@/utils';
 
 export default function StorageTransportWizard() {
     const navigate = useNavigate();
