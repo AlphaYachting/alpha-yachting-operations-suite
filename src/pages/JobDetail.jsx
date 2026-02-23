@@ -184,7 +184,7 @@ export default function ProjectDetail() {
     }
   };
 
-  const handleSaveWorkOrder = async (woData, templateId, suggestedTasks) => {
+  const handleSaveWorkOrder = async (woData, templateId, suggestedTasks, splitOptions = {}) => {
     const toastId = toast.loading(editingWorkOrder ? 'Updating work order...' : 'Creating work order...');
 
     try {
@@ -223,7 +223,30 @@ export default function ProjectDetail() {
         setEditingWorkOrder(null);
         toast.success('Work order updated', { id: toastId });
       } else {
-        // Create new work order
+        // Check if dual WorkOrder creation is requested
+        const shouldSplit = splitOptions?.splitMode && 
+                            splitOptions?.orgTasks?.length > 0 && 
+                            splitOptions?.execTasks?.length > 0;
+
+        if (shouldSplit) {
+          // Create dual WorkOrders (ORG + EXEC)
+          const dualResponse = await base44.functions.invoke('createDualWorkOrders', {
+            baseWorkOrderData: woData,
+            orgTasks: splitOptions.orgTasks,
+            execTasks: splitOptions.execTasks
+          });
+
+          if (!dualResponse.data?.success) {
+            throw new Error(dualResponse.data?.error || 'Failed to create dual work orders');
+          }
+
+          toast.success('Created 2 linked WorkOrders: ORG + EXEC', { id: toastId });
+          setShowNewWorkOrderDialog(false);
+          await loadProjectData();
+          return;
+        }
+
+        // Single WorkOrder creation (standard path)
         const response = await base44.functions.invoke('createWorkOrderWithNumber', woData);
         const result = response.data;
         if (!result.success) {
@@ -240,7 +263,8 @@ export default function ProjectDetail() {
               work_order_id: createdWoId,
               title: task.title,
               description: task.description || '',
-              estimated_minutes: task.estimated_hours ? Math.round(task.estimated_hours * 60) : null,
+              estimated_minutes: task.estimated_minutes || (task.estimated_hours ? Math.round(task.estimated_hours * 60) : null),
+              task_stream: task.task_stream || 'EXECUTION',
               sequence_order: idx,
               status: 'Not Started'
             })
@@ -809,6 +833,15 @@ export default function ProjectDetail() {
                           <CardTitle className="text-lg">{wo.title}</CardTitle>
                           <Badge className={statusColors[wo.status]}>{wo.status}</Badge>
                           <Badge variant="outline">{wo.work_order_number}</Badge>
+                          {wo.workorder_type && wo.workorder_type !== 'STANDARD' && (
+                            <Badge variant="outline" className={
+                              wo.workorder_type === 'ORGANIZATION' 
+                                ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                : 'bg-purple-50 text-purple-700 border-purple-300'
+                            }>
+                              {wo.workorder_type === 'ORGANIZATION' ? '📋 ORG' : '🔧 EXEC'}
+                            </Badge>
+                          )}
                         </div>
                         {wo.scheduled_date && (
                           <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
