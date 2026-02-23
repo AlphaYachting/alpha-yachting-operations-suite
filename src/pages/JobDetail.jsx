@@ -134,20 +134,24 @@ export default function ProjectDetail() {
 
          let projectWOs = allWOs.filter(wo => wo.job_id === projectId);
 
-         // Initialize sort_index if missing (batch update)
+         // Initialize sort_index if missing (batch update with error handling)
          const needsIndexInit = projectWOs.filter(wo => wo.sort_index === null || wo.sort_index === undefined);
          if (needsIndexInit.length > 0) {
-           try {
-             await Promise.all(
-               needsIndexInit.map((wo, idx) => {
-                 const sortIndex = projectWOs.indexOf(wo) + 1;
-                 wo.sort_index = sortIndex;
-                 return base44.entities.WorkOrder.update(wo.id, { sort_index: sortIndex });
-               })
-             );
-           } catch (error) {
-             console.error('Error initializing sort_index:', error);
-           }
+           const initPromises = needsIndexInit.map(async (wo, idx) => {
+             const sortIndex = projectWOs.indexOf(wo) + 1;
+             wo.sort_index = sortIndex;
+             try {
+               await base44.entities.WorkOrder.update(wo.id, { sort_index: sortIndex });
+             } catch (error) {
+               console.error(`Failed to init sort_index for WO ${wo.id}:`, error.message);
+               // Skip this WO if it no longer exists
+             }
+           });
+           await Promise.all(initPromises);
+
+           // Re-fetch to ensure we have current data
+           const refreshedWOs = await base44.entities.WorkOrder.filter({ job_id: projectId });
+           projectWOs = refreshedWOs;
          }
 
          // Sort by sort_index
