@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Save, Trash2, Edit2, Play } from 'lucide-react';
 import { toast } from 'sonner';
-import { calculateOffer } from '@/utils/pricingEngine';
+import { calculateOffer } from '@/components/utils/pricingEngine';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function StoragePricingAdmin() {

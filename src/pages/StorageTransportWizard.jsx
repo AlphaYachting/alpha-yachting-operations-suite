@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowRight, ArrowLeft, CheckCircle2, Package, MapPin, Settings } from 'lucide-react';
 import { toast } from 'sonner';
-import { calculateOffer } from '@/utils/pricingEngine';
+import { calculateOffer } from '@/components/utils/pricingEngine';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/Layout/utils';
 
