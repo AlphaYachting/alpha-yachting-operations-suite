@@ -223,10 +223,9 @@ export default function ProjectDetail() {
         setEditingWorkOrder(null);
         toast.success('Work order updated', { id: toastId });
       } else {
-        // Check if dual WorkOrder creation is requested
+        // Check if dual WorkOrder creation is requested (need at least one task stream)
         const shouldSplit = splitOptions?.splitMode && 
-                            splitOptions?.orgTasks?.length > 0 && 
-                            splitOptions?.execTasks?.length > 0;
+                            (splitOptions?.orgTasks?.length > 0 || splitOptions?.execTasks?.length > 0);
 
         if (shouldSplit) {
           // Create dual WorkOrders (ORG + EXEC)

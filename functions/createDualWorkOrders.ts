@@ -73,17 +73,18 @@ Deno.serve(async (req) => {
       });
 
       // Create execution tasks
-      for (let i = 0; i < execTasks.length; i++) {
-        await base44.asServiceRole.entities.Task.create({
+      const execTaskPromises = execTasks.map((task, i) =>
+        base44.asServiceRole.entities.Task.create({
           work_order_id: execWorkOrder.id,
-          title: execTasks[i].title,
-          description: execTasks[i].description || '',
-          estimated_minutes: execTasks[i].estimated_minutes || null,
+          title: task.title,
+          description: task.description || '',
+          estimated_minutes: task.estimated_minutes || null,
           sequence_order: i,
           task_stream: 'EXECUTION',
           status: 'Not Started'
-        });
-      }
+        })
+      );
+      await Promise.all(execTaskPromises);
     }
 
     // ============================================================
@@ -103,18 +104,19 @@ Deno.serve(async (req) => {
       });
 
       // Create organization tasks
-      for (let i = 0; i < orgTasks.length; i++) {
-        await base44.asServiceRole.entities.Task.create({
+      const orgTaskPromises = orgTasks.map((task, i) =>
+        base44.asServiceRole.entities.Task.create({
           work_order_id: orgWorkOrder.id,
-          title: orgTasks[i].title,
-          description: orgTasks[i].description || '',
-          estimated_minutes: orgTasks[i].estimated_minutes || null,
+          title: task.title,
+          description: task.description || '',
+          estimated_minutes: task.estimated_minutes || null,
           sequence_order: i,
           task_stream: 'ORGANIZATION',
           status: 'Not Started',
-          assigned_user_id: user.id // Default org tasks to current user (optional)
-        });
-      }
+          assigned_user_id: user.id
+        })
+      );
+      await Promise.all(orgTaskPromises);
     }
 
     // ============================================================
