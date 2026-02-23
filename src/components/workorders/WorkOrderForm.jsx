@@ -58,6 +58,9 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
   const [fieldErrors, setFieldErrors] = useState({});
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [suggestedTasks, setSuggestedTasks] = useState([]);
+  const [suggestedOrgTasks, setSuggestedOrgTasks] = useState([]);
+  const [suggestedExecTasks, setSuggestedExecTasks] = useState([]);
+  const [splitWorkOrdersEnabled, setSplitWorkOrdersEnabled] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState(() => {
     if (preselectedCustomerId) return preselectedCustomerId;
     if (preselectedJobId) {
@@ -181,9 +184,13 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
         }
       });
       
-      console.log('Submitting work order:', { cleanedData, selectedTemplateId, suggestedTasks });
+      console.log('Submitting work order:', { cleanedData, selectedTemplateId, suggestedTasks, splitWorkOrdersEnabled });
       
-      await onSave(cleanedData, selectedTemplateId, suggestedTasks);
+      await onSave(cleanedData, selectedTemplateId, suggestedTasks, {
+        splitMode: splitWorkOrdersEnabled,
+        orgTasks: suggestedOrgTasks,
+        execTasks: suggestedExecTasks
+      });
       // Success toast and navigation handled by parent
       } catch (err) {
        console.error('Work order save error:', err);
@@ -198,8 +205,22 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleAddSuggestedTasks = (tasks) => {
-    setSuggestedTasks(tasks);
+  const handleAddSuggestedTasks = (taskData) => {
+    // Handle both old format (array) and new format (object with org/exec split)
+    if (Array.isArray(taskData)) {
+      setSuggestedTasks(taskData);
+      setSuggestedOrgTasks([]);
+      setSuggestedExecTasks([]);
+      setSplitWorkOrdersEnabled(false);
+    } else {
+      const orgTasks = taskData.organizationTasks || [];
+      const execTasks = taskData.executionTasks || [];
+      setSuggestedOrgTasks(orgTasks);
+      setSuggestedExecTasks(execTasks);
+      setSuggestedTasks([...orgTasks, ...execTasks]);
+      // Auto-enable split if both streams exist
+      setSplitWorkOrdersEnabled(orgTasks.length > 0 && execTasks.length > 0);
+    }
   };
 
   const handleNotesUpdate = (field, value) => {
@@ -562,17 +583,68 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
 
       {/* Suggested Tasks Preview */}
       {suggestedTasks.length > 0 && (
-        <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-          <p className="font-medium text-purple-900 mb-2">
-            📋 {suggestedTasks.length} tasks will be added after creation
-          </p>
-          <ul className="space-y-1">
-            {suggestedTasks.map((task, idx) => (
-              <li key={idx} className="text-sm text-purple-800">
-                • {task.title}
-              </li>
-            ))}
-          </ul>
+        <div className="space-y-3">
+          {/* Split WorkOrders Toggle */}
+          {suggestedOrgTasks.length > 0 && suggestedExecTasks.length > 0 && (
+            <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <Checkbox
+                id="split-workorders"
+                checked={splitWorkOrdersEnabled}
+                onCheckedChange={(v) => setSplitWorkOrdersEnabled(v)}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <label htmlFor="split-workorders" className="font-medium text-blue-900 cursor-pointer">
+                  Create separate Organization + Execution WorkOrders
+                </label>
+                <p className="text-sm text-blue-700 mt-1">
+                  {splitWorkOrdersEnabled 
+                    ? `Will create 2 linked WorkOrders: ORG (${suggestedOrgTasks.length} tasks) + EXEC (${suggestedExecTasks.length} tasks)`
+                    : `Will create 1 WorkOrder with ${suggestedTasks.length} mixed tasks`
+                  }
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <p className="font-medium text-purple-900 mb-2">
+              📋 {suggestedTasks.length} tasks will be added after creation
+            </p>
+            {splitWorkOrdersEnabled && suggestedOrgTasks.length > 0 && (
+              <div className="mb-3">
+                <p className="text-sm font-medium text-blue-800 mb-1">Organization Tasks:</p>
+                <ul className="space-y-1">
+                  {suggestedOrgTasks.map((task, idx) => (
+                    <li key={idx} className="text-sm text-purple-800">
+                      • {task.title}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {splitWorkOrdersEnabled && suggestedExecTasks.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-purple-800 mb-1">Execution Tasks:</p>
+                <ul className="space-y-1">
+                  {suggestedExecTasks.map((task, idx) => (
+                    <li key={idx} className="text-sm text-purple-800">
+                      • {task.title}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {!splitWorkOrdersEnabled && (
+              <ul className="space-y-1">
+                {suggestedTasks.map((task, idx) => (
+                  <li key={idx} className="text-sm text-purple-800">
+                    • {task.title}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 

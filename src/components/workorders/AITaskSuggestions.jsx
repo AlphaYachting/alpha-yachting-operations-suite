@@ -157,8 +157,12 @@ Return a JSON object with this structure:
     
     const tasksToAdd = selectedTasks.map(idx => allTasks[idx]);
     
+    // Send structured payload separating org vs exec tasks
     if (tasksToAdd.length > 0) {
-      onTasksAdd?.(tasksToAdd);
+      onTasksAdd?.({
+        organizationTasks: tasksToAdd.filter(t => t.task_stream === "ORGANIZATION"),
+        executionTasks: tasksToAdd.filter(t => t.task_stream === "EXECUTION")
+      });
     }
 
     if (selectedNotes.safety && suggestions.safety_notes) {

@@ -123,6 +123,7 @@ export default function WorkOrderDetail() {
   const [allJobs, setAllJobs] = useState([]);
   const [allCustomers, setAllCustomers] = useState([]);
   const [allBoats, setAllBoats] = useState([]);
+  const [linkedWorkOrder, setLinkedWorkOrder] = useState(null);
 
   useEffect(() => {
     loadCurrentUser();
@@ -173,6 +174,12 @@ export default function WorkOrderDetail() {
       setAllJobs(allJobs);
       setAllCustomers(allCustomers);
       setAllBoats(allBoats);
+
+      // Load linked WorkOrder if exists
+      if (wo.linked_workorder_id) {
+        const [linkedWO] = await base44.entities.WorkOrder.filter({ id: wo.linked_workorder_id });
+        if (linkedWO) setLinkedWorkOrder(linkedWO);
+      }
 
       if (wo.job_id) {
         const [projectData] = await base44.entities.Job.filter({ id: wo.job_id });
@@ -646,6 +653,15 @@ export default function WorkOrderDetail() {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-slate-900">{workOrder.title}</h1>
             <Badge className={statusColors[workOrder.status]}>{workOrder.status}</Badge>
+            {workOrder.workorder_type && workOrder.workorder_type !== 'STANDARD' && (
+              <Badge variant="outline" className={
+                workOrder.workorder_type === 'ORGANIZATION' 
+                  ? 'bg-blue-50 text-blue-700 border-blue-300'
+                  : 'bg-purple-50 text-purple-700 border-purple-300'
+              }>
+                {workOrder.workorder_type === 'ORGANIZATION' ? '📋 Organization' : '🔧 Execution'}
+              </Badge>
+            )}
           </div>
           <p className="text-slate-500 mt-1">
             WO #{workOrder.work_order_number || workOrder.id.slice(-6)}
@@ -679,6 +695,31 @@ export default function WorkOrderDetail() {
            )}
          </div>
       </div>
+
+      {/* Linked WorkOrder Alert */}
+      {linkedWorkOrder && (
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-700">
+                  {workOrder.workorder_type === 'ORGANIZATION' ? '🔧 Related Execution WorkOrder' : '📋 Related Organization WorkOrder'}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">{linkedWorkOrder.title}</p>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                asChild
+              >
+                <Link to={createPageUrl('WorkOrderDetail') + `?id=${linkedWorkOrder.id}`}>
+                  View
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Overview Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
