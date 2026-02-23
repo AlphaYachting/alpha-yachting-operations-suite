@@ -37,23 +37,40 @@ Deno.serve(async (req) => {
     });
 
     // ============================================================
+    // ALLOCATE WO NUMBERS (inline to avoid nested function calls)
+    // ============================================================
+    const recentWorkOrders = await base44.asServiceRole.entities.WorkOrder.list('-created_date', 50);
+    const validNumbers = recentWorkOrders
+      .map(wo => wo.work_order_number)
+      .filter(num => num && /^WO\d{5}$/.test(num))
+      .map(num => parseInt(num.substring(2), 10))
+      .filter(num => !isNaN(num));
+    
+    const maxNumber = validNumbers.length > 0 ? Math.max(...validNumbers) : 0;
+    const execWONumber = `WO${String(maxNumber + 1).padStart(5, '0')}`;
+    const orgWONumber = `WO${String(maxNumber + 2).padStart(5, '0')}`;
+
+    // Auto-set status
+    const hasDate = !!baseWorkOrderData.scheduled_date;
+    const hasTechs = baseWorkOrderData.assigned_technicians?.length > 0;
+    const isPlannedReady = hasDate && hasTechs;
+    const execStatus = (isPlannedReady && baseWorkOrderData.status === 'Draft') ? 'Scheduled' : baseWorkOrderData.status;
+
+    // ============================================================
     // CREATE EXECUTION WORKORDER (Primary)
     // ============================================================
     let execWorkOrder = null;
     if (execTasks?.length > 0) {
-      const execWOResponse = await base44.asServiceRole.functions.invoke('createWorkOrderWithNumber', {
+      execWorkOrder = await base44.asServiceRole.entities.WorkOrder.create({
         ...baseWorkOrderData,
         title: `${baseWorkOrderData.title} – Execution`,
+        work_order_number: execWONumber,
         workorder_type: 'EXECUTION',
         workorder_group_id: workorder_group_id,
         linked_workorder_id: null, // Will update after org WO created
-        assigned_technicians: baseWorkOrderData.assigned_technicians || []
+        assigned_technicians: baseWorkOrderData.assigned_technicians || [],
+        status: execStatus
       });
-
-      if (!execWOResponse.data?.success) {
-        throw new Error(execWOResponse.data?.message || 'Failed to create execution work order');
-      }
-      execWorkOrder = execWOResponse.data.work_order;
 
       // Create execution tasks
       for (let i = 0; i < execTasks.length; i++) {
@@ -74,20 +91,16 @@ Deno.serve(async (req) => {
     // ============================================================
     let orgWorkOrder = null;
     if (orgTasks?.length > 0) {
-      const orgWOResponse = await base44.asServiceRole.functions.invoke('createWorkOrderWithNumber', {
+      orgWorkOrder = await base44.asServiceRole.entities.WorkOrder.create({
         ...baseWorkOrderData,
         title: `${baseWorkOrderData.title} – Organization`,
+        work_order_number: orgWONumber,
         workorder_type: 'ORGANIZATION',
         workorder_group_id: workorder_group_id,
         linked_workorder_id: execWorkOrder?.id || null,
         assigned_technicians: [], // Default to empty for org WO
         status: 'Draft'
       });
-
-      if (!orgWOResponse.data?.success) {
-        throw new Error(orgWOResponse.data?.message || 'Failed to create organization work order');
-      }
-      orgWorkOrder = orgWOResponse.data.work_order;
 
       // Create organization tasks
       for (let i = 0; i < orgTasks.length; i++) {
