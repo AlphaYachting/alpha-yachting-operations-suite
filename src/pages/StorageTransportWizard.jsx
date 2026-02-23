@@ -111,7 +111,24 @@ export default function StorageTransportWizard() {
         });
     };
 
-    if (!activeRateCard) return <div className="p-8">Loading configuration or no active Rate Card found...</div>;
+    if (!activeRateCard && !rateCards) {
+        return <div className="p-8">Loading configuration...</div>;
+    }
+
+    if (!activeRateCard && rateCards) {
+        return (
+            <div className="p-8 max-w-3xl mx-auto text-center mt-12">
+                <Package className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+                <h2 className="text-2xl font-bold mb-2 text-slate-800">No Active Pricing Found</h2>
+                <p className="text-slate-500 mb-6">
+                    Before generating an offer, the pricing engine requires an active Rate Card.
+                </p>
+                <Button onClick={() => navigate(createPageUrl('StoragePricingAdmin'))}>
+                    <Settings className="w-4 h-4 mr-2" /> Go to Storage Pricing Admin
+                </Button>
+            </div>
+        );
+    }
 
     const availableOptions = rateCardItems?.filter(i => i.category === 'OPTION' && i.is_active) || [];
 
