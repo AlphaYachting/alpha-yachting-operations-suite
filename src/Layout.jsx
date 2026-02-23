@@ -64,6 +64,7 @@ const navItems = [
   // SALES & CUSTOMER FLOW
   { header: 'SALES & CUSTOMER FLOW' },
   { name: 'Leads', icon: Phone, page: 'LeadsV2' },
+  { name: 'Storage & Transport', icon: Anchor, page: 'StorageTransportWizard', primary: true },
   { name: 'Customers', icon: Users, page: 'Customers' },
   { name: 'Boats', icon: Ship, page: 'Boats' },
   { name: 'Locations', icon: MapPin, page: 'Locations' },
@@ -89,6 +90,7 @@ const navItems = [
   // ADMIN
   { header: 'ADMIN' },
   { name: 'Settings', icon: Settings, page: 'Settings' },
+  { name: 'Storage Pricing', icon: Database, page: 'StoragePricingAdmin', adminOnly: true },
   { name: 'Calendar Feeds', icon: CalendarIcon, page: 'CalendarFeeds', adminOnly: true },
   { name: 'App Invitations', icon: Mail, page: 'AppInvites', adminOnly: true },
   { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
