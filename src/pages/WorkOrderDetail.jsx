@@ -177,8 +177,15 @@ export default function WorkOrderDetail() {
 
       // Load linked WorkOrder if exists
       if (wo.linked_workorder_id) {
-        const [linkedWO] = await base44.entities.WorkOrder.filter({ id: wo.linked_workorder_id });
-        if (linkedWO) setLinkedWorkOrder(linkedWO);
+        try {
+          const linkedWOs = await base44.entities.WorkOrder.filter({ id: wo.linked_workorder_id });
+          if (linkedWOs.length > 0) {
+            setLinkedWorkOrder(linkedWOs[0]);
+          }
+        } catch (error) {
+          console.error('Error loading linked work order:', error);
+          // Non-critical - continue loading page
+        }
       }
 
       if (wo.job_id) {
