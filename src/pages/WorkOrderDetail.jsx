@@ -630,10 +630,6 @@ export default function WorkOrderDetail() {
   const organizationTasks = enrichedTasks.filter(t => t.task_stream === 'ORGANIZATION');
   const executionTasks = enrichedTasks.filter(t => t.task_stream === 'EXECUTION');
   
-  // Gate logic: check if all organizational tasks are complete
-  const allOrganizationCompleted = organizationTasks.length === 0 || 
-    organizationTasks.every(t => t.status === 'Completed');
-  
   const completedTasks = enrichedTasks.filter(t => t.status === 'Completed').length;
   const totalTasks = enrichedTasks.length;
   const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -975,7 +971,7 @@ export default function WorkOrderDetail() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className={allOrganizationCompleted ? "bg-green-50 text-green-700 border-green-300" : "bg-blue-50 text-blue-700 border-blue-300"}>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
                       {organizationTasks.filter(t => t.status === 'Completed').length}/{organizationTasks.length} complete
                     </Badge>
                   </div>
@@ -1123,16 +1119,9 @@ export default function WorkOrderDetail() {
                         </p>
                       </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                      {!allOrganizationCompleted && (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
-                          🔒 Blocked - Organization incomplete
-                        </Badge>
-                      )}
                       <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
                         {executionTasks.filter(t => t.status === 'Completed').length}/{executionTasks.length} complete
                       </Badge>
-                      </div>
                       </div>
 
                       <DragDropContext onDragEnd={handleDragEnd}>
@@ -1145,9 +1134,7 @@ export default function WorkOrderDetail() {
                       >
                       {executionTasks
                       .sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0))
-                      .map((task, index) => {
-                        const isBlocked = !allOrganizationCompleted && task.task_stream === 'EXECUTION';
-                        return (
+                      .map((task, index) => (
                         <Draggable 
                           key={task.id} 
                           draggableId={task.id} 
@@ -1159,11 +1146,9 @@ export default function WorkOrderDetail() {
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               className={`p-4 border rounded-lg transition-all ${
-                                isBlocked 
-                                  ? 'border-amber-300 bg-amber-50/50 opacity-70'
-                                  : snapshot.isDragging 
-                                    ? 'bg-blue-50 border-blue-400 shadow-lg scale-105' 
-                                    : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
+                                snapshot.isDragging 
+                                  ? 'bg-blue-50 border-blue-400 shadow-lg scale-105' 
+                                  : 'border-slate-200 hover:border-slate-300 hover:shadow-sm'
                               }`}
                             >
                               <div className="flex items-start justify-between gap-4">
@@ -1195,11 +1180,6 @@ export default function WorkOrderDetail() {
                                       {task.sequence_order > 0 && (
                                         <Badge variant="outline" className="text-xs">
                                           #{task.sequence_order}
-                                        </Badge>
-                                      )}
-                                      {isBlocked && (
-                                        <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
-                                          Blocked
                                         </Badge>
                                       )}
                                     </div>
@@ -1263,10 +1243,9 @@ export default function WorkOrderDetail() {
                               </div>
                             </div>
                           )}
-                        </Draggable>
-                      );
-                      })}
-                      {provided.placeholder}
+                          </Draggable>
+                          ))}
+                          {provided.placeholder}
                       </div>
                       )}
                       </Droppable>

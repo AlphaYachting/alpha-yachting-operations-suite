@@ -28,11 +28,10 @@ export default function AITaskSuggestions({
       const boat = boats?.find(b => b.id === job?.boat_id);
       const customer = customers?.find(c => c.id === job?.customer_id);
 
-      const prompt = `You are a marine service expert. Based on the following work order details, suggest:
-1. A list of 4-6 specific technical tasks to be completed
-2. A list of 2-4 organizational/preparation tasks (material ordering, tools preparation, access coordination, etc.)
-3. Safety precautions or notes
-4. Internal notes for technicians
+      const prompt = `You are a marine service expert. Generate a work plan in TWO STEPS:
+
+STEP 1: First, generate 4-8 specific EXECUTION tasks (the actual technical work to be done)
+STEP 2: Then, based on those execution tasks, generate 2-6 ORGANIZATION tasks that are directly derived from and reference the execution scope
 
 Work Order Details:
 - Title: ${formData.title}
@@ -45,22 +44,31 @@ Work Order Details:
 - Electrical System: ${boat?.electrical_system || 'N/A'}
 - Service Category: ${job?.service_category || 'General Service'}
 
-IMPORTANT: Always include organizational tasks such as:
-- Order required materials/parts
-- Prepare necessary tools and equipment
-- Coordinate marina/location access
-- Check availability of required resources
-- Prepare work area
-- Any pre-work organization needed
+CRITICAL REQUIREMENTS FOR ORGANIZATION TASKS:
+- Must reference SPECIFIC materials/tools needed for the execution tasks you listed
+- Must reference SPECIFIC access/logistics requirements based on the execution plan
+- Must reference SPECIFIC approvals/scheduling prerequisites for the execution work
+- NO generic tasks like "Order materials" - instead say "Order [specific parts for specific execution task]"
+- NO generic tasks like "Prepare tools" - instead say "Prepare [specific tools for specific execution task]"
+- Each organization task must have a clear relationship to one or more execution tasks
+
+Example:
+If execution task is "Replace oil filter and engine oil (5.5L synthetic)",
+then organization task could be "Order 6L synthetic engine oil SAE 10W-40 and OEM oil filter for [boat engine model]"
 
 Return a JSON object with this structure:
 {
-  "suggested_tasks": [
-    { "title": "Task title", "description": "Brief description of what needs to be done", "estimated_hours": 1.5 },
+  "execution_tasks": [
+    { "title": "Task title", "description": "Brief description of the technical work", "estimated_hours": 1.5 },
     ...
   ],
-  "organizational_tasks": [
-    { "title": "Organizational task title", "description": "What needs to be organized/prepared", "estimated_hours": 0.5 },
+  "organization_tasks": [
+    { 
+      "title": "Organization task title", 
+      "description": "Specific preparation/organization tied to execution tasks", 
+      "estimated_hours": 0.5,
+      "relates_to_execution_titles": ["Execution task 1", "Execution task 2"]
+    },
     ...
   ],
   "safety_notes": "Important safety considerations for this work",
@@ -73,7 +81,7 @@ Return a JSON object with this structure:
         response_json_schema: {
           type: 'object',
           properties: {
-            suggested_tasks: {
+            execution_tasks: {
               type: 'array',
               items: {
                 type: 'object',
@@ -84,14 +92,18 @@ Return a JSON object with this structure:
                 }
               }
             },
-            organizational_tasks: {
+            organization_tasks: {
               type: 'array',
               items: {
                 type: 'object',
                 properties: {
                   title: { type: 'string' },
                   description: { type: 'string' },
-                  estimated_hours: { type: 'number' }
+                  estimated_hours: { type: 'number' },
+                  relates_to_execution_titles: { 
+                    type: 'array',
+                    items: { type: 'string' }
+                  }
                 }
               }
             },
@@ -102,12 +114,12 @@ Return a JSON object with this structure:
       });
 
       setSuggestions(result);
-      // Pre-select all tasks (technical + organizational)
-      const techTasksCount = result.suggested_tasks?.length || 0;
-      const orgTasksCount = result.organizational_tasks?.length || 0;
+      // Pre-select all tasks (execution + organization)
+      const execTasksCount = result.execution_tasks?.length || 0;
+      const orgTasksCount = result.organization_tasks?.length || 0;
       setSelectedTasks([
-        ...Array.from({ length: techTasksCount }, (_, i) => i),
-        ...Array.from({ length: orgTasksCount }, (_, i) => techTasksCount + i)
+        ...Array.from({ length: orgTasksCount }, (_, i) => i),
+        ...Array.from({ length: execTasksCount }, (_, i) => orgTasksCount + i)
       ]);
       setSelectedNotes({
         safety: !!result.safety_notes,
@@ -124,14 +136,19 @@ Return a JSON object with this structure:
   const handleAddSuggestions = () => {
     if (!suggestions) return;
 
-    // Preserve task stream classification
-    const executionTasks = (suggestions.suggested_tasks || []).map(t => ({
-      ...t,
+    // Map execution tasks with EXECUTION stream
+    const executionTasks = (suggestions.execution_tasks || []).map(t => ({
+      title: t.title,
+      description: t.description,
+      estimated_minutes: t.estimated_hours ? Math.round(t.estimated_hours * 60) : null,
       task_stream: "EXECUTION"
     }));
 
-    const organizationTasks = (suggestions.organizational_tasks || []).map(t => ({
-      ...t,
+    // Map organization tasks with ORGANIZATION stream
+    const organizationTasks = (suggestions.organization_tasks || []).map(t => ({
+      title: t.title,
+      description: t.description,
+      estimated_minutes: t.estimated_hours ? Math.round(t.estimated_hours * 60) : null,
       task_stream: "ORGANIZATION"
     }));
 
@@ -195,74 +212,80 @@ Return a JSON object with this structure:
             </div>
           ) : suggestions ? (
             <div className="space-y-6">
-              {/* Technical Tasks */}
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-3">🔧 Technical Tasks</h3>
-                <div className="space-y-2">
-                  {suggestions.suggested_tasks?.map((task, idx) => (
-                    <label 
-                      key={idx}
-                      className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedTasks.includes(idx)
-                          ? 'border-purple-300 bg-purple-50'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <Checkbox
-                        checked={selectedTasks.includes(idx)}
-                        onCheckedChange={() => toggleTask(idx)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900">{task.title}</p>
-                        <p className="text-sm text-slate-600 mt-1">{task.description}</p>
-                        {task.estimated_hours && (
-                          <Badge variant="outline" className="mt-2 text-xs">
-                            ~{task.estimated_hours}h
-                          </Badge>
-                        )}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Organizational Tasks */}
-              {suggestions.organizational_tasks && suggestions.organizational_tasks.length > 0 && (
+              {/* Organizational Tasks - Show First */}
+              {suggestions.organization_tasks && suggestions.organization_tasks.length > 0 && (
                 <div>
-                  <h3 className="font-semibold text-slate-900 mb-3">📋 Organizational Tasks</h3>
+                  <h3 className="font-semibold text-slate-900 mb-3">📋 Organization Tasks (Prep)</h3>
                   <div className="space-y-2">
-                    {suggestions.organizational_tasks.map((task, idx) => {
-                      const actualIdx = (suggestions.suggested_tasks?.length || 0) + idx;
-                      return (
-                        <label 
-                          key={actualIdx}
-                          className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                            selectedTasks.includes(actualIdx)
-                              ? 'border-blue-300 bg-blue-50'
-                              : 'border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <Checkbox
-                            checked={selectedTasks.includes(actualIdx)}
-                            onCheckedChange={() => toggleTask(actualIdx)}
-                            className="mt-1"
-                          />
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-900">{task.title}</p>
-                            <p className="text-sm text-slate-600 mt-1">{task.description}</p>
-                            {task.estimated_hours && (
-                              <Badge variant="outline" className="mt-2 text-xs">
-                                ~{task.estimated_hours}h
-                              </Badge>
-                            )}
-                          </div>
-                        </label>
-                      );
-                    })}
+                    {suggestions.organization_tasks.map((task, idx) => (
+                      <label 
+                        key={idx}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedTasks.includes(idx)
+                            ? 'border-blue-300 bg-blue-50'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <Checkbox
+                          checked={selectedTasks.includes(idx)}
+                          onCheckedChange={() => toggleTask(idx)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{task.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+                          {task.relates_to_execution_titles && task.relates_to_execution_titles.length > 0 && (
+                            <div className="mt-2 text-xs text-slate-500">
+                              <span className="font-medium">For: </span>
+                              {task.relates_to_execution_titles.join(', ')}
+                            </div>
+                          )}
+                          {task.estimated_hours && (
+                            <Badge variant="outline" className="mt-2 text-xs">
+                              ~{task.estimated_hours}h
+                            </Badge>
+                          )}
+                        </div>
+                      </label>
+                    ))}
                   </div>
                 </div>
               )}
+
+              {/* Execution Tasks */}
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-3">🔧 Execution Tasks (Technical Work)</h3>
+                <div className="space-y-2">
+                  {suggestions.execution_tasks?.map((task, idx) => {
+                    const actualIdx = (suggestions.organization_tasks?.length || 0) + idx;
+                    return (
+                      <label 
+                        key={actualIdx}
+                        className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedTasks.includes(actualIdx)
+                            ? 'border-purple-300 bg-purple-50'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <Checkbox
+                          checked={selectedTasks.includes(actualIdx)}
+                          onCheckedChange={() => toggleTask(actualIdx)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{task.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">{task.description}</p>
+                          {task.estimated_hours && (
+                            <Badge variant="outline" className="mt-2 text-xs">
+                              ~{task.estimated_hours}h
+                            </Badge>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
 
               {/* Safety Notes */}
               {suggestions.safety_notes && (
