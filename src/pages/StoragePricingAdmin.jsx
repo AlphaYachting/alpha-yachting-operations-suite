@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Save, Trash2, Edit2, Play } from 'lucide-react';
+import { Plus, Save, Trash2, Edit2, Play, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { calculateOffer } from '@/components/utils/pricingEngine';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -171,9 +171,16 @@ export default function StoragePricingAdmin() {
 
 function StorageMatrixEditor({ items, rateCardId, onSave, onDelete }) {
     const [newItem, setNewItem] = useState({ length_min: 0, length_max: 5, period: 'month', price: 0, title: '', code: '' });
+    const [editingId, setEditingId] = useState(null);
+    const [editData, setEditData] = useState({});
 
     const handleSave = () => {
         if(!newItem.title || !newItem.code) return toast.error("Title and Code required");
+        
+        // Check for duplicate code
+        const duplicate = items.find(i => i.code === newItem.code);
+        if(duplicate) return toast.error("Code already exists. Use a unique code.");
+        
         onSave({
             rate_card_id: rateCardId,
             category: 'STORAGE',
@@ -185,6 +192,45 @@ function StorageMatrixEditor({ items, rateCardId, onSave, onDelete }) {
             is_active: true
         });
         setNewItem({ length_min: 0, length_max: 5, period: 'month', price: 0, title: '', code: '' });
+    };
+
+    const startEdit = (item) => {
+        setEditingId(item.id);
+        setEditData({
+            title: item.title,
+            price: item.price,
+            code: item.code,
+            length_min: item.rules_json?.length_min || 0,
+            length_max: item.rules_json?.length_max || 0,
+            period: item.rules_json?.period || 'month'
+        });
+    };
+
+    const saveEdit = () => {
+        if(!editData.title || !editData.code) return toast.error("Title and Code required");
+        
+        // Check for duplicate code (excluding current item)
+        const duplicate = items.find(i => i.code === editData.code && i.id !== editingId);
+        if(duplicate) return toast.error("Code already exists. Use a unique code.");
+        
+        onSave({
+            id: editingId,
+            rate_card_id: rateCardId,
+            category: 'STORAGE',
+            code: editData.code,
+            title: editData.title,
+            unit: 'flat',
+            price: parseFloat(editData.price),
+            rules_json: { length_min: parseFloat(editData.length_min), length_max: parseFloat(editData.length_max), period: editData.period },
+            is_active: true
+        });
+        setEditingId(null);
+        setEditData({});
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditData({});
     };
 
     return (
@@ -204,15 +250,50 @@ function StorageMatrixEditor({ items, rateCardId, onSave, onDelete }) {
                 </div>
                 <div className="space-y-2 mb-6">
                     {items.map(item => (
-                        <div key={item.id} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded border">
-                            <div className="col-span-2">{item.code}</div>
-                            <div className="col-span-3 font-medium">{item.title}</div>
-                            <div className="col-span-2">{item.rules_json?.length_min} - {item.rules_json?.length_max} m</div>
-                            <div className="col-span-2 capitalize">{item.rules_json?.period}</div>
-                            <div className="col-span-2">€{item.price}</div>
-                            <div className="col-span-1 flex justify-end">
-                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => onDelete(item.id)}><Trash2 className="w-4 h-4"/></Button>
-                            </div>
+                        <div key={item.id} className={`grid grid-cols-12 gap-2 items-center p-2 rounded border ${editingId === item.id ? 'bg-blue-50 border-blue-300' : 'bg-slate-50'}`}>
+                            {editingId === item.id ? (
+                                <>
+                                    <div className="col-span-2">
+                                        <Input value={editData.code} onChange={e => setEditData({...editData, code: e.target.value})} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="col-span-3">
+                                        <Input value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="col-span-2 flex gap-1">
+                                        <Input type="number" value={editData.length_min} onChange={e => setEditData({...editData, length_min: e.target.value})} className="h-8 text-sm" placeholder="Min" />
+                                        <Input type="number" value={editData.length_max} onChange={e => setEditData({...editData, length_max: e.target.value})} className="h-8 text-sm" placeholder="Max" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Select value={editData.period} onValueChange={v => setEditData({...editData, period: v})}>
+                                            <SelectTrigger className="h-8 text-sm"><SelectValue/></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="day">Day</SelectItem>
+                                                <SelectItem value="month">Month</SelectItem>
+                                                <SelectItem value="season">Season</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Input type="number" value={editData.price} onChange={e => setEditData({...editData, price: e.target.value})} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="col-span-1 flex justify-end gap-1">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={saveEdit}><Save className="w-4 h-4"/></Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500" onClick={cancelEdit}><X className="w-4 h-4"/></Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="col-span-2">{item.code}</div>
+                                    <div className="col-span-3 font-medium">{item.title}</div>
+                                    <div className="col-span-2">{item.rules_json?.length_min} - {item.rules_json?.length_max} m</div>
+                                    <div className="col-span-2 capitalize">{item.rules_json?.period}</div>
+                                    <div className="col-span-2">€{item.price}</div>
+                                    <div className="col-span-1 flex justify-end gap-1">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(item)}><Edit2 className="w-4 h-4"/></Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => onDelete(item.id)}><Trash2 className="w-4 h-4"/></Button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -308,9 +389,16 @@ function RoofRuleEditor({ item, rateCardId, onSave }) {
 
 function TransportEditor({ startItems, kmItems, rateCardId, onSave, onDelete }) {
     const [newItem, setNewItem] = useState({ type: 'start', length_min: 0, length_max: 10, distance_min: 0, distance_max: 50, price: 0, title: '', code: '' });
+    const [editingId, setEditingId] = useState(null);
+    const [editData, setEditData] = useState({});
 
     const handleSave = () => {
         if(!newItem.title || !newItem.code) return toast.error("Title and Code required");
+        
+        const allItems = [...startItems, ...kmItems];
+        const duplicate = allItems.find(i => i.code === newItem.code);
+        if(duplicate) return toast.error("Code already exists. Use a unique code.");
+        
         onSave({
             rate_card_id: rateCardId,
             category: newItem.type === 'start' ? 'TRANSPORT_START' : 'TRANSPORT_KM',
@@ -326,6 +414,49 @@ function TransportEditor({ startItems, kmItems, rateCardId, onSave, onDelete }) 
         setNewItem({ ...newItem, price: 0, title: '', code: '' });
     };
 
+    const startEdit = (item, category) => {
+        setEditingId(item.id);
+        setEditData({
+            title: item.title,
+            price: item.price,
+            code: item.code,
+            category: category,
+            length_min: item.rules_json?.length_min || 0,
+            length_max: item.rules_json?.length_max || 0,
+            distance_min: item.rules_json?.distance_min || 0,
+            distance_max: item.rules_json?.distance_max || 0
+        });
+    };
+
+    const saveEdit = () => {
+        if(!editData.title || !editData.code) return toast.error("Title and Code required");
+        
+        const allItems = [...startItems, ...kmItems];
+        const duplicate = allItems.find(i => i.code === editData.code && i.id !== editingId);
+        if(duplicate) return toast.error("Code already exists. Use a unique code.");
+        
+        onSave({
+            id: editingId,
+            rate_card_id: rateCardId,
+            category: editData.category,
+            code: editData.code,
+            title: editData.title,
+            unit: editData.category === 'TRANSPORT_START' ? 'flat' : 'km',
+            price: parseFloat(editData.price),
+            rules_json: editData.category === 'TRANSPORT_START'
+                ? { length_min: parseFloat(editData.length_min), length_max: parseFloat(editData.length_max) }
+                : { distance_min: parseFloat(editData.distance_min), distance_max: parseFloat(editData.distance_max) },
+            is_active: true
+        });
+        setEditingId(null);
+        setEditData({});
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditData({});
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -337,13 +468,36 @@ function TransportEditor({ startItems, kmItems, rateCardId, onSave, onDelete }) 
                     <h3 className="font-semibold text-lg mb-2">Transport Start Fees</h3>
                     <div className="space-y-2">
                         {startItems.map(item => (
-                            <div key={item.id} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded border">
-                                <div className="col-span-3">{item.code} - {item.title}</div>
-                                <div className="col-span-4">Boat: {item.rules_json?.length_min} - {item.rules_json?.length_max} m</div>
-                                <div className="col-span-4 font-bold">€{item.price} Flat</div>
-                                <div className="col-span-1 flex justify-end">
-                                    <Button variant="ghost" size="icon" className="text-red-500" onClick={() => onDelete(item.id)}><Trash2 className="w-4 h-4"/></Button>
-                                </div>
+                            <div key={item.id} className={`grid grid-cols-12 gap-2 items-center p-2 rounded border ${editingId === item.id ? 'bg-blue-50 border-blue-300' : 'bg-slate-50'}`}>
+                                {editingId === item.id ? (
+                                    <>
+                                        <div className="col-span-3 flex gap-1">
+                                            <Input value={editData.code} onChange={e => setEditData({...editData, code: e.target.value})} className="h-8 text-sm" placeholder="Code" />
+                                            <Input value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} className="h-8 text-sm" placeholder="Title" />
+                                        </div>
+                                        <div className="col-span-4 flex gap-1">
+                                            <Input type="number" value={editData.length_min} onChange={e => setEditData({...editData, length_min: e.target.value})} className="h-8 text-sm" placeholder="Min" />
+                                            <Input type="number" value={editData.length_max} onChange={e => setEditData({...editData, length_max: e.target.value})} className="h-8 text-sm" placeholder="Max" />
+                                        </div>
+                                        <div className="col-span-4">
+                                            <Input type="number" value={editData.price} onChange={e => setEditData({...editData, price: e.target.value})} className="h-8 text-sm" placeholder="Price" />
+                                        </div>
+                                        <div className="col-span-1 flex justify-end gap-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={saveEdit}><Save className="w-4 h-4"/></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelEdit}><X className="w-4 h-4"/></Button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="col-span-3">{item.code} - {item.title}</div>
+                                        <div className="col-span-4">Boat: {item.rules_json?.length_min} - {item.rules_json?.length_max} m</div>
+                                        <div className="col-span-4 font-bold">€{item.price} Flat</div>
+                                        <div className="col-span-1 flex justify-end gap-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(item, 'TRANSPORT_START')}><Edit2 className="w-4 h-4"/></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => onDelete(item.id)}><Trash2 className="w-4 h-4"/></Button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -353,13 +507,36 @@ function TransportEditor({ startItems, kmItems, rateCardId, onSave, onDelete }) 
                     <h3 className="font-semibold text-lg mb-2">Transport KM Rates</h3>
                     <div className="space-y-2">
                         {kmItems.map(item => (
-                            <div key={item.id} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded border">
-                                <div className="col-span-3">{item.code} - {item.title}</div>
-                                <div className="col-span-4">Distance: {item.rules_json?.distance_min} - {item.rules_json?.distance_max} km</div>
-                                <div className="col-span-4 font-bold">€{item.price} / km</div>
-                                <div className="col-span-1 flex justify-end">
-                                    <Button variant="ghost" size="icon" className="text-red-500" onClick={() => onDelete(item.id)}><Trash2 className="w-4 h-4"/></Button>
-                                </div>
+                            <div key={item.id} className={`grid grid-cols-12 gap-2 items-center p-2 rounded border ${editingId === item.id ? 'bg-blue-50 border-blue-300' : 'bg-slate-50'}`}>
+                                {editingId === item.id ? (
+                                    <>
+                                        <div className="col-span-3 flex gap-1">
+                                            <Input value={editData.code} onChange={e => setEditData({...editData, code: e.target.value})} className="h-8 text-sm" placeholder="Code" />
+                                            <Input value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} className="h-8 text-sm" placeholder="Title" />
+                                        </div>
+                                        <div className="col-span-4 flex gap-1">
+                                            <Input type="number" value={editData.distance_min} onChange={e => setEditData({...editData, distance_min: e.target.value})} className="h-8 text-sm" placeholder="Min KM" />
+                                            <Input type="number" value={editData.distance_max} onChange={e => setEditData({...editData, distance_max: e.target.value})} className="h-8 text-sm" placeholder="Max KM" />
+                                        </div>
+                                        <div className="col-span-4">
+                                            <Input type="number" value={editData.price} onChange={e => setEditData({...editData, price: e.target.value})} className="h-8 text-sm" placeholder="Price/km" />
+                                        </div>
+                                        <div className="col-span-1 flex justify-end gap-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={saveEdit}><Save className="w-4 h-4"/></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelEdit}><X className="w-4 h-4"/></Button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="col-span-3">{item.code} - {item.title}</div>
+                                        <div className="col-span-4">Distance: {item.rules_json?.distance_min} - {item.rules_json?.distance_max} km</div>
+                                        <div className="col-span-4 font-bold">€{item.price} / km</div>
+                                        <div className="col-span-1 flex justify-end gap-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(item, 'TRANSPORT_KM')}><Edit2 className="w-4 h-4"/></Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => onDelete(item.id)}><Trash2 className="w-4 h-4"/></Button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -411,9 +588,15 @@ function TransportEditor({ startItems, kmItems, rateCardId, onSave, onDelete }) 
 
 function OptionsEditor({ items, rateCardId, onSave, onDelete }) {
     const [newItem, setNewItem] = useState({ code: '', title: '', unit: 'piece', price: 0 });
+    const [editingId, setEditingId] = useState(null);
+    const [editData, setEditData] = useState({});
 
     const handleSave = () => {
         if(!newItem.title || !newItem.code) return toast.error("Title and Code required");
+        
+        const duplicate = items.find(i => i.code === newItem.code);
+        if(duplicate) return toast.error("Code already exists. Use a unique code.");
+        
         onSave({
             rate_card_id: rateCardId,
             category: 'OPTION',
@@ -426,6 +609,41 @@ function OptionsEditor({ items, rateCardId, onSave, onDelete }) {
         setNewItem({ code: '', title: '', unit: 'piece', price: 0 });
     };
 
+    const startEdit = (item) => {
+        setEditingId(item.id);
+        setEditData({
+            code: item.code,
+            title: item.title,
+            unit: item.unit,
+            price: item.price
+        });
+    };
+
+    const saveEdit = () => {
+        if(!editData.title || !editData.code) return toast.error("Title and Code required");
+        
+        const duplicate = items.find(i => i.code === editData.code && i.id !== editingId);
+        if(duplicate) return toast.error("Code already exists. Use a unique code.");
+        
+        onSave({
+            id: editingId,
+            rate_card_id: rateCardId,
+            category: 'OPTION',
+            code: editData.code,
+            title: editData.title,
+            unit: editData.unit,
+            price: parseFloat(editData.price),
+            is_active: true
+        });
+        setEditingId(null);
+        setEditData({});
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditData({});
+    };
+
     return (
         <Card>
             <CardHeader>
@@ -435,14 +653,38 @@ function OptionsEditor({ items, rateCardId, onSave, onDelete }) {
             <CardContent>
                 <div className="space-y-2 mb-6">
                     {items.map(item => (
-                        <div key={item.id} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded border">
-                            <div className="col-span-3">{item.code}</div>
-                            <div className="col-span-4 font-medium">{item.title}</div>
-                            <div className="col-span-2">Per {item.unit}</div>
-                            <div className="col-span-2 font-bold">€{item.price}</div>
-                            <div className="col-span-1 flex justify-end">
-                                <Button variant="ghost" size="icon" className="text-red-500" onClick={() => onDelete(item.id)}><Trash2 className="w-4 h-4"/></Button>
-                            </div>
+                        <div key={item.id} className={`grid grid-cols-12 gap-2 items-center p-2 rounded border ${editingId === item.id ? 'bg-blue-50 border-blue-300' : 'bg-slate-50'}`}>
+                            {editingId === item.id ? (
+                                <>
+                                    <div className="col-span-3">
+                                        <Input value={editData.code} onChange={e => setEditData({...editData, code: e.target.value})} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="col-span-4">
+                                        <Input value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Input value={editData.unit} onChange={e => setEditData({...editData, unit: e.target.value})} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Input type="number" value={editData.price} onChange={e => setEditData({...editData, price: e.target.value})} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="col-span-1 flex justify-end gap-1">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600" onClick={saveEdit}><Save className="w-4 h-4"/></Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cancelEdit}><X className="w-4 h-4"/></Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="col-span-3">{item.code}</div>
+                                    <div className="col-span-4 font-medium">{item.title}</div>
+                                    <div className="col-span-2">Per {item.unit}</div>
+                                    <div className="col-span-2 font-bold">€{item.price}</div>
+                                    <div className="col-span-1 flex justify-end gap-1">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(item)}><Edit2 className="w-4 h-4"/></Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500" onClick={() => onDelete(item.id)}><Trash2 className="w-4 h-4"/></Button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     ))}
                 </div>
