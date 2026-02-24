@@ -466,96 +466,164 @@ export default function StorageTransportWizard() {
                     {/* STEP 6 - Review */}
                     {step === 6 && calculation && (
                         <div className="space-y-6">
-                            {/* Debug Panel (Admin only) */}
-                            {(() => {
-                                const extendedParams = { ...formData };
-                                const moduleComponentsDebug = [];
+                            {/* Full Function Check Panel */}
+                            <div className="bg-blue-50 border border-blue-300 p-4 rounded-lg text-xs font-mono space-y-3">
+                                <div className="font-bold text-blue-900">✅ FUNCTION CHECK - WIZARD CONFIGURATION</div>
                                 
-                                for (const selectedMod of formData.selected_modules) {
-                                    const components = allModuleComponents?.filter(c => c.module_id === selectedMod.module_id) || [];
-                                    moduleComponentsDebug.push({
-                                        module_name: selectedMod.module.name,
-                                        module_id: selectedMod.module_id,
-                                        components_count: components.length,
-                                        components: components.map(c => ({
-                                            code: c.rate_card_item_code,
-                                            qty: c.qty_value,
-                                            pricing_mode: c.pricing_mode
-                                        }))
-                                    });
+                                <div className="border-t border-blue-300 pt-2">
+                                    <div className="font-semibold text-blue-900">Rate Card:</div>
+                                    <div className="ml-2">• {activeRateCard?.name || 'N/A'}</div>
+                                    <div className="ml-2">• Items loaded: {rateCardItems?.length || 0}</div>
+                                    <div className="ml-2">• VAT Rate: {activeRateCard?.vat_rate}%</div>
+                                </div>
+                                
+                                <div className="border-t border-blue-300 pt-2">
+                                    <div className="font-semibold text-blue-900">User Input:</div>
+                                    <div className="ml-2">• Boat Length: {formData.boat_length}m</div>
+                                    <div className="ml-2">• Transport Needed: {formData.transport_needed ? 'YES' : 'NO'}</div>
+                                    {formData.transport_needed && (
+                                        <>
+                                            <div className="ml-4 text-blue-700">- Distance: {formData.distance_km} km</div>
+                                            <div className="ml-4 text-blue-700">- Pickup: {formData.pickup_address || 'N/A'}</div>
+                                        </>
+                                    )}
+                                    <div className="ml-2">• Storage Period: {formData.storage_period}</div>
+                                    <div className="ml-2">• Roof/Indoor: {formData.roof_option ? 'YES ✅' : 'NO'}</div>
+                                    <div className="ml-2">• Selected Modules: {formData.selected_modules.length}</div>
+                                    <div className="ml-2">• Additional Options: {formData.selected_options.length}</div>
+                                </div>
+                                
+                                <div className="border-t border-blue-300 pt-2">
+                                    <div className="font-semibold text-blue-900">Rate Card Lookup Results:</div>
+                                    {formData.transport_needed && (() => {
+                                        const startFee = rateCardItems?.find(i => 
+                                            i.category === 'TRANSPORT_START' && 
+                                            i.is_active !== false &&
+                                            (i.rules_json?.length_min || 0) <= formData.boat_length && 
+                                            (i.rules_json?.length_max ? i.rules_json.length_max >= formData.boat_length : true)
+                                        );
+                                        const kmRate = rateCardItems?.find(i => 
+                                            i.category === 'TRANSPORT_KM' && 
+                                            i.is_active !== false &&
+                                            (i.rules_json?.distance_min || 0) <= formData.distance_km && 
+                                            (i.rules_json?.distance_max ? i.rules_json.distance_max >= formData.distance_km : true)
+                                        );
+                                        return (
+                                            <>
+                                                <div className="ml-2">• TRANSPORT_START: {startFee ? `✅ ${startFee.title} - €${startFee.price}` : '❌ NOT FOUND'}</div>
+                                                <div className="ml-2">• TRANSPORT_KM: {kmRate ? `✅ ${kmRate.title} - €${kmRate.price}/km` : '❌ NOT FOUND'}</div>
+                                            </>
+                                        );
+                                    })()}
+                                    {(() => {
+                                        const storage = rateCardItems?.find(i => 
+                                            i.category === 'STORAGE' && 
+                                            i.is_active !== false &&
+                                            i.rules_json?.period === formData.storage_period && 
+                                            (i.rules_json?.length_min || 0) <= formData.boat_length && 
+                                            (i.rules_json?.length_max ? i.rules_json.length_max >= formData.boat_length : true)
+                                        );
+                                        const roof = rateCardItems?.find(i => i.category === 'ROOF_RULE' && i.is_active !== false);
+                                        return (
+                                            <>
+                                                <div className="ml-2">• STORAGE: {storage ? `✅ ${storage.title} - €${storage.price}` : '❌ NOT FOUND'}</div>
+                                                {formData.roof_option && (
+                                                    <div className="ml-2">• ROOF_RULE: {roof ? `✅ ${roof.title} (${roof.rules_json?.type}) - ${roof.rules_json?.type === 'multiplier' ? `x${roof.price}` : `+€${roof.price}`}` : '❌ NOT FOUND'}</div>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                                
+                                {formData.selected_modules.length > 0 && (() => {
+                                    const moduleComponentsDebug = [];
+                                    const extendedParams = { ...formData };
                                     
-                                    for (const comp of components) {
-                                        if (comp.pricing_mode === 'ADD_AS_LINE_ITEM') {
-                                            extendedParams.selected_options = [
-                                                ...(extendedParams.selected_options || []),
-                                                { code: comp.rate_card_item_code, quantity: comp.qty_value }
-                                            ];
+                                    for (const selectedMod of formData.selected_modules) {
+                                        const components = allModuleComponents?.filter(c => c.module_id === selectedMod.module_id) || [];
+                                        moduleComponentsDebug.push({
+                                            module_name: selectedMod.module.name,
+                                            module_id: selectedMod.module_id,
+                                            components_count: components.length,
+                                            components: components.map(c => ({
+                                                code: c.rate_card_item_code,
+                                                qty: c.qty_value,
+                                                pricing_mode: c.pricing_mode
+                                            }))
+                                        });
+                                        
+                                        for (const comp of components) {
+                                            if (comp.pricing_mode === 'ADD_AS_LINE_ITEM') {
+                                                extendedParams.selected_options = [
+                                                    ...(extendedParams.selected_options || []),
+                                                    { code: comp.rate_card_item_code, quantity: comp.qty_value }
+                                                ];
+                                            }
                                         }
                                     }
-                                }
-                                
-                                const optionsLookup = (extendedParams.selected_options || []).map(opt => {
-                                    const found = rateCardItems?.find(i => i.code === opt.code && i.is_active !== false);
-                                    return {
-                                        code: opt.code,
-                                        qty: opt.quantity,
-                                        found: !!found,
-                                        category: found?.category,
-                                        price: found?.price,
-                                        title: found?.title
-                                    };
-                                });
-                                
-                                const hasIssues = moduleComponentsDebug.some(m => m.components_count === 0) ||
-                                                 optionsLookup.some(o => !o.found) ||
-                                                 (formData.selected_modules.length > 0 && extendedParams.selected_options?.length === 0);
-                                
-                                return hasIssues && (
-                                    <div className="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-xs font-mono space-y-3">
-                                        <div className="font-bold text-yellow-900">🔍 MODULE CALCULATION DEBUG</div>
-                                        
-                                        <div className="border-t border-yellow-300 pt-2">
-                                            <div className="font-semibold text-yellow-900">Selected Modules ({formData.selected_modules.length}):</div>
+                                    
+                                    const optionsLookup = (extendedParams.selected_options || []).filter(opt => 
+                                        !formData.selected_options.find(o => o.code === opt.code)
+                                    ).map(opt => {
+                                        const found = rateCardItems?.find(i => i.code === opt.code && i.is_active !== false);
+                                        return {
+                                            code: opt.code,
+                                            qty: opt.quantity,
+                                            found: !!found,
+                                            category: found?.category,
+                                            price: found?.price,
+                                            title: found?.title
+                                        };
+                                    });
+                                    
+                                    return (
+                                        <div className="border-t border-blue-300 pt-2">
+                                            <div className="font-semibold text-blue-900">Selected Modules ({formData.selected_modules.length}):</div>
                                             {moduleComponentsDebug.map((m, i) => (
                                                 <div key={i} className="ml-2 mt-1">
-                                                    <div>• {m.module_name} (ID: {m.module_id.substring(0, 8)}...)</div>
-                                                    <div className="ml-4 text-yellow-700">
+                                                    <div>• {m.module_name}</div>
+                                                    <div className="ml-4 text-blue-700">
                                                         Components: {m.components_count}
-                                                        {m.components_count === 0 && <span className="text-red-600 font-bold"> ⚠️ NO COMPONENTS CONFIGURED</span>}
+                                                        {m.components_count === 0 && <span className="text-red-600 font-bold"> ⚠️ NO COMPONENTS</span>}
                                                     </div>
                                                     {m.components.map((c, j) => (
-                                                        <div key={j} className="ml-6 text-yellow-700">
-                                                            - Code: {c.code}, Qty: {c.qty}, Mode: {c.pricing_mode}
+                                                        <div key={j} className="ml-6 text-blue-700">
+                                                            - {c.code}: Qty={c.qty}, Mode={c.pricing_mode}
                                                         </div>
                                                     ))}
                                                 </div>
                                             ))}
-                                        </div>
-                                        
-                                        <div className="border-t border-yellow-300 pt-2">
-                                            <div className="font-semibold text-yellow-900">Derived selected_options ({extendedParams.selected_options?.length || 0}):</div>
-                                            {optionsLookup.map((o, i) => (
-                                                <div key={i} className="ml-2 mt-1">
-                                                    <div>• Code: {o.code}, Qty: {o.qty}</div>
-                                                    <div className="ml-4">
-                                                        {o.found ? (
-                                                            <span className="text-green-700">✅ FOUND: {o.title} | Cat: {o.category} | €{o.price}</span>
-                                                        ) : (
-                                                            <span className="text-red-600 font-bold">❌ NOT FOUND in RateCardItems</span>
-                                                        )}
-                                                    </div>
+                                            {optionsLookup.length > 0 && (
+                                                <div className="mt-2">
+                                                    <div className="font-semibold text-blue-900">Module Components Lookup:</div>
+                                                    {optionsLookup.map((o, i) => (
+                                                        <div key={i} className="ml-2">
+                                                            {o.found ? (
+                                                                <div className="text-green-700">✅ {o.code}: {o.title} - €{o.price} ({o.category})</div>
+                                                            ) : (
+                                                                <div className="text-red-600 font-bold">❌ {o.code}: NOT FOUND</div>
+                                                            )}
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
+                                            )}
                                         </div>
-                                        
-                                        {formData.selected_modules.length > 0 && extendedParams.selected_options?.length === 0 && (
-                                            <div className="border-t border-yellow-300 pt-2">
-                                                <div className="text-red-600 font-bold">⚠️ WARNING: Modules selected but no components configured as ADD_AS_LINE_ITEM</div>
+                                    );
+                                })()}
+                                
+                                <div className="border-t border-blue-300 pt-2">
+                                    <div className="font-semibold text-blue-900">Calculation Breakdown:</div>
+                                    <div className="ml-2">• Line Items Generated: {calculation.lineItems.length}</div>
+                                    <div className="ml-2 mt-1 space-y-1">
+                                        {calculation.lineItems.map((li, i) => (
+                                            <div key={i} className="text-blue-700">
+                                                - {li.category}: {li.title} = €{li.total_price.toFixed(2)}
                                             </div>
-                                        )}
+                                        ))}
                                     </div>
-                                );
-                            })()}
+                                </div>
+                            </div>
+                            )()}
                             
                             <div className="bg-slate-800 text-white p-4 rounded-lg">
                                 <h3 className="font-medium mb-2 opacity-80">Pricing Engine Output</h3>
