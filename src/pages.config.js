@@ -99,6 +99,8 @@ import Reports from './pages/Reports';
 import Schedule from './pages/Schedule';
 import Settings from './pages/Settings';
 import StandardizeWorkOrders from './pages/StandardizeWorkOrders';
+import StoragePricingAdmin from './pages/StoragePricingAdmin';
+import StorageTransportWizard from './pages/StorageTransportWizard';
 import SupplierDetail from './pages/SupplierDetail';
 import Suppliers from './pages/Suppliers';
 import TaskTemplates from './pages/TaskTemplates';
@@ -117,8 +119,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import StoragePricingAdmin from './pages/StoragePricingAdmin';
-import StorageTransportWizard from './pages/StorageTransportWizard';
 import __Layout from './Layout.jsx';
 
 
@@ -175,6 +175,8 @@ export const PAGES = {
     "Schedule": Schedule,
     "Settings": Settings,
     "StandardizeWorkOrders": StandardizeWorkOrders,
+    "StoragePricingAdmin": StoragePricingAdmin,
+    "StorageTransportWizard": StorageTransportWizard,
     "SupplierDetail": SupplierDetail,
     "Suppliers": Suppliers,
     "TaskTemplates": TaskTemplates,
@@ -193,8 +195,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "StoragePricingAdmin": StoragePricingAdmin,
-    "StorageTransportWizard": StorageTransportWizard,
 }
 
 export const pagesConfig = {

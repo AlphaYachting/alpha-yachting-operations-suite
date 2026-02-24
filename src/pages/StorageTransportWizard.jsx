@@ -93,8 +93,28 @@ export default function StorageTransportWizard() {
         }
         if (step === 4) {
             // Generate Preview Calculation
-            const res = calculateOffer(formData, rateCardItems || [], activeRateCard?.vat_rate || 25);
-            setCalculation(res);
+            try {
+                const res = calculateOffer(formData, rateCardItems || [], activeRateCard?.vat_rate || 25);
+                
+                // VALIDATION: If storage was selected, ensure storage line item exists
+                if (formData.storage_needed) {
+                    const hasStorage = res.lineItems.some(li => li.category === 'STORAGE' || li.category === 'ROOF_RULE');
+                    if (!hasStorage) {
+                        return toast.error("Storage selected but no matching rate found. Please check rate card configuration.");
+                    }
+                }
+                
+                setCalculation(res);
+            } catch (error) {
+                if (error.message.includes('STORAGE_NOT_FOUND')) {
+                    const msg = error.message.split('Available rates:')[0];
+                    toast.error(msg.replace('STORAGE_NOT_FOUND: ', ''));
+                    console.error('Storage Rate Debug Info:', error.message);
+                    return;
+                }
+                toast.error('Calculation failed: ' + error.message);
+                return;
+            }
         }
         setStep(s => s + 1);
     };

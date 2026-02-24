@@ -57,6 +57,21 @@ export const calculateOffer = (params, rateCardItems, vatRate = 25) => {
             (i.rules_json?.length_max ? i.rules_json.length_max >= params.boat_length : true)
         );
         
+        if (!storageItem) {
+            // CRITICAL: Storage was requested but no matching rate found
+            const availableStorage = rateCardItems.filter(i => i.category === 'STORAGE' && i.is_active !== false);
+            const debugInfo = {
+                requested: { period: params.storage_period, length: params.boat_length },
+                available: availableStorage.map(i => ({ 
+                    period: i.rules_json?.period, 
+                    length_range: `${i.rules_json?.length_min}-${i.rules_json?.length_max}`,
+                    price: i.price,
+                    code: i.code
+                }))
+            };
+            throw new Error(`STORAGE_NOT_FOUND: No storage rate found for period="${params.storage_period}" and length=${params.boat_length}m. Available rates: ${JSON.stringify(debugInfo.available)}`);
+        }
+        
         if (storageItem) {
             storageBasePrice = storageItem.price;
             
