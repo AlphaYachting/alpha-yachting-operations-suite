@@ -49,6 +49,7 @@
  */
 import AccessLogs from './pages/AccessLogs';
 import AdminCleanup from './pages/AdminCleanup';
+import AdminProductModules from './pages/AdminProductModules';
 import AppInvites from './pages/AppInvites';
 import BoatDetail from './pages/BoatDetail';
 import Boats from './pages/Boats';
@@ -67,6 +68,7 @@ import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import DatabaseBackup from './pages/DatabaseBackup';
 import EmailConfiguration from './pages/EmailConfiguration';
+import ImportNauticoRateCard from './pages/ImportNauticoRateCard';
 import Inventory from './pages/Inventory';
 import InventoryDashboard from './pages/InventoryDashboard';
 import InventoryExportSchema from './pages/InventoryExportSchema';
@@ -119,14 +121,13 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import ImportNauticoRateCard from './pages/ImportNauticoRateCard';
-import AdminProductModules from './pages/AdminProductModules';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AccessLogs": AccessLogs,
     "AdminCleanup": AdminCleanup,
+    "AdminProductModules": AdminProductModules,
     "AppInvites": AppInvites,
     "BoatDetail": BoatDetail,
     "Boats": Boats,
@@ -145,6 +146,7 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "DatabaseBackup": DatabaseBackup,
     "EmailConfiguration": EmailConfiguration,
+    "ImportNauticoRateCard": ImportNauticoRateCard,
     "Inventory": Inventory,
     "InventoryDashboard": InventoryDashboard,
     "InventoryExportSchema": InventoryExportSchema,
@@ -197,8 +199,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "ImportNauticoRateCard": ImportNauticoRateCard,
-    "AdminProductModules": AdminProductModules,
 }
 
 export const pagesConfig = {

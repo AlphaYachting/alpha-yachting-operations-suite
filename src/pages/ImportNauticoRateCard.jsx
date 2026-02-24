@@ -23,64 +23,64 @@ export default function ImportNauticoRateCard() {
         { category: "ROOF_RULE", code: "ROOF_MULTIPLIER_150", title: "Under the roof surcharge (multiplier)", unit: "flat", price: 1.5, is_active: true, rules_json: { type: "multiplier", applies_to: "STORAGE" } },
         
         // 0-4.99m
-        { category: "STORAGE", code: "STORAGE_YEAR_0_4_99", title: "Storage 1 year (0-4.99m)", unit: "year", price: 645, is_active: true, rules_json: { period: "year", length_min: 0.00, length_max: 4.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_0_4_99", title: "Storage 6 months (0-4.99m)", unit: "6_months", price: 405, is_active: true, rules_json: { period: "6_months", length_min: 0.00, length_max: 4.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_0_4_99", title: "Storage 1 month (0-4.99m)", unit: "month", price: 90, is_active: true, rules_json: { period: "month", length_min: 0.00, length_max: 4.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_0_4_99", title: "Storage 1 day (0-4.99m)", unit: "day", price: 6, is_active: true, rules_json: { period: "day", length_min: 0.00, length_max: 4.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_0_4_99", title: "Storage 1 year (0-4.99m)", unit: "year", price: 645, is_active: true, rules_json: { period: "year", length_min: 0.00, length_max: 5.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_0_4_99", title: "Storage 6 months (0-4.99m)", unit: "6_months", price: 405, is_active: true, rules_json: { period: "6_months", length_min: 0.00, length_max: 5.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_0_4_99", title: "Storage 1 month (0-4.99m)", unit: "month", price: 90, is_active: true, rules_json: { period: "month", length_min: 0.00, length_max: 5.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_0_4_99", title: "Storage 1 day (0-4.99m)", unit: "day", price: 6, is_active: true, rules_json: { period: "day", length_min: 0.00, length_max: 5.00 } },
         
         // 5-5.99m
-        { category: "STORAGE", code: "STORAGE_YEAR_5_5_99", title: "Storage 1 year (5-5.99m)", unit: "year", price: 705, is_active: true, rules_json: { period: "year", length_min: 5.00, length_max: 5.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_5_5_99", title: "Storage 6 months (5-5.99m)", unit: "6_months", price: 450, is_active: true, rules_json: { period: "6_months", length_min: 5.00, length_max: 5.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_5_5_99", title: "Storage 1 month (5-5.99m)", unit: "month", price: 105, is_active: true, rules_json: { period: "month", length_min: 5.00, length_max: 5.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_5_5_99", title: "Storage 1 day (5-5.99m)", unit: "day", price: 9, is_active: true, rules_json: { period: "day", length_min: 5.00, length_max: 5.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_5_5_99", title: "Storage 1 year (5-5.99m)", unit: "year", price: 705, is_active: true, rules_json: { period: "year", length_min: 5.00, length_max: 6.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_5_5_99", title: "Storage 6 months (5-5.99m)", unit: "6_months", price: 450, is_active: true, rules_json: { period: "6_months", length_min: 5.00, length_max: 6.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_5_5_99", title: "Storage 1 month (5-5.99m)", unit: "month", price: 105, is_active: true, rules_json: { period: "month", length_min: 5.00, length_max: 6.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_5_5_99", title: "Storage 1 day (5-5.99m)", unit: "day", price: 9, is_active: true, rules_json: { period: "day", length_min: 5.00, length_max: 6.00 } },
         
         // 6-6.99m
-        { category: "STORAGE", code: "STORAGE_YEAR_6_6_99", title: "Storage 1 year (6-6.99m)", unit: "year", price: 765, is_active: true, rules_json: { period: "year", length_min: 6.00, length_max: 6.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_6_6_99", title: "Storage 6 months (6-6.99m)", unit: "6_months", price: 495, is_active: true, rules_json: { period: "6_months", length_min: 6.00, length_max: 6.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_6_6_99", title: "Storage 1 month (6-6.99m)", unit: "month", price: 120, is_active: true, rules_json: { period: "month", length_min: 6.00, length_max: 6.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_6_6_99", title: "Storage 1 day (6-6.99m)", unit: "day", price: 12, is_active: true, rules_json: { period: "day", length_min: 6.00, length_max: 6.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_6_6_99", title: "Storage 1 year (6-6.99m)", unit: "year", price: 765, is_active: true, rules_json: { period: "year", length_min: 6.00, length_max: 7.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_6_6_99", title: "Storage 6 months (6-6.99m)", unit: "6_months", price: 495, is_active: true, rules_json: { period: "6_months", length_min: 6.00, length_max: 7.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_6_6_99", title: "Storage 1 month (6-6.99m)", unit: "month", price: 120, is_active: true, rules_json: { period: "month", length_min: 6.00, length_max: 7.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_6_6_99", title: "Storage 1 day (6-6.99m)", unit: "day", price: 12, is_active: true, rules_json: { period: "day", length_min: 6.00, length_max: 7.00 } },
         
         // 7-7.99m
-        { category: "STORAGE", code: "STORAGE_YEAR_7_7_99", title: "Storage 1 year (7-7.99m)", unit: "year", price: 825, is_active: true, rules_json: { period: "year", length_min: 7.00, length_max: 7.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_7_7_99", title: "Storage 6 months (7-7.99m)", unit: "6_months", price: 540, is_active: true, rules_json: { period: "6_months", length_min: 7.00, length_max: 7.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_7_7_99", title: "Storage 1 month (7-7.99m)", unit: "month", price: 135, is_active: true, rules_json: { period: "month", length_min: 7.00, length_max: 7.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_7_7_99", title: "Storage 1 day (7-7.99m)", unit: "day", price: 15, is_active: true, rules_json: { period: "day", length_min: 7.00, length_max: 7.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_7_7_99", title: "Storage 1 year (7-7.99m)", unit: "year", price: 825, is_active: true, rules_json: { period: "year", length_min: 7.00, length_max: 8.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_7_7_99", title: "Storage 6 months (7-7.99m)", unit: "6_months", price: 540, is_active: true, rules_json: { period: "6_months", length_min: 7.00, length_max: 8.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_7_7_99", title: "Storage 1 month (7-7.99m)", unit: "month", price: 135, is_active: true, rules_json: { period: "month", length_min: 7.00, length_max: 8.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_7_7_99", title: "Storage 1 day (7-7.99m)", unit: "day", price: 15, is_active: true, rules_json: { period: "day", length_min: 7.00, length_max: 8.00 } },
         
         // 8-8.99m
-        { category: "STORAGE", code: "STORAGE_YEAR_8_8_99", title: "Storage 1 year (8-8.99m)", unit: "year", price: 885, is_active: true, rules_json: { period: "year", length_min: 8.00, length_max: 8.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_8_8_99", title: "Storage 6 months (8-8.99m)", unit: "6_months", price: 585, is_active: true, rules_json: { period: "6_months", length_min: 8.00, length_max: 8.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_8_8_99", title: "Storage 1 month (8-8.99m)", unit: "month", price: 150, is_active: true, rules_json: { period: "month", length_min: 8.00, length_max: 8.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_8_8_99", title: "Storage 1 day (8-8.99m)", unit: "day", price: 18, is_active: true, rules_json: { period: "day", length_min: 8.00, length_max: 8.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_8_8_99", title: "Storage 1 year (8-8.99m)", unit: "year", price: 885, is_active: true, rules_json: { period: "year", length_min: 8.00, length_max: 9.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_8_8_99", title: "Storage 6 months (8-8.99m)", unit: "6_months", price: 585, is_active: true, rules_json: { period: "6_months", length_min: 8.00, length_max: 9.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_8_8_99", title: "Storage 1 month (8-8.99m)", unit: "month", price: 150, is_active: true, rules_json: { period: "month", length_min: 8.00, length_max: 9.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_8_8_99", title: "Storage 1 day (8-8.99m)", unit: "day", price: 18, is_active: true, rules_json: { period: "day", length_min: 8.00, length_max: 9.00 } },
         
         // 9-9.99m
-        { category: "STORAGE", code: "STORAGE_YEAR_9_9_99", title: "Storage 1 year (9-9.99m)", unit: "year", price: 945, is_active: true, rules_json: { period: "year", length_min: 9.00, length_max: 9.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_9_9_99", title: "Storage 6 months (9-9.99m)", unit: "6_months", price: 630, is_active: true, rules_json: { period: "6_months", length_min: 9.00, length_max: 9.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_9_9_99", title: "Storage 1 month (9-9.99m)", unit: "month", price: 165, is_active: true, rules_json: { period: "month", length_min: 9.00, length_max: 9.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_9_9_99", title: "Storage 1 day (9-9.99m)", unit: "day", price: 22, is_active: true, rules_json: { period: "day", length_min: 9.00, length_max: 9.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_9_9_99", title: "Storage 1 year (9-9.99m)", unit: "year", price: 945, is_active: true, rules_json: { period: "year", length_min: 9.00, length_max: 10.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_9_9_99", title: "Storage 6 months (9-9.99m)", unit: "6_months", price: 630, is_active: true, rules_json: { period: "6_months", length_min: 9.00, length_max: 10.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_9_9_99", title: "Storage 1 month (9-9.99m)", unit: "month", price: 165, is_active: true, rules_json: { period: "month", length_min: 9.00, length_max: 10.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_9_9_99", title: "Storage 1 day (9-9.99m)", unit: "day", price: 22, is_active: true, rules_json: { period: "day", length_min: 9.00, length_max: 10.00 } },
         
         // 10-10.99m
-        { category: "STORAGE", code: "STORAGE_YEAR_10_10_99", title: "Storage 1 year (10-10.99m)", unit: "year", price: 1005, is_active: true, rules_json: { period: "year", length_min: 10.00, length_max: 10.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_10_10_99", title: "Storage 6 months (10-10.99m)", unit: "6_months", price: 675, is_active: true, rules_json: { period: "6_months", length_min: 10.00, length_max: 10.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_10_10_99", title: "Storage 1 month (10-10.99m)", unit: "month", price: 180, is_active: true, rules_json: { period: "month", length_min: 10.00, length_max: 10.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_10_10_99", title: "Storage 1 day (10-10.99m)", unit: "day", price: 25, is_active: true, rules_json: { period: "day", length_min: 10.00, length_max: 10.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_10_10_99", title: "Storage 1 year (10-10.99m)", unit: "year", price: 1005, is_active: true, rules_json: { period: "year", length_min: 10.00, length_max: 11.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_10_10_99", title: "Storage 6 months (10-10.99m)", unit: "6_months", price: 675, is_active: true, rules_json: { period: "6_months", length_min: 10.00, length_max: 11.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_10_10_99", title: "Storage 1 month (10-10.99m)", unit: "month", price: 180, is_active: true, rules_json: { period: "month", length_min: 10.00, length_max: 11.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_10_10_99", title: "Storage 1 day (10-10.99m)", unit: "day", price: 25, is_active: true, rules_json: { period: "day", length_min: 10.00, length_max: 11.00 } },
         
         // 11-11.99m
-        { category: "STORAGE", code: "STORAGE_YEAR_11_11_99", title: "Storage 1 year (11-11.99m)", unit: "year", price: 1065, is_active: true, rules_json: { period: "year", length_min: 11.00, length_max: 11.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_11_11_99", title: "Storage 6 months (11-11.99m)", unit: "6_months", price: 720, is_active: true, rules_json: { period: "6_months", length_min: 11.00, length_max: 11.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_11_11_99", title: "Storage 1 month (11-11.99m)", unit: "month", price: 195, is_active: true, rules_json: { period: "month", length_min: 11.00, length_max: 11.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_11_11_99", title: "Storage 1 day (11-11.99m)", unit: "day", price: 28, is_active: true, rules_json: { period: "day", length_min: 11.00, length_max: 11.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_11_11_99", title: "Storage 1 year (11-11.99m)", unit: "year", price: 1065, is_active: true, rules_json: { period: "year", length_min: 11.00, length_max: 12.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_11_11_99", title: "Storage 6 months (11-11.99m)", unit: "6_months", price: 720, is_active: true, rules_json: { period: "6_months", length_min: 11.00, length_max: 12.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_11_11_99", title: "Storage 1 month (11-11.99m)", unit: "month", price: 195, is_active: true, rules_json: { period: "month", length_min: 11.00, length_max: 12.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_11_11_99", title: "Storage 1 day (11-11.99m)", unit: "day", price: 28, is_active: true, rules_json: { period: "day", length_min: 11.00, length_max: 12.00 } },
         
         // 12-12.99m
-        { category: "STORAGE", code: "STORAGE_YEAR_12_12_99", title: "Storage 1 year (12-12.99m)", unit: "year", price: 1125, is_active: true, rules_json: { period: "year", length_min: 12.00, length_max: 12.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_12_12_99", title: "Storage 6 months (12-12.99m)", unit: "6_months", price: 765, is_active: true, rules_json: { period: "6_months", length_min: 12.00, length_max: 12.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_12_12_99", title: "Storage 1 month (12-12.99m)", unit: "month", price: 210, is_active: true, rules_json: { period: "month", length_min: 12.00, length_max: 12.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_12_12_99", title: "Storage 1 day (12-12.99m)", unit: "day", price: 34, is_active: true, rules_json: { period: "day", length_min: 12.00, length_max: 12.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_12_12_99", title: "Storage 1 year (12-12.99m)", unit: "year", price: 1125, is_active: true, rules_json: { period: "year", length_min: 12.00, length_max: 13.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_12_12_99", title: "Storage 6 months (12-12.99m)", unit: "6_months", price: 765, is_active: true, rules_json: { period: "6_months", length_min: 12.00, length_max: 13.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_12_12_99", title: "Storage 1 month (12-12.99m)", unit: "month", price: 210, is_active: true, rules_json: { period: "month", length_min: 12.00, length_max: 13.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_12_12_99", title: "Storage 1 day (12-12.99m)", unit: "day", price: 34, is_active: true, rules_json: { period: "day", length_min: 12.00, length_max: 13.00 } },
         
         // 13m+
-        { category: "STORAGE", code: "STORAGE_YEAR_13_99_99", title: "Storage 1 year (13m+)", unit: "year", price: 1200, is_active: true, rules_json: { period: "year", length_min: 13.00, length_max: 99.99 } },
-        { category: "STORAGE", code: "STORAGE_6M_13_99_99", title: "Storage 6 months (13m+)", unit: "6_months", price: 825, is_active: true, rules_json: { period: "6_months", length_min: 13.00, length_max: 99.99 } },
-        { category: "STORAGE", code: "STORAGE_MONTH_13_99_99", title: "Storage 1 month (13m+)", unit: "month", price: 225, is_active: true, rules_json: { period: "month", length_min: 13.00, length_max: 99.99 } },
-        { category: "STORAGE", code: "STORAGE_DAY_13_99_99", title: "Storage 1 day (13m+)", unit: "day", price: 40, is_active: true, rules_json: { period: "day", length_min: 13.00, length_max: 99.99 } },
+        { category: "STORAGE", code: "STORAGE_YEAR_13_PLUS", title: "Storage 1 year (13m+)", unit: "year", price: 1200, is_active: true, rules_json: { period: "year", length_min: 13.00, length_max: 999.00 } },
+        { category: "STORAGE", code: "STORAGE_6M_13_PLUS", title: "Storage 6 months (13m+)", unit: "6_months", price: 825, is_active: true, rules_json: { period: "6_months", length_min: 13.00, length_max: 999.00 } },
+        { category: "STORAGE", code: "STORAGE_MONTH_13_PLUS", title: "Storage 1 month (13m+)", unit: "month", price: 225, is_active: true, rules_json: { period: "month", length_min: 13.00, length_max: 999.00 } },
+        { category: "STORAGE", code: "STORAGE_DAY_13_PLUS", title: "Storage 1 day (13m+)", unit: "day", price: 40, is_active: true, rules_json: { period: "day", length_min: 13.00, length_max: 999.00 } },
         
         // Options
         { category: "OPTION", code: "OPTION_OUTBOARD_SEASON", title: "Outboard motor storage (season)", unit: "season", price: 150, is_active: true, rules_json: { type: "storage_option" } },
