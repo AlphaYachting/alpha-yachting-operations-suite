@@ -90,6 +90,7 @@ const navItems = [
   // ADMIN
   { header: 'ADMIN' },
   { name: 'Settings', icon: Settings, page: 'Settings' },
+  { name: 'Product Modules', icon: Package, page: 'AdminProductModules', adminOnly: true },
   { name: 'Storage Pricing', icon: Database, page: 'StoragePricingAdmin', adminOnly: true },
   { name: 'Calendar Feeds', icon: CalendarIcon, page: 'CalendarFeeds', adminOnly: true },
   { name: 'App Invitations', icon: Mail, page: 'AppInvites', adminOnly: true },
