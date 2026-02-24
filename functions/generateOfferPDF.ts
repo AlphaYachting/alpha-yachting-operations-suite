@@ -1,7 +1,7 @@
 // Template generation is embedded below since backend can't import from components
 // This mirrors the same logic as components/pdf/pdfTemplateUtils.js
 
-function buildPDFHTML(document, lineItems, template, payments = []) {
+function buildPDFHTML(document, lineItems, template, payments = [], offerSections = []) {
   const isInvoice = document.document_type === 'Invoice';
   const currency = document.currency === 'EUR' ? '€ ' : document.currency + ' ';
 
@@ -812,7 +812,7 @@ function formatDate(dateString) {
 
 Deno.serve(async (req) => {
   try {
-    const { documentData, lineItems, templateData } = await req.json();
+    const { documentData, lineItems, templateData, offerSections = [] } = await req.json();
     
     const puppeteer = (await import('npm:puppeteer@23.11.1')).default;
     let browser;
@@ -822,7 +822,7 @@ Deno.serve(async (req) => {
       const page = await browser.newPage();
       
       // Build unified HTML template
-      const html = buildPDFHTML(documentData, lineItems, templateData);
+      const html = buildPDFHTML(documentData, lineItems, templateData, [], offerSections);
       
       // Set content with print styling
       await page.setContent(html, { waitUntil: 'networkidle2' });

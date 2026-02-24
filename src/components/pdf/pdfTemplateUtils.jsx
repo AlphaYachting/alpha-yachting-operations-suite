@@ -1,7 +1,7 @@
 // Shared PDF HTML template generator for both frontend preview and backend export
 // Used by: PDFDocumentTemplate (React preview), generateOfferPDF (Puppeteer export)
 
-export function buildPDFHTML(document, lineItems, template, payments = []) {
+export function buildPDFHTML(document, lineItems, template, payments = [], offerSections = []) {
   const isInvoice = document.document_type === 'Invoice';
   const currency = document.currency === 'EUR' ? '€ ' : document.currency + ' ';
 
@@ -595,6 +595,61 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
           font-size: 8pt;
           color: #999;
         }
+
+        /* Module Sections */
+        .modules-section {
+          margin-bottom: 20px;
+          padding: 12px;
+          background-color: #f8fafc;
+          border-left: 3px solid ${template.primary_color || '#2563eb'};
+          border-radius: 3px;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        .modules-title {
+          font-size: 11pt;
+          font-weight: bold;
+          color: ${template.primary_color || '#2563eb'};
+          margin-bottom: 10px;
+        }
+
+        .module-item {
+          margin-bottom: 10px;
+          padding-bottom: 10px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .module-item:last-child {
+          border-bottom: none;
+          margin-bottom: 0;
+          padding-bottom: 0;
+        }
+
+        .module-name {
+          font-size: 10pt;
+          font-weight: bold;
+          color: #1e293b;
+          margin-bottom: 4px;
+        }
+
+        .module-description {
+          font-size: 9pt;
+          color: #475569;
+          line-height: 1.4;
+          margin-bottom: 6px;
+        }
+
+        .module-bullets {
+          font-size: 9pt;
+          color: #64748b;
+          line-height: 1.3;
+          padding-left: 8px;
+        }
+
+        .module-bullets li {
+          margin-bottom: 2px;
+        }
       </style>
     </head>
     <body>
@@ -665,6 +720,26 @@ export function buildPDFHTML(document, lineItems, template, payments = []) {
             ${document.boat_name ? `<div><strong>Vessel:</strong> ${document.boat_name}</div>` : ''}
             ${document.boat_details ? `<div class="detail">${document.boat_details}</div>` : ''}
             ${document.location_name ? `<div style="margin-top: 3px;"><strong>Location:</strong> ${document.location_name}</div>` : ''}
+          </div>
+        ` : ''}
+
+        <!-- Module Sections (Offers Only) -->
+        ${!isInvoice && offerSections && offerSections.filter(s => s.section_type === 'MODULE').length > 0 ? `
+          <div class="modules-section">
+            <div class="modules-title">${document.language === 'English' ? 'Selected Service Packages' : 'Ausgewählte Servicepakete'}</div>
+            ${offerSections
+              .filter(s => s.section_type === 'MODULE')
+              .map((section, idx) => `
+                <div class="module-item">
+                  <div class="module-name">${idx + 1}. ${section.title || ''}</div>
+                  ${section.description ? `<div class="module-description">${section.description}</div>` : ''}
+                  ${section.bullets_json && section.bullets_json.length > 0 ? `
+                    <ul class="module-bullets">
+                      ${section.bullets_json.map(bullet => `<li>• ${bullet}</li>`).join('')}
+                    </ul>
+                  ` : ''}
+                </div>
+              `).join('')}
           </div>
         ` : ''}
 
