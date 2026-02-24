@@ -466,6 +466,97 @@ export default function StorageTransportWizard() {
                     {/* STEP 6 - Review */}
                     {step === 6 && calculation && (
                         <div className="space-y-6">
+                            {/* Debug Panel (Admin only) */}
+                            {(() => {
+                                const extendedParams = { ...formData };
+                                const moduleComponentsDebug = [];
+                                
+                                for (const selectedMod of formData.selected_modules) {
+                                    const components = allModuleComponents?.filter(c => c.module_id === selectedMod.module_id) || [];
+                                    moduleComponentsDebug.push({
+                                        module_name: selectedMod.module.name,
+                                        module_id: selectedMod.module_id,
+                                        components_count: components.length,
+                                        components: components.map(c => ({
+                                            code: c.rate_card_item_code,
+                                            qty: c.qty_value,
+                                            pricing_mode: c.pricing_mode
+                                        }))
+                                    });
+                                    
+                                    for (const comp of components) {
+                                        if (comp.pricing_mode === 'ADD_AS_LINE_ITEM') {
+                                            extendedParams.selected_options = [
+                                                ...(extendedParams.selected_options || []),
+                                                { code: comp.rate_card_item_code, quantity: comp.qty_value }
+                                            ];
+                                        }
+                                    }
+                                }
+                                
+                                const optionsLookup = (extendedParams.selected_options || []).map(opt => {
+                                    const found = rateCardItems?.find(i => i.code === opt.code && i.is_active !== false);
+                                    return {
+                                        code: opt.code,
+                                        qty: opt.quantity,
+                                        found: !!found,
+                                        category: found?.category,
+                                        price: found?.price,
+                                        title: found?.title
+                                    };
+                                });
+                                
+                                const hasIssues = moduleComponentsDebug.some(m => m.components_count === 0) ||
+                                                 optionsLookup.some(o => !o.found) ||
+                                                 (formData.selected_modules.length > 0 && extendedParams.selected_options?.length === 0);
+                                
+                                return hasIssues && (
+                                    <div className="bg-yellow-50 border border-yellow-300 p-4 rounded-lg text-xs font-mono space-y-3">
+                                        <div className="font-bold text-yellow-900">🔍 MODULE CALCULATION DEBUG</div>
+                                        
+                                        <div className="border-t border-yellow-300 pt-2">
+                                            <div className="font-semibold text-yellow-900">Selected Modules ({formData.selected_modules.length}):</div>
+                                            {moduleComponentsDebug.map((m, i) => (
+                                                <div key={i} className="ml-2 mt-1">
+                                                    <div>• {m.module_name} (ID: {m.module_id.substring(0, 8)}...)</div>
+                                                    <div className="ml-4 text-yellow-700">
+                                                        Components: {m.components_count}
+                                                        {m.components_count === 0 && <span className="text-red-600 font-bold"> ⚠️ NO COMPONENTS CONFIGURED</span>}
+                                                    </div>
+                                                    {m.components.map((c, j) => (
+                                                        <div key={j} className="ml-6 text-yellow-700">
+                                                            - Code: {c.code}, Qty: {c.qty}, Mode: {c.pricing_mode}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        
+                                        <div className="border-t border-yellow-300 pt-2">
+                                            <div className="font-semibold text-yellow-900">Derived selected_options ({extendedParams.selected_options?.length || 0}):</div>
+                                            {optionsLookup.map((o, i) => (
+                                                <div key={i} className="ml-2 mt-1">
+                                                    <div>• Code: {o.code}, Qty: {o.qty}</div>
+                                                    <div className="ml-4">
+                                                        {o.found ? (
+                                                            <span className="text-green-700">✅ FOUND: {o.title} | Cat: {o.category} | €{o.price}</span>
+                                                        ) : (
+                                                            <span className="text-red-600 font-bold">❌ NOT FOUND in RateCardItems</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        
+                                        {formData.selected_modules.length > 0 && extendedParams.selected_options?.length === 0 && (
+                                            <div className="border-t border-yellow-300 pt-2">
+                                                <div className="text-red-600 font-bold">⚠️ WARNING: Modules selected but no components configured as ADD_AS_LINE_ITEM</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                            
                             <div className="bg-slate-800 text-white p-4 rounded-lg">
                                 <h3 className="font-medium mb-2 opacity-80">Pricing Engine Output</h3>
                                 <div className="space-y-2">
@@ -473,7 +564,7 @@ export default function StorageTransportWizard() {
                                         <div key={idx} className="flex justify-between text-sm items-center border-b border-white/10 pb-2">
                                             <div>
                                                 <div>{li.title}</div>
-                                                <div className="text-xs opacity-60">{li.quantity} {li.unit} x €{li.unit_price}</div>
+                                                <div className="text-xs opacity-60">{li.quantity} {li.unit} x €{li.unit_price} [{li.category}]</div>
                                             </div>
                                             <div className="font-mono">€{li.total_price.toFixed(2)}</div>
                                         </div>

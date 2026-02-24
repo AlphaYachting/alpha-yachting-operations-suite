@@ -121,11 +121,12 @@ export const calculateOffer = (params, rateCardItems, vatRate = 25) => {
         }
     }
     
-    // Options
+    // Options (includes module components)
     if (params.selected_options && params.selected_options.length > 0) {
         params.selected_options.forEach(opt => {
             if (opt.quantity > 0) {
-                const optionItem = rateCardItems.find(i => i.category === 'OPTION' && i.code === opt.code && i.is_active !== false);
+                // Lookup by code across ALL categories (not just OPTION)
+                const optionItem = rateCardItems.find(i => i.code === opt.code && i.is_active !== false);
                 if (optionItem) {
                     const optTotal = optionItem.price * opt.quantity;
                     lineItems.push({ 
@@ -135,9 +136,11 @@ export const calculateOffer = (params, rateCardItems, vatRate = 25) => {
                         unit: optionItem.unit || 'piece', 
                         unit_price: optionItem.price, 
                         total_price: optTotal, 
-                        category: 'OPTION' 
+                        category: optionItem.category // Use original category
                     });
                     subtotal += optTotal;
+                } else {
+                    throw new Error(`ITEM_NOT_FOUND: No active rate card item found for code="${opt.code}". This may be a module component reference.`);
                 }
             }
         });
