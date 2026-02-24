@@ -120,6 +120,7 @@ import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
 import ImportNauticoRateCard from './pages/ImportNauticoRateCard';
+import AdminProductModules from './pages/AdminProductModules';
 import __Layout from './Layout.jsx';
 
 
@@ -197,6 +198,7 @@ export const PAGES = {
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
     "ImportNauticoRateCard": ImportNauticoRateCard,
+    "AdminProductModules": AdminProductModules,
 }
 
 export const pagesConfig = {

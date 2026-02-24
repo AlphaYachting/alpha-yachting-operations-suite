@@ -28,6 +28,16 @@ export default function StorageTransportWizard() {
     });
     
     const { data: customers } = useQuery({ queryKey: ['Customers'], queryFn: () => base44.entities.Customer.list() });
+    
+    const { data: modules } = useQuery({ 
+        queryKey: ['ProductModule'], 
+        queryFn: () => base44.entities.ProductModule.filter({ is_active: true }) 
+    });
+    
+    const { data: allModuleComponents } = useQuery({
+        queryKey: ['ModuleComponent_All'],
+        queryFn: () => base44.entities.ModuleComponent.list()
+    });
 
     // Wizard State
     const [formData, setFormData] = useState({
@@ -38,9 +48,10 @@ export default function StorageTransportWizard() {
         transport_needed: false,
         pickup_address: '',
         distance_km: 0,
-        storage_needed: false,
+        storage_needed: true, // MANDATORY
         storage_period: 'month',
         roof_option: false,
+        selected_modules: [], // [{module_id, module}]
         selected_options: [] // [{code, quantity}]
     });
 
@@ -60,7 +71,11 @@ export default function StorageTransportWizard() {
                 subtotal: calculation.subtotal,
                 vat: calculation.vat,
                 total_amount: calculation.total,
-                calculation_snapshot_json: { rateCardItems, params: formData },
+                calculation_snapshot_json: { 
+                    rateCardItems, 
+                    params: formData,
+                    selected_modules: formData.selected_modules.map(m => ({ module_id: m.module_id, name: m.module.name }))
+                },
                 status: 'Draft',
                 vat_rate: activeRateCard.vat_rate
             });
@@ -79,6 +94,64 @@ export default function StorageTransportWizard() {
             }));
 
             await base44.entities.OfferTask.bulkCreate(tasks);
+            
+            // 3. Create Offer Sections (Presentation Layer)
+            const sections = [];
+            let displayOrder = 0;
+            
+            // Storage section
+            sections.push({
+                offer_id: offer.id,
+                section_type: 'STORAGE',
+                title: 'Storage Service',
+                description: `Storage for ${formData.boat_length}m boat - ${formData.storage_period} ${formData.roof_option ? '(with roof cover)' : ''}`,
+                bullets_json: ['Base storage service included'],
+                display_order: displayOrder++
+            });
+            
+            // Transport section
+            if (formData.transport_needed) {
+                sections.push({
+                    offer_id: offer.id,
+                    section_type: 'TRANSPORT',
+                    title: 'Transport Service',
+                    description: `Transport from ${formData.pickup_address || 'customer location'} (${formData.distance_km}km)`,
+                    bullets_json: [],
+                    display_order: displayOrder++
+                });
+            }
+            
+            // Module sections
+            for (const selectedMod of formData.selected_modules) {
+                sections.push({
+                    offer_id: offer.id,
+                    section_type: 'MODULE',
+                    title: selectedMod.module.name,
+                    description: selectedMod.module.description_long || selectedMod.module.description_short,
+                    bullets_json: selectedMod.module.bullets_json || [],
+                    display_order: displayOrder++,
+                    module_id: selectedMod.module_id
+                });
+            }
+            
+            // Options section
+            if (formData.selected_options.length > 0) {
+                const optionItems = formData.selected_options.map(opt => {
+                    const item = rateCardItems?.find(i => i.code === opt.code);
+                    return item?.title || opt.code;
+                });
+                sections.push({
+                    offer_id: offer.id,
+                    section_type: 'OPTIONS',
+                    title: 'Additional Services',
+                    description: 'Selected add-on services',
+                    bullets_json: optionItems,
+                    display_order: displayOrder++
+                });
+            }
+            
+            await base44.entities.OfferSection.bulkCreate(sections);
+            
             return offer;
         },
         onSuccess: (offer) => {
@@ -91,16 +164,38 @@ export default function StorageTransportWizard() {
         if (step === 1 && (!formData.customer_id || formData.boat_length <= 0)) {
             return toast.error("Please select a customer and enter valid boat length.");
         }
-        if (step === 4) {
+        if (step === 5) {
             // Generate Preview Calculation
             try {
-                const res = calculateOffer(formData, rateCardItems || [], activeRateCard?.vat_rate || 25);
+                // Build extended params with module components
+                const extendedParams = { ...formData };
                 
-                // VALIDATION: If storage was selected, ensure storage line item exists
-                if (formData.storage_needed) {
-                    const hasStorage = res.lineItems.some(li => li.category === 'STORAGE' || li.category === 'ROOF_RULE');
-                    if (!hasStorage) {
-                        return toast.error("Storage selected but no matching rate found. Please check rate card configuration.");
+                // Add module components to calculation
+                for (const selectedMod of formData.selected_modules) {
+                    const components = allModuleComponents?.filter(c => c.module_id === selectedMod.module_id) || [];
+                    for (const comp of components) {
+                        if (comp.pricing_mode === 'ADD_AS_LINE_ITEM') {
+                            extendedParams.selected_options = [
+                                ...(extendedParams.selected_options || []),
+                                { code: comp.rate_card_item_code, quantity: comp.qty_value }
+                            ];
+                        }
+                    }
+                }
+                
+                const res = calculateOffer(extendedParams, rateCardItems || [], activeRateCard?.vat_rate || 25);
+                
+                // VALIDATION: Storage must exist
+                const hasStorage = res.lineItems.some(li => li.category === 'STORAGE' || li.category === 'ROOF_RULE');
+                if (!hasStorage) {
+                    return toast.error("Storage base fee missing. Check rate card configuration.");
+                }
+                
+                // VALIDATION: Selected modules must have components
+                for (const selectedMod of formData.selected_modules) {
+                    const components = allModuleComponents?.filter(c => c.module_id === selectedMod.module_id) || [];
+                    if (components.length === 0) {
+                        return toast.error(`Module "${selectedMod.module.name}" has no configured components. Please configure in Admin.`);
                     }
                 }
                 
@@ -161,7 +256,7 @@ export default function StorageTransportWizard() {
 
             {/* Stepper Indicator */}
             <div className="flex justify-between items-center mb-8 border-b pb-4">
-                {[1, 2, 3, 4, 5].map((num) => (
+                {[1, 2, 3, 4, 5, 6].map((num) => (
                     <div key={num} className={`flex items-center ${step === num ? 'text-blue-600 font-bold' : step > num ? 'text-green-500' : 'text-slate-300'}`}>
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${step === num ? 'border-blue-600 bg-blue-50' : step > num ? 'border-green-500 bg-green-50' : 'border-slate-300'}`}>
                             {step > num ? <CheckCircle2 className="w-5 h-5" /> : num}
@@ -175,9 +270,10 @@ export default function StorageTransportWizard() {
                     <CardTitle>
                         {step === 1 && "Step 1: Customer & Boat Data"}
                         {step === 2 && "Step 2: Transport Needs"}
-                        {step === 3 && "Step 3: Storage Configuration"}
-                        {step === 4 && "Step 4: Additional Options"}
-                        {step === 5 && "Step 5: Review & Generate"}
+                        {step === 3 && "Step 3: Storage Configuration (Mandatory)"}
+                        {step === 4 && "Step 4: Service Modules"}
+                        {step === 5 && "Step 5: Additional Options"}
+                        {step === 6 && "Step 6: Review & Generate"}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
@@ -240,49 +336,118 @@ export default function StorageTransportWizard() {
                         </div>
                     )}
 
-                    {/* STEP 3 */}
+                    {/* STEP 3 - Storage (MANDATORY) */}
                     {step === 3 && (
                         <div className="space-y-6">
-                            <div className="flex items-center justify-between p-4 border rounded-lg bg-emerald-50/50">
-                                <div className="flex items-center gap-3">
-                                    <Package className="text-emerald-500" />
-                                    <div>
-                                        <h3 className="font-semibold">Storage Needed?</h3>
-                                        <p className="text-sm text-slate-500">Store boat at our facility.</p>
-                                    </div>
+                            <div className="p-4 border rounded-lg bg-emerald-50 border-emerald-200">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <Package className="text-emerald-600" />
+                                    <h3 className="font-semibold">Storage Service (Mandatory)</h3>
                                 </div>
-                                <Checkbox checked={formData.storage_needed} onCheckedChange={c => setFormData({...formData, storage_needed: !!c})} className="h-6 w-6" />
+                                <p className="text-sm text-slate-600">Storage is the base service and always included in every offer.</p>
                             </div>
 
-                            {formData.storage_needed && (
-                                <div className="space-y-4 pt-4 border-t animate-in fade-in slide-in-from-top-4">
-                                    <div>
-                                        <label className="text-sm font-medium mb-1 block">Storage Period</label>
-                                        <Select value={formData.storage_period} onValueChange={v => setFormData({...formData, storage_period: v})}>
-                                            <SelectTrigger><SelectValue/></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="day">Daily</SelectItem>
-                                                <SelectItem value="month">Monthly</SelectItem>
-                                                <SelectItem value="season">Full Season</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                                        <div>
-                                            <h3 className="font-medium">Indoor / Roof Covered</h3>
-                                            <p className="text-sm text-slate-500">Applies rule surcharge/multiplier</p>
-                                        </div>
-                                        <Checkbox checked={formData.roof_option} onCheckedChange={c => setFormData({...formData, roof_option: !!c})} />
-                                    </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Storage Period</label>
+                                    <Select value={formData.storage_period} onValueChange={v => setFormData({...formData, storage_period: v})}>
+                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="day">Daily</SelectItem>
+                                            <SelectItem value="month">Monthly</SelectItem>
+                                            <SelectItem value="6_months">6 Months</SelectItem>
+                                            <SelectItem value="year">Full Year</SelectItem>
+                                            <SelectItem value="season">Full Season</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
-                            )}
+                                <div className="flex items-center justify-between p-4 border rounded-lg">
+                                    <div>
+                                        <h3 className="font-medium">Indoor / Roof Covered</h3>
+                                        <p className="text-sm text-slate-500">Applies rule surcharge/multiplier</p>
+                                    </div>
+                                    <Checkbox checked={formData.roof_option} onCheckedChange={c => setFormData({...formData, roof_option: !!c})} />
+                                </div>
+                            </div>
                         </div>
                     )}
 
-                    {/* STEP 4 */}
+                    {/* STEP 4 - Service Modules */}
                     {step === 4 && (
+                        <div className="space-y-6">
+                            {['TECH', 'CARE', 'PREMIUM'].map(group => {
+                                const groupModules = modules?.filter(m => m.module_group === group).sort((a, b) => a.display_order - b.display_order) || [];
+                                if (groupModules.length === 0) return null;
+                                
+                                const groupName = { TECH: 'Technical Service', CARE: 'Care & Value', PREMIUM: 'Premium Upgrades' }[group];
+                                const isRadio = group === 'TECH' || group === 'CARE';
+                                
+                                return (
+                                    <div key={group}>
+                                        <h3 className="font-semibold mb-3">{groupName}</h3>
+                                        <div className="space-y-3">
+                                            {isRadio && (
+                                                <div className="p-3 border rounded-lg hover:bg-slate-50 cursor-pointer"
+                                                    onClick={() => setFormData({...formData, selected_modules: formData.selected_modules.filter(m => modules?.find(mod => mod.id === m.module_id)?.module_group !== group)})}>
+                                                    <div className="flex items-center gap-3">
+                                                        <input type="radio" checked={!formData.selected_modules.some(m => modules?.find(mod => mod.id === m.module_id)?.module_group === group)} readOnly />
+                                                        <div>
+                                                            <div className="font-medium">None</div>
+                                                            <div className="text-sm text-slate-500">Skip {groupName}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {groupModules.map(module => {
+                                                const isSelected = formData.selected_modules.some(m => m.module_id === module.id);
+                                                return (
+                                                    <div key={module.id} className={`p-4 border rounded-lg cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50' : 'hover:bg-slate-50'}`}
+                                                        onClick={() => {
+                                                            if (isRadio) {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    selected_modules: [
+                                                                        ...formData.selected_modules.filter(m => modules?.find(mod => mod.id === m.module_id)?.module_group !== group),
+                                                                        { module_id: module.id, module }
+                                                                    ]
+                                                                });
+                                                            } else {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    selected_modules: isSelected
+                                                                        ? formData.selected_modules.filter(m => m.module_id !== module.id)
+                                                                        : [...formData.selected_modules, { module_id: module.id, module }]
+                                                                });
+                                                            }
+                                                        }}>
+                                                        <div className="flex items-start gap-3">
+                                                            <input type={isRadio ? "radio" : "checkbox"} checked={isSelected} readOnly />
+                                                            <div className="flex-1">
+                                                                <div className="font-semibold">{module.name}</div>
+                                                                <p className="text-sm text-slate-600 mt-1">{module.description_short}</p>
+                                                                {module.bullets_json?.length > 0 && (
+                                                                    <ul className="text-xs text-slate-500 mt-2 space-y-1">
+                                                                        {module.bullets_json.slice(0, 3).map((bullet, idx) => (
+                                                                            <li key={idx}>• {bullet}</li>
+                                                                        ))}
+                                                                    </ul>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    
+                    {/* STEP 5 - Additional Options */}
+                    {step === 5 && (
                         <div className="space-y-4">
-                            <h3 className="font-medium mb-4">Select Additional Services</h3>
+                            <h3 className="font-medium mb-4">Additional Services</h3>
                             {availableOptions.map(opt => {
                                 const isSelected = formData.selected_options.some(o => o.code === opt.code);
                                 return (
@@ -298,8 +463,8 @@ export default function StorageTransportWizard() {
                         </div>
                     )}
 
-                    {/* STEP 5 */}
-                    {step === 5 && calculation && (
+                    {/* STEP 6 - Review */}
+                    {step === 6 && calculation && (
                         <div className="space-y-6">
                             <div className="bg-slate-800 text-white p-4 rounded-lg">
                                 <h3 className="font-medium mb-2 opacity-80">Pricing Engine Output</h3>
@@ -331,7 +496,7 @@ export default function StorageTransportWizard() {
                         <ArrowLeft className="w-4 h-4 mr-2" /> Back
                     </Button>
                     
-                    {step < 5 ? (
+                    {step < 6 ? (
                         <Button onClick={handleNext}>
                             Next <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>

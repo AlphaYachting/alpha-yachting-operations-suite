@@ -269,6 +269,8 @@ function StorageMatrixEditor({ items, rateCardId, onSave, onDelete }) {
                                             <SelectContent>
                                                 <SelectItem value="day">Day</SelectItem>
                                                 <SelectItem value="month">Month</SelectItem>
+                                                <SelectItem value="6_months">6 Months</SelectItem>
+                                                <SelectItem value="year">Year</SelectItem>
                                                 <SelectItem value="season">Season</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -319,6 +321,8 @@ function StorageMatrixEditor({ items, rateCardId, onSave, onDelete }) {
                                 <SelectContent>
                                     <SelectItem value="day">Day</SelectItem>
                                     <SelectItem value="month">Month</SelectItem>
+                                    <SelectItem value="6_months">6 Months</SelectItem>
+                                    <SelectItem value="year">Year</SelectItem>
                                     <SelectItem value="season">Season</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -773,6 +777,8 @@ function TestCalculationPanel({ rateCard, items }) {
                                         <SelectContent>
                                             <SelectItem value="day">Day</SelectItem>
                                             <SelectItem value="month">Month</SelectItem>
+                                            <SelectItem value="6_months">6 Months</SelectItem>
+                                            <SelectItem value="year">Year</SelectItem>
                                             <SelectItem value="season">Season</SelectItem>
                                         </SelectContent>
                                     </Select>
