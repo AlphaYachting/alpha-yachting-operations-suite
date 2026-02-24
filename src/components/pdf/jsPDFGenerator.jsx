@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { generatePartnerBriefPDF } from './PartnerBriefTemplate';
 
-export async function generatePDFWithJsPDF(document, lineItems, template, payments = []) {
+export async function generatePDFWithJsPDF(document, lineItems, template, payments = [], offerSections = []) {
   // Route to Partner Brief template if applicable
   if (document.document_type === 'PartnerBrief') {
     return await generatePartnerBriefPDF(document, lineItems, template);
@@ -279,6 +279,60 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
       doc.text(document.location_name, margins.left + 22, yPos + 7);
     }
     yPos += 15;
+  }
+
+  // Module Sections (for Offers only)
+  if (!isInvoice && offerSections && offerSections.length > 0) {
+    const moduleSections = offerSections.filter(s => s.section_type === 'MODULE');
+    
+    if (moduleSections.length > 0) {
+      checkPageBreak(30);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(primaryColor.r, primaryColor.g, primaryColor.b);
+      doc.setFont(fontFamily, 'bold');
+      const modulesTitle = document.language === 'English' ? 'Selected Service Packages' : 'Ausgewählte Servicepakete';
+      doc.text(modulesTitle, margins.left, yPos);
+      yPos += 8;
+      
+      moduleSections.forEach((section, idx) => {
+        checkPageBreak(20);
+        
+        // Module title
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(fontFamily, 'bold');
+        doc.text(`${idx + 1}. ${section.title}`, margins.left + 2, yPos);
+        yPos += 6;
+        
+        // Module description
+        if (section.description) {
+          doc.setFontSize(9);
+          doc.setTextColor(85, 85, 85);
+          doc.setFont(fontFamily, 'normal');
+          const descLines = doc.splitTextToSize(section.description, contentWidth - 4);
+          doc.text(descLines, margins.left + 2, yPos);
+          yPos += (descLines.length * 4) + 2;
+        }
+        
+        // Bullets
+        if (section.bullets_json && section.bullets_json.length > 0) {
+          doc.setFontSize(9);
+          doc.setTextColor(85, 85, 85);
+          doc.setFont(fontFamily, 'normal');
+          section.bullets_json.forEach(bullet => {
+            const bulletLines = doc.splitTextToSize(`• ${bullet}`, contentWidth - 8);
+            doc.text(bulletLines, margins.left + 5, yPos);
+            yPos += bulletLines.length * 4;
+          });
+          yPos += 3;
+        }
+        
+        yPos += 3;
+      });
+      
+      yPos += 5;
+    }
   }
 
   // Line items table
