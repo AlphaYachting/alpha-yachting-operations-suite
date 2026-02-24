@@ -110,6 +110,12 @@ export default function OfferDetail() {
     enabled: !!offerId,
   });
 
+  const { data: offerSections = [] } = useQuery({
+    queryKey: ['offerSections', offerId],
+    queryFn: () => base44.entities.OfferSection.filter({ offer_id: offerId }, 'display_order'),
+    enabled: !!offerId,
+  });
+
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: () => base44.entities.Customer.list(),
@@ -807,6 +813,7 @@ Requirements:
               <PDFExportButton 
                 document={getPDFDocument()}
                 lineItems={getPDFLineItems()}
+                offerSections={offerSections}
               />
             )}
             {formData.converted_job_id ? (
@@ -942,6 +949,7 @@ Requirements:
             document={getPDFDocument()}
             lineItems={getPDFLineItems()}
             template={template}
+            offerSections={offerSections}
           />
         </div>
       )}
