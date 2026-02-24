@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-export default function PDFExportButton({ document: documentData, lineItems, payments = [], variant = "outline", templateId = null }) {
+export default function PDFExportButton({ document: documentData, lineItems, payments = [], offerSections = [], variant = "outline", templateId = null }) {
   const [showPreview, setShowPreview] = useState(false);
   const [template, setTemplate] = useState(null);
   const [pdfError, setPdfError] = useState(null);
@@ -107,7 +107,7 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
         safety_compliance_clause: documentData.safety_compliance_clause || '',
         show_marina_fees_notice: documentData.show_marina_fees_notice || false
       };
-      const pdfDoc = await generatePDFWithJsPDF(completeDocumentData, lineItems, templateData, payments);
+      const pdfDoc = await generatePDFWithJsPDF(completeDocumentData, lineItems, templateData, payments, offerSections);
       
       // Generate blob URL for preview
       const pdfBlob = pdfDoc.output('blob');
