@@ -87,15 +87,26 @@ export default function Offers() {
       // Get original offer tasks
       const originalTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
 
+      // Generate new offer number
+      const allOffers = await base44.entities.Offer.list();
+      const existingNumbers = allOffers
+        .map(o => o.offer_number)
+        .filter(num => num && num.startsWith('OFF-2026-'))
+        .map(num => parseInt(num.split('-')[2]) || 0);
+      
+      const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+      const newOfferNumber = `OFF-2026-${String(maxNumber + 1).padStart(4, '0')}`;
+
       // Create new offer (copy of original, but set status to Draft)
       const { id: newOfferId, created_date, updated_date, created_by, ...offerData } = originalOffer;
       const newOffer = await base44.entities.Offer.create({
         ...offerData,
         status: 'Draft',
         title: `${offerData.title} (Copy)`,
-        offer_number: null, // Will be auto-generated
+        offer_number: newOfferNumber,
         approved_date: null,
         converted_work_order_id: null,
+        converted_job_id: null,
       });
 
       // Duplicate all tasks
