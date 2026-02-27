@@ -338,7 +338,7 @@ export default function LeadForm({
             <Input
               id="email"
               name="email"
-              type="email"
+              type="text"
               value={formData.email}
               onChange={handleInputChange}
               placeholder="Email address"
