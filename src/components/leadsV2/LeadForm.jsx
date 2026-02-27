@@ -46,11 +46,16 @@ export default function LeadForm({
 
   useEffect(() => {
     if (lead) {
+      // Parse lead.name into first_name/last_name for leads without a linked customer
+      const nameParts = (lead.name || '').trim().split(' ');
+      const parsedFirstName = nameParts.length > 1 ? nameParts.slice(0, -1).join(' ') : nameParts[0] || '';
+      const parsedLastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
       setFormData({
         id: lead.id,
         name: lead.name || '',
-        first_name: '',
-        last_name: '',
+        first_name: parsedFirstName,
+        last_name: parsedLastName,
         phone: lead.phone || '',
         email: lead.email || '',
         boat_name: lead.boat_name || '',
@@ -64,7 +69,7 @@ export default function LeadForm({
         description: lead.description || '',
         customer_id: lead.customer_id || '',
         assigned_to_user_id: lead.assigned_to_user_id || '',
-        boat_id: '',
+        boat_id: lead.boat_id || '',
       });
     }
   }, [lead]);
