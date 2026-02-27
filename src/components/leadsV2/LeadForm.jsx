@@ -83,17 +83,29 @@ export default function LeadForm({
     }
   }, [formData.customer_id, boats]);
 
-  // Auto-fill customer data when existing customer is selected
+  // Auto-fill customer data when a NEW customer is selected (not on initial load of existing lead)
+  const [prevCustomerId, setPrevCustomerId] = useState(lead?.customer_id || '');
   useEffect(() => {
-    if (formData.customer_id && customers) {
+    if (formData.customer_id && customers && formData.customer_id !== prevCustomerId) {
       const selectedCustomer = customers.find(c => c.id === formData.customer_id);
       if (selectedCustomer) {
+        const customerName = selectedCustomer.company_name || 
+          `${selectedCustomer.first_name || ''} ${selectedCustomer.last_name || ''}`.trim();
         setFormData(prev => ({
           ...prev,
-          name: `${selectedCustomer.first_name || ''} ${selectedCustomer.last_name || ''}`.trim(),
+          name: customerName,
           phone: selectedCustomer.phone || prev.phone,
           email: selectedCustomer.email || prev.email,
         }));
+      }
+      setPrevCustomerId(formData.customer_id);
+    } else if (formData.customer_id && customers && formData.customer_id === prevCustomerId) {
+      // On initial load of existing lead with customer, only fill name if it's empty
+      const selectedCustomer = customers.find(c => c.id === formData.customer_id);
+      if (selectedCustomer && !formData.name) {
+        const customerName = selectedCustomer.company_name || 
+          `${selectedCustomer.first_name || ''} ${selectedCustomer.last_name || ''}`.trim();
+        setFormData(prev => ({ ...prev, name: customerName }));
       }
     }
   }, [formData.customer_id, customers]);
