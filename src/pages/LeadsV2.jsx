@@ -23,6 +23,7 @@ export default function LeadsV2() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
+  const [showEmailParser, setShowEmailParser] = useState(false);
 
   const handleEditLead = (lead) => {
     setEditingLead(lead);
