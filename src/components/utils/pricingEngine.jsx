@@ -54,7 +54,7 @@ export const calculateOffer = (params, rateCardItems, vatRate = 25) => {
             i.is_active !== false &&
             i.rules_json?.period === params.storage_period && 
             (i.rules_json?.length_min || 0) <= params.boat_length && 
-            (i.rules_json?.length_max ? i.rules_json.length_max >= params.boat_length : true)
+            (i.rules_json?.length_max ? i.rules_json.length_max > params.boat_length : true)
         );
         // Prefer the most specific (narrowest) range
         storageMatches.sort((a, b) => {
