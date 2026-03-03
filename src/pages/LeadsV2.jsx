@@ -10,10 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Clock, PhoneCall, CheckCircle2, XCircle, Search } from 'lucide-react';
+import { Plus, Clock, PhoneCall, CheckCircle2, XCircle, Search, Mail } from 'lucide-react';
 import { useLeadData, getAgingLevel } from '@/components/leadsV2/useLeadData';
 import LeadsList from '@/components/leadsV2/LeadsList';
 import LeadForm from '@/components/leadsV2/LeadForm';
+import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
 
 export default function LeadsV2() {
   const { leads, customers, locations, users, boats, isLoading, updateLeadStatus, saveLead, deleteLead, refetchAll } = useLeadData();
