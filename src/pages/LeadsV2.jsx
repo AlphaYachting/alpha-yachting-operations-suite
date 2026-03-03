@@ -85,16 +85,26 @@ export default function LeadsV2() {
           <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
           <p className="text-slate-500 text-sm mt-1">Manage customer inquiries and opportunities</p>
         </div>
-        <Button
-          onClick={() => {
-            setEditingLead(null);
-            setShowForm(true);
-          }}
-          className="bg-blue-600 hover:bg-blue-700 shadow-sm"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Lead
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowEmailParser(true)}
+            className="border-purple-300 text-purple-700 hover:bg-purple-50"
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            E-Mail → Lead
+          </Button>
+          <Button
+            onClick={() => {
+              setEditingLead(null);
+              setShowForm(true);
+            }}
+            className="bg-blue-600 hover:bg-blue-700 shadow-sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Lead
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
