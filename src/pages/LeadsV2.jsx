@@ -174,6 +174,23 @@ export default function LeadsV2() {
         getAgingLevel={getAgingLevel}
       />
 
+      {/* Email to Lead Parser Dialog */}
+      <Dialog open={showEmailParser} onOpenChange={setShowEmailParser}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>E-Mail → Lead</DialogTitle>
+          </DialogHeader>
+          <EmailToLeadParser
+            onLeadParsed={(leadData) => {
+              setShowEmailParser(false);
+              setEditingLead(leadData);
+              setShowForm(true);
+            }}
+            onCancel={() => setShowEmailParser(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Lead Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
