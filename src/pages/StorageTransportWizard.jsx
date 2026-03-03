@@ -59,10 +59,20 @@ export default function StorageTransportWizard() {
 
     const createOfferMutation = useMutation({
         mutationFn: async (data) => {
-            // 1. Create Offer
+            // 1. Generate offer number
+            const allOffers = await base44.entities.Offer.list();
+            const existingNumbers = allOffers
+                .map(o => o.offer_number)
+                .filter(num => num && num.startsWith('OFF-2026-'))
+                .map(num => parseInt(num.split('-')[2]) || 0);
+            const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+            const offerNumber = `OFF-2026-${String(maxNumber + 1).padStart(4, '0')}`;
+
+            // 2. Create Offer
             const offer = await base44.entities.Offer.create({
                 customer_id: formData.customer_id,
                 title: formData.title,
+                offer_number: offerNumber,
                 rate_card_id: activeRateCard.id,
                 boat_length: formData.boat_length,
                 transport_distance_km: formData.distance_km,
