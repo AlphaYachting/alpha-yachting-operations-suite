@@ -682,6 +682,20 @@ Requirements:
   const filteredBoats = boats.filter(b => b.customer_id === formData.customer_id);
   const filteredJobs = jobs.filter(j => j.customer_id === formData.customer_id);
 
+  const handleSendEmail = () => {
+    const customer = customers.find(c => c.id === formData.customer_id);
+    if (!customer?.email) {
+      toast.error('Kein E-Mail-Adresse für diesen Kunden gefunden.');
+      return;
+    }
+    const offerNumber = formData.offer_number ? ` (${formData.offer_number})` : '';
+    const subject = encodeURIComponent(`Angebot: ${formData.title || ''}${offerNumber}`);
+    const body = encodeURIComponent(
+      `Sehr geehrte/r ${customer.first_name || ''} ${customer.last_name || ''},\n\nanbei erhalten Sie unser Angebot für die besprochenen Leistungen. Bitte prüfen Sie es in Ruhe und melden Sie sich bei Fragen.\n\nMit freundlichen Grüßen,\nIhr Team`
+    );
+    window.open(`mailto:${customer.email}?subject=${subject}&body=${body}`, '_self');
+  };
+
   // Get selected location and check if marina fees apply
   const selectedLocation = locations.find(l => l.id === formData.location_id);
   const marinaFeesApply = selectedLocation?.marina_fee_enabled && selectedLocation?.location_type === 'Marina';
