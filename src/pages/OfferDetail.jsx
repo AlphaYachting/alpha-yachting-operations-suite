@@ -831,6 +831,16 @@ Requirements:
                 offerSections={offerSections}
               />
             )}
+            {formData.customer_id && customers.find(c => c.id === formData.customer_id)?.email && (
+              <Button
+                onClick={handleSendEmail}
+                variant="outline"
+                className="border-sky-500 text-sky-600 hover:bg-sky-50"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                E-Mail senden
+              </Button>
+            )}
             {formData.converted_job_id ? (
               <Button
                 onClick={() => navigate(createPageUrl('JobDetail') + `?id=${formData.converted_job_id}`)}
