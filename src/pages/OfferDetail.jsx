@@ -42,6 +42,7 @@ import {
   AlertCircle,
   Loader2,
   Briefcase,
+  Mail,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import OfferTaskEditor from '@/components/offers/OfferTaskEditor';
