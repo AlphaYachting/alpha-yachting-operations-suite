@@ -331,6 +331,7 @@ export default function Suppliers() {
           )}
 
           <SupplierForm
+            key={aiPrefillData ? JSON.stringify(aiPrefillData) : 'empty'}
             supplier={aiPrefillData ? { ...aiPrefillData, id: undefined } : undefined}
             onSuccess={() => {
               setDialogOpen(false);
