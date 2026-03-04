@@ -40,7 +40,7 @@ export default function SupplierForm({ supplier, onSuccess, onCancel }) {
     e.preventDefault();
     setSaving(true);
     try {
-      if (supplier) {
+      if (supplier?.id) {
         await base44.entities.Supplier.update(supplier.id, formData);
       } else {
         await base44.entities.Supplier.create(formData);
