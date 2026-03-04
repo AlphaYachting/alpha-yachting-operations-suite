@@ -44,6 +44,7 @@ import {
   Loader2,
   Briefcase,
   Mail,
+  Search,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import OfferTaskEditor from '@/components/offers/OfferTaskEditor';
