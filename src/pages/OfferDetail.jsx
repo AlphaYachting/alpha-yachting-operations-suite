@@ -683,6 +683,33 @@ Requirements:
   const filteredBoats = boats.filter(b => b.customer_id === formData.customer_id);
   const filteredJobs = jobs.filter(j => j.customer_id === formData.customer_id);
 
+  // Searchable customer select state
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
+  const customerDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(e.target)) {
+        setCustomerDropdownOpen(false);
+        setCustomerSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredCustomers = customers.filter(c => {
+    const name = (c.company_name || `${c.first_name || ''} ${c.last_name || ''}`).toLowerCase();
+    return name.includes(customerSearch.toLowerCase());
+  });
+
+  const selectedCustomerName = (() => {
+    const c = customers.find(c => c.id === formData.customer_id);
+    if (!c) return null;
+    return c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
+  })();
+
   const handleSendEmail = () => {
     const customer = customers.find(c => c.id === formData.customer_id);
     if (!customer?.email) {
