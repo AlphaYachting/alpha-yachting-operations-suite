@@ -34,6 +34,8 @@ export default function Suppliers() {
   const [countryFilter, setCountryFilter] = useState('all');
   const [hasPortalFilter, setHasPortalFilter] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showAIParser, setShowAIParser] = useState(false);
+  const [aiPrefillData, setAiPrefillData] = useState(null);
 
   useEffect(() => {
     loadData();
