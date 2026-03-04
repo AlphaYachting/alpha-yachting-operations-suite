@@ -115,10 +115,16 @@ export default function Suppliers() {
           <h1 className="text-3xl font-bold text-slate-900">Supplier Hub</h1>
           <p className="text-slate-500 mt-1">Manage suppliers, contacts, portals, and terms</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Supplier
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { setShowAIParser(false); setAiPrefillData(null); setDialogOpen(true); }}>
+            <Sparkles className="w-4 h-4 mr-2 text-purple-500" />
+            AI Import
+          </Button>
+          <Button onClick={() => { setShowAIParser(false); setAiPrefillData(null); setDialogOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Supplier
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
