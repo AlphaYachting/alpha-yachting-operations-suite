@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Building2, Package, Wrench, Globe, Mail, Phone, ExternalLink } from 'lucide-react';
+import { Search, Plus, Building2, Package, Wrench, Globe, Mail, Phone, ExternalLink, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SupplierForm from '@/components/suppliers/SupplierForm';
+import SupplierAIParser from '@/components/suppliers/SupplierAIParser';
 
 const typeColors = {
   PRODUCT: 'bg-blue-100 text-blue-800',
