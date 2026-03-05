@@ -564,7 +564,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     const totalColIdx = template.show_vat_column ? 6 : 5;
     doc.text(formatCurrency(item.total_gross), xPos + colWidths[totalColIdx] - 2, rowY, { align: 'right' });
     
-    yPos = Math.max(descY, rowY + 5) + 2;
+    yPos = Math.max(descY, rowY + 5) + 1;
   });
   
   yPos += 5;
