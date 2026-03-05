@@ -77,6 +77,21 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     } : { r: 37, g: 99, b: 235 };
   }
 
+  function stripHtml(html) {
+    if (!html) return '';
+    return html
+      .replace(/<li>/gi, '\n• ')
+      .replace(/<\/li>/gi, '')
+      .replace(/<\/?(ol|ul|p|br|div)[^>]*>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
   function formatDate(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
