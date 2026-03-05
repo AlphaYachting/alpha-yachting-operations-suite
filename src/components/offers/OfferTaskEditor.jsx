@@ -156,7 +156,10 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                                     )}
                                   </div>
                                   {task.description && (
-                                    <p className="text-sm text-slate-600 mt-1 whitespace-pre-line">{task.description}</p>
+                                    <div
+                                      className="text-sm text-slate-600 mt-1 prose prose-sm max-w-none"
+                                      dangerouslySetInnerHTML={{ __html: task.description }}
+                                    />
                                   )}
                                 </div>
                               </div>
