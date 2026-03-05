@@ -348,11 +348,12 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
           line-height: 1.2;
         }
         .item-desc ol, .item-desc ul {
-          margin: 2pt 0;
-          padding-left: 14pt;
+          margin: 0;
+          padding-left: 12pt;
         }
         .item-desc li {
-          margin-bottom: 1pt;
+          margin-bottom: 0;
+          line-height: 1.3;
         }
 
         /* Totals Section */
