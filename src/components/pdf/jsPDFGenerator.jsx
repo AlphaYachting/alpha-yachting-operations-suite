@@ -527,16 +527,15 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
       // Parse HTML into structured lines with bullet awareness
       const descSegments = parseHtmlToSegments(item.description);
       for (const seg of descSegments) {
-        const indent = seg.isBullet ? 7 : 2;
+        const indent = seg.isBullet ? 6 : 2;
         const maxWidth = colWidths[1] - 4 - indent;
         const lines = doc.splitTextToSize(seg.text, maxWidth);
         if (seg.isBullet) {
           doc.text('•', xPos + 2, descY);
         }
         doc.text(lines, xPos + indent, descY);
-        descY += lines.length * 3.8;
+        descY += lines.length * 3.5;
       }
-      descY += 1;
       doc.setFontSize(9);
       doc.setTextColor(51, 51, 51);
     }
