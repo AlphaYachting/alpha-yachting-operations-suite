@@ -286,12 +286,21 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea
-                value={taskForm.description}
-                onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
-                placeholder="Detailed task description"
-                rows={3}
-              />
+              <div className="border rounded-md overflow-hidden">
+                <ReactQuill
+                  value={taskForm.description || ''}
+                  onChange={(val) => setTaskForm({ ...taskForm, description: val })}
+                  placeholder="Detailed task description"
+                  modules={{
+                    toolbar: [
+                      ['bold', 'italic', 'underline'],
+                      [{ list: 'ordered' }, { list: 'bullet' }],
+                      ['clean'],
+                    ],
+                  }}
+                  style={{ minHeight: '120px' }}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Charging Method *</Label>
