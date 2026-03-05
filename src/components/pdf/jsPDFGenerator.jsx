@@ -472,17 +472,10 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
       doc.setTextColor(85, 85, 85);
     }
 
-    if (item.description) {
+    if (descText) {
       doc.setFont(fontFamily, 'normal');
       doc.setFontSize(8);
       doc.setTextColor(85, 85, 85);
-
-      // Preserve line breaks and format bullet points
-      const descText = item.description
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .join('\n');
 
       const descLines = doc.splitTextToSize(descText, colWidths[1] - 4);
       doc.text(descLines, xPos + 2, descY);
