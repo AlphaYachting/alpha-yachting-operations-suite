@@ -426,9 +426,7 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   lineItems.forEach((item, idx) => {
     // Calculate required height for this row
     const titleLines = doc.splitTextToSize(item.title || '', colWidths[1] - 4);
-    const descText = item.description ? 
-      item.description.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n') : 
-      '';
+    const descText = item.description ? stripHtml(item.description) : '';
     const descLines = descText ? doc.splitTextToSize(descText, colWidths[1] - 4) : [];
     const requiredHeight = (titleLines.length * 4) + (descLines.length > 0 ? 1.5 : 0) + (descLines.length * 3.8) + 10;
 
