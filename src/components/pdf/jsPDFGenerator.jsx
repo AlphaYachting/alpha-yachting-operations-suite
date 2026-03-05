@@ -77,6 +77,50 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     } : { r: 37, g: 99, b: 235 };
   }
 
+  function parseHtmlToSegments(html) {
+    if (!html) return [];
+    const segments = [];
+    // Extract <li> items as bullet points, everything else as plain text
+    const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+    let lastIndex = 0;
+    let match;
+    // First get plain text before/between/after list items
+    const withoutLists = html.replace(/<(ol|ul)[^>]*>[\s\S]*?<\/(ol|ul)>/gi, '\n__LIST__\n');
+    const listContents = [];
+    const tempLi = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+    let lm;
+    while ((lm = tempLi.exec(html)) !== null) {
+      listContents.push(lm[1].replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ').trim());
+    }
+    let listIdx = 0;
+    const parts = withoutLists.split('__LIST__');
+    for (let i = 0; i < parts.length; i++) {
+      const plain = parts[i].replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ').trim();
+      if (plain) {
+        for (const line of plain.split('\n')) {
+          const l = line.trim();
+          if (l) segments.push({ text: l, isBullet: false });
+        }
+      }
+      // Add bullet items that belong after this part
+      if (i < parts.length - 1 && listIdx < listContents.length) {
+        // Count how many <li> items are in the corresponding list block
+        const listBlockMatch = html.match(/<(ol|ul)[^>]*>([\s\S]*?)<\/(ol|ul)>/i);
+        const allListBlocks = [...html.matchAll(/<(ol|ul)[^>]*>([\s\S]*?)<\/(ol|ul)>/gi)];
+        const block = allListBlocks[i];
+        if (block) {
+          const blockLis = [...block[2].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+          blockLis.forEach(lim => {
+            const text = lim[1].replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ').trim();
+            if (text) segments.push({ text, isBullet: true });
+          });
+          listIdx += blockLis.length;
+        }
+      }
+    }
+    return segments;
+  }
+
   function stripHtml(html) {
     if (!html) return '';
     return html
