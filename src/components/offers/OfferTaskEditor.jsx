@@ -228,13 +228,23 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => openEditTask(task, index)}
+                                title="Edit"
                               >
                                 <Edit className="h-4 w-4 text-slate-600" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                onClick={() => handleDuplicateTask(index)}
+                                title="Duplicate"
+                              >
+                                <Copy className="h-4 w-4 text-blue-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 onClick={() => handleDeleteTask(index)}
+                                title="Delete"
                               >
                                 <Trash2 className="h-4 w-4 text-red-600" />
                               </Button>
