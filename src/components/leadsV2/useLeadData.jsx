@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { notifyLeadAssignment } from '@/components/notifications/notificationUtils';
 
 export function getAgingLevel(lead) {
+  if (lead.status === 'Converted' || lead.status === 'Lost') return 'none';
   if (!lead.created_date) return 'none';
   const createdDate = new Date(lead.created_date);
   const now = new Date();
