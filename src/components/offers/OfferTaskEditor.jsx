@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Trash2, Edit, GripVertical, Tag, Copy } from 'lucide-react';
 import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
 import { UNIT_OPTIONS, getUnitOptions } from './unitMapping';
