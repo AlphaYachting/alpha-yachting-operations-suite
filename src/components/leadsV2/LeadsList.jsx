@@ -13,17 +13,31 @@ export default function LeadsList({
   onViewDetail,
   getAgingLevel,
 }) {
-  const filteredLeads = leads.filter((lead) => {
-    const matchesSearch =
-      lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone?.includes(searchTerm) ||
-      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.boat_name?.toLowerCase().includes(searchTerm.toLowerCase());
+  const agingPriority = (lead) => {
+    const level = getAgingLevel(lead);
+    if (level === 'danger') return 0;
+    if (level === 'warn') return 1;
+    return 2;
+  };
 
-    const matchesStatus = statusFilter === 'All' || lead.status === statusFilter;
+  const filteredLeads = leads
+    .filter((lead) => {
+      const matchesSearch =
+        lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.phone?.includes(searchTerm) ||
+        lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.boat_name?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return matchesSearch && matchesStatus;
-  });
+      const matchesStatus = statusFilter === 'All' || lead.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      const agingDiff = agingPriority(a) - agingPriority(b);
+      if (agingDiff !== 0) return agingDiff;
+      // Within same aging group, newest first
+      return new Date(b.created_date) - new Date(a.created_date);
+    });
 
   if (filteredLeads.length === 0) {
     return (
