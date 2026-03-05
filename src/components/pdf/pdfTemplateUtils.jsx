@@ -345,8 +345,14 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
           font-size: 8pt;
           color: #666;
           margin-top: 2px;
-          white-space: pre-line;
           line-height: 1.2;
+        }
+        .item-desc ol, .item-desc ul {
+          margin: 2pt 0;
+          padding-left: 14pt;
+        }
+        .item-desc li {
+          margin-bottom: 1pt;
         }
 
         /* Totals Section */
