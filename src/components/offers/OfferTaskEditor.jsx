@@ -84,6 +84,14 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
     setTasks(tasks.filter((_, i) => i !== index));
   };
 
+  const handleDuplicateTask = (index) => {
+    const taskToDuplicate = { ...tasks[index] };
+    delete taskToDuplicate.id; // remove DB id so it's treated as new
+    const updated = [...tasks];
+    updated.splice(index + 1, 0, taskToDuplicate);
+    setTasks(updated);
+  };
+
   const updateTaskField = (index, field, value) => {
     const updated = [...tasks];
     updated[index] = { ...updated[index], [field]: value };
