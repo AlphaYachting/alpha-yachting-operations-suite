@@ -99,6 +99,9 @@ Generate a detailed list of tasks for this service offer. For each task, provide
 - ${detailedExplanations ? 'A detailed technical description with proper structure:\n  • Use bullet points with "• " at the start of each point\n  • Put each bullet point on a new line\n  • Group related steps under clear subtopics\n  • Keep each bullet point concise but complete\n  • Separate main sections with a blank line' : 'A brief, simple description that a non-technical customer can understand. If using bullet points, start each with "• " and put each on a new line'}
 - Quantity needed (e.g., hours for labor, pieces for parts, square meters for surface work, etc.)
 - Appropriate unit type (Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, or Lump Sum)
+- unit_price: If a price is explicitly stated in the work description for this position, extract it exactly. If no price is mentioned, return null.
+
+IMPORTANT: Only set unit_price if a price is clearly and explicitly stated in the input text. Do NOT estimate or invent prices.
 
 Be practical and realistic with estimates. Consider travel time if it's mobile service work.
 
