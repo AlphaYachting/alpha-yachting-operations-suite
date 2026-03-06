@@ -1115,18 +1115,42 @@ export default function Dashboard() {
       <Dialog open={showLeadDialog} onOpenChange={setShowLeadDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New Lead</DialogTitle>
+            <DialogTitle>{emailParsedLead ? 'Lead aus E-Mail' : 'Create New Lead'}</DialogTitle>
           </DialogHeader>
           <LeadForm
+            lead={emailParsedLead}
+            customers={customers}
+            boats={boats}
             locations={locations}
             onSave={async (leadData) => {
               const newLead = await base44.entities.Lead.create(leadData);
               setLeads([newLead, ...leads]);
               setShowLeadDialog(false);
+              setEmailParsedLead(null);
               toast.success('Lead created');
               await loadDashboardData();
             }}
-            onCancel={() => setShowLeadDialog(false)}
+            onCancel={() => {
+              setShowLeadDialog(false);
+              setEmailParsedLead(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Email to Lead Parser Dialog */}
+      <Dialog open={showEmailParserDialog} onOpenChange={setShowEmailParserDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>E-Mail → Lead</DialogTitle>
+          </DialogHeader>
+          <EmailToLeadParser
+            onLeadParsed={(leadData) => {
+              setShowEmailParserDialog(false);
+              setEmailParsedLead(leadData);
+              setShowLeadDialog(true);
+            }}
+            onCancel={() => setShowEmailParserDialog(false)}
           />
         </DialogContent>
       </Dialog>
