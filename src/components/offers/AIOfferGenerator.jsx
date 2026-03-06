@@ -125,7 +125,8 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                   title: { type: 'string' },
                   description: { type: 'string' },
                   unit_type: { type: 'string' },
-                  quantity: { type: 'number' }
+                  quantity: { type: 'number' },
+                  unit_price: { type: 'number', description: 'Only if explicitly stated in input text, otherwise omit' }
                 },
                 required: ['title', 'quantity']
               }
