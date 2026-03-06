@@ -725,19 +725,13 @@ Requirements:
       return;
     }
 
-    // Build salutation
-    const salutation = customer.salutation;
+    // Build salutation from available data
     const lastName = customer.last_name || '';
-    let salutationLine = '';
-    if (salutation === 'Herr') {
-      salutationLine = `Sehr geehrter Herr ${lastName}`;
-    } else if (salutation === 'Frau') {
-      salutationLine = `Sehr geehrte Frau ${lastName}`;
-    } else if (salutation === 'Firma' || customer.company_name) {
-      salutationLine = `Sehr geehrte Damen und Herren`;
-    } else {
-      salutationLine = `Sehr geehrte/r ${customer.first_name || ''} ${lastName}`.trim();
-    }
+    const firstName = customer.first_name || '';
+    const isCompany = customer.customer_type !== 'Private' || !!customer.company_name;
+    const salutationLine = isCompany
+      ? `Sehr geehrte Damen und Herren`
+      : `Sehr geehrte/r ${firstName} ${lastName}`.trim();
 
     const offerNumber = formData.offer_number ? ` (${formData.offer_number})` : '';
     const subject = encodeURIComponent(`Angebot: ${formData.title || ''}${offerNumber}`);
