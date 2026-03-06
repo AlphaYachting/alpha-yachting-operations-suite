@@ -49,6 +49,7 @@ import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
+import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
 
@@ -90,25 +91,15 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      
-      // Load only active/recent data for dashboard display
       const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
-        base44.entities.WorkOrder.filter({ 
-          status: { $nin: ['Completed', 'Cancelled'] } 
-        }),
-        base44.entities.Job.filter({ 
-          status: { $nin: ['Completed', 'Invoiced', 'Cancelled'] } 
-        }),
+        base44.entities.WorkOrder.list('-scheduled_date', 100),
+        base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
         base44.entities.Boat.list('-created_date', 50),
         base44.entities.Location.list(),
-        base44.entities.Lead.filter({ 
-          status: { $nin: ['Converted', 'Rejected', 'Lost'] } 
-        }),
-        base44.entities.Offer.filter({ 
-          status: { $nin: ['Approved', 'Rejected', 'Expired', 'Converted'] } 
-        }),
-        base44.entities.Note.filter({ completed: false })
+        base44.entities.Lead.list('-created_date', 30),
+        base44.entities.Offer.list('-created_date', 30),
+        base44.entities.Note.list('-created_date', 50)
       ]);
 
       setWorkOrders(woData);
@@ -120,8 +111,8 @@ export default function Dashboard() {
       setOffers(offersData);
       setNotes(notesData);
 
-      // Load or calculate KPIs using already loaded data
-      await loadKPIs(woData, jobsData, leadsData, offersData);
+      // Load or calculate KPIs (max 2x per day)
+      await loadKPIs();
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -129,7 +120,7 @@ export default function Dashboard() {
     }
   };
 
-  const loadKPIs = async (woData, jobsData, leadsData, offersData) => {
+  const loadKPIs = async () => {
     try {
       const now = new Date();
       const todayDate = format(now, 'yyyy-MM-dd');
@@ -140,23 +131,34 @@ export default function Dashboard() {
       const existingCache = await base44.entities.KPICache.filter({ cache_key: cacheKey });
 
       if (existingCache.length > 0) {
+        // Use cached values
         setKpis(existingCache[0]);
         return;
       }
 
-      // Calculate KPIs using already loaded data + minimal additional queries
-      const [allTechnicians] = await Promise.all([
+      // Calculate KPIs (simple count queries only)
+      const [allJobs, allWorkOrders, allOffers, allLeads, allTechnicians] = await Promise.all([
+        base44.entities.Job.list('-created_date', 200),
+        base44.entities.WorkOrder.list('-scheduled_date', 200),
+        base44.entities.Offer.list('-created_date', 100),
+        base44.entities.Lead.list('-created_date', 100),
         base44.entities.Technician.list()
       ]);
 
-      // Use already loaded data (already filtered to active)
-      const activeProjects = jobsData.length;
-      const openWorkOrders = woData.length;
-      const openOffers = offersData.length;
-      const activeLeads = leadsData.length;
+      // Count active projects
+      const activeProjects = allJobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status)).length;
 
-      // Calculate capacity today
-      const todayWOs = woData.filter(wo => {
+      // Count open work orders
+      const openWorkOrders = allWorkOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status)).length;
+
+      // Count open offers
+      const openOffers = allOffers.filter(o => !['Approved', 'Rejected', 'Expired', 'Converted'].includes(o.status)).length;
+
+      // Count active leads
+      const activeLeads = allLeads.filter(l => !['Converted', 'Rejected', 'Lost'].includes(l.status)).length;
+
+      // Calculate capacity today (assigned techs / total techs)
+      const todayWOs = allWorkOrders.filter(wo => {
         if (!wo.scheduled_date) return false;
         return isToday(parseISO(wo.scheduled_date));
       });

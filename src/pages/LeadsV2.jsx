@@ -13,7 +13,7 @@ import {
 import { Plus, Clock, PhoneCall, CheckCircle2, XCircle, Search, Mail } from 'lucide-react';
 import { useLeadData, getAgingLevel } from '@/components/leadsV2/useLeadData';
 import LeadsList from '@/components/leadsV2/LeadsList';
-import LeadForm from '@/components/leadsV2/LeadForm';
+import LeadForm from '@/components/leads/LeadForm';
 import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
 
 export default function LeadsV2() {
