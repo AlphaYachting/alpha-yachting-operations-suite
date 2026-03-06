@@ -250,11 +250,33 @@ export default function OfferDetail() {
       const boat = boats.find(b => b.id === formData.boat_id);
       const location = locations.find(l => l.id === formData.location_id);
 
-      const customerName = customer ? (customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim()) : '';
       const boatInfo = boat ? `${boat.vessel_name}${boat.manufacturer ? ` (${boat.manufacturer}${boat.model ? ` ${boat.model}` : ''})` : ''}` : '';
       const locationInfo = location ? location.name : '';
 
-      const tasksText = tasks.map(t => 
+      // Build salutation line
+      const salutation = customer?.salutation;
+      const lastName = customer?.last_name || '';
+      let salutationLine = '';
+      if (salutation === 'Herr') {
+        salutationLine = `Sehr geehrter Herr ${lastName},`;
+      } else if (salutation === 'Frau') {
+        salutationLine = `Sehr geehrte Frau ${lastName},`;
+      } else if (salutation === 'Firma' || customer?.company_name) {
+        salutationLine = `Sehr geehrte Damen und Herren,`;
+      } else {
+        salutationLine = `Sehr geehrte/r ${customer?.first_name || ''} ${lastName},`.trim();
+      }
+
+      // Override salutation for non-German languages
+      const langSalutationMap = {
+        'English': `Dear ${customer?.first_name || ''} ${lastName},`,
+        'Italian': `Gentile ${salutation === 'Frau' ? 'Signora' : 'Signor'} ${lastName},`,
+        'Slovenian': `Spoštovani ${lastName},`,
+        'Croatian': `Poštovani/a ${lastName},`,
+      };
+      const finalSalutation = langSalutationMap[formData.language] || salutationLine;
+
+      const tasksText = tasks.map(t =>
         `- ${t.title}${t.description ? `: ${t.description}` : ''} (${t.quantity} ${t.unit_type})`
       ).join('\n');
 
@@ -264,34 +286,30 @@ export default function OfferDetail() {
         'Italian': 'Respond in Italian.',
         'Slovenian': 'Respond in Slovenian.',
         'Croatian': 'Respond in Croatian.'
-      }[formData.language] || 'Respond in English.';
+      }[formData.language] || 'Respond in German.';
 
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are writing a brief project introduction for a yacht service offer.
+        prompt: `You are writing a project introduction for a yacht service offer.
 
 ${languageInstruction}
 
-Generate a short, direct project description (1-2 paragraphs max).
+The text MUST start with this exact salutation line on its own line:
+"${finalSalutation}"
 
-Context:
-- Customer: ${customerName || 'N/A'}
-- Boat: ${boatInfo || 'N/A'}
-- Location: ${locationInfo || 'N/A'}
-- Project title: ${formData.title}
+Then write a short, professional project description (1-2 paragraphs max) that:
+- Describes what work will be done clearly and concisely
+- Mentions boat (${boatInfo || 'N/A'}) and location (${locationInfo || 'N/A'}) if relevant
+- No prices or timelines
+- Professional and direct tone
 
-Services:
+Services to describe:
 ${tasksText || 'N/A'}
 
-Requirements:
-- Professional and direct tone
-- State what will be done clearly and concisely
-- Mention boat and location context only if relevant
-- Maximum 2 short paragraphs
-- No prices or timelines`,
+Project title: ${formData.title}`,
       });
 
       updateField('description', response);
-      toast.success('Project introduction generated');
+      toast.success('Projektbeschreibung generiert');
     } catch (error) {
       console.error('Error generating introduction:', error);
       toast.error('Failed to generate introduction');
