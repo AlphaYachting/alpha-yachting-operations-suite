@@ -447,6 +447,15 @@ export default function Dashboard() {
           </Button>
           <Button 
             size="sm" 
+            variant="outline"
+            onClick={() => setShowEmailParserDialog(true)}
+            className="border-purple-300 text-purple-700 hover:bg-purple-50"
+          >
+            <Mail className="h-4 w-4 mr-1" />
+            E-Mail → Lead
+          </Button>
+          <Button 
+            size="sm" 
             asChild
             className="bg-cyan-600 hover:bg-cyan-700 text-white"
           >
