@@ -253,26 +253,22 @@ export default function OfferDetail() {
       const boatInfo = boat ? `${boat.vessel_name}${boat.manufacturer ? ` (${boat.manufacturer}${boat.model ? ` ${boat.model}` : ''})` : ''}` : '';
       const locationInfo = location ? location.name : '';
 
-      // Build salutation line
-      const salutation = customer?.salutation;
+      // Build salutation line from available data (no explicit salutation field)
       const lastName = customer?.last_name || '';
+      const firstName = customer?.first_name || '';
+      const isCompany = customer?.customer_type !== 'Private' || !!customer?.company_name;
       let salutationLine = '';
-      if (salutation === 'Herr') {
-        salutationLine = `Sehr geehrter Herr ${lastName},`;
-      } else if (salutation === 'Frau') {
-        salutationLine = `Sehr geehrte Frau ${lastName},`;
-      } else if (salutation === 'Firma' || customer?.company_name) {
+      if (isCompany) {
         salutationLine = `Sehr geehrte Damen und Herren,`;
       } else {
-        salutationLine = `Sehr geehrte/r ${customer?.first_name || ''} ${lastName},`.trim();
+        salutationLine = `Sehr geehrte/r ${firstName} ${lastName},`.trim();
       }
 
-      // Override salutation for non-German languages
       const langSalutationMap = {
-        'English': `Dear ${customer?.first_name || ''} ${lastName},`,
-        'Italian': `Gentile ${salutation === 'Frau' ? 'Signora' : 'Signor'} ${lastName},`,
-        'Slovenian': `Spoštovani ${lastName},`,
-        'Croatian': `Poštovani/a ${lastName},`,
+        'English': isCompany ? `Dear Sir or Madam,` : `Dear ${firstName} ${lastName},`,
+        'Italian': isCompany ? `Gentili Signore e Signori,` : `Gentile ${firstName} ${lastName},`,
+        'Slovenian': isCompany ? `Spoštovane dame in gospodje,` : `Spoštovani/a ${lastName},`,
+        'Croatian': isCompany ? `Poštovane dame i gospodo,` : `Poštovani/a ${lastName},`,
       };
       const finalSalutation = langSalutationMap[formData.language] || salutationLine;
 
