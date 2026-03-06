@@ -99,9 +99,14 @@ Generate a detailed list of tasks for this service offer. For each task, provide
 - ${detailedExplanations ? 'A detailed technical description with proper structure:\n  • Use bullet points with "• " at the start of each point\n  • Put each bullet point on a new line\n  • Group related steps under clear subtopics\n  • Keep each bullet point concise but complete\n  • Separate main sections with a blank line' : 'A brief, simple description that a non-technical customer can understand. If using bullet points, start each with "• " and put each on a new line'}
 - Quantity needed (e.g., hours for labor, pieces for parts, square meters for surface work, etc.)
 - Appropriate unit type (Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, or Lump Sum)
-- unit_price: If a price is explicitly stated in the work description for this position, extract it exactly. If no price is mentioned, return null.
+- unit_price: If a price is explicitly stated for this position, calculate the unit price as follows:
+  * If a per-unit price is given (e.g. "70 €/m²"), use that directly as unit_price.
+  * If only a total/lump sum price is given (e.g. "1.050 € netto" for 15 m²), divide it by the quantity to get the unit_price (e.g. 1050 / 15 = 70).
+  * If no price is mentioned at all, return null.
+- total_price: The total amount for this position as stated in the input text (before any division).
 
 IMPORTANT: Only set unit_price if a price is clearly and explicitly stated in the input text. Do NOT estimate or invent prices.
+CRITICAL: When a position has a quantity > 1 and a lump sum price, the unit_price MUST be total_price / quantity. Never use the lump sum as the unit_price when quantity > 1.
 
 Be practical and realistic with estimates. Consider travel time if it's mobile service work.
 
