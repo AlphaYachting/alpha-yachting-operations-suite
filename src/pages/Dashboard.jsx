@@ -75,6 +75,8 @@ export default function Dashboard() {
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
   const [showLeadDialog, setShowLeadDialog] = useState(false);
+  const [showEmailParserDialog, setShowEmailParserDialog] = useState(false);
+  const [emailParsedLead, setEmailParsedLead] = useState(null);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [noteForm, setNoteForm] = useState({
