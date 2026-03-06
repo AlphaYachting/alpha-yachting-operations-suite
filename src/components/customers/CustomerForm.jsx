@@ -14,6 +14,7 @@ import {
 export default function CustomerForm({ customer, onSave, onCancel }) {
   const [formData, setFormData] = useState({
     company_name: customer?.company_name || '',
+    salutation: customer?.salutation || '',
     first_name: customer?.first_name || '',
     last_name: customer?.last_name || '',
     email: customer?.email || '',
