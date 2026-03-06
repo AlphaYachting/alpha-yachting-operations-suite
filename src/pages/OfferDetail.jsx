@@ -728,10 +728,31 @@ Requirements:
       toast.error('Kein E-Mail-Adresse für diesen Kunden gefunden.');
       return;
     }
+
+    // Build salutation
+    const salutation = customer.salutation;
+    const lastName = customer.last_name || '';
+    let salutationLine = '';
+    if (salutation === 'Herr') {
+      salutationLine = `Sehr geehrter Herr ${lastName}`;
+    } else if (salutation === 'Frau') {
+      salutationLine = `Sehr geehrte Frau ${lastName}`;
+    } else if (salutation === 'Firma' || customer.company_name) {
+      salutationLine = `Sehr geehrte Damen und Herren`;
+    } else {
+      salutationLine = `Sehr geehrte/r ${customer.first_name || ''} ${lastName}`.trim();
+    }
+
     const offerNumber = formData.offer_number ? ` (${formData.offer_number})` : '';
     const subject = encodeURIComponent(`Angebot: ${formData.title || ''}${offerNumber}`);
+
+    // Include the AI-generated description if available, otherwise generic text
+    const descriptionPart = formData.description
+      ? `${formData.description}\n\n`
+      : `anbei erhalten Sie unser Angebot für die besprochenen Leistungen.\n\n`;
+
     const body = encodeURIComponent(
-      `Sehr geehrte/r ${customer.first_name || ''} ${customer.last_name || ''},\n\nanbei erhalten Sie unser Angebot für die besprochenen Leistungen. Bitte prüfen Sie es in Ruhe und melden Sie sich bei Fragen.\n\nMit freundlichen Grüßen,\nIhr Team`
+      `${salutationLine},\n\n${descriptionPart}Bitte prüfen Sie das Angebot in Ruhe und melden Sie sich bei Fragen.\n\nMit freundlichen Grüßen,\nIhr Team`
     );
     window.open(`mailto:${customer.email}?subject=${subject}&body=${body}`, '_self');
   };
