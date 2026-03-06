@@ -90,6 +90,22 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
         </div>
       )}
 
+      {/* Salutation + Name */}
+      <div className="space-y-2">
+        <Label>Anrede</Label>
+        <Select value={formData.salutation} onValueChange={(v) => updateField('salutation', v)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Anrede wählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={null}>–</SelectItem>
+            <SelectItem value="Herr">Herr</SelectItem>
+            <SelectItem value="Frau">Frau</SelectItem>
+            <SelectItem value="Firma">Firma</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Name */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
