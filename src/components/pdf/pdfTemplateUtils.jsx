@@ -22,7 +22,7 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
 
   const columnWidths = template.table_column_widths || {
     index: 4,
-    description: 38,
+    description: 40,
     quantity: 8,
     unit: 8,
     unit_price: 13,
