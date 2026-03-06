@@ -137,12 +137,17 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
       });
 
       if (response.tasks && Array.isArray(response.tasks)) {
-        const tasksWithPrices = response.tasks.map(task => ({
-          ...task,
-          unit_type: task.unit_type || 'Hour',
-          unit_price: defaultUnitPrice,
-          total_amount: task.quantity * defaultUnitPrice
-        }));
+        const tasksWithPrices = response.tasks.map(task => {
+          const unitPrice = (task.unit_price != null && task.unit_price > 0)
+            ? task.unit_price
+            : defaultUnitPrice;
+          return {
+            ...task,
+            unit_type: task.unit_type || 'Hour',
+            unit_price: unitPrice,
+            total_amount: task.quantity * unitPrice
+          };
+        });
         
         // Check if there are existing tasks
         if (existingTasks && existingTasks.length > 0) {
