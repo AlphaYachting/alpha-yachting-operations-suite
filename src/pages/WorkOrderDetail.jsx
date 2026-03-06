@@ -281,29 +281,37 @@ export default function WorkOrderDetail() {
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
     if (result.source.index === result.destination.index) return;
-    if (!canEditTasks) return; // Only admins can reorder
+    if (!canEditTasks) return;
 
-    // Sort tasks by current sequence_order
-    const sortedTasks = [...tasks].sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
-    
-    // Create reordered array
-    const reorderedTasks = Array.from(sortedTasks);
-    const [movedTask] = reorderedTasks.splice(result.source.index, 1);
-    reorderedTasks.splice(result.destination.index, 0, movedTask);
+    // Determine which stream was dragged
+    const isOrgStream = result.source.droppableId === 'organization-tasks';
+    const streamFilter = isOrgStream ? 'ORGANIZATION' : 'EXECUTION';
 
-    // Assign new sequence_order values
-    const tasksWithNewOrder = reorderedTasks.map((task, index) => ({
+    // Get the sub-array for this stream, sorted
+    const streamTasks = [...tasks]
+      .map(t => ({ ...t, task_stream: t.task_stream || 'EXECUTION' }))
+      .filter(t => t.task_stream === streamFilter)
+      .sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
+
+    // Reorder within the stream
+    const reordered = Array.from(streamTasks);
+    const [movedTask] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, movedTask);
+
+    // Reassign sequence_order within the stream (use offsets to avoid collisions)
+    const offset = isOrgStream ? 0 : 1000;
+    const updatedStreamTasks = reordered.map((task, index) => ({
       ...task,
-      sequence_order: index
+      sequence_order: offset + index
     }));
 
-    // Update local state immediately for instant feedback
-    setTasks(tasksWithNewOrder);
+    // Merge back into full tasks list
+    const otherTasks = tasks.filter(t => (t.task_stream || 'EXECUTION') !== streamFilter);
+    setTasks([...otherTasks, ...updatedStreamTasks]);
 
     try {
-      // Update all tasks with new sequence_order
       await Promise.all(
-        tasksWithNewOrder.map((task) => 
+        updatedStreamTasks.map(task =>
           base44.entities.Task.update(task.id, { sequence_order: task.sequence_order })
         )
       );
@@ -311,7 +319,6 @@ export default function WorkOrderDetail() {
     } catch (error) {
       console.error('Error reordering tasks:', error);
       toast.error('Failed to save new order');
-      // Reload to restore correct order
       await loadWorkOrderDetails();
     }
   };
