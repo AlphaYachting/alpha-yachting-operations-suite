@@ -131,7 +131,8 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                   description: { type: 'string' },
                   unit_type: { type: 'string' },
                   quantity: { type: 'number' },
-                  unit_price: { type: 'number', description: 'Only if explicitly stated in input text, otherwise omit' }
+                  unit_price: { type: 'number', description: 'Per-unit price. If total price is given for qty>1, divide total by quantity. Only if price is stated in input.' },
+                  total_price: { type: 'number', description: 'Total price for this position as stated in the input text' }
                 },
                 required: ['title', 'quantity']
               }
