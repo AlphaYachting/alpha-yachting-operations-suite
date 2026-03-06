@@ -22,12 +22,12 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
 
   const columnWidths = template.table_column_widths || {
     index: 4,
-    description: 38,
-    quantity: 8,
-    unit: 8,
-    unit_price: 13,
+    description: 32,
+    quantity: 10,
+    unit: 10,
+    unit_price: 14,
     vat: 8,
-    total: 13
+    total: 14
   };
 
   const columnAlign = template.table_column_align || {
