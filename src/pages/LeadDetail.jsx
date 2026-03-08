@@ -277,6 +277,24 @@ export default function LeadDetail() {
     }
   };
 
+  const handleEditOpen = async () => {
+    const [customers, locations, boats] = await Promise.all([
+      base44.entities.Customer.list(),
+      base44.entities.Location.list(),
+      base44.entities.Boat.list(),
+    ]);
+    setEditCustomers(customers);
+    setEditLocations(locations);
+    setEditBoats(boats);
+    setShowEditForm(true);
+  };
+
+  const handleLeadSave = async (data) => {
+    await base44.entities.Lead.update(lead.id, data);
+    await loadLeadDetails();
+    setShowEditForm(false);
+  };
+
   const handleAssignmentChange = async (newUserId) => {
     if (!lead) return;
     
