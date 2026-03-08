@@ -307,9 +307,7 @@ export default function Dashboard() {
   };
 
   // SALES & ORGANISATION
-  const allOpenLeads = leads
-    .filter(l => !['Converted', 'Rejected', 'Lost'].includes(l.status))
-    .sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+  const allOpenLeads = leads.filter(l => !['Converted', 'Rejected', 'Lost'].includes(l.status));
   const allOpenOffers = offers.filter(o => !['Approved', 'Rejected', 'Expired', 'Converted'].includes(o.status));
 
   const getAge = (dateStr) => {
@@ -990,7 +988,7 @@ export default function Dashboard() {
                 ))}
                 {allOpenLeads.length > 5 && (
                   <Button variant="outline" size="sm" asChild className="w-full mt-2">
-                    <Link to={createPageUrl('Leads')}>View All ({allOpenLeads.length})</Link>
+                    <Link to={createPageUrl('LeadsV2')}>View All ({allOpenLeads.length})</Link>
                   </Button>
                 )}
               </div>
