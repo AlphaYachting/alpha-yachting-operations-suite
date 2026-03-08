@@ -581,26 +581,38 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         completed_at: now
       };
 
-      // Optimistic update (no reload needed)
       setTasks(tasks.map((t) => t.id === taskId ? updatedTask : t));
-
-      // Save to cache first
       await offlineStorage.saveData(offlineStorage.STORES.tasks, updatedTask);
 
-      // Sync to server
       if (isOnline) {
-        await base44.entities.Task.update(taskId, { 
-          status: 'Completed',
-          completed_at: now
-        });
+        await base44.entities.Task.update(taskId, { status: 'Completed', completed_at: now });
       } else {
         await syncQueue.addToQueue('Task', 'update', { status: 'Completed', completed_at: now }, taskId);
         setPendingChanges(prev => [...prev, { entity: 'Task', id: taskId }]);
       }
     } catch (error) {
       console.error('Error completing task:', error);
-      // Revert optimistic update on error
       setTasks(tasks.map((t) => t.id === taskId ? tasks.find(t => t.id === taskId) : t));
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
+  const handleReopenTask = async (taskId) => {
+    try {
+      setUpdatingTaskId(taskId);
+      const updatedTask = { ...tasks.find(t => t.id === taskId), status: 'Not Started' };
+      setTasks(tasks.map((t) => t.id === taskId ? updatedTask : t));
+      await offlineStorage.saveData(offlineStorage.STORES.tasks, updatedTask);
+
+      if (isOnline) {
+        await base44.entities.Task.update(taskId, { status: 'Not Started' });
+      } else {
+        await syncQueue.addToQueue('Task', 'update', { status: 'Not Started' }, taskId);
+        setPendingChanges(prev => [...prev, { entity: 'Task', id: taskId }]);
+      }
+    } catch (error) {
+      console.error('Error reopening task:', error);
     } finally {
       setUpdatingTaskId(null);
     }
@@ -659,20 +671,22 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
-        <Button
-          onClick={handleTimerToggle}
-          className={`text-base font-semibold px-4 py-1.5 rounded-lg text-white ${
-          timerRunning ?
-          'bg-red-600 hover:bg-red-700' :
-          'bg-green-600 hover:bg-green-700'}`
-          }>
-
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            <span>{timerRunning ? 'Stop Timer' : 'Start Timer'}</span>
-            {timerRunning && <span className="font-mono text-sm">{formatTime(elapsedSeconds)}</span>}
-          </div>
-        </Button>
+        <div className="flex flex-col items-end gap-0.5">
+          <Button
+            onClick={handleTimerToggle}
+            className={`text-sm font-semibold px-3 py-1.5 rounded-lg text-white ${
+            timerRunning ?
+            'bg-red-600 hover:bg-red-700' :
+            'bg-green-600 hover:bg-green-700'}`
+            }>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span>{timerRunning ? 'Stop' : 'WO Timer'}</span>
+              {timerRunning && <span className="font-mono text-xs">{formatTime(elapsedSeconds)}</span>}
+            </div>
+          </Button>
+          {timerRunning && <span className="text-[10px] text-slate-400">Tracking full work order</span>}
+        </div>
       </div>
 
       {/* Work Order Info */}
