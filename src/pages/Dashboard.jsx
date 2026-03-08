@@ -672,7 +672,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-red-900">Stale Leads ({staleLeads.length})</h3>
                   <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('Leads')}>View All</Link>
+                    <Link to={createPageUrl('LeadsV2')}>View All</Link>
                   </Button>
                 </div>
                 <div className="space-y-2">
