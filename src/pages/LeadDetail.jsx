@@ -375,14 +375,23 @@ export default function LeadDetail() {
           </div>
           <p className="text-slate-500 mt-1">{lead.inquiry_type}</p>
         </div>
-        <Button
-          onClick={handleCreateOffer}
-          disabled={creatingOffer}
-          className="bg-emerald-600 hover:bg-emerald-700"
-        >
-          <FileText className="h-4 w-4 mr-2" />
-          {creatingOffer ? 'Creating...' : 'Create Offer'}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleEditOpen}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Lead
+          </Button>
+          <Button
+            onClick={handleCreateOffer}
+            disabled={creatingOffer}
+            className="bg-emerald-600 hover:bg-emerald-700"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            {creatingOffer ? 'Creating...' : 'Create Offer'}
+          </Button>
+        </div>
       </div>
 
       {/* Overview Grid */}
