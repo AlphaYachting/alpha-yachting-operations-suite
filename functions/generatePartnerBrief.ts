@@ -179,25 +179,29 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
       </table>
     </div>
 
+    <div class="keep-together">
     <h2>COVERED COSTS</h2>
     <div class="section">
       ${costPolicies.length > 0 ? `<ul>${costPolicies.join('')}${teamOrder.other_reimbursables_allowed ? '<li>Other reimbursables allowed (pre-approval required)</li>' : ''}</ul>` : '<p>No additional costs covered</p>'}
     </div>
+    </div>
 
-    ${teamOrder.requires_preapproval_over > 0 || teamOrder.budget_exceed_requires_approval ? `<h2>APPROVAL REQUIREMENTS</h2>
+    ${teamOrder.requires_preapproval_over > 0 || teamOrder.budget_exceed_requires_approval ? `<div class="keep-together"><h2>APPROVAL REQUIREMENTS</h2>
     <div class="section">
       <ul>
         ${teamOrder.requires_preapproval_over > 0 ? `<li>Purchases over €${teamOrder.requires_preapproval_over} require pre-approval</li>` : ''}
         ${teamOrder.budget_exceed_requires_approval ? '<li>Budget overages require approval before proceeding</li>' : ''}
       </ul>
-    </div>` : ''}
+    </div></div>` : ''}
 
+    <div class="keep-together">
     <h2>ASSIGNED TEAM</h2>
     <div class="section">
       ${assignedTechs.length > 0 ? `<table>
-        <tr><th>Name</th><th>Phone</th></tr>
-        ${assignedTechs.map(t => `<tr><td>${t.first_name} ${t.last_name}</td><td>${t.phone || '-'}</td></tr>`).join('')}
+        <tr><th>Name</th><th>Role</th><th>Phone</th></tr>
+        ${assignedTechs.map(t => `<tr><td>${t.first_name} ${t.last_name}</td><td>${t.role || '-'}</td><td>${t.phone || '-'}</td></tr>`).join('')}
       </table>` : '<p>No technicians assigned</p>'}
+    </div>
     </div>
 
     ${teamOrder.partner_notes ? `<h2>SPECIAL NOTES</h2>
