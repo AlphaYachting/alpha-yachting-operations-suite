@@ -165,22 +165,28 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
   const groupWorkOrdersBySection = () => {
     const today = startOfDay(new Date());
-    const sections = { overdue: [], today: [], upcoming: [], later: [] };
+    const sections = { today: [], upcoming: [], later: [] };
 
-    // Exclude completed and cancelled WOs
-    const activeWorkOrders = workOrders.filter(wo =>
-      wo.status !== 'Completed' && wo.status !== 'Cancelled'
-    );
+    // CRITICAL FIX: Work orders already filtered by technicianId in loadData
+    // No need to re-filter - just use all loaded work orders
+    const userWorkOrders = workOrders;
+
+    console.log('📊 DEBUG - Grouping:', {
+      totalWorkOrders: workOrders.length,
+      resolvedTechnicianId,
+      todayDate: today.toISOString()
+    });
 
     const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     
-    activeWorkOrders.forEach((wo) => {
+    userWorkOrders.forEach((wo) => {
+      // Hide completed/cancelled WOs from the list
+      if (wo.status === 'Completed' || wo.status === 'Cancelled') return;
+
       const woDate = wo.scheduled_date ? startOfDay(parseISO(wo.scheduled_date)) : null;
       
       if (!woDate) {
         sections.later.push(wo);
-      } else if (woDate < today) {
-        sections.overdue.push(wo);
       } else if (woDate.getTime() === today.getTime()) {
         sections.today.push(wo);
       } else if (woDate > today && woDate <= sevenDaysFromNow) {
@@ -190,8 +196,14 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
       }
     });
 
+    console.log('✅ Sections:', {
+      today: sections.today.length,
+      upcoming: sections.upcoming.length,
+      later: sections.later.length
+    });
+
     // Sort each section by date and time
-    [sections.overdue, sections.today, sections.upcoming, sections.later].forEach((section) => {
+    [sections.today, sections.upcoming, sections.later].forEach((section) => {
       section.sort((a, b) => {
         const dateA = a.scheduled_date ? parseISO(a.scheduled_date) : new Date();
         const dateB = b.scheduled_date ? parseISO(b.scheduled_date) : new Date();
