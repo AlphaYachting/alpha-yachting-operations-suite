@@ -93,11 +93,10 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   
   // === HEADER SECTION - Reserved space, no overlap ===
   
-  // Logo - preserve aspect ratio by setting width only
+  // Logo - fixed height to control header space
   if (template.logo_url) {
     try {
-      // By not specifying height, jsPDF will maintain aspect ratio
-      doc.addImage(template.logo_url, 'PNG', LOGO_BOX.x, LOGO_BOX.y, LOGO_BOX.w, 0, undefined, 'FAST');
+      doc.addImage(template.logo_url, 'PNG', LOGO_BOX.x, LOGO_BOX.y, LOGO_BOX.w, LOGO_BOX.h, undefined, 'FAST');
     } catch (e) {
       console.log('Logo not loaded');
     }
