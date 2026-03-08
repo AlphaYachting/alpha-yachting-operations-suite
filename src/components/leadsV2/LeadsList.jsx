@@ -13,13 +13,6 @@ export default function LeadsList({
   onViewDetail,
   getAgingLevel,
 }) {
-  const agingPriority = (lead) => {
-    const level = getAgingLevel(lead);
-    if (level === 'danger') return 0;
-    if (level === 'warn') return 1;
-    return 2;
-  };
-
   const filteredLeads = leads
     .filter((lead) => {
       const matchesSearch =
@@ -32,12 +25,7 @@ export default function LeadsList({
 
       return matchesSearch && matchesStatus;
     })
-    .sort((a, b) => {
-      const agingDiff = agingPriority(a) - agingPriority(b);
-      if (agingDiff !== 0) return agingDiff;
-      // Within same aging group, newest first
-      return new Date(b.created_date) - new Date(a.created_date);
-    });
+    .sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
 
   if (filteredLeads.length === 0) {
     return (
