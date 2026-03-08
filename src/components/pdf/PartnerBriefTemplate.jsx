@@ -274,6 +274,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   }
   
   // COST COVERAGE & BUDGET
+  checkPageBreak(40);
   yPos = drawSectionHeader('COST COVERAGE & BUDGET', yPos);
   
   // Table header - teal background
