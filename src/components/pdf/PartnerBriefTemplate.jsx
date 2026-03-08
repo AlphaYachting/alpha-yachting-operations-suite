@@ -28,8 +28,8 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   const LOGO_BOX = {
     x: margins.left,
     y: HEADER_TOP_Y,
-    w: 52,   // Width in mm (~30% larger)
-    h: 29    // Fixed height in mm (~30% larger)
+    w: 104,  // Width in mm (doubled)
+    h: 58    // Fixed height in mm (doubled)
   };
   const HEADER_TEXT_START_Y = LOGO_BOX.y + LOGO_BOX.h + 6; // Logo bottom + compact padding
   
