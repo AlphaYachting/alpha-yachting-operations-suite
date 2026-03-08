@@ -345,25 +345,7 @@ export default function TeamOrderDetail() {
         </div>
       </div>
 
-      {/* PDF Preview Dialog */}
-      <Dialog open={showPreview} onOpenChange={(open) => {
-        setShowPreview(open);
-        if (!open && previewUrl) {
-          URL.revokeObjectURL(previewUrl);
-          setPreviewUrl(null);
-        }
-      }}>
-        <DialogContent className="max-w-5xl h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Partner Brief Preview</DialogTitle>
-          </DialogHeader>
-          <iframe
-            src={previewUrl}
-            className="w-full h-full border-0"
-            title="PDF Preview"
-          />
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }
