@@ -42,6 +42,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { format, parseISO } from 'date-fns';
+import LeadFormV2 from '@/components/leadsV2/LeadForm';
 
 const statusColors = {
   Pending: 'bg-slate-100 text-slate-700',
