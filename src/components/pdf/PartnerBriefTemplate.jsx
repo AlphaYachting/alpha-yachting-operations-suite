@@ -28,10 +28,10 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   const LOGO_BOX = {
     x: margins.left,
     y: HEADER_TOP_Y,
-    w: 45,  // Width in mm
-    h: 15   // Estimated height in mm (will auto-adjust but reserve space)
+    w: 40,   // Width in mm
+    h: 22    // Fixed height in mm
   };
-  const HEADER_TEXT_START_Y = LOGO_BOX.y + LOGO_BOX.h + 30; // Logo bottom + padding (increased to prevent overlap)
+  const HEADER_TEXT_START_Y = LOGO_BOX.y + LOGO_BOX.h + 6; // Logo bottom + compact padding
   
   function hexToRgb(hex) {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
