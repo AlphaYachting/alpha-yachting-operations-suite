@@ -48,7 +48,7 @@ import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfD
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
-import LeadForm from '@/components/leads/LeadForm';
+import LeadForm from '@/components/leadsV2/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
 
@@ -507,7 +507,7 @@ export default function Dashboard() {
             </Card>
           </Link>
 
-          <Link to={createPageUrl('LeadsV2')} className="block">
+          <Link to={createPageUrl('Leads')} className="block">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -672,7 +672,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-medium text-red-900">Stale Leads ({staleLeads.length})</h3>
                   <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('LeadsV2')}>View All</Link>
+                    <Link to={createPageUrl('Leads')}>View All</Link>
                   </Button>
                 </div>
                 <div className="space-y-2">
@@ -988,7 +988,7 @@ export default function Dashboard() {
                 ))}
                 {allOpenLeads.length > 5 && (
                   <Button variant="outline" size="sm" asChild className="w-full mt-2">
-                    <Link to={createPageUrl('LeadsV2')}>View All ({allOpenLeads.length})</Link>
+                    <Link to={createPageUrl('Leads')}>View All ({allOpenLeads.length})</Link>
                   </Button>
                 )}
               </div>
