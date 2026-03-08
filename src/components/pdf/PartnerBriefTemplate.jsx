@@ -92,10 +92,34 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   
   // === HEADER SECTION - Reserved space, no overlap ===
   
-  // Logo - fixed height to control header space
+  // Logo - preserve natural aspect ratio, max height = LOGO_BOX.h
   if (template.logo_url) {
     try {
-      doc.addImage(template.logo_url, 'PNG', LOGO_BOX.x, LOGO_BOX.y, LOGO_BOX.w, LOGO_BOX.h, undefined, 'FAST');
+      await new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const naturalW = img.naturalWidth;
+          const naturalH = img.naturalHeight;
+          const maxH = LOGO_BOX.h;
+          const maxW = LOGO_BOX.w;
+          // Scale to fit within the box while preserving aspect ratio
+          let drawH = maxH;
+          let drawW = (naturalW / naturalH) * drawH;
+          if (drawW > maxW) {
+            drawW = maxW;
+            drawH = (naturalH / naturalW) * drawW;
+          }
+          try {
+            doc.addImage(img, 'PNG', LOGO_BOX.x, LOGO_BOX.y, drawW, drawH, undefined, 'FAST');
+          } catch (e) {
+            console.log('Logo render error', e);
+          }
+          resolve();
+        };
+        img.onerror = () => resolve();
+        img.src = template.logo_url;
+      });
     } catch (e) {
       console.log('Logo not loaded');
     }
