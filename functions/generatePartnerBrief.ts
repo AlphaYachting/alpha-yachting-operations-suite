@@ -130,7 +130,7 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
         </div>
         <div class="field">
           <div class="label">Length</div>
-          <div class="value">${boat?.length_m ? boat.length_m + 'm' : 'Unknown'}</div>
+          <div class="value">${boat?.length_m ? boat.length_m + ' m' : 'Unknown'}</div>
         </div>
       </div>
     </div>
