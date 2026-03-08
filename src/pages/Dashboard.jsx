@@ -20,8 +20,7 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2,
-  Mail
+  BarChart2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,7 +49,6 @@ import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
-import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
 
@@ -76,8 +74,6 @@ export default function Dashboard() {
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
   const [showLeadDialog, setShowLeadDialog] = useState(false);
-  const [showEmailParserDialog, setShowEmailParserDialog] = useState(false);
-  const [emailParsedLead, setEmailParsedLead] = useState(null);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [noteForm, setNoteForm] = useState({
@@ -311,7 +307,9 @@ export default function Dashboard() {
   };
 
   // SALES & ORGANISATION
-  const allOpenLeads = leads.filter(l => !['Converted', 'Rejected', 'Lost'].includes(l.status));
+  const allOpenLeads = leads
+    .filter(l => !['Converted', 'Rejected', 'Lost'].includes(l.status))
+    .sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
   const allOpenOffers = offers.filter(o => !['Approved', 'Rejected', 'Expired', 'Converted'].includes(o.status));
 
   const getAge = (dateStr) => {
@@ -444,15 +442,6 @@ export default function Dashboard() {
           >
             <Plus className="h-4 w-4 mr-1" />
             Lead
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={() => setShowEmailParserDialog(true)}
-            className="border-purple-300 text-purple-700 hover:bg-purple-50"
-          >
-            <Mail className="h-4 w-4 mr-1" />
-            E-Mail → Lead
           </Button>
           <Button 
             size="sm" 
@@ -1115,42 +1104,18 @@ export default function Dashboard() {
       <Dialog open={showLeadDialog} onOpenChange={setShowLeadDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{emailParsedLead ? 'Lead aus E-Mail' : 'Create New Lead'}</DialogTitle>
+            <DialogTitle>Create New Lead</DialogTitle>
           </DialogHeader>
           <LeadForm
-            lead={emailParsedLead}
-            customers={customers}
-            boats={boats}
             locations={locations}
             onSave={async (leadData) => {
               const newLead = await base44.entities.Lead.create(leadData);
               setLeads([newLead, ...leads]);
               setShowLeadDialog(false);
-              setEmailParsedLead(null);
               toast.success('Lead created');
               await loadDashboardData();
             }}
-            onCancel={() => {
-              setShowLeadDialog(false);
-              setEmailParsedLead(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Email to Lead Parser Dialog */}
-      <Dialog open={showEmailParserDialog} onOpenChange={setShowEmailParserDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>E-Mail → Lead</DialogTitle>
-          </DialogHeader>
-          <EmailToLeadParser
-            onLeadParsed={(leadData) => {
-              setShowEmailParserDialog(false);
-              setEmailParsedLead(leadData);
-              setShowLeadDialog(true);
-            }}
-            onCancel={() => setShowEmailParserDialog(false)}
+            onCancel={() => setShowLeadDialog(false)}
           />
         </DialogContent>
       </Dialog>
