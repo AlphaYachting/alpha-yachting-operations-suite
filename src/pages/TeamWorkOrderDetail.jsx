@@ -210,7 +210,6 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
   const [accessLogId, setAccessLogId] = useState(null);
   const [showRequirements, setShowRequirements] = useState(false);
   const [requirementsCount, setRequirementsCount] = useState(0);
-  const [technicians, setTechnicians] = useState([]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -872,81 +871,168 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         </Card>
 
         {/* Tasks Section */}
-        {tasks.length > 0 &&
         <div>
-            <h2 className="text-sm font-semibold text-slate-900 mb-3">Tasks ({tasks.length})</h2>
-            <div className="space-y-3">
-              {tasks.map((task) => {
-                const isCompleted = task.status === 'Completed';
-                return (
-              <Card key={task.id} className={isCompleted ? 'opacity-60' : ''}>
-              <CardContent className="p-4 relative">
-                {/* Task Title */}
-                 <div className="mb-4 pr-32">
-                   <p className="text-slate-900 text-base font-semibold">{task.title}</p>
-                 </div>
-                 
-                 {/* Action Button & Status Icon */}
-                 <div className="absolute top-4 right-4 flex items-center gap-2">
-                   <Button
-                     onClick={() => handleCompleteTask(task.id)}
-                     disabled={isCompleted || updatingTaskId === task.id}
-                     className={`text-sm font-semibold px-3 py-1.5 rounded text-white ${
-                       isCompleted
-                         ? 'bg-green-600 cursor-not-allowed'
-                         : 'bg-slate-600 hover:bg-slate-700'
-                     }`}
-                   >
-                     {isCompleted ? 'Completed' : 'Start'}
-                   </Button>
-                   <div className="flex-shrink-0">
-                     {isCompleted ? (
-                       <CheckCircle2 className="h-5 w-5 text-green-600 fill-green-600" />
-                     ) : (
-                       <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
-                     )}
-                   </div>
-                 </div>
-
-                {/* Task Description */}
-                {task.description &&
-                  <p className="text-xs text-slate-600 leading-relaxed mb-2">{task.description}</p>
-                }
-
-                {/* Task Status Badge */}
-                <Badge variant="outline" className="text-xs">
-                  {task.status}
-                </Badge>
-
-                {/* Task Notes */}
-                {task.notes &&
-                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
-                    <p className="font-medium mb-1">Notes:</p>
-                    <p>{task.notes}</p>
-                  </div>
-                }
-
-                {/* Estimated Time */}
-                {task.estimated_minutes &&
-                  <div className="mt-2 text-xs text-slate-600">
-                    <span className="font-medium">Estimated:</span> {Math.round(task.estimated_minutes / 60)} min
-                  </div>
-                }
-              </CardContent>
-            </Card>
-            );
-              })}
+          <h2 className="text-sm font-semibold text-slate-900 mb-3">
+            Tasks ({tasks.filter(t => t.status !== 'Completed').length}/{tasks.length})
+          </h2>
+          {tasks.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle2 className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+              <p className="text-slate-500 text-sm">No tasks assigned yet</p>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              {[...tasks]
+                .sort((a, b) => {
+                  const order = { 'In Progress': 0, 'Not Started': 1, 'Needs Approval': 2, 'Not Possible': 3, 'Skipped': 4, 'Completed': 5 };
+                  return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+                })
+                .map((task) => {
+                  const isCompleted = task.status === 'Completed';
+                  return (
+                    <Card key={task.id} className={isCompleted ? 'opacity-60' : ''}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-600 fill-green-600 flex-shrink-0" />
+                            ) : (
+                              <div className="h-5 w-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                            )}
+                          </div>
+                          <p className={`flex-1 text-base font-semibold ${isCompleted ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                            {task.title}
+                          </p>
+                          <div className="flex gap-2 flex-shrink-0">
+                            {!isCompleted ? (
+                              <Button
+                                onClick={() => handleCompleteTask(task.id)}
+                                disabled={updatingTaskId === task.id}
+                                className="text-sm font-semibold px-3 py-1.5 rounded text-white bg-emerald-600 hover:bg-emerald-700"
+                              >
+                                Mark Done
+                              </Button>
+                            ) : (
+                              <Button
+                                onClick={() => handleReopenTask(task.id)}
+                                disabled={updatingTaskId === task.id}
+                                variant="outline"
+                                className="text-xs px-2 py-1 border-slate-300 text-slate-600"
+                              >
+                                Reopen
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {task.description && (
+                          <p className="text-xs text-slate-600 leading-relaxed mb-2 ml-7">{task.description}</p>
+                        )}
+                        {task.notes && (
+                          <div className="mt-2 ml-7 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+                            <p className="font-medium mb-1">Notes:</p>
+                            <p>{task.notes}</p>
+                          </div>
+                        )}
+                        {task.estimated_minutes && (
+                          <div className="mt-1 ml-7 text-xs text-slate-500">
+                            Est: {task.estimated_minutes} min
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+
+        {/* Description */}
+        {job?.description &&
+        <Card>
+            <CardContent className="p-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Description</p>
+              <p className="text-sm text-slate-700 leading-relaxed">{job.description}</p>
+            </CardContent>
+          </Card>
         }
 
-        {/* No Tasks */}
-        {tasks.length === 0 &&
-        <div className="text-center py-8">
-            <CheckCircle2 className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-500 text-sm">No tasks assigned yet</p>
-          </div>
+        {/* Safety Notes */}
+        {workOrder.safety_notes &&
+        <Card className="border-orange-200 bg-orange-50">
+            <CardContent className="p-4">
+              <div className="flex gap-3">
+                <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-orange-900 uppercase mb-1">Safety Notes</p>
+                  <p className="text-sm text-orange-900">{workOrder.safety_notes}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         }
+
+        {/* Photos Section */}
+        <Card>
+         <CardContent className="p-4">
+           <h2 className="text-sm font-semibold text-slate-900 mb-4">Documentation Photos</h2>
+           <div className="mb-4">
+             <PhotoUpload 
+               workOrderId={workOrder.id} 
+               tasks={tasks}
+               onSuccess={() => loadData()} 
+             />
+           </div>
+           {photos.length > 0 && (
+             <PhotoGallery 
+               photos={photos}
+               tasks={tasks}
+               onPhotoDeleted={() => loadData()}
+               onPhotoUpdated={() => loadData()}
+             />
+           )}
+         </CardContent>
+        </Card>
+
+        {/* Comments Section */}
+        <Card>
+          <CardContent className="p-4">
+            <h2 className="text-sm font-semibold text-slate-900 mb-4">Work Notes</h2>
+            <div className="space-y-2 mb-4">
+              <Textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Leave a note about this work order..."
+                rows={3}
+                className="text-sm"
+              />
+              <Button
+                onClick={handleAddComment}
+                disabled={!commentText.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Add Note
+              </Button>
+            </div>
+            {comments.length > 0 && (
+              <div className="space-y-3 border-t pt-4">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="bg-slate-50 rounded-lg p-3">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="font-medium text-sm text-slate-900">{comment.author_name}</p>
+                      <span className="text-xs text-slate-500">{comment.created_date ? format(parseISO(comment.created_date), 'MMM d, HH:mm') : 'Just now'}</span>
+                    </div>
+                    <p className="text-sm text-slate-700 leading-relaxed">{comment.content}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {comments.length === 0 && (
+              <p className="text-sm text-slate-500 text-center py-4">No notes yet</p>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>);
 
