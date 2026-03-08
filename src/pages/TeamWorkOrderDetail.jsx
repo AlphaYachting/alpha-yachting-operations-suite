@@ -210,7 +210,6 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
   const [accessLogId, setAccessLogId] = useState(null);
   const [showRequirements, setShowRequirements] = useState(false);
   const [requirementsCount, setRequirementsCount] = useState(0);
-  const [technicians, setTechnicians] = useState([]);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -452,20 +451,10 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
           boatData?.[0] ? offlineStorage.saveData(offlineStorage.STORES.boats, boatData[0]) : Promise.resolve()
         ]).catch(e => console.error('Cache save error:', e));
 
-        // Load requirements count + technicians (non-blocking)
+        // Load requirements count (non-blocking)
         base44.entities.WorkOrderRequirementItem.filter({ work_order_id: effectiveWoId })
           .then(data => setRequirementsCount(data?.length || 0))
           .catch(() => setRequirementsCount(0));
-
-        const techIds = [
-          ...(wo.assigned_technicians || []),
-          wo.lead_technician_id
-        ].filter(Boolean);
-        if (techIds.length > 0) {
-          base44.entities.Technician.filter({ id: { $in: techIds } })
-            .then(data => setTechnicians(data || []))
-            .catch(() => {});
-        }
       } catch (error) {
         // Network error - already showing cached data
         if (!cachedWo) {
@@ -882,81 +871,82 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         </Card>
 
         {/* Tasks Section */}
-        {tasks.length > 0 &&
         <div>
-            <h2 className="text-sm font-semibold text-slate-900 mb-3">Tasks ({tasks.length})</h2>
-            <div className="space-y-3">
-              {tasks.map((task) => {
-                const isCompleted = task.status === 'Completed';
-                return (
-              <Card key={task.id} className={isCompleted ? 'opacity-60' : ''}>
-              <CardContent className="p-4 relative">
-                {/* Task Title */}
-                 <div className="mb-4 pr-32">
-                   <p className="text-slate-900 text-base font-semibold">{task.title}</p>
-                 </div>
-                 
-                 {/* Action Button & Status Icon */}
-                 <div className="absolute top-4 right-4 flex items-center gap-2">
-                   <Button
-                     onClick={() => handleCompleteTask(task.id)}
-                     disabled={isCompleted || updatingTaskId === task.id}
-                     className={`text-sm font-semibold px-3 py-1.5 rounded text-white ${
-                       isCompleted
-                         ? 'bg-green-600 cursor-not-allowed'
-                         : 'bg-slate-600 hover:bg-slate-700'
-                     }`}
-                   >
-                     {isCompleted ? 'Completed' : 'Start'}
-                   </Button>
-                   <div className="flex-shrink-0">
-                     {isCompleted ? (
-                       <CheckCircle2 className="h-5 w-5 text-green-600 fill-green-600" />
-                     ) : (
-                       <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
-                     )}
-                   </div>
-                 </div>
-
-                {/* Task Description */}
-                {task.description &&
-                  <p className="text-xs text-slate-600 leading-relaxed mb-2">{task.description}</p>
-                }
-
-                {/* Task Status Badge */}
-                <Badge variant="outline" className="text-xs">
-                  {task.status}
-                </Badge>
-
-                {/* Task Notes */}
-                {task.notes &&
-                  <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
-                    <p className="font-medium mb-1">Notes:</p>
-                    <p>{task.notes}</p>
-                  </div>
-                }
-
-                {/* Estimated Time */}
-                {task.estimated_minutes &&
-                  <div className="mt-2 text-xs text-slate-600">
-                    <span className="font-medium">Estimated:</span> {Math.round(task.estimated_minutes / 60)} min
-                  </div>
-                }
-              </CardContent>
-            </Card>
-            );
-              })}
+          <h2 className="text-sm font-semibold text-slate-900 mb-3">
+            Tasks ({tasks.filter(t => t.status !== 'Completed').length}/{tasks.length})
+          </h2>
+          {tasks.length === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle2 className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+              <p className="text-slate-500 text-sm">No tasks assigned yet</p>
             </div>
-          </div>
-        }
+          ) : (
+            <div className="space-y-3">
+              {[...tasks]
+                .sort((a, b) => {
+                  const order = { 'In Progress': 0, 'Not Started': 1, 'Needs Approval': 2, 'Not Possible': 3, 'Skipped': 4, 'Completed': 5 };
+                  return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+                })
+                .map((task) => {
+                  const isCompleted = task.status === 'Completed';
+                  return (
+                    <Card key={task.id} className={isCompleted ? 'opacity-60' : ''}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-600 fill-green-600 flex-shrink-0" />
+                            ) : (
+                              <div className="h-5 w-5 rounded-full border-2 border-slate-300 flex-shrink-0" />
+                            )}
+                          </div>
+                          <p className={`flex-1 text-base font-semibold ${isCompleted ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                            {task.title}
+                          </p>
+                          <div className="flex gap-2 flex-shrink-0">
+                            {!isCompleted ? (
+                              <Button
+                                onClick={() => handleCompleteTask(task.id)}
+                                disabled={updatingTaskId === task.id}
+                                className="text-sm font-semibold px-3 py-1.5 rounded text-white bg-emerald-600 hover:bg-emerald-700"
+                              >
+                                Mark Done
+                              </Button>
+                            ) : (
+                              <Button
+                                onClick={() => handleReopenTask(task.id)}
+                                disabled={updatingTaskId === task.id}
+                                variant="outline"
+                                className="text-xs px-2 py-1 border-slate-300 text-slate-600"
+                              >
+                                Reopen
+                              </Button>
+                            )}
+                          </div>
+                        </div>
 
-        {/* No Tasks */}
-        {tasks.length === 0 &&
-        <div className="text-center py-8">
-            <CheckCircle2 className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-500 text-sm">No tasks assigned yet</p>
-          </div>
-        }
+                        {task.description && (
+                          <p className="text-xs text-slate-600 leading-relaxed mb-2 ml-7">{task.description}</p>
+                        )}
+                        {task.notes && (
+                          <div className="mt-2 ml-7 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+                            <p className="font-medium mb-1">Notes:</p>
+                            <p>{task.notes}</p>
+                          </div>
+                        )}
+                        {task.estimated_minutes && (
+                          <div className="mt-1 ml-7 text-xs text-slate-500">
+                            Est: {task.estimated_minutes} min
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>);
 
