@@ -495,52 +495,30 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           </div>
         }
 
-        {/* ATTENTION Section */}
-        {(() => {
-          const overdueTasks = tasks.filter(t => {
-            const wo = workOrders.find(w => w.id === t.work_order_id);
-            if (!wo?.scheduled_date) return false;
-            const woDate = parseISO(wo.scheduled_date);
-            return woDate < startOfDay(new Date()) && t.status !== 'Completed';
-          });
-          
+        {/* ATTENTION Section - Admin only for assignment/location issues */}
+        {user?.role === 'admin' && (() => {
           const jobsWithoutTech = workOrders.filter(wo => 
             (!wo.assigned_technicians || wo.assigned_technicians.length === 0) && 
-            wo.status !== 'Completed' && 
-            wo.status !== 'Cancelled'
+            wo.status !== 'Completed' && wo.status !== 'Cancelled'
           );
-          
           const jobsWithoutLocation = workOrders.filter(wo => {
             const job = jobs.find(j => j.id === wo.job_id);
             return !job?.location_id && wo.status !== 'Completed' && wo.status !== 'Cancelled';
           });
-          
-          const hasAlerts = overdueTasks.length > 0 || jobsWithoutTech.length > 0 || jobsWithoutLocation.length > 0;
-          
-          if (!hasAlerts) return null;
-          
+          if (jobsWithoutTech.length === 0 && jobsWithoutLocation.length === 0) return null;
           return (
             <Card className="bg-amber-50 border-amber-200 shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertCircle className="h-5 w-5 text-amber-600" />
-                  <h3 className="text-sm font-bold text-amber-900 uppercase">Attention Required</h3>
+                  <h3 className="text-sm font-bold text-amber-900 uppercase">Admin: Attention Required</h3>
                 </div>
                 <div className="space-y-2">
-                  {overdueTasks.length > 0 && (
-                    <div className="text-sm text-amber-900">
-                      ⚠️ {overdueTasks.length} overdue {overdueTasks.length === 1 ? 'task' : 'tasks'}
-                    </div>
-                  )}
                   {jobsWithoutTech.length > 0 && (
-                    <div className="text-sm text-amber-900">
-                      ⚠️ {jobsWithoutTech.length} {jobsWithoutTech.length === 1 ? 'job' : 'jobs'} without technician
-                    </div>
+                    <div className="text-sm text-amber-900">⚠️ {jobsWithoutTech.length} {jobsWithoutTech.length === 1 ? 'job' : 'jobs'} without technician</div>
                   )}
                   {jobsWithoutLocation.length > 0 && (
-                    <div className="text-sm text-amber-900">
-                      ⚠️ {jobsWithoutLocation.length} {jobsWithoutLocation.length === 1 ? 'job' : 'jobs'} without location
-                    </div>
+                    <div className="text-sm text-amber-900">⚠️ {jobsWithoutLocation.length} {jobsWithoutLocation.length === 1 ? 'job' : 'jobs'} without location</div>
                   )}
                 </div>
               </CardContent>
