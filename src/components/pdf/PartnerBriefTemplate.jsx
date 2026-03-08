@@ -141,7 +141,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
   doc.text(`Generated: ${timestamp}`, margins.left, yPos);
-  yPos += 10;
+  yPos += 6;
 
   // Footer helper - draws footer on current page
   const drawFooter = () => {
