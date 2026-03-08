@@ -299,11 +299,11 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   budgetRows.forEach(([label, amount]) => {
     doc.text(label, margins.left + 2, yPos);
     doc.text(amount, pageWidth - margins.right - 2, yPos, { align: 'right' });
-    yPos += 5;
+    yPos += 4.5;
     doc.setDrawColor(220, 220, 220);
     doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
   });
-  yPos += 3;
+  yPos += 2;
   
   // COVERED COSTS - render cost_policies array as bullet list
   checkPageBreak(20);
