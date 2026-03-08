@@ -714,6 +714,26 @@ export default function LeadDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Lead Dialog */}
+      <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Lead</DialogTitle>
+          </DialogHeader>
+          {showEditForm && (
+            <LeadFormV2
+              lead={lead}
+              customers={editCustomers}
+              locations={editLocations}
+              users={allUsers}
+              boats={editBoats}
+              onSave={handleLeadSave}
+              onCancel={() => setShowEditForm(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Comment Dialog */}
       <Dialog open={!!selectedTaskForComment} onOpenChange={(open) => !open && setSelectedTaskForComment(null)}>
         <DialogContent className="max-w-md">
