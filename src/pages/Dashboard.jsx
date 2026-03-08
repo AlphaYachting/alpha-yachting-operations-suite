@@ -1110,7 +1110,7 @@ export default function Dashboard() {
           <LeadForm
             customers={customers}
             locations={locations}
-            users={[]}
+            users={users}
             boats={boats}
             onSave={async (leadData) => {
               const newLead = await base44.entities.Lead.create(leadData);
