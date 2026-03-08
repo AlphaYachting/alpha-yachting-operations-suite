@@ -237,109 +237,12 @@ export default function TeamOrderDetail() {
         </div>
         <div className="flex gap-2">
           {!isNew && workOrder && teamOrder.id && (
-            <>
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    setGenerating(true);
-                    setError(null);
-                    
-                    const template = await base44.entities.PDFTemplate.list();
-                    const partnerTemplate = template.find(t => t.template_type === 'PartnerBrief') || template[0];
-                    
-                    console.log('Generating PDF with:', { workOrderId: workOrder.id, teamOrderId: teamOrder.id });
-                    
-                    const response = await base44.functions.invoke('generatePartnerBriefPDF', {
-                      workOrderId: workOrder.id,
-                      teamOrderId: teamOrder.id,
-                      templateData: partnerTemplate
-                    });
-                    
-                    console.log('PDF Response:', response);
-                    console.log('PDF Response Data:', response.data);
-                    console.log('Response Status:', response.status);
-                    
-                    if (response.data?.success && response.data?.pdf) {
-                      const byteCharacters = atob(response.data.pdf);
-                      const byteNumbers = new Array(byteCharacters.length);
-                      for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                      }
-                      const byteArray = new Uint8Array(byteNumbers);
-                      const blob = new Blob([byteArray], { type: 'application/pdf' });
-                      const blobUrl = URL.createObjectURL(blob);
-                      setPreviewUrl(blobUrl);
-                      setShowPreview(true);
-                    } else {
-                      const errorMsg = response.data?.error || response.data?.message || JSON.stringify(response.data) || 'Unknown error';
-                      setError('Failed to generate PDF: ' + errorMsg);
-                      console.error('PDF generation failed:', response);
-                    }
-                  } catch (error) {
-                    console.error('PDF preview error:', error);
-                    setError('PDF generation failed: ' + error.message);
-                  } finally {
-                    setGenerating(false);
-                  }
-                }}
-                disabled={generating}
-              >
-                {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Eye className="h-4 w-4 mr-2" />}
-                Preview Brief
-              </Button>
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    setGenerating(true);
-                    setError(null);
-                    
-                    const template = await base44.entities.PDFTemplate.list();
-                    const partnerTemplate = template.find(t => t.template_type === 'PartnerBrief') || template[0];
-                    
-                    const response = await base44.functions.invoke('generatePartnerBriefPDF', {
-                      workOrderId: workOrder.id,
-                      teamOrderId: teamOrder.id,
-                      templateData: partnerTemplate
-                    });
-                    
-                    console.log('Download PDF Response:', response.data);
-                    
-                    if (response.data?.success && response.data?.pdf) {
-                      const byteCharacters = atob(response.data.pdf);
-                      const byteNumbers = new Array(byteCharacters.length);
-                      for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                      }
-                      const byteArray = new Uint8Array(byteNumbers);
-                      const blob = new Blob([byteArray], { type: 'application/pdf' });
-                      const blobUrl = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = blobUrl;
-                      link.download = response.data.fileName;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(blobUrl);
-                    } else {
-                      const errorMsg = response.data?.error || response.data?.message || JSON.stringify(response.data) || 'Unknown error';
-                      setError('Failed to download PDF: ' + errorMsg);
-                      console.error('PDF download failed:', response);
-                    }
-                  } catch (error) {
-                    console.error('PDF download error:', error);
-                    setError('PDF download failed: ' + error.message);
-                  } finally {
-                    setGenerating(false);
-                  }
-                }}
-                disabled={generating}
-              >
-                {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                Download Brief
-              </Button>
-            </>
+            <PDFExportButton
+              document={getPartnerBriefPDFDocument()}
+              lineItems={getPartnerBriefPDFLineItems()}
+              templateId="PartnerBrief"
+              variant="default"
+            />
           )}
           <Button onClick={handleSave} disabled={saving} className="bg-purple-600 hover:bg-purple-700">
             <Save className="h-4 w-4 mr-2" />
