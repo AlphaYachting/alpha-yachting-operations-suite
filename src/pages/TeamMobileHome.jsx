@@ -165,28 +165,22 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
   const groupWorkOrdersBySection = () => {
     const today = startOfDay(new Date());
-    const sections = { today: [], upcoming: [], later: [] };
+    const sections = { overdue: [], today: [], upcoming: [], later: [] };
 
-    // CRITICAL FIX: Work orders already filtered by technicianId in loadData
-    // No need to re-filter - just use all loaded work orders
-    const userWorkOrders = workOrders;
-
-    console.log('📊 DEBUG - Grouping:', {
-      totalWorkOrders: workOrders.length,
-      resolvedTechnicianId,
-      todayDate: today.toISOString()
-    });
+    // Exclude completed and cancelled WOs
+    const activeWorkOrders = workOrders.filter(wo =>
+      wo.status !== 'Completed' && wo.status !== 'Cancelled'
+    );
 
     const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     
-    userWorkOrders.forEach((wo) => {
-      // Hide completed/cancelled WOs from the list
-      if (wo.status === 'Completed' || wo.status === 'Cancelled') return;
-
+    activeWorkOrders.forEach((wo) => {
       const woDate = wo.scheduled_date ? startOfDay(parseISO(wo.scheduled_date)) : null;
       
       if (!woDate) {
         sections.later.push(wo);
+      } else if (woDate < today) {
+        sections.overdue.push(wo);
       } else if (woDate.getTime() === today.getTime()) {
         sections.today.push(wo);
       } else if (woDate > today && woDate <= sevenDaysFromNow) {
@@ -196,14 +190,8 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
       }
     });
 
-    console.log('✅ Sections:', {
-      today: sections.today.length,
-      upcoming: sections.upcoming.length,
-      later: sections.later.length
-    });
-
     // Sort each section by date and time
-    [sections.today, sections.upcoming, sections.later].forEach((section) => {
+    [sections.overdue, sections.today, sections.upcoming, sections.later].forEach((section) => {
       section.sort((a, b) => {
         const dateA = a.scheduled_date ? parseISO(a.scheduled_date) : new Date();
         const dateB = b.scheduled_date ? parseISO(b.scheduled_date) : new Date();
@@ -455,6 +443,18 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           </Card>
         }
 
+        {/* OVERDUE Section */}
+        {sections.overdue.length > 0 &&
+          <div>
+            <h2 className="text-lg font-bold text-red-700 mb-3">⚠️ Overdue ({sections.overdue.length})</h2>
+            <div className="space-y-3">
+              {sections.overdue.map((wo) =>
+                <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
+              )}
+            </div>
+          </div>
+        }
+
         {/* TODAY Section */}
         {sections.today.length > 0 &&
           <div>
@@ -495,51 +495,52 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           </div>
         }
 
-        {/* OVERDUE Section - WOs with past date still open */}
+        {/* ATTENTION Section */}
         {(() => {
-          const overdueWOs = workOrders.filter(wo => {
-            if (wo.status === 'Completed' || wo.status === 'Cancelled') return false;
-            if (!wo.scheduled_date) return false;
-            return startOfDay(parseISO(wo.scheduled_date)) < startOfDay(new Date());
+          const overdueTasks = tasks.filter(t => {
+            const wo = workOrders.find(w => w.id === t.work_order_id);
+            if (!wo?.scheduled_date) return false;
+            const woDate = parseISO(wo.scheduled_date);
+            return woDate < startOfDay(new Date()) && t.status !== 'Completed';
           });
-          if (overdueWOs.length === 0) return null;
-          return (
-            <div>
-              <h2 className="text-lg font-bold text-red-700 mb-3">⚠️ Overdue ({overdueWOs.length})</h2>
-              <div className="space-y-3">
-                {overdueWOs.map((wo) =>
-                  <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
-                )}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* ATTENTION Section (admin-only: jobs without tech/location) */}
-        {user?.role === 'admin' && (() => {
+          
           const jobsWithoutTech = workOrders.filter(wo => 
             (!wo.assigned_technicians || wo.assigned_technicians.length === 0) && 
-            wo.status !== 'Completed' && wo.status !== 'Cancelled'
+            wo.status !== 'Completed' && 
+            wo.status !== 'Cancelled'
           );
+          
           const jobsWithoutLocation = workOrders.filter(wo => {
             const job = jobs.find(j => j.id === wo.job_id);
             return !job?.location_id && wo.status !== 'Completed' && wo.status !== 'Cancelled';
           });
-          const hasAlerts = jobsWithoutTech.length > 0 || jobsWithoutLocation.length > 0;
+          
+          const hasAlerts = overdueTasks.length > 0 || jobsWithoutTech.length > 0 || jobsWithoutLocation.length > 0;
+          
           if (!hasAlerts) return null;
+          
           return (
             <Card className="bg-amber-50 border-amber-200 shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertCircle className="h-5 w-5 text-amber-600" />
-                  <h3 className="text-sm font-bold text-amber-900 uppercase">Admin: Attention Required</h3>
+                  <h3 className="text-sm font-bold text-amber-900 uppercase">Attention Required</h3>
                 </div>
                 <div className="space-y-2">
+                  {overdueTasks.length > 0 && (
+                    <div className="text-sm text-amber-900">
+                      ⚠️ {overdueTasks.length} overdue {overdueTasks.length === 1 ? 'task' : 'tasks'}
+                    </div>
+                  )}
                   {jobsWithoutTech.length > 0 && (
-                    <div className="text-sm text-amber-900">⚠️ {jobsWithoutTech.length} {jobsWithoutTech.length === 1 ? 'WO' : 'WOs'} without technician</div>
+                    <div className="text-sm text-amber-900">
+                      ⚠️ {jobsWithoutTech.length} {jobsWithoutTech.length === 1 ? 'job' : 'jobs'} without technician
+                    </div>
                   )}
                   {jobsWithoutLocation.length > 0 && (
-                    <div className="text-sm text-amber-900">⚠️ {jobsWithoutLocation.length} {jobsWithoutLocation.length === 1 ? 'WO' : 'WOs'} without location</div>
+                    <div className="text-sm text-amber-900">
+                      ⚠️ {jobsWithoutLocation.length} {jobsWithoutLocation.length === 1 ? 'job' : 'jobs'} without location
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -548,11 +549,11 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         })()}
 
         {/* Empty State */}
-        {sections.today.length === 0 && sections.upcoming.length === 0 &&
+        {sections.overdue.length === 0 && sections.today.length === 0 && sections.upcoming.length === 0 && sections.later.length === 0 &&
           <div className="text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-600 font-medium mb-1">No scheduled work orders</p>
-            <p className="text-slate-500 text-sm">You have no items assigned in the next 7 days</p>
+            <p className="text-slate-600 font-medium mb-1">No open work orders</p>
+            <p className="text-slate-500 text-sm">All your work is done or no items assigned</p>
           </div>
         }
       </div>
