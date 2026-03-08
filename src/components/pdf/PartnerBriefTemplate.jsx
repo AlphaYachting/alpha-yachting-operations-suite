@@ -308,6 +308,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   yPos += 3;
   
   // COVERED COSTS - render cost_policies array as bullet list
+  checkPageBreak(20);
   yPos = drawSectionHeader('COVERED COSTS', yPos);
   doc.setFont(fontFamily, 'normal');
   doc.setFontSize(9);
