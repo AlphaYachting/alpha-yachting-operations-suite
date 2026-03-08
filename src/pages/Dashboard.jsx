@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [leads, setLeads] = useState([]);
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [users, setUsers] = useState([]);
   const [kpis, setKpis] = useState(null);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
