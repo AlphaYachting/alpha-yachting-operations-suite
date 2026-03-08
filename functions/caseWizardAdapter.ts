@@ -239,10 +239,21 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Boat is required for job/inspection creation' }, { status: 400 });
       }
 
+      // Allocate canonical Job number inline (avoid nested function invoke)
+      const recentJobsForNum = await base44.asServiceRole.entities.Job.list('-created_date', 100);
+      const validJobNumbers = recentJobsForNum
+        .map(j => j.job_number)
+        .filter(num => num && /^J\d{5}$/.test(num))
+        .map(num => parseInt(num.substring(1), 10))
+        .filter(num => !isNaN(num));
+      const maxJobNumber = validJobNumbers.length > 0 ? Math.max(...validJobNumbers) : 0;
+      const allocatedJobNumber = `J${String(maxJobNumber + 1).padStart(5, '0')}`;
+
       job = await base44.asServiceRole.entities.Job.create({
         customer_id: customer.id,
         boat_id: boat.id,
         location_id: location?.id,
+        job_number: allocatedJobNumber,
         title: wizardData.job?.title || wizardData.workOrder?.title || 'Inspection',
         description: wizardData.job?.description || wizardData.workOrder?.description || '',
         job_type: wizardData.job?.jobType || 'Mobile Service',
