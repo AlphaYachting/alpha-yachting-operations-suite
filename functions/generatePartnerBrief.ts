@@ -235,15 +235,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const [workOrders, teamOrders, jobs, customers, boats, locations, tasks, technicians, templates] = await Promise.all([
+    // Step 1: fetch WO + TeamOrder + Templates in parallel
+    const [workOrders, teamOrders, templates] = await Promise.all([
       base44.entities.WorkOrder.filter({ id: workOrderId }),
       base44.entities.TeamOrder.filter({ id: teamOrderId }),
-      base44.entities.Job.list(),
-      base44.entities.Customer.list(),
-      base44.entities.Boat.list(),
-      base44.entities.Location.list(),
-      base44.entities.Task.filter({ work_order_id: workOrderId }),
-      base44.entities.Technician.list(),
       base44.entities.PDFTemplate.list()
     ]);
 
@@ -253,11 +248,25 @@ Deno.serve(async (req) => {
 
     const workOrder = workOrders[0];
     const teamOrder = teamOrders[0];
-    const job = jobs.find(j => j.id === workOrder.job_id);
-    const customer = customers.find(c => c.id === job?.customer_id);
-    const boat = boats.find(b => b.id === job?.boat_id);
-    const location = locations.find(l => l.id === job?.location_id);
     const template = templates.find(t => t.is_default) || templates[0];
+
+    // Step 2: fetch Job + Tasks using known IDs
+    const [jobArr, tasks] = await Promise.all([
+      workOrder.job_id ? base44.entities.Job.filter({ id: workOrder.job_id }) : Promise.resolve([]),
+      base44.entities.Task.filter({ work_order_id: workOrderId }),
+    ]);
+    const job = jobArr[0] || null;
+
+    // Step 3: fetch Customer / Boat / Location / Technicians by specific IDs
+    const [customerArr, boatArr, locationArr, technicians] = await Promise.all([
+      job?.customer_id ? base44.entities.Customer.filter({ id: job.customer_id }) : Promise.resolve([]),
+      job?.boat_id ? base44.entities.Boat.filter({ id: job.boat_id }) : Promise.resolve([]),
+      job?.location_id ? base44.entities.Location.filter({ id: job.location_id }) : Promise.resolve([]),
+      workOrder.assigned_technicians?.length > 0 ? base44.entities.Technician.list() : Promise.resolve([]),
+    ]);
+    const customer = customerArr[0] || null;
+    const boat = boatArr[0] || null;
+    const location = locationArr[0] || null;
 
     const html = buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, location, tasks, technicians, template);
 
