@@ -472,6 +472,7 @@ export default function WorkOrderDetail() {
       // Assigned Team
       assigned_team: assignedTechs.map(t => ({
         name: `${t.first_name} ${t.last_name}`,
+        role: t.role || '-',
         phone: t.phone || '-'
       })),
       
