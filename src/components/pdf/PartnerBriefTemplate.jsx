@@ -213,10 +213,11 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   yPos += 3;
   
   // CUSTOMER & VESSEL
+  checkPageBreak(25);
   yPos = drawSectionHeader('CUSTOMER & VESSEL', yPos);
   yPos = drawTwoColGrid([
     ['Customer', document.customer_name, 'Vessel', document.boat_name],
-    ['Type', document.boat_type, 'Length', document.boat_length ? `${document.boat_length}m` : '-']
+    ['Type', document.boat_type, 'Length', document.boat_length ? `${document.boat_length} m` : '-']
   ], yPos);
   yPos += 3;
   
