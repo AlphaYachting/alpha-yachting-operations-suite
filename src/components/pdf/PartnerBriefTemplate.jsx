@@ -222,6 +222,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   yPos += 3;
   
   // LOCATION & ACCESS
+  checkPageBreak(25);
   yPos = drawSectionHeader('LOCATION & ACCESS', yPos);
   yPos = drawTwoColGrid([
     ['Location', document.location_name, 'Address', document.location_address],
