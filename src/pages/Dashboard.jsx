@@ -1105,7 +1105,10 @@ export default function Dashboard() {
             <DialogTitle>Create New Lead</DialogTitle>
           </DialogHeader>
           <LeadForm
+            customers={customers}
             locations={locations}
+            users={[]}
+            boats={boats}
             onSave={async (leadData) => {
               const newLead = await base44.entities.Lead.create(leadData);
               setLeads([newLead, ...leads]);
