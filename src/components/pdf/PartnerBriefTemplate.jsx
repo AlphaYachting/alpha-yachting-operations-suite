@@ -208,25 +208,25 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     ['Work Order #', document.work_order_number || document.document_number, 'Status', document.work_order_status],
     ['Title', document.work_order_title, 'Scheduled Date', formatDate(document.scheduled_date)]
   ], yPos);
-  yPos += 3;
+  yPos += 2;
   
   // CUSTOMER & VESSEL
-  checkPageBreak(25);
+  checkPageBreak(20);
   yPos = drawSectionHeader('CUSTOMER & VESSEL', yPos);
   yPos = drawTwoColGrid([
     ['Customer', document.customer_name, 'Vessel', document.boat_name],
     ['Type', document.boat_type, 'Length', document.boat_length ? `${document.boat_length} m` : '-']
   ], yPos);
-  yPos += 3;
+  yPos += 2;
   
   // LOCATION & ACCESS
-  checkPageBreak(25);
+  checkPageBreak(20);
   yPos = drawSectionHeader('LOCATION & ACCESS', yPos);
   yPos = drawTwoColGrid([
     ['Location', document.location_name, 'Address', document.location_address],
     ['Access Notes', document.location_access_notes || 'None', null, null]
   ], yPos);
-  yPos += 3;
+  yPos += 2;
   
   // WORK DESCRIPTION
   if (document.work_order_description) {
