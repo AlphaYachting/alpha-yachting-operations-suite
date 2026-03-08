@@ -64,16 +64,14 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
     .field { margin-bottom: 6px; }
     .label { font-weight: bold; color: ${primaryColor}; font-size: 8pt; }
     .value { font-size: ${fontSizeBody}pt; margin-top: 2px; }
-    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; page-break-inside: auto; }
-    tr { page-break-inside: avoid; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; }
     th, td { padding: 6px; border: 1px solid #ddd; text-align: left; }
     th { background-color: ${primaryColor}; color: white; font-weight: bold; }
     tbody tr:nth-child(even) { background-color: #f9f9f9; }
     ul { margin-left: 20px; margin-top: 5px; font-size: ${fontSizeBody}pt; }
     .meta { color: #999; font-size: 8pt; margin-bottom: 15px; }
-    h2 { page-break-after: avoid; }
-    .section { page-break-inside: avoid; }
-    .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 8pt; color: #666; text-align: center; page-break-inside: avoid; }
+    .keep-together { page-break-inside: avoid; }
+    .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 8pt; color: #666; text-align: center; }
   </style>
 </head>
 <body>
