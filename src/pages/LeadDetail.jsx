@@ -87,6 +87,10 @@ export default function LeadDetail() {
   const [commentText, setCommentText] = useState('');
   const [generatingTasks, setGeneratingTasks] = useState(false);
   const [creatingOffer, setCreatingOffer] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editCustomers, setEditCustomers] = useState([]);
+  const [editLocations, setEditLocations] = useState([]);
+  const [editBoats, setEditBoats] = useState([]);
 
   useEffect(() => {
     loadCurrentUser();
