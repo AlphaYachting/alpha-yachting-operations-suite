@@ -195,11 +195,11 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
       doc.text(tech.name || '-', margins.left + 2, yPos);
       doc.text(tech.role || '-', margins.left + contentWidth / 2, yPos);
       doc.text(tech.phone || '-', pageWidth - margins.right - 2, yPos, { align: 'right' });
-      yPos += 5;
+      yPos += 4.5;
       doc.setDrawColor(220, 220, 220);
       doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
     });
-    yPos += 6;
+    yPos += 4;
   }
 
   // WORK ORDER INFORMATION
