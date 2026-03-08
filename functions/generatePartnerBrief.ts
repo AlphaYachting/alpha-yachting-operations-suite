@@ -149,7 +149,7 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
       </div>
       <div class="field">
         <div class="label">Access Notes</div>
-        <div class="value">${location?.access_notes || 'None'}</div>
+        <div class="value">${location?.access_notes || '-'}</div>
       </div>
     </div>
 
