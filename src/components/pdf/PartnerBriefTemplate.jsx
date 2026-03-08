@@ -144,7 +144,66 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   doc.setTextColor(100, 100, 100);
   doc.text(`Generated: ${timestamp}`, margins.left, yPos);
   yPos += 10;
-  
+
+  // Footer helper - draws footer on current page
+  const drawFooter = () => {
+    const footerY = pageHeight - margins.bottom - 5;
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont(fontFamily, 'normal');
+    doc.text(
+      `${template.company_name || 'Alpha Yachting'} | This briefing is confidential and intended for the assigned partner.`,
+      pageWidth / 2,
+      footerY,
+      { align: 'center' }
+    );
+  };
+
+  // Page break check - leaves room for footer (40mm from bottom)
+  const checkPageBreak = (needed = 10) => {
+    if (yPos + needed > pageHeight - margins.bottom - 40) {
+      drawFooter();
+      doc.addPage();
+      yPos = margins.top;
+    }
+  };
+
+  // === ASSIGNED PARTNER / TEAM - First section ===
+  if (document.assigned_team && document.assigned_team.length > 0) {
+    yPos = drawSectionHeader('ASSIGNED PARTNER / TEAM', yPos);
+    
+    // Highlight box background
+    doc.setFillColor(240, 244, 255);
+    doc.rect(margins.left, yPos - 4, contentWidth, document.assigned_team.length * 5 + 8, 'F');
+    doc.setDrawColor(tealColor.r, tealColor.g, tealColor.b);
+    doc.setLineWidth(0.8);
+    doc.line(margins.left, yPos - 4, margins.left, yPos + document.assigned_team.length * 5 + 4);
+    doc.setLineWidth(0.3);
+
+    // Table header
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.setFillColor(tealColor.r, tealColor.g, tealColor.b);
+    doc.rect(margins.left, yPos - 4, contentWidth, 6, 'F');
+    doc.text('Name', margins.left + 2, yPos);
+    doc.text('Role', margins.left + contentWidth / 2, yPos);
+    doc.text('Phone', pageWidth - margins.right - 2, yPos, { align: 'right' });
+    yPos += 6;
+
+    doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(0, 0, 0);
+    document.assigned_team.forEach(tech => {
+      doc.text(tech.name || '-', margins.left + 2, yPos);
+      doc.text(tech.role || '-', margins.left + contentWidth / 2, yPos);
+      doc.text(tech.phone || '-', pageWidth - margins.right - 2, yPos, { align: 'right' });
+      yPos += 5;
+      doc.setDrawColor(220, 220, 220);
+      doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
+    });
+    yPos += 6;
+  }
+
   // WORK ORDER INFORMATION
   yPos = drawSectionHeader('WORK ORDER INFORMATION', yPos);
   yPos = drawTwoColGrid([
