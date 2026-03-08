@@ -65,7 +65,6 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   function drawTwoColGrid(rows, y) {
     doc.setFont(fontFamily, 'normal');
     doc.setFontSize(9);
-    const colWidth = contentWidth / 2 - 5;
     
     rows.forEach(([label1, value1, label2, value2]) => {
       // Left column
@@ -74,7 +73,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
       doc.text(label1, margins.left, y);
       doc.setFont(fontFamily, 'normal');
       const val1 = value1 || '-';
-      doc.text(val1.toString(), margins.left + 30, y);
+      doc.text(val1.toString(), margins.left + 28, y);
       
       // Right column (if provided)
       if (label2) {
@@ -82,10 +81,10 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
         doc.text(label2, margins.left + contentWidth / 2, y);
         doc.setFont(fontFamily, 'normal');
         const val2 = value2 || '-';
-        doc.text(val2.toString(), margins.left + contentWidth / 2 + 30, y);
+        doc.text(val2.toString(), margins.left + contentWidth / 2 + 28, y);
       }
       
-      y += 5;
+      y += 4.5;
     });
     
     return y;
