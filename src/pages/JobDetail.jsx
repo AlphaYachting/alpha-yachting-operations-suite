@@ -178,7 +178,15 @@ export default function ProjectDetail() {
 
   const handleSaveProject = async (projectData) => {
     try {
-      await base44.entities.Job.update(projectId, projectData);
+      // Sanitize numeric fields: convert empty strings to null
+      const numericFields = ['estimated_hours', 'actual_hours', 'estimated_cost', 'actual_cost', 'quote_amount'];
+      const cleanedData = { ...projectData };
+      numericFields.forEach(field => {
+        if (cleanedData[field] === '' || cleanedData[field] === undefined) {
+          cleanedData[field] = null;
+        }
+      });
+      await base44.entities.Job.update(projectId, cleanedData);
       setShowEditDialog(false);
       toast.success('Project updated');
       await loadProjectData();
