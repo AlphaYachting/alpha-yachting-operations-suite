@@ -36,9 +36,7 @@ export default function TeamOrderDetail() {
   const [customer, setCustomer] = useState(null);
   const [boat, setBoat] = useState(null);
   const [location, setLocation] = useState(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [generating, setGenerating] = useState(false);
+
 
   useEffect(() => {
     loadData();
