@@ -821,6 +821,74 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
           </Card>
         }
 
+        {/* Tasks Section */}
+        {tasks.length > 0 && (
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 mb-3">Tasks ({tasks.length})</h2>
+            <div className="space-y-3">
+              {[...tasks]
+                .sort((a, b) => {
+                  const order = { 'In Progress': 0, 'Not Started': 1, 'Needs Approval': 2, 'Completed': 3, 'Not Possible': 4, 'Skipped': 5 };
+                  return (order[a.status] ?? 2) - (order[b.status] ?? 2);
+                })
+                .map((task) => {
+                  const isCompleted = task.status === 'Completed';
+                  return (
+                    <Card key={task.id} className={isCompleted ? 'opacity-60' : ''}>
+                      <CardContent className="p-4 relative">
+                        <div className="mb-4 pr-32">
+                          <p className="text-slate-900 text-base font-semibold">{task.title}</p>
+                        </div>
+                        <div className="absolute top-4 right-4 flex items-center gap-2">
+                          {isCompleted ? (
+                            <Button
+                              onClick={() => handleReopenTask(task.id)}
+                              disabled={updatingTaskId === task.id}
+                              className="text-sm font-semibold px-3 py-1.5 rounded text-white bg-slate-500 hover:bg-slate-600"
+                            >
+                              Reopen
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={() => handleCompleteTask(task.id)}
+                              disabled={updatingTaskId === task.id}
+                              className="text-sm font-semibold px-3 py-1.5 rounded text-white bg-emerald-600 hover:bg-emerald-700"
+                            >
+                              Mark Done
+                            </Button>
+                          )}
+                          <div className="flex-shrink-0">
+                            {isCompleted
+                              ? <CheckCircle2 className="h-5 w-5 text-green-600 fill-green-600" />
+                              : <div className="h-5 w-5 rounded-full border-2 border-slate-300" />
+                            }
+                          </div>
+                        </div>
+                        {task.description && (
+                          <p className="text-xs text-slate-600 leading-relaxed mb-2">{task.description}</p>
+                        )}
+                        <Badge variant="outline" className="text-xs">{task.status}</Badge>
+                        {task.notes && (
+                          <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+                            <p className="font-medium mb-1">Notes:</p>
+                            <p>{task.notes}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {tasks.length === 0 && (
+          <div className="text-center py-8">
+            <CheckCircle2 className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-500 text-sm">No tasks assigned yet</p>
+          </div>
+        )}
+
         {/* Description */}
         {job?.description &&
         <Card>
