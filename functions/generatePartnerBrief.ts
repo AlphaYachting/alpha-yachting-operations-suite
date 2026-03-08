@@ -71,7 +71,13 @@ function buildPartnerBriefHTML(workOrder, teamOrder, job, customer, boat, locati
     ul { margin-left: 20px; margin-top: 5px; font-size: ${fontSizeBody}pt; }
     .meta { color: #999; font-size: 8pt; margin-bottom: 15px; }
     .keep-together { page-break-inside: avoid; }
-    .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 8pt; color: #666; text-align: center; }
+    @media print {
+      .footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 8px ${margins.right}mm; border-top: 1px solid #ddd; font-size: 8pt; color: #666; text-align: center; background: white; }
+      body { padding-bottom: 25mm; }
+    }
+    @media screen {
+      .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 8pt; color: #666; text-align: center; }
+    }
   </style>
 </head>
 <body>
