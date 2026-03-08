@@ -51,14 +51,14 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   // Section header: teal text with thin underline (NOT filled rectangle)
   function drawSectionHeader(title, y) {
     doc.setFont(fontFamily, 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
     doc.text(title, margins.left, y);
     y += 1;
     doc.setLineWidth(0.3);
     doc.setDrawColor(tealColor.r, tealColor.g, tealColor.b);
     doc.line(margins.left, y, pageWidth - margins.right, y);
-    return y + 5;
+    return y + 4;
   }
   
   // Two-column grid for key-value pairs
