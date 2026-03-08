@@ -99,7 +99,8 @@ export default function Dashboard() {
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
-        base44.entities.Note.list('-created_date', 50)
+        base44.entities.Note.list('-created_date', 50),
+        base44.entities.User.list()
       ]);
 
       setWorkOrders(woData);
@@ -110,6 +111,7 @@ export default function Dashboard() {
       setLeads(leadsData);
       setOffers(offersData);
       setNotes(notesData);
+      setUsers(usersData);
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
