@@ -158,9 +158,9 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     );
   };
 
-  // Page break check - leaves room for footer (40mm from bottom)
+  // Page break check - leaves room for footer (20mm from bottom)
   const checkPageBreak = (needed = 10) => {
-    if (yPos + needed > pageHeight - margins.bottom - 40) {
+    if (yPos + needed > pageHeight - margins.bottom - 20) {
       drawFooter();
       doc.addPage();
       yPos = margins.top;
