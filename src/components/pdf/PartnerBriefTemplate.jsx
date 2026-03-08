@@ -126,7 +126,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   doc.setLineWidth(0.3);
   doc.setDrawColor(tealColor.r, tealColor.g, tealColor.b);
   doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
-  yPos += 6;
+  yPos += 4;
   
   // Generated timestamp
   const timestamp = new Date().toLocaleDateString('de-DE', { 
