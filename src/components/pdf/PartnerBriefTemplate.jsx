@@ -243,6 +243,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   
   // TASKS & CHECKLIST
   if (lineItems && lineItems.length > 0) {
+    checkPageBreak(20);
     yPos = drawSectionHeader('TASKS & CHECKLIST', yPos);
     
     // Table header - teal background
@@ -260,17 +261,12 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     doc.setFont(fontFamily, 'normal');
     doc.setTextColor(0, 0, 0);
     lineItems.forEach((item, idx) => {
-      if (yPos > pageHeight - 40) {
-        doc.addPage();
-        yPos = margins.top;
-      }
-      
+      checkPageBreak(8);
       doc.text((idx + 1).toString(), margins.left + 2, yPos);
       const taskLines = doc.splitTextToSize(item.title, contentWidth - 40);
       doc.text(taskLines, margins.left + 12, yPos);
       doc.text(item.estimated_time || '-', pageWidth - margins.right - 2, yPos, { align: 'right' });
       yPos += Math.max(taskLines.length * 4.5, 5) + 1;
-      
       doc.setDrawColor(220, 220, 220);
       doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
     });
