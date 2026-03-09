@@ -83,6 +83,7 @@ export default function LeadDetail() {
   const [allUsers, setAllUsers] = useState([]);
   const [assignedUser, setAssignedUser] = useState(null);
   const [savingAssignment, setSavingAssignment] = useState(false);
+  const [savingAcceptance, setSavingAcceptance] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [selectedTaskForComment, setSelectedTaskForComment] = useState(null);
