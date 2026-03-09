@@ -135,9 +135,36 @@ export default function LeadCard({
               )}
             </div>
 
-            {/* Description */}
+            {/* Description with Tooltip */}
             {lead.description && (
-              <p className="text-sm text-slate-600 line-clamp-1">{lead.description}</p>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="text-sm text-slate-600 line-clamp-1 cursor-help">{lead.description}</p>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-sm text-xs whitespace-pre-wrap p-3">
+                    {lead.description}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            {/* Assigned User + Accepted Status */}
+            {assignedUser && (
+              <div className="flex items-center gap-2 mt-1.5">
+                <div className={`flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full ${
+                  lead.accepted_by_assignee
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-slate-100 text-slate-500'
+                }`}>
+                  {lead.accepted_by_assignee
+                    ? <CheckCircle2 className="h-3 w-3" />
+                    : <User className="h-3 w-3" />
+                  }
+                  <span>{assignedUser.full_name || assignedUser.email}</span>
+                  {lead.accepted_by_assignee && <span className="font-medium">· Übernommen</span>}
+                </div>
+              </div>
             )}
           </div>
 
