@@ -298,6 +298,25 @@ export default function LeadDetail() {
     setShowEditForm(false);
   };
 
+  const handleToggleAcceptance = async () => {
+    if (!lead) return;
+    const isAssignee = currentUser?.id === lead.assigned_to_user_id;
+    const isAdmin = currentUser?.role === 'admin';
+    if (!isAssignee && !isAdmin) return;
+
+    try {
+      setSavingAcceptance(true);
+      await base44.entities.Lead.update(lead.id, {
+        accepted_by_assignee: !lead.accepted_by_assignee
+      });
+      await loadLeadDetails();
+    } catch (error) {
+      console.error('Error toggling acceptance:', error);
+    } finally {
+      setSavingAcceptance(false);
+    }
+  };
+
   const handleAssignmentChange = async (newUserId) => {
     if (!lead) return;
     
