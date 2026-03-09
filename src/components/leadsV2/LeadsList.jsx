@@ -42,6 +42,7 @@ export default function LeadsList({
     <div className="space-y-1.5">
       {filteredLeads.map((lead) => {
         const customer = customers.find((c) => c.id === lead.customer_id);
+        const assignedUser = users?.find((u) => u.id === lead.assigned_to_user_id);
         const agingLevel = getAgingLevel(lead);
         return (
           <LeadCard
@@ -49,6 +50,7 @@ export default function LeadsList({
             lead={lead}
             customer={customer}
             agingLevel={agingLevel}
+            assignedUser={assignedUser}
             onEdit={onEdit}
             onDelete={onDelete}
             onStatusChange={onStatusChange}
