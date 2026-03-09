@@ -174,7 +174,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     doc.setTextColor(100, 100, 100);
     doc.setFont(fontFamily, 'normal');
     doc.text(
-      `${template.company_name || 'Alpha Yachting'} | This briefing is confidential and intended for the assigned partner.`,
+      [template.company_name || 'Alpha Yachting', template.company_address, template.company_registration || template.company_vat, template.contact_email, template.contact_phone].filter(Boolean).join('  ·  '),
       pageWidth / 2,
       footerY,
       { align: 'center' }
