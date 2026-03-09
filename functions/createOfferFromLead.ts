@@ -31,8 +31,19 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
+    // Generate offer number (same pattern as frontend: OFF-YYYY-XXXX)
+    const currentYear = new Date().getFullYear();
+    const allOffers = await base44.asServiceRole.entities.Offer.list('-created_date', 5000);
+    const existingNumbers = allOffers
+      .map(o => o.offer_number)
+      .filter(num => num && num.startsWith(`OFF-${currentYear}-`))
+      .map(num => parseInt(num.split('-')[2]) || 0);
+    const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+    const offerNumber = `OFF-${currentYear}-${String(maxNumber + 1).padStart(4, '0')}`;
+
     // Prepare offer data from lead
     const offerData = {
+      offer_number: offerNumber,
       lead_id: lead.id,
       customer_id: lead.customer_id,
       boat_id: lead.converted_boat_id || undefined,
