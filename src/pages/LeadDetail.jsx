@@ -509,8 +509,8 @@ export default function LeadDetail() {
         <CardContent className="space-y-4">
           {/* Assignee Section */}
           <div className="pb-4 border-b border-slate-200">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-[200px]">
                 <Label className="text-sm font-medium text-slate-700 mb-2 block">Assigned To</Label>
                 <Select
                   value={lead.assigned_to_user_id || ''}
@@ -532,10 +532,46 @@ export default function LeadDetail() {
                   </SelectContent>
                 </Select>
               </div>
-              {assignedUser && (
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <User className="h-4 w-4 text-slate-400" />
-                  <span>{assignedUser.email}</span>
+
+              {/* Accept / Reject Button – only visible when lead is assigned */}
+              {lead.assigned_to_user_id && (
+                <div className="flex flex-col items-end gap-1">
+                  <Label className="text-sm font-medium text-slate-700">Übernahme-Status</Label>
+                  {lead.accepted_by_assignee ? (
+                    <div className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg font-medium">
+                        <UserCheck className="h-4 w-4" />
+                        Übernommen
+                      </span>
+                      {(currentUser?.id === lead.assigned_to_user_id || currentUser?.role === 'admin') && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleToggleAcceptance}
+                          disabled={savingAcceptance}
+                          className="text-slate-400 hover:text-red-500 text-xs h-7"
+                        >
+                          Zurücksetzen
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    (currentUser?.id === lead.assigned_to_user_id || currentUser?.role === 'admin') ? (
+                      <Button
+                        onClick={handleToggleAcceptance}
+                        disabled={savingAcceptance}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 px-4 text-sm gap-2"
+                      >
+                        <UserCheck className="h-4 w-4" />
+                        {savingAcceptance ? 'Speichern...' : 'Lead übernehmen'}
+                      </Button>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-sm text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
+                        <UserX className="h-4 w-4" />
+                        Noch nicht übernommen
+                      </span>
+                    )
+                  )}
                 </div>
               )}
             </div>
