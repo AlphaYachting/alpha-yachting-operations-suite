@@ -2,11 +2,17 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Phone, Mail, Anchor, MapPin, Calendar, Edit, Trash2, Eye, Ship } from 'lucide-react';
+import { Phone, Mail, Anchor, MapPin, Calendar, Edit, Trash2, Eye, Ship, User, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import LeadStatusChange from './LeadStatusChange';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const statusColors = {
   'Pending': 'bg-amber-100 text-amber-700',

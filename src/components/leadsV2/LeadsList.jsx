@@ -5,6 +5,7 @@ import LeadCard from './LeadCard';
 export default function LeadsList({
   leads,
   customers,
+  users,
   searchTerm,
   statusFilter,
   onEdit,
