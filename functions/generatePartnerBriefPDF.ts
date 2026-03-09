@@ -396,7 +396,7 @@ Deno.serve(async (req) => {
       const footerY = footerBase64 ? pageHeight - footerH - 5 : pageHeight - 10;
       doc.setFontSize(7);
       doc.setTextColor(130, 130, 130);
-      const contactParts = [companyName, tpl.contact_email, tpl.contact_phone, tpl.contact_website].filter(Boolean);
+      const contactParts = [companyName, tpl.company_address, tpl.company_registration || tpl.company_vat, tpl.contact_email, tpl.contact_phone, tpl.contact_website].filter(Boolean);
       if (contactParts.length > 0) {
         doc.text(contactParts.join('  ·  '), marginLeft, footerY);
       }
