@@ -165,6 +165,7 @@ export default function LeadsV2() {
       <LeadsList
         leads={leads}
         customers={customers}
+        users={users}
         searchTerm={searchTerm}
         statusFilter={statusFilter}
         onEdit={handleEditLead}
