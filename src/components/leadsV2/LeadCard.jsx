@@ -121,7 +121,12 @@ export default function LeadCard({
                   </TooltipProvider>
                 );
               })()}
-              <h3 className="text-base font-semibold text-slate-900">{lead.name}</h3>
+              <Link
+                to={createPageUrl('LeadDetail') + `?id=${lead.id}&from=v2`}
+                className="text-base font-semibold text-slate-900 hover:text-blue-600 hover:underline"
+              >
+                {lead.name}
+              </Link>
               <Badge className={statusColors[lead.status]}>
                 {lead.status}
               </Badge>
