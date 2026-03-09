@@ -41,6 +41,7 @@ export default function LeadCard({
   lead,
   customer,
   agingLevel,
+  assignedUser,
   onEdit,
   onDelete,
   onStatusChange,
