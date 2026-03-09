@@ -29,6 +29,25 @@ const priorityColors = {
   'Urgent': 'bg-red-100 text-red-700'
 };
 
+// Generate a consistent color from a string
+const USER_COLORS = [
+  '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b',
+  '#10b981', '#06b6d4', '#ef4444', '#f97316', '#6366f1'
+];
+function getUserColor(str) {
+  if (!str) return '#94a3b8';
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
+}
+function getUserInitials(user) {
+  if (!user) return '?';
+  const name = user.full_name || user.email || '';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.substring(0, 2).toUpperCase();
+}
+
 const inquiryTypeColors = {
   'Service Inquiry': 'bg-blue-100 text-blue-700 border-blue-200',
   'Parts Request': 'bg-purple-100 text-purple-700 border-purple-200',
