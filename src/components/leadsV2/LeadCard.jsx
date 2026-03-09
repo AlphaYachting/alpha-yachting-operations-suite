@@ -100,6 +100,27 @@ export default function LeadCard({
           <div className="flex-1 min-w-0">
             {/* Name + Badges */}
             <div className="flex items-center gap-2 mb-2 flex-wrap">
+              {/* Assigned User Avatar */}
+              {assignedUser && (() => {
+                const color = getUserColor(assignedUser.id || assignedUser.email);
+                const initials = getUserInitials(assignedUser);
+                const title = `${assignedUser.full_name || assignedUser.email}${lead.accepted_by_assignee ? ' · Übernommen' : ''}`;
+                return (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-default"
+                          style={{ backgroundColor: color, boxShadow: lead.accepted_by_assignee ? `0 0 0 2px #10b981` : undefined }}
+                        >
+                          {initials}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">{title}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              })()}
               <h3 className="text-base font-semibold text-slate-900">{lead.name}</h3>
               <Badge className={statusColors[lead.status]}>
                 {lead.status}
