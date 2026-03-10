@@ -136,7 +136,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                   {tasks.map((task, index) => {
                     const stableKey = task.id ? String(task.id) : `new-task-${index}-${task.title}`;
                     return (
-                    <Draggable key={stableKey} draggableId={stableKey} index={index}>
+                    <Draggable key={stableKey} draggableId={stableKey} index={index}>{
                       {(provided, snapshot) => (
                         <Card 
                           ref={provided.innerRef}
