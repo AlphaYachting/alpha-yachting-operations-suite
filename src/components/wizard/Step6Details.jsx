@@ -44,7 +44,7 @@ export function Step6Details() {
     <div className="space-y-6">
       <WizardAlert open={alertOpen} onOpenChange={setAlertOpen} message={alertMessage} />
       {/* OFFER DETAILS */}
-      {wizardData.intent.includes('offer') && (
+      {wizardData.intent && wizardData.intent.includes('offer') && (
         <Card>
           <CardHeader>
             <CardTitle>Offer Details</CardTitle>
@@ -144,7 +144,7 @@ export function Step6Details() {
       )}
 
       {/* JOB DETAILS */}
-      {wizardData.intent.includes('job') && (
+      {wizardData.intent && wizardData.intent.includes('job') && (
         <Card>
           <CardHeader>
             <CardTitle>Project Details</CardTitle>
