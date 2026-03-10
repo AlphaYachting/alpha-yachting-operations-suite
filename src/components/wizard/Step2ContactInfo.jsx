@@ -267,8 +267,8 @@ export function Step2ContactInfo() {
         <Button variant="outline" onClick={() => setStep(1)}>
           ← Back
         </Button>
-        <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
-          Next →
+        <Button onClick={handleNext} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700">
+          {isSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : 'Next →'}
         </Button>
       </div>
     </div>
