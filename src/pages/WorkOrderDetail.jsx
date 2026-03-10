@@ -1072,7 +1072,11 @@ export default function WorkOrderDetail() {
                                   </div>
                                 )}
                                 <div className="flex items-start gap-3 flex-1">
-                                  <div className="mt-0.5">
+                                  <button
+                                    className="mt-0.5 cursor-pointer hover:opacity-70 transition-opacity"
+                                    onClick={() => setQuickUpdateTask(task)}
+                                    title="Update task status"
+                                  >
                                     {task.status === 'Completed' ? (
                                       <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                                     ) : task.status === 'In Progress' ? (
@@ -1080,7 +1084,7 @@ export default function WorkOrderDetail() {
                                     ) : (
                                       <Circle className="h-5 w-5 text-slate-300" />
                                     )}
-                                  </div>
+                                  </button>
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                       <p className="font-medium text-slate-900">{task.title}</p>
@@ -1221,7 +1225,11 @@ export default function WorkOrderDetail() {
                                   </div>
                                 )}
                                 <div className="flex items-start gap-3 flex-1">
-                                  <div className="mt-0.5">
+                                  <button
+                                    className="mt-0.5 cursor-pointer hover:opacity-70 transition-opacity"
+                                    onClick={() => setQuickUpdateTask(task)}
+                                    title="Update task status"
+                                  >
                                     {task.status === 'Completed' ? (
                                       <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                                     ) : task.status === 'In Progress' ? (
@@ -1229,7 +1237,7 @@ export default function WorkOrderDetail() {
                                     ) : (
                                       <Circle className="h-5 w-5 text-slate-300" />
                                     )}
-                                  </div>
+                                  </button>
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                       <p className="font-medium text-slate-900">{task.title}</p>
