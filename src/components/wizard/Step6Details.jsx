@@ -14,12 +14,12 @@ export function Step6Details() {
   const [alertMessage, setAlertMessage] = React.useState('');
 
   const handleNext = () => {
-    if (wizardData.intent.includes('offer') && !wizardData.offer.title) {
+    if (wizardData.intent && wizardData.intent.includes('offer') && !wizardData.offer.title) {
       setAlertMessage('Offer title is required');
       setAlertOpen(true);
       return;
     }
-    if (wizardData.intent.includes('job') && !wizardData.job.title) {
+    if (wizardData.intent && wizardData.intent.includes('job') && !wizardData.job.title) {
       setAlertMessage('Project title is required');
       setAlertOpen(true);
       return;
