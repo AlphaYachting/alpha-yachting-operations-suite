@@ -318,6 +318,21 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
               </div>
             </div>
             <div className="space-y-2">
+              <Label>Type</Label>
+              <Select
+                value={taskForm.item_type || 'Labor'}
+                onValueChange={(v) => setTaskForm({ ...taskForm, item_type: v, unit_type: v === 'Material' ? 'Piece' : 'Hour' })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Labor"><span className="flex items-center gap-2"><Wrench className="h-4 w-4 text-blue-500" />Labor / Service</span></SelectItem>
+                  <SelectItem value="Material"><span className="flex items-center gap-2"><Package className="h-4 w-4 text-green-500" />Material / Part</span></SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Charging Method *</Label>
               <Select 
                 value={taskForm.unit_type} 
