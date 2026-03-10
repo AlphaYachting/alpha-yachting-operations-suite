@@ -129,6 +129,7 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
                 properties: {
                   title: { type: 'string' },
                   description: { type: 'string' },
+                  item_type: { type: 'string', enum: ['Labor', 'Material'], description: 'Labor = service/work, Material = physical parts/consumables/products' },
                   unit_type: { type: 'string' },
                   quantity: { type: 'number' },
                   unit_price: { type: 'number', description: 'Per-unit price. If total price is given for qty>1, divide total by quantity. Only if price is stated in input.' },
