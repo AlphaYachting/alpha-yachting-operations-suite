@@ -220,7 +220,7 @@ export default function Dashboard() {
 
   // ACTION REQUIRED: Overdue WorkOrders
   const overdueWorkOrders = workOrders.filter(wo => {
-    if (['Completed', 'Cancelled'].includes(wo.status)) return false;
+    if (['Completed', 'Cancelled', 'Draft'].includes(wo.status)) return false;
     if (!wo.scheduled_date) return false;
     const schedDate = parseISO(wo.scheduled_date);
     return isPast(schedDate) && !isToday(schedDate);
@@ -1055,13 +1055,10 @@ export default function Dashboard() {
             boats={boats}
             locations={locations}
             onSave={async (projectData) => {
-              // Allocate canonical job number from backend
-              const numResponse = await base44.functions.invoke('allocateJobNumber', {});
-              const job_number = numResponse.data?.job_number;
-              if (!job_number) throw new Error('Failed to allocate job number');
+              const woNumber = `P${Date.now().toString().slice(-6)}`;
               const newJob = await base44.entities.Job.create({ 
                 ...projectData, 
-                job_number, 
+                job_number: woNumber, 
                 intake_date: new Date().toISOString() 
               });
               setJobs([newJob, ...jobs]);
@@ -1086,11 +1083,12 @@ export default function Dashboard() {
             customers={customers}
             boats={boats}
             onSave={async (workOrderData) => {
-              // Use canonical backend creation (allocates number + creates record atomically)
-              const response = await base44.functions.invoke('createWorkOrderWithNumber', workOrderData);
-              const result = response.data;
-              if (!result.success) throw new Error(result.error || 'Failed to create work order');
-              setWorkOrders([result.work_order, ...workOrders]);
+              const woNumber = `WO${Date.now().toString().slice(-6)}`;
+              const newWo = await base44.entities.WorkOrder.create({ 
+                ...workOrderData, 
+                work_order_number: woNumber 
+              });
+              setWorkOrders([newWo, ...workOrders]);
               setShowWorkOrderDialog(false);
               toast.success('Work order created');
               await loadDashboardData();
