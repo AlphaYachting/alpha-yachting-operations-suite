@@ -57,6 +57,14 @@ export function Step5Intent() {
       description: 'Just add a new boat to customer',
       icon: Ship,
       color: 'text-cyan-600'
+    },
+    {
+      value: 'storage_transport',
+      label: 'Storage & Transport Offer',
+      description: 'Generate a calculated offer using the pricing engine (storage, transport, modules)',
+      icon: Anchor,
+      color: 'text-emerald-600',
+      requiresExistingCustomer: true
     }
   ];
 
@@ -71,6 +79,8 @@ export function Step5Intent() {
       setStep(10); // Go straight to review
     } else if (wizardData.intent === 'workorder_for_existing_project') {
       setStep(5.5); // Go to project selection
+    } else if (wizardData.intent === 'storage_transport') {
+      setStep(6); // Go to Storage & Transport Flow (rendered inside step 6)
     } else {
       setStep(6); // Go to details
     }
