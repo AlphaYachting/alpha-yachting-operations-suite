@@ -122,7 +122,7 @@ export function Step10Review() {
           </div>
 
           {/* OFFER DETAILS */}
-          {wizardData.intent.includes('offer') && (
+          {wizardData.intent && wizardData.intent.includes('offer') && wizardData.intent !== 'storage_transport' && (
             <div className="border-b pb-4">
               <p className="text-sm font-medium mb-2">Offer</p>
               <div className="text-sm text-slate-600 space-y-1">
