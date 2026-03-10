@@ -308,13 +308,16 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     }
     
     if (document.description) {
-      checkPageBreak(20);
-      doc.setFontSize(9);
-      doc.setTextColor(85, 85, 85);
-      doc.setFont(fontFamily, 'normal');
-      const descLines = doc.splitTextToSize(document.description, contentWidth);
-      doc.text(descLines, margins.left, yPos);
-      yPos += (descLines.length * 4.5) + 8;
+      const cleanDesc = stripHtml(document.description).trim();
+      if (cleanDesc) {
+        checkPageBreak(20);
+        doc.setFontSize(9);
+        doc.setTextColor(85, 85, 85);
+        doc.setFont(fontFamily, 'normal');
+        const descLines = doc.splitTextToSize(cleanDesc, contentWidth);
+        doc.text(descLines, margins.left, yPos);
+        yPos += (descLines.length * 4.5) + 6;
+      }
     }
   }
 
