@@ -19,20 +19,20 @@ function WizardContent() {
   const { wizardData } = useWizard();
 
   const getStepName = (step) => {
-    const names = {
-      1: 'Source',
-      2: 'Contact',
-      3: 'Vessel',
-      4: 'Location',
-      5: 'Intent',
-      5.5: 'Project',
-      6: 'Details',
-      7: 'Line Items',
-      8: 'Technicians',
-      9: 'Partner',
-      10: 'Review'
-    };
-    return names[step] || 'Step';
+  const names = {
+    1: 'Source',
+    2: 'Contact',
+    3: 'Vessel',
+    4: 'Location',
+    5: 'Intent',
+    5.5: 'Project',
+    6: wizardData.intent === 'storage_transport' ? 'Storage & Transport' : 'Details',
+    7: 'Line Items',
+    8: 'Technicians',
+    9: 'Partner',
+    10: 'Review'
+  };
+  return names[step] || 'Step';
   };
 
   const isStepVisible = (step) => {
