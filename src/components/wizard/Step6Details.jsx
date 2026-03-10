@@ -31,9 +31,9 @@ export function Step6Details() {
     }
 
     // If offer path and no line items, skip to technician step
-    if (wizardData.intent.includes('offer') && !wizardData.intent.includes('job')) {
+    if (wizardData.intent && wizardData.intent.includes('offer') && !wizardData.intent.includes('job')) {
       setStep(8); // Skip line items for offer-only
-    } else if (wizardData.intent.includes('offer')) {
+    } else if (wizardData.intent && wizardData.intent.includes('offer')) {
       setStep(7); // Go to line items for offer+job
     } else {
       setStep(8); // Go to technicians for job-only, inspection, or workorder_for_existing_project
