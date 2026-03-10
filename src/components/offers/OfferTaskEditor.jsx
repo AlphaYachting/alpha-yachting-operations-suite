@@ -152,8 +152,17 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                             <div className="flex-1 space-y-3">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <h4 className="font-semibold text-slate-900">{task.title}</h4>
+                                    {task.item_type === 'Material' ? (
+                                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                        <Package className="h-3 w-3" />Material
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                        <Wrench className="h-3 w-3" />Labor
+                                      </span>
+                                    )}
                                     {task.is_optional && (
                                       <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Optional</span>
                                     )}
