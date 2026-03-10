@@ -76,6 +76,26 @@ export function Step2ContactInfo() {
         showAlert(emailError);
         return;
       }
+      // Create customer immediately and store in wizard context
+      setIsSaving(true);
+      try {
+        const newCustomer = await base44.entities.Customer.create({
+          first_name,
+          last_name,
+          email,
+          phone,
+          status: 'Active',
+          preferred_language: 'German'
+        });
+        updateWizardData('sourceId', newCustomer.id);
+        updateWizardData('sourceData.customer', newCustomer);
+        updateWizardData('source', 'customer');
+      } catch (err) {
+        showAlert(err.message || 'Failed to create customer. Please try again.');
+        setIsSaving(false);
+        return;
+      }
+      setIsSaving(false);
     }
     setStep(3);
   };
