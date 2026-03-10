@@ -42,15 +42,13 @@ function WizardContent() {
     // Step 5.5: Project selection (only for workorder_for_existing_project)
     if (step === 5.5) return wizardData.intent === 'workorder_for_existing_project';
 
-    // Step 6-7: Offer or Job details
-    if (step === 6) return true; // Always visible (conditional content inside)
-    if (step === 7) return wizardData.intent && wizardData.intent.includes('offer'); // Line items only for offers
+    // Step 6-7: Offer or Job details (NOT shown for storage_transport — it has its own embedded flow)
+    if (step === 6) return wizardData.intent !== 'storage_transport';
+    if (step === 7) return wizardData.intent && wizardData.intent.includes('offer') && wizardData.intent !== 'storage_transport';
 
-    // Step 8: Technician (if WO created)
-    if (step === 8) return wizardData.intent === 'inspection' || wizardData.intent === 'workorder_for_existing_project' || (wizardData.intent && wizardData.intent.includes('job') && wizardData.workOrder?.createFirst !== false);
-
-    // Step 9: External Partner (optional, always visible)
-    if (step === 9) return wizardData.intent === 'inspection' || wizardData.intent === 'workorder_for_existing_project' || (wizardData.intent && wizardData.intent.includes('job'));
+    // Steps 8-9 not used for storage_transport
+    if (step === 8) return wizardData.intent !== 'storage_transport' && (wizardData.intent === 'inspection' || wizardData.intent === 'workorder_for_existing_project' || (wizardData.intent && wizardData.intent.includes('job') && wizardData.workOrder?.createFirst !== false));
+    if (step === 9) return wizardData.intent !== 'storage_transport' && (wizardData.intent === 'inspection' || wizardData.intent === 'workorder_for_existing_project' || (wizardData.intent && wizardData.intent.includes('job')));
 
     // Step 10: Always review
     if (step === 10) return true;
