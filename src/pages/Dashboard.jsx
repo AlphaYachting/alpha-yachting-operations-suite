@@ -218,9 +218,9 @@ export default function Dashboard() {
     };
   };
 
-  // ACTION REQUIRED: Overdue WorkOrders
+  // ACTION REQUIRED: Overdue WorkOrders (excludes active/running statuses)
   const overdueWorkOrders = workOrders.filter(wo => {
-    if (['Completed', 'Cancelled', 'Draft'].includes(wo.status)) return false;
+    if (['Completed', 'Cancelled', 'Draft', 'In Progress', 'Dispatched', 'In Transit'].includes(wo.status)) return false;
     if (!wo.scheduled_date) return false;
     const schedDate = parseISO(wo.scheduled_date);
     return isPast(schedDate) && !isToday(schedDate);
