@@ -148,9 +148,11 @@ REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
           const unitPrice = (task.unit_price != null && task.unit_price > 0)
             ? task.unit_price
             : defaultUnitPrice;
+          const isMaterial = task.item_type === 'Material';
           return {
             ...task,
-            unit_type: task.unit_type || 'Hour',
+            item_type: task.item_type || 'Labor',
+            unit_type: task.unit_type || (isMaterial ? 'Piece' : 'Hour'),
             unit_price: unitPrice,
             total_amount: task.quantity * unitPrice
           };
