@@ -17,6 +17,7 @@ export function Step2ContactInfo() {
   const [emailError, setEmailError] = useState('');
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadData();
