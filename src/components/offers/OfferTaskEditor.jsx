@@ -270,7 +270,8 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                         </Card>
                       )}
                     </Draggable>
-                  ))}
+                    );
+                  })}
                   {provided.placeholder}
                 </div>
               )}
