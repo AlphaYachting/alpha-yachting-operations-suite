@@ -58,7 +58,7 @@ export function Step2ContactInfo() {
     setAlertOpen(true);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (wizardData.source === 'lead' && !wizardData.sourceId) {
       showAlert('Please select a lead');
       return;
