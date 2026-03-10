@@ -104,7 +104,8 @@ function WizardContent() {
           {wizardData.currentStep === 4 && <Step4LocationSelection />}
           {wizardData.currentStep === 5 && <Step5Intent />}
           {wizardData.currentStep === 5.5 && <Step5bProjectSelection />}
-          {wizardData.currentStep === 6 && <Step6Details />}
+          {wizardData.currentStep === 6 && wizardData.intent === 'storage_transport' && <StorageTransportFlow />}
+          {wizardData.currentStep === 6 && wizardData.intent !== 'storage_transport' && <Step6Details />}
           {wizardData.currentStep === 7 && <Step7AddLineItems />}
           {wizardData.currentStep === 8 && <Step8TechnicianAssignment />}
           {wizardData.currentStep === 9 && <Step9ExternalPartner />}
