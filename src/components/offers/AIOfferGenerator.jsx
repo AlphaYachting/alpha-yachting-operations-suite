@@ -94,26 +94,51 @@ ${job ? `Related Job: ${job.title}` : ''}
 Work Description:
 ${prompt}
 
-Generate a detailed list of tasks for this service offer. For each task, provide:
-- A clear, concise title in ${languageMap[formData.language] || 'German'} (max 60 characters)
-- ${detailedExplanations ? 'A detailed technical description with proper structure:\n  • Use bullet points with "• " at the start of each point\n  • Put each bullet point on a new line\n  • Group related steps under clear subtopics\n  • Keep each bullet point concise but complete\n  • Separate main sections with a blank line' : 'A brief, simple description that a non-technical customer can understand. If using bullet points, start each with "• " and put each on a new line'}
-- item_type: MUST be either "Labor" or "Material".
-  * Use "Labor" for: work performed by a technician, service, inspection, installation, repair, diagnostic, travel, etc.
-  * Use "Material" for: physical parts, consumables, products, oil, filters, paint, adhesives, spare parts, antifouling, anodes, belts, hoses, etc.
-- Quantity needed (e.g., hours for labor, pieces for parts, square meters for surface work, etc.)
-- Appropriate unit type: Use "Hour" for Labor tasks, "Piece"/"Liter"/"Kilogram"/"Set"/"Square Meter" etc. for Material tasks
-- unit_price: If a price is explicitly stated for this position, calculate the unit price as follows:
-  * If a per-unit price is given (e.g. "70 €/m²"), use that directly as unit_price.
-  * If only a total/lump sum price is given (e.g. "1.050 € netto" for 15 m²), divide it by the quantity to get the unit_price (e.g. 1050 / 15 = 70).
-  * If no price is mentioned at all, return null.
-- total_price: The total amount for this position as stated in the input text (before any division).
+---
 
-IMPORTANT: Only set unit_price if a price is clearly and explicitly stated in the input text. Do NOT estimate or invent prices.
-CRITICAL: When a position has a quantity > 1 and a lump sum price, the unit_price MUST be total_price / quantity. Never use the lump sum as the unit_price when quantity > 1.
+Generate a professional service offer task list. Follow these rules carefully:
 
-Be practical and realistic with estimates. Consider travel time if it's mobile service work.
+## TASK SPLITTING RULE (CRITICAL)
+Whenever a job involves both a material/product AND the work to install/apply it, you MUST create TWO separate tasks:
+1. A "Material" task for the product itself
+2. A "Labor" task for the installation/application work
+Example: "Change engine oil" → Task 1: "Motoröl 15W-40 5L" (Material, 5 Liter) + Task 2: "Motoröl wechseln" (Labor, hours)
 
-REMEMBER: Write everything in ${languageMap[formData.language] || 'German'}.
+## MATERIAL TASK TITLES
+Material task titles MUST be the product/article name ONLY — no verbs, no "Installation von", no "Einbau von".
+✓ CORRECT: "Kraftstofffilter Volvo Penta", "Antifouling Farbe 5L", "Motoröl 15W-40"
+✗ WRONG: "Installation des Kraftstofffilters", "Antifouling auftragen", "Motoröl wechseln"
+
+## LABOR TASK TITLES
+Labor task titles describe the work action — use a verb or action phrase.
+✓ CORRECT: "Kraftstofffilter wechseln", "Antifouling auftragen", "Motoröl wechseln", "Inspektion Motorraum"
+
+## item_type CLASSIFICATION
+- "Material": physical products, parts, consumables, oil, filters, paint, antifouling, anodes, belts, hoses, sealants, adhesives, spare parts
+- "Labor": any work performed by a technician — service, inspection, installation, repair, diagnostics, travel, commissioning
+
+## DESCRIPTIONS
+${detailedExplanations
+  ? 'Write a detailed technical description:\n  • Use bullet points with "• " at the start of each point\n  • Put each bullet point on a new line\n  • Group related steps under clear subtopics\n  • Keep each bullet point concise and complete'
+  : 'Write a short, clear description (1-2 sentences) that a non-technical customer can understand. No bullet points needed for simple items.'}
+- For Material tasks: describe the product specification (e.g. brand, spec, quantity details)
+- For Labor tasks: describe what work is done and why
+
+## QUANTITIES & UNITS
+- Labor: quantity = estimated hours, unit_type = "Hour"
+- Material: quantity = realistic amount, unit_type = "Piece" / "Liter" / "Kilogram" / "Set" / "Square Meter" etc.
+
+## PRICING
+- unit_price: Set ONLY if a price is explicitly stated in the input text.
+  * Per-unit price given (e.g. "70 €/h"): use directly
+  * Lump sum for multiple units (e.g. "1.050 € for 15 m²"): unit_price = 1050 / 15 = 70
+  * No price mentioned: return null (do NOT estimate)
+- total_price: The total as stated in the input text (before division)
+
+## CLIENT DESCRIPTION
+Also generate a short professional client-facing summary (3-5 sentences) describing the scope of work, what will be done, and the benefit for the customer. Write in a professional but approachable tone in ${languageMap[formData.language] || 'German'}.
+
+REMEMBER: Write ALL content (titles, descriptions, client description) in ${languageMap[formData.language] || 'German'}.
 `.trim();
 
       const response = await base44.integrations.Core.InvokeLLM({
