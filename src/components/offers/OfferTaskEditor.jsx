@@ -268,8 +268,8 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                             </div>
                           </div>
                         </Card>
-                      )}
-                    </Draggable>
+                        )}
+                      </Draggable>
                     );
                   })}
                   {provided.placeholder}
