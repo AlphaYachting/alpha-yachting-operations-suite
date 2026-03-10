@@ -134,7 +134,7 @@ export function Step10Review() {
           )}
 
           {/* JOB DETAILS */}
-          {wizardData.intent.includes('job') && (
+          {wizardData.intent && wizardData.intent.includes('job') && (
             <div className="border-b pb-4">
               <p className="text-sm font-medium mb-2">Project</p>
               <div className="text-sm text-slate-600 space-y-1">
@@ -146,7 +146,7 @@ export function Step10Review() {
           )}
 
           {/* WORK ORDER DETAILS */}
-          {(wizardData.intent === 'inspection' || (wizardData.intent.includes('job') && wizardData.workOrder?.createFirst)) && (
+          {(wizardData.intent === 'inspection' || (wizardData.intent && wizardData.intent.includes('job') && wizardData.workOrder?.createFirst)) && (
             <div className="border-b pb-4">
               <p className="text-sm font-medium mb-2">Work Order</p>
               <div className="text-sm text-slate-600 space-y-1">
