@@ -11,6 +11,7 @@ import { Step7AddLineItems } from '@/components/wizard/Step7AddLineItems';
 import { Step8TechnicianAssignment } from '@/components/wizard/Step8TechnicianAssignment';
 import { Step9ExternalPartner } from '@/components/wizard/Step9ExternalPartner';
 import { Step10Review } from '@/components/wizard/Step10Review';
+import { StorageTransportFlow } from '@/components/wizard/StorageTransportFlow';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Briefcase } from 'lucide-react';
 
