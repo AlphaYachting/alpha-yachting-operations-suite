@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { FileText, Briefcase, Compass, Ship } from 'lucide-react';
+import { FileText, Briefcase, Compass, Ship, Anchor } from 'lucide-react';
 import { useWizard } from './WizardContext';
 import { WizardAlert } from './WizardAlert';
 
