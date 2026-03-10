@@ -618,6 +618,9 @@ export default function LeadDetail() {
         </CardContent>
       </Card>
 
+      {/* Lead Intelligence Panel — detachable AI module */}
+      <LeadIntelligencePanel lead={lead} />
+
       {/* Tasks Section */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
