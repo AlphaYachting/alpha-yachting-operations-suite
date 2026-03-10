@@ -97,8 +97,11 @@ ${prompt}
 Generate a detailed list of tasks for this service offer. For each task, provide:
 - A clear, concise title in ${languageMap[formData.language] || 'German'} (max 60 characters)
 - ${detailedExplanations ? 'A detailed technical description with proper structure:\n  • Use bullet points with "• " at the start of each point\n  • Put each bullet point on a new line\n  • Group related steps under clear subtopics\n  • Keep each bullet point concise but complete\n  • Separate main sections with a blank line' : 'A brief, simple description that a non-technical customer can understand. If using bullet points, start each with "• " and put each on a new line'}
+- item_type: MUST be either "Labor" or "Material".
+  * Use "Labor" for: work performed by a technician, service, inspection, installation, repair, diagnostic, travel, etc.
+  * Use "Material" for: physical parts, consumables, products, oil, filters, paint, adhesives, spare parts, antifouling, anodes, belts, hoses, etc.
 - Quantity needed (e.g., hours for labor, pieces for parts, square meters for surface work, etc.)
-- Appropriate unit type (Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, or Lump Sum)
+- Appropriate unit type: Use "Hour" for Labor tasks, "Piece"/"Liter"/"Kilogram"/"Set"/"Square Meter" etc. for Material tasks
 - unit_price: If a price is explicitly stated for this position, calculate the unit price as follows:
   * If a per-unit price is given (e.g. "70 €/m²"), use that directly as unit_price.
   * If only a total/lump sum price is given (e.g. "1.050 € netto" for 15 m²), divide it by the quantity to get the unit_price (e.g. 1050 / 15 = 70).
