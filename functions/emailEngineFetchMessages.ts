@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
 
         for await (const msg of client.fetch(range, {
           envelope: true,
-          bodyParts: ['TEXT', 'HEADER.FIELDS (FROM TO CC SUBJECT MESSAGE-ID IN-REPLY-TO DATE)'],
+          bodyText: true,
           bodyStructure: true,
         })) {
           results.fetched++;
