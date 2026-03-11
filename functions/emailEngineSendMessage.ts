@@ -1,11 +1,9 @@
-// EMAIL ENGINE SANDBOX - Manual Send Approved Outbound Message
+// EMAIL ENGINE SANDBOX - Manual Send Approved Outbound Message via Resend API
 // Phase 1: Secure isolated module.
 // STRICT: Only sends messages with approval_status = 'approved_to_send'.
 // NO auto-send, NO auto-reply, NO agent-triggered sending.
 // ISOLATION: Writes ONLY to EmailOutboundQueueSandbox and EmailMessageSandbox.
-// Never writes to Lead, Customer, Boat, Job, WorkOrder, Task, or any production entity.
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
-import nodemailer from 'npm:nodemailer@6.9.16';
 
 Deno.serve(async (req) => {
   try {
@@ -30,26 +28,13 @@ Deno.serve(async (req) => {
       }, { status: 403 });
     }
 
-    const host = Deno.env.get('EMAIL_ENGINE_SMTP_HOST');
-    const port = parseInt(Deno.env.get('EMAIL_ENGINE_SMTP_PORT') || '587');
-    const smtpUser = Deno.env.get('EMAIL_ENGINE_SMTP_USER');
-    const smtpPass = Deno.env.get('EMAIL_ENGINE_SMTP_PASSWORD');
+    const apiKey = Deno.env.get('RESEND_API_KEY');
     const fromAddr = Deno.env.get('EMAIL_ENGINE_FROM_ADDRESS');
     const fromName = Deno.env.get('EMAIL_ENGINE_FROM_NAME') || 'Alpha Yachting';
 
-    if (!host || !smtpUser || !smtpPass || !fromAddr) {
-      return Response.json({ success: false, error: 'SMTP secrets not fully configured' });
+    if (!apiKey || !fromAddr) {
+      return Response.json({ success: false, error: 'RESEND_API_KEY or EMAIL_ENGINE_FROM_ADDRESS not configured' });
     }
-
-    const useSSL = port === 465;
-    const transporter = nodemailer.createTransport({
-      host, port,
-      secure: useSSL,
-      requireTLS: !useSSL,
-      auth: { user: smtpUser, pass: smtpPass },
-      connectionTimeout: 20000,
-      socketTimeout: 30000,
-    });
 
     const toList = Array.isArray(item.to_email) ? item.to_email : [item.to_email].filter(Boolean);
     const ccList = Array.isArray(item.cc_emails) ? item.cc_emails : [];
@@ -58,26 +43,36 @@ Deno.serve(async (req) => {
     let sendError = null;
 
     try {
-      const info = await transporter.sendMail({
-        from: `"${fromName}" <${fromAddr}>`,
-        to: toList.join(', '),
-        cc: ccList.length > 0 ? ccList.join(', ') : undefined,
-        subject: item.draft_subject,
-        text: item.draft_body_text,
-        // Phase 1: plain text only for security
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: `${fromName} <${fromAddr}>`,
+          to: toList,
+          cc: ccList.length > 0 ? ccList : undefined,
+          subject: item.draft_subject,
+          text: item.draft_body_text,
+          ...(item.related_message_id ? { headers: { 'In-Reply-To': item.related_message_id, 'References': item.related_message_id } } : {}),
+        }),
       });
-      sentMessageId = info.messageId || `sent-${Date.now()}`;
-    } catch (smtpErr) {
-      sendError = (smtpErr.message || 'SMTP error')
-        .replace(/pass(word)?\s*[=:][^\s]*/gi, '[REDACTED]')
-        .replace(/password[^\s]*/gi, '[REDACTED]')
-        .substring(0, 500);
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        sendError = `Resend error: ${data?.message || JSON.stringify(data)}`.substring(0, 500);
+      } else {
+        sentMessageId = data.id || `resend-${Date.now()}`;
+      }
+    } catch (err) {
+      sendError = (err.message || 'Send failed').substring(0, 500);
     }
 
     const now = new Date().toISOString();
 
     if (sendError) {
-      // NEVER delete draft on failure
       await base44.asServiceRole.entities.EmailOutboundQueueSandbox.update(item.id, {
         approval_status: 'failed',
         send_error_log: sendError,
@@ -93,12 +88,12 @@ Deno.serve(async (req) => {
       send_result: sentMessageId,
     });
 
-    // Store outbound record in sandbox only
+    // Store outbound record in sandbox
     const convKey = item.conversation_key || `manual-out:${Date.now()}`;
     const normalSubj = (item.draft_subject || '').replace(/^(Re|Fwd?):\s*/gi, '').trim().toLowerCase();
 
     await base44.asServiceRole.entities.EmailMessageSandbox.create({
-      mailbox_name: smtpUser,
+      mailbox_name: fromAddr,
       direction: 'outbound',
       message_id: sentMessageId,
       conversation_key: convKey,
@@ -127,7 +122,7 @@ Deno.serve(async (req) => {
       future_agent_processing_status: 'disabled',
     });
 
-    // Update conversation
+    // Update or create conversation
     const convs = await base44.asServiceRole.entities.EmailConversationSandbox.filter({ conversation_key: convKey });
     if (convs?.length > 0) {
       await base44.asServiceRole.entities.EmailConversationSandbox.update(convs[0].id, {
@@ -135,17 +130,14 @@ Deno.serve(async (req) => {
         message_count: (convs[0].message_count || 0) + 1,
         latest_direction: 'outbound',
         latest_from_email: fromAddr,
+        latest_to_email: toList,
         latest_preview: (item.draft_body_text || '').substring(0, 200),
       });
     }
 
-    return Response.json({ success: true, message: 'Email sent successfully', sent_message_id: sentMessageId });
+    return Response.json({ success: true, message: 'Email sent successfully via Resend', resend_id: sentMessageId });
 
   } catch (error) {
-    const safeErr = (error.message || 'Send failed')
-      .replace(/pass(word)?\s*[=:][^\s]*/gi, '[REDACTED]')
-      .replace(/password[^\s]*/gi, '[REDACTED]')
-      .substring(0, 400);
-    return Response.json({ success: false, error: safeErr }, { status: 500 });
+    return Response.json({ success: false, error: error.message?.substring(0, 400) || 'Send failed' }, { status: 500 });
   }
 });
