@@ -169,9 +169,13 @@ Deno.serve(async (req) => {
               const { content } = await client.download(info.uid, info.partInfo.num, { uid: true });
               const chunks = [];
               for await (const chunk of content) {
-                chunks.push(chunk);
+                chunks.push(chunk instanceof Uint8Array ? chunk : new TextEncoder().encode(String(chunk)));
               }
-              const rawText = Buffer.concat(chunks).toString('utf-8');
+              const total = chunks.reduce((n, c) => n + c.length, 0);
+              const merged = new Uint8Array(total);
+              let offset = 0;
+              for (const c of chunks) { merged.set(c, offset); offset += c.length; }
+              const rawText = new TextDecoder('utf-8', { fatal: false }).decode(merged);
               debugInfo.downloadedLength = rawText.length;
               bodyText = info.partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
               bodyText = bodyText.substring(0, 10000);
