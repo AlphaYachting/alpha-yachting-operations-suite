@@ -41,10 +41,11 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'SMTP secrets not fully configured' });
     }
 
+    const useSSL = port === 465;
     const transporter = nodemailer.createTransport({
       host, port,
-      secure: false,
-      requireTLS: true,
+      secure: useSSL,
+      requireTLS: !useSSL,
       auth: { user: smtpUser, pass: smtpPass },
       connectionTimeout: 20000,
       socketTimeout: 30000,

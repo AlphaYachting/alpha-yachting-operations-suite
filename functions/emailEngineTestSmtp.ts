@@ -21,11 +21,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    const useSSL = port === 465;
     const transporter = nodemailer.createTransport({
       host,
       port,
-      secure: false, // STARTTLS
-      requireTLS: true,
+      secure: useSSL, // SSL for 465, STARTTLS for 587
+      requireTLS: !useSSL,
       auth: { user: smtpUser, pass: smtpPass },
       connectionTimeout: 10000,
       greetingTimeout: 5000,
