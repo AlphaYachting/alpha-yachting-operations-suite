@@ -37,6 +37,50 @@ function isInternalEmail(email) {
 }
 
 // ---------------------------------------------------------------------------
+// FORWARDED EMAIL — extract the original customer message body
+// Strips the forwarder's signature, the separator line, and the forwarded
+// headers (Von/From, Datum/Date, An/To, Betreff/Subject) so that only the
+// customer's actual message text is returned.
+// ---------------------------------------------------------------------------
+
+function extractForwardedBody(bodyText) {
+  if (!bodyText) return null;
+
+  // Match common German/English forwarded separators
+  const sepPattern = /[-=*]{5,}\s*(?:Weitergeleitete Nachricht|Forwarded message|Forwarded Message|Original Message|Originaltext|Weitergeleitet)\s*[-=*]{5,}/i;
+  const sepMatch = bodyText.match(sepPattern);
+
+  let contentBody = null;
+
+  if (sepMatch) {
+    const afterSep = bodyText.substring(sepMatch.index + sepMatch[0].length);
+    const lines = afterSep.split(/\r?\n/);
+    let i = 0;
+    // Skip blank lines before headers
+    while (i < lines.length && lines[i].trim() === '') i++;
+    // Skip forwarded header lines (Von/From/Datum/Date/An/To/Betreff/Subject/Cc/Reply-To)
+    while (i < lines.length && /^(?:Von|From|Datum|Date|An|To|Betreff|Subject|Cc|Bcc|Antwort-An|Reply-To):\s*/i.test(lines[i].trim())) i++;
+    // Skip blank lines after headers
+    while (i < lines.length && lines[i].trim() === '') i++;
+
+    const cleanedLines = lines.slice(i).map(l => l.replace(/^>\s?/, ''));
+    contentBody = cleanedLines.join('\n').trim();
+  }
+
+  if (!contentBody) {
+    // Fallback: find content after a Von/From block (no separator)
+    const fromBlockMatch = bodyText.match(
+      /(?:Von|From):\s*[^\n]+\n(?:(?:Datum|Date|An|To|Betreff|Subject|Cc):[^\n]*\n){0,5}\n([\s\S]+)/i
+    );
+    if (fromBlockMatch) {
+      contentBody = fromBlockMatch[1].split(/\r?\n/).map(l => l.replace(/^>\s?/, '')).join('\n').trim();
+    }
+  }
+
+  return contentBody || null;
+}
+
+// ---------------------------------------------------------------------------
 // FORWARDED EMAIL — find the original external sender in the body
 // e.g.  Von: Max Mustermann <max@example.com>
 //       From: "Some Person" <customer@gmail.com>
