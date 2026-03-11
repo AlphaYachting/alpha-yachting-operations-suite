@@ -26,6 +26,69 @@ function htmlToText(html) {
     .trim();
 }
 
+function decodePartBody(body, encoding) {
+  if (!body) return '';
+  const enc = (encoding || '').toLowerCase().trim();
+  if (enc === 'base64') {
+    try {
+      const cleaned = body.replace(/[\r\n\s]/g, '');
+      const bytes = Uint8Array.from(atob(cleaned), c => c.charCodeAt(0));
+      return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    } catch { return body; }
+  }
+  if (enc === 'quoted-printable') {
+    return body
+      .replace(/=\r?\n/g, '')
+      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  }
+  return body;
+}
+
+// Extract readable text from raw MIME body using bodyStructure for guidance
+function extractBodyFromRaw(raw, struct) {
+  if (!raw) return '';
+
+  // Multipart: split by boundary from bodyStructure
+  if (struct && struct.type === 'multipart' && struct.parameters?.boundary) {
+    const boundary = struct.parameters.boundary;
+    const parts = ('\r\n' + raw).split('\r\n--' + boundary);
+
+    let plainText = '';
+    let htmlText = '';
+
+    for (const part of parts) {
+      if (!part || part.startsWith('--')) continue;
+      const headerEnd = part.indexOf('\r\n\r\n');
+      if (headerEnd < 0) continue;
+
+      const partHeaders = part.substring(0, headerEnd);
+      const partBody = part.substring(headerEnd + 4);
+      const ctMatch = partHeaders.match(/Content-Type:\s*([^;\r\n]+)/i);
+      const ct = (ctMatch ? ctMatch[1] : '').trim().toLowerCase();
+      const encMatch = partHeaders.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i);
+      const enc = (encMatch ? encMatch[1] : '').trim();
+
+      const decoded = decodePartBody(partBody, enc);
+
+      if (ct.startsWith('text/plain') && !plainText) plainText = decoded.trim();
+      else if (ct.startsWith('text/html') && !htmlText) htmlText = htmlToText(decoded);
+    }
+
+    return plainText || htmlText || '';
+  }
+
+  // Single part — check bodyStructure subtype
+  if (struct && struct.subtype === 'html') return htmlToText(raw);
+
+  // Auto-detect HTML
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('<') || /<html/i.test(trimmed.substring(0, 200))) {
+    return htmlToText(raw);
+  }
+
+  return trimmed;
+}
+
 function buildConversationKey(messageId, inReplyTo, fromEmail, normalizedSubject) {
   const clean = (id) => id ? id.replace(/[<>\s]/g, '') : null;
   if (inReplyTo && clean(inReplyTo)) return `chain:${clean(inReplyTo)}`;
