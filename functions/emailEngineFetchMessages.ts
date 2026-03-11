@@ -111,10 +111,11 @@ Deno.serve(async (req) => {
             const normalizedSubj = normalizeSubject(subject);
             const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
 
-            // Get body text
+            // Get body text from bodyParts map (key 'TEXT' or 'text')
             let bodyText = '';
-            if (msg.bodyText) {
-              bodyText = Buffer.isBuffer(msg.bodyText) ? msg.bodyText.toString('utf8') : String(msg.bodyText);
+            if (msg.bodyParts) {
+              const raw = msg.bodyParts.get('TEXT') || msg.bodyParts.get('text') || '';
+              bodyText = Buffer.isBuffer(raw) ? raw.toString('utf8') : String(raw);
             }
             bodyText = sanitizeText(bodyText).substring(0, 10000);
 
