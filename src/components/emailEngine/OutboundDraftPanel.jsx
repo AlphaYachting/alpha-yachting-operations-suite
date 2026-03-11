@@ -117,7 +117,7 @@ export default function OutboundDraftPanel({ replyToMessage, onReplyComplete, re
       toast.error('Only "approved_to_send" drafts may be sent. Approve it first.');
       return;
     }
-    if (!confirm(`⚠️ SEND EMAIL?\n\nTo: ${(draft.to_email || []).join(', ')}\nSubject: ${draft.draft_subject}\n\nThis will send a real email via SMTP. Continue?`)) return;
+    if (!confirm(`⚠️ SEND EMAIL?\n\nTo: ${(draft.to_email || []).join(', ')}\nSubject: ${draft.draft_subject}\n\nThis will send a real email via Resend API. Continue?`)) return;
 
     setSending(draft.id);
     try {
