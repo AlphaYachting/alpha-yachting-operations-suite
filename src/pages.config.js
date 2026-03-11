@@ -68,6 +68,7 @@ import Customers from './pages/Customers';
 import Dashboard from './pages/Dashboard';
 import DatabaseBackup from './pages/DatabaseBackup';
 import EmailConfiguration from './pages/EmailConfiguration';
+import EmailEngineSandbox from './pages/EmailEngineSandbox';
 import ImportNauticoRateCard from './pages/ImportNauticoRateCard';
 import Inventory from './pages/Inventory';
 import InventoryDashboard from './pages/InventoryDashboard';
@@ -121,7 +122,6 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
-import EmailEngineSandbox from './pages/EmailEngineSandbox';
 import __Layout from './Layout.jsx';
 
 
@@ -147,6 +147,7 @@ export const PAGES = {
     "Dashboard": Dashboard,
     "DatabaseBackup": DatabaseBackup,
     "EmailConfiguration": EmailConfiguration,
+    "EmailEngineSandbox": EmailEngineSandbox,
     "ImportNauticoRateCard": ImportNauticoRateCard,
     "Inventory": Inventory,
     "InventoryDashboard": InventoryDashboard,
@@ -200,7 +201,6 @@ export const PAGES = {
     "WorkOrderDetail": WorkOrderDetail,
     "WorkOrders": WorkOrders,
     "WorkshopDisplay": WorkshopDisplay,
-    "EmailEngineSandbox": EmailEngineSandbox,
 }
 
 export const pagesConfig = {

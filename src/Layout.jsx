@@ -94,6 +94,7 @@ const navItems = [
   { name: 'Storage Pricing', icon: Database, page: 'StoragePricingAdmin', adminOnly: true },
   { name: 'Calendar Feeds', icon: CalendarIcon, page: 'CalendarFeeds', adminOnly: true },
   { name: 'App Invitations', icon: Mail, page: 'AppInvites', adminOnly: true },
+  { name: 'Email Engine', icon: Mail, page: 'EmailEngineSandbox', adminOnly: true },
   { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
   { name: 'Customer Portal Test', icon: Users, page: 'CustomerPortalTest', adminOnly: true },
 ];
