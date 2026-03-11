@@ -181,25 +181,26 @@ Deno.serve(async (req) => {
             const normalizedSubj = normalizeSubject(subject);
             const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
 
-            // Get body text — parse raw MIME, handle multipart/HTML-only/plain
+            // Get body text from full source (RFC822), strip headers first
             let bodyText = '';
             let debugInfo = {};
-            if (msg.bodyText) {
-              const raw = Buffer.isBuffer(msg.bodyText) ? msg.bodyText.toString('utf8') : String(msg.bodyText);
+            if (msg.source) {
+              const full = Buffer.isBuffer(msg.source) ? msg.source.toString('utf8') : String(msg.source);
+              // Strip email headers (everything before first blank line)
+              const headerEnd = full.indexOf('\r\n\r\n');
+              const rawBody = headerEnd >= 0 ? full.substring(headerEnd + 4) : full;
               debugInfo = {
-                rawType: typeof msg.bodyText,
-                isBuffer: Buffer.isBuffer(msg.bodyText),
-                rawLength: raw.length,
-                rawFirst200: raw.substring(0, 200),
+                sourceLength: full.length,
+                rawBodyFirst200: rawBody.substring(0, 200),
                 structType: msg.bodyStructure?.type,
                 structSubtype: msg.bodyStructure?.subtype,
                 structBoundary: msg.bodyStructure?.parameters?.boundary,
               };
-              bodyText = extractBodyFromRaw(raw, msg.bodyStructure).substring(0, 10000);
+              bodyText = extractBodyFromRaw(rawBody, msg.bodyStructure).substring(0, 10000);
               debugInfo.extractedLength = bodyText.length;
               debugInfo.extractedFirst200 = bodyText.substring(0, 200);
             } else {
-              debugInfo = { bodyTextPresent: false, bodyTextType: typeof msg.bodyText };
+              debugInfo = { sourcePresent: false };
             }
 
             const inReplyTo = null; // from envelope, not headers
