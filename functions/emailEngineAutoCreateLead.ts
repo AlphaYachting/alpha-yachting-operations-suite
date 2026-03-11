@@ -25,6 +25,8 @@ const INTERNAL_DOMAINS = [
   'alpha-yachting.eu',
   'alpha-yachting.at',
   'alphayachting.at',
+  'alpha-yachting.hr',
+  'alphayachting.hr',
 ];
 
 function isInternalEmail(email) {
