@@ -181,11 +181,11 @@ Deno.serve(async (req) => {
             const normalizedSubj = normalizeSubject(subject);
             const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
 
-            // Get body text — bodyText contains the raw MIME body (may be HTML-only)
+            // Get body text — parse raw MIME, handle multipart/HTML-only/plain
             let bodyText = '';
             if (msg.bodyText) {
               const raw = Buffer.isBuffer(msg.bodyText) ? msg.bodyText.toString('utf8') : String(msg.bodyText);
-              bodyText = htmlToText(raw).substring(0, 10000);
+              bodyText = extractBodyFromRaw(raw, msg.bodyStructure).substring(0, 10000);
             }
 
             const inReplyTo = null; // from envelope, not headers
