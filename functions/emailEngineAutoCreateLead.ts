@@ -306,13 +306,13 @@ function extractLeadPayload(record) {
   const boatDetailsStr = boatParts.join(', ');
 
   // --- INQUIRY TYPE & PRIORITY ---
-  const inquiryText  = formFields.message || formFields.service || body;
+  const inquiryText  = formFields.message || formFields.service || customerBody;
   const inquiryType  = classifyInquiryType(inquiryText, rawSubject);
   const priority     = classifyPriority(inquiryText, rawSubject);
 
   // --- DESCRIPTION ---
-  // Use the structured message field if available, otherwise the full body
-  const description = (formFields.message || body).substring(0, 5000);
+  // Use the structured message field if available, otherwise the customer body
+  const description = (formFields.message || customerBody).substring(0, 5000);
 
   // --- STRUCTURED NOTES (audit trail) ---
   const structuredNotes = [
