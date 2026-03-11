@@ -282,8 +282,8 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get('FIRA_API_KEY');
     if (!apiKey) throw new Error('FIRA_API_KEY secret is not configured');
 
-    // FIRA auth: API key passed as query parameter (no Bearer scheme in FIRA OpenAPI spec)
-    const firaUrl = `https://app.fira.finance/api/v1/webshop/order/custom?apiKey=${encodeURIComponent(apiKey)}`;
+    // FIRA auth: secret key in 'FIRA-Api-Key' header (per FIRA error message)
+    const firaUrl = 'https://app.fira.finance/api/v1/webshop/order/custom';
 
     let firaResponse, firaBody;
     try {
@@ -293,6 +293,7 @@ Deno.serve(async (req) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'FIRA-Api-Key': apiKey,
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
