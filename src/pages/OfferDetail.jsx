@@ -47,6 +47,7 @@ import OfferGallery from '@/components/offers/OfferGallery';
 import PDFExportButton from '@/components/pdf/PDFExportButton';
 import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
 import { computeOfferTotals } from '@/components/offers/offerTotals';
+import FiraExportButton from '@/components/fira/FiraExportButton';
 
 export default function OfferDetail() {
   const navigate = useNavigate();
