@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, XCircle, Loader2, RefreshCw, Wifi, Mail, Server } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, RefreshCw, Wifi, Zap } from 'lucide-react';
 
 export default function MailboxStatus({ onFetchComplete }) {
   const [imapStatus, setImapStatus] = useState(null);
-  const [smtpStatus, setSmtpStatus] = useState(null);
+  const [resendStatus, setResendStatus] = useState(null);
   const [fetchResult, setFetchResult] = useState(null);
-  const [loading, setLoading] = useState({ imap: false, smtp: false, fetch: false });
+  const [loading, setLoading] = useState({ imap: false, resend: false, fetch: false });
 
   const testImap = async () => {
     setLoading(l => ({ ...l, imap: true }));
@@ -21,15 +21,15 @@ export default function MailboxStatus({ onFetchComplete }) {
     setLoading(l => ({ ...l, imap: false }));
   };
 
-  const testSmtp = async () => {
-    setLoading(l => ({ ...l, smtp: true }));
+  const testResend = async () => {
+    setLoading(l => ({ ...l, resend: true }));
     try {
-      const res = await base44.functions.invoke('emailEngineTestSmtp', {});
-      setSmtpStatus(res.data);
+      const res = await base44.functions.invoke('emailEngineTestResendSend', {});
+      setResendStatus(res.data);
     } catch (e) {
-      setSmtpStatus({ success: false, error: 'Function call failed' });
+      setResendStatus({ success: false, error: 'Function call failed' });
     }
-    setLoading(l => ({ ...l, smtp: false }));
+    setLoading(l => ({ ...l, resend: false }));
   };
 
   const fetchEmails = async () => {
@@ -75,23 +75,25 @@ export default function MailboxStatus({ onFetchComplete }) {
         </CardContent>
       </Card>
 
-      {/* SMTP */}
+      {/* Resend API */}
       <Card className="border-slate-200">
         <CardHeader className="pb-2 pt-4 px-4">
           <CardTitle className="text-sm font-medium text-slate-600 flex items-center gap-2">
-            <Server className="h-4 w-4 text-slate-400" />
-            SMTP Outbound (STARTTLS/587)
-            <StatusIcon status={smtpStatus} />
+            <Zap className="h-4 w-4 text-slate-400" />
+            Resend Outbound (API)
+            <StatusIcon status={resendStatus} />
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
-          {smtpStatus && (
-            <p className={`text-xs mb-2 leading-relaxed ${smtpStatus.success ? 'text-green-700' : 'text-red-700'}`}>
-              {smtpStatus.success ? `✓ ${smtpStatus.message}` : `✗ ${smtpStatus.error}`}
+          {resendStatus && (
+            <p className={`text-xs mb-2 leading-relaxed ${resendStatus.success ? 'text-green-700' : 'text-red-700'}`}>
+              {resendStatus.success
+                ? `✓ ${resendStatus.message}`
+                : `✗ ${resendStatus.error}`}
             </p>
           )}
-          <Button size="sm" variant="outline" onClick={testSmtp} disabled={loading.smtp} className="w-full">
-            {loading.smtp ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Test SMTP Connection'}
+          <Button size="sm" variant="outline" onClick={testResend} disabled={loading.resend} className="w-full">
+            {loading.resend ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Test Resend (sends test email)'}
           </Button>
         </CardContent>
       </Card>
