@@ -183,9 +183,23 @@ Deno.serve(async (req) => {
 
             // Get body text — parse raw MIME, handle multipart/HTML-only/plain
             let bodyText = '';
+            let debugInfo = {};
             if (msg.bodyText) {
               const raw = Buffer.isBuffer(msg.bodyText) ? msg.bodyText.toString('utf8') : String(msg.bodyText);
+              debugInfo = {
+                rawType: typeof msg.bodyText,
+                isBuffer: Buffer.isBuffer(msg.bodyText),
+                rawLength: raw.length,
+                rawFirst200: raw.substring(0, 200),
+                structType: msg.bodyStructure?.type,
+                structSubtype: msg.bodyStructure?.subtype,
+                structBoundary: msg.bodyStructure?.parameters?.boundary,
+              };
               bodyText = extractBodyFromRaw(raw, msg.bodyStructure).substring(0, 10000);
+              debugInfo.extractedLength = bodyText.length;
+              debugInfo.extractedFirst200 = bodyText.substring(0, 200);
+            } else {
+              debugInfo = { bodyTextPresent: false, bodyTextType: typeof msg.bodyText };
             }
 
             const inReplyTo = null; // from envelope, not headers
