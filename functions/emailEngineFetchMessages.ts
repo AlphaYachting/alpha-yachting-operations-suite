@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
 
         for await (const msg of client.fetch(range, {
           envelope: true,
-          bodyParts: ['TEXT'],
+          bodyText: true,
           bodyStructure: true,
         })) {
           results.fetched++;
