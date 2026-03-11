@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
             }
 
             results.stored++;
-            results.messages.push({ status: 'stored', message_id: messageId, from: fromEmail, subject });
+            results.messages.push({ status: 'stored', message_id: messageId, from: fromEmail, subject, debug: debugInfo });
 
           } catch (msgErr) {
             results.errors++;
