@@ -161,8 +161,7 @@ Deno.serve(async (req) => {
           try {
             let bodyText = '';
             const debugInfo = {
-              structType: info.bodyStructure?.type,
-              structSubtype: info.bodyStructure?.subtype,
+              structRaw: JSON.stringify(info.bodyStructure).substring(0, 500),
               partInfo: info.partInfo,
             };
 
