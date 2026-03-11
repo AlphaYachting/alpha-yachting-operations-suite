@@ -1,6 +1,5 @@
 // EMAIL ENGINE SANDBOX - Fetch & Store Inbound Messages
-// OPTIMIZED: Fetches only UNSEEN messages, uses lightweight header parsing.
-// ISOLATION: Writes ONLY to EmailMessageSandbox and EmailConversationSandbox.
+// Two-pass approach: 1) fetch envelopes+structure (fast), 2) download only the text part per message
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { ImapFlow } from 'npm:imapflow@1.0.167';
 
@@ -26,67 +25,45 @@ function htmlToText(html) {
     .trim();
 }
 
-function decodePartBody(body, encoding) {
-  if (!body) return '';
-  const enc = (encoding || '').toLowerCase().trim();
-  if (enc === 'base64') {
-    try {
-      const cleaned = body.replace(/[\r\n\s]/g, '');
-      const bytes = Uint8Array.from(atob(cleaned), c => c.charCodeAt(0));
-      return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-    } catch { return body; }
+// Walk bodyStructure to find the best text part. Returns { num, isHtml } or null.
+function findTextPartInfo(struct, parentNum = '') {
+  if (!struct) return null;
+
+  // Single-part: text node
+  if (struct.type === 'text') {
+    const num = parentNum || '1';
+    return { num, isHtml: struct.subtype === 'html' };
   }
-  if (enc === 'quoted-printable') {
-    return body
-      .replace(/=\r?\n/g, '')
-      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-  }
-  return body;
-}
 
-// Extract readable text from raw MIME body using bodyStructure for guidance
-function extractBodyFromRaw(raw, struct) {
-  if (!raw) return '';
-
-  // Multipart: split by boundary from bodyStructure
-  if (struct && struct.type === 'multipart' && struct.parameters?.boundary) {
-    const boundary = struct.parameters.boundary;
-    const parts = ('\r\n' + raw).split('\r\n--' + boundary);
-
-    let plainText = '';
-    let htmlText = '';
-
-    for (const part of parts) {
-      if (!part || part.startsWith('--')) continue;
-      const headerEnd = part.indexOf('\r\n\r\n');
-      if (headerEnd < 0) continue;
-
-      const partHeaders = part.substring(0, headerEnd);
-      const partBody = part.substring(headerEnd + 4);
-      const ctMatch = partHeaders.match(/Content-Type:\s*([^;\r\n]+)/i);
-      const ct = (ctMatch ? ctMatch[1] : '').trim().toLowerCase();
-      const encMatch = partHeaders.match(/Content-Transfer-Encoding:\s*([^\r\n]+)/i);
-      const enc = (encMatch ? encMatch[1] : '').trim();
-
-      const decoded = decodePartBody(partBody, enc);
-
-      if (ct.startsWith('text/plain') && !plainText) plainText = decoded.trim();
-      else if (ct.startsWith('text/html') && !htmlText) htmlText = htmlToText(decoded);
+  if (struct.type === 'multipart' && struct.childNodes?.length > 0) {
+    // Pass 1: direct text/plain child
+    for (let i = 0; i < struct.childNodes.length; i++) {
+      const child = struct.childNodes[i];
+      const childNum = parentNum ? `${parentNum}.${i + 1}` : `${i + 1}`;
+      if (child.type === 'text' && child.subtype === 'plain') {
+        return { num: childNum, isHtml: false };
+      }
     }
-
-    return plainText || htmlText || '';
+    // Pass 2: recurse into nested multiparts (e.g. multipart/mixed > multipart/alternative)
+    for (let i = 0; i < struct.childNodes.length; i++) {
+      const child = struct.childNodes[i];
+      const childNum = parentNum ? `${parentNum}.${i + 1}` : `${i + 1}`;
+      if (child.type === 'multipart') {
+        const result = findTextPartInfo(child, childNum);
+        if (result) return result;
+      }
+    }
+    // Pass 3: fall back to text/html
+    for (let i = 0; i < struct.childNodes.length; i++) {
+      const child = struct.childNodes[i];
+      const childNum = parentNum ? `${parentNum}.${i + 1}` : `${i + 1}`;
+      if (child.type === 'text' && child.subtype === 'html') {
+        return { num: childNum, isHtml: true };
+      }
+    }
   }
 
-  // Single part — check bodyStructure subtype
-  if (struct && struct.subtype === 'html') return htmlToText(raw);
-
-  // Auto-detect HTML
-  const trimmed = raw.trim();
-  if (trimmed.startsWith('<') || /<html/i.test(trimmed.substring(0, 200))) {
-    return htmlToText(raw);
-  }
-
-  return trimmed;
+  return null;
 }
 
 function buildConversationKey(messageId, inReplyTo, fromEmail, normalizedSubject) {
@@ -123,7 +100,6 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'IMAP secrets not configured' });
     }
 
-    // Pre-load existing message IDs (only most recent 200 for speed)
     const existingMessages = await base44.asServiceRole.entities.EmailMessageSandbox.list('-received_at', 200);
     const existingMsgIds = new Set((existingMessages || []).map(m => m.message_id).filter(Boolean));
 
@@ -137,7 +113,7 @@ Deno.serve(async (req) => {
       logger: false,
       connectionTimeout: 10000,
       greetingTimeout: 6000,
-      socketTimeout: 15000,
+      socketTimeout: 30000,
     });
 
     await client.connect();
@@ -151,28 +127,60 @@ Deno.serve(async (req) => {
       if (total === 0) {
         results.messages.push({ info: 'Inbox is empty' });
       } else {
-        // Fetch only the most recent N messages by sequence number
         const start = Math.max(1, total - batchSize + 1);
         const range = `${start}:${total}`;
 
+        // PASS 1: Fetch only envelopes + bodyStructure (no body content = fast)
+        const msgInfos = [];
         for await (const msg of client.fetch(range, {
           envelope: true,
-          source: true,
           bodyStructure: true,
+          uid: true,
         })) {
           results.fetched++;
+          const messageId = msg.envelope?.messageId || null;
 
+          if (messageId && existingMsgIds.has(messageId)) {
+            results.duplicates++;
+            results.messages.push({ status: 'duplicate', message_id: messageId });
+            continue;
+          }
+
+          msgInfos.push({
+            uid: msg.uid,
+            envelope: msg.envelope,
+            bodyStructure: msg.bodyStructure,
+            partInfo: findTextPartInfo(msg.bodyStructure),
+          });
+        }
+
+        // PASS 2: Download only the specific text part per message
+        for (const info of msgInfos) {
           try {
-            const env = msg.envelope;
-            const messageId = env?.messageId || null;
+            let bodyText = '';
+            const debugInfo = {
+              structType: info.bodyStructure?.type,
+              structSubtype: info.bodyStructure?.subtype,
+              partInfo: info.partInfo,
+            };
 
-            // Skip duplicates using pre-loaded Set
-            if (messageId && existingMsgIds.has(messageId)) {
-              results.duplicates++;
-              results.messages.push({ status: 'duplicate', message_id: messageId });
-              continue;
+            if (info.partInfo) {
+              const { content } = await client.download(info.uid, info.partInfo.num, { uid: true });
+              const chunks = [];
+              for await (const chunk of content) {
+                chunks.push(chunk);
+              }
+              const rawText = Buffer.concat(chunks).toString('utf-8');
+              debugInfo.downloadedLength = rawText.length;
+              bodyText = info.partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
+              bodyText = bodyText.substring(0, 10000);
+              debugInfo.extractedFirst200 = bodyText.substring(0, 200);
+            } else {
+              debugInfo.partNotFound = true;
             }
 
+            const env = info.envelope;
+            const messageId = env?.messageId || null;
             const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
             const fromName = env?.from?.[0]?.name || fromEmail;
             const toEmails = (env?.to || []).map(a => a.address).filter(Boolean);
@@ -180,35 +188,9 @@ Deno.serve(async (req) => {
             const subject = env?.subject || '(no subject)';
             const normalizedSubj = normalizeSubject(subject);
             const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
-
-            // Get body text from full source (RFC822), strip headers first
-            let bodyText = '';
-            let debugInfo = {};
-            if (msg.source) {
-              const full = Buffer.isBuffer(msg.source) ? msg.source.toString('utf8') : String(msg.source);
-              // Strip email headers (everything before first blank line)
-              const headerEnd = full.indexOf('\r\n\r\n');
-              const rawBody = headerEnd >= 0 ? full.substring(headerEnd + 4) : full;
-              debugInfo = {
-                sourceLength: full.length,
-                rawBodyFirst200: rawBody.substring(0, 200),
-                structType: msg.bodyStructure?.type,
-                structSubtype: msg.bodyStructure?.subtype,
-                structBoundary: msg.bodyStructure?.parameters?.boundary,
-              };
-              bodyText = extractBodyFromRaw(rawBody, msg.bodyStructure).substring(0, 10000);
-              debugInfo.extractedLength = bodyText.length;
-              debugInfo.extractedFirst200 = bodyText.substring(0, 200);
-            } else {
-              debugInfo = { sourcePresent: false };
-            }
-
-            const inReplyTo = null; // from envelope, not headers
-            const conversationKey = buildConversationKey(messageId, inReplyTo, fromEmail, normalizedSubj);
-
-            // Attachment detection from body structure
-            const hasAttachments = !!(msg.bodyStructure?.childNodes?.some(n => n.disposition === 'attachment'));
-            const attachmentCount = msg.bodyStructure?.childNodes?.filter(n => n.disposition === 'attachment').length || 0;
+            const conversationKey = buildConversationKey(messageId, null, fromEmail, normalizedSubj);
+            const hasAttachments = !!(info.bodyStructure?.childNodes?.some(n => n.disposition === 'attachment'));
+            const attachmentCount = info.bodyStructure?.childNodes?.filter(n => n.disposition === 'attachment').length || 0;
 
             await base44.asServiceRole.entities.EmailMessageSandbox.create({
               mailbox_name: imapUser,
@@ -243,7 +225,6 @@ Deno.serve(async (req) => {
 
             if (messageId) existingMsgIds.add(messageId);
 
-            // Update or create conversation
             const allParticipants = Array.from(new Set([fromEmail, ...toEmails, ...ccEmails]));
             const existingConv = convMap.get(conversationKey);
 
