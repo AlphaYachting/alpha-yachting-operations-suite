@@ -212,7 +212,7 @@ export default function ContactsTab({ supplierId }) {
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={null}>No role</SelectItem>
+                  <SelectItem value="none">No role</SelectItem>
                   <SelectItem value="SALES">Sales</SelectItem>
                   <SelectItem value="ORDERING">Ordering</SelectItem>
                   <SelectItem value="TECH_SUPPORT">Tech Support</SelectItem>
