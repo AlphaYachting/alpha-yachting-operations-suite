@@ -166,8 +166,9 @@ function buildFiraPayload(offer, tasks, customer, location) {
   const termsEN = 'This offer is valid for 30 days from the date of issue. Retention of title until full payment.';
 
   const now = new Date().toISOString();
-  const validTo = offer.valid_until ? new Date(offer.valid_until + 'T23:59:59Z').toISOString() : null;
-  const dueDate = validTo || new Date(Date.now() + 14 * 86400000).toISOString();
+  // FIRA spec: dueDate and validTo must be 'YYYY-MM-DD' format, createdAt is ISO datetime
+  const validTo = offer.valid_until ? offer.valid_until : null; // already YYYY-MM-DD
+  const dueDate = validTo || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
   const webshopOrderId = deriveWebshopOrderId(offer.offer_number);
 
   const payload = {
