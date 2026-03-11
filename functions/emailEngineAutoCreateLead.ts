@@ -147,7 +147,7 @@ function parseContactFormFields(bodyText) {
     if (/^(firma|company|unternehmen|organisation|organization)$/.test(key))      fields.company = value;
 
     // --- Inquiry content ---
-    if (/^(nachricht|message|anfrage|anliegen|request|kommentar|comment|text|inhalt|beschreibung|description|ihr.?anliegen|betreff|betreff.?text)$/.test(key)) fields.message = value;
+    if (/^(nachricht|message|anfrage|anliegen|request|kommentar|comment|text|inhalt|beschreibung|description|ihr.?anliegen)$/.test(key)) fields.message = value;
     if (/^(service|dienstleistung|leistung|gewunschte.?leistung|art.?der.?anfrage|anfrage.?typ|service.?art)$/.test(key)) fields.service = value;
 
     // --- Boat ---
