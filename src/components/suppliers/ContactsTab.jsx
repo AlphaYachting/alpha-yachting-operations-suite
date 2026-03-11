@@ -78,7 +78,7 @@ export default function ContactsTab({ supplierId }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const data = { ...formData, supplier_id: supplierId };
+      const data = { ...formData, supplier_id: supplierId, role: formData.role === 'none' ? null : formData.role };
       if (editingContact) {
         await base44.entities.SupplierContact.update(editingContact.id, data);
       } else {
