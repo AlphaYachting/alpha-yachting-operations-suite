@@ -94,6 +94,11 @@ export default function OfferDetail() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [template, setTemplate] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(u => setCurrentUser(u)).catch(() => {});
+  }, []);
 
   const { data: offer } = useQuery({
     queryKey: ['offer', offerId],
