@@ -2,6 +2,7 @@
 // Two-pass approach: 1) fetch envelopes+structure (fast), 2) download only the text part per message
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 import { ImapFlow } from 'npm:imapflow@1.0.167';
+import { Buffer } from 'node:buffer';
 
 function normalizeSubject(subject) {
   if (!subject) return '';
