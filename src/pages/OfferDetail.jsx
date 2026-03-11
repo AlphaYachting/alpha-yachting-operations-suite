@@ -880,7 +880,16 @@ Requirements:
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {!isNewOffer && (
+              <FiraExportButton
+                offer={{ ...formData, id: offerId }}
+                tasks={tasks}
+                customer={customers.find(c => c.id === formData.customer_id) || null}
+                userRole={currentUser?.role}
+                onExported={() => queryClient.invalidateQueries(['offer', offerId])}
+              />
+            )}
             {formData.customer_id && formData.title && (
               <PDFExportButton 
                 document={getPDFDocument()}
