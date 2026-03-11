@@ -275,17 +275,26 @@ function extractLeadPayload(record) {
     return { blocked: true, blockReason: 'resolved_sender_still_internal' };
   }
 
+  // --- EXTRACT FORWARDED CUSTOMER BODY (if available) ---
+  // For forwarded emails, we only want to parse the *customer's* original message,
+  // not the forwarder's signature or their own header block.
+  const customerBody = (senderSource === 'forwarded_body')
+    ? (extractForwardedBody(body) || body)
+    : body;
+
   // --- STRUCTURED CONTACT FORM FIELDS ---
-  const formFields = parseContactFormFields(body);
+  // Parse from customer body only
+  const formFields = parseContactFormFields(customerBody);
 
   // Prefer form-extracted values over header values where available
   const finalName  = formFields.name  || resolvedName || resolvedEmail;
   const finalEmail = formFields.email || resolvedEmail;
-  const finalPhone = formFields.phone || extractPhoneFromText(body) || extractPhoneFromText(rawSubject) || '';
+  // Phone: prefer form fields, then scan ONLY the customer body (not forwarder signature)
+  const finalPhone = formFields.phone || extractPhoneFromText(customerBody) || extractPhoneFromText(rawSubject) || '';
 
   // --- BOAT DETAILS ---
-  // Prefer form fields, fall back to free-text scan
-  const textBoatDetails = extractBoatDetailsFromText(body);
+  // Prefer form fields, fall back to free-text scan of customer body only
+  const textBoatDetails = extractBoatDetailsFromText(customerBody);
   const boatParts = [
     formFields.boat_name   ? `vessel: ${formFields.boat_name}` : null,
     formFields.boat_brand  || textBoatDetails.boat_brand  ? `brand: ${formFields.boat_brand || textBoatDetails.boat_brand}` : null,
