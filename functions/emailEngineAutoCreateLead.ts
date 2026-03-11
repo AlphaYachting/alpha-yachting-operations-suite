@@ -1,16 +1,135 @@
 /**
  * EMAIL ENGINE — Auto Create Lead from Inbound Email
  *
- * Called automatically via entity automation when a new EmailMessageSandbox record is created,
- * OR manually from the UI with a specific sandbox_record_id.
- *
  * ISOLATION: Only writes to Lead and EmailLeadBridgeSandbox.
  * Does NOT create Customer, Boat, Job, WorkOrder, Task, or send any email.
+ *
+ * SENDER GUARD: Never creates a lead if the resolved sender is an internal
+ * Alpha Yachting address. For forwarded/contact-form emails arriving from an
+ * internal address, the real external sender is extracted from the body first.
+ *
+ * CONTENT PARSING: Parses both structured contact-form key:value blocks
+ * and free-form forwarded email bodies.
  */
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
 
-// --- Helpers ---
+// ---------------------------------------------------------------------------
+// INTERNAL DOMAIN GUARD
+// ---------------------------------------------------------------------------
+
+const INTERNAL_DOMAINS = [
+  'alphayachting.com',
+  'alpha-yachting.com',
+  'alphayachting.eu',
+  'alpha-yachting.eu',
+  'alpha-yachting.at',
+  'alphayachting.at',
+];
+
+function isInternalEmail(email) {
+  if (!email) return true;
+  const domain = (email.split('@')[1] || '').toLowerCase().trim();
+  if (!domain) return true;
+  return INTERNAL_DOMAINS.some(d => domain === d || domain.endsWith('.' + d));
+}
+
+// ---------------------------------------------------------------------------
+// FORWARDED EMAIL — find the original external sender in the body
+// e.g.  Von: Max Mustermann <max@example.com>
+//       From: "Some Person" <customer@gmail.com>
+// ---------------------------------------------------------------------------
+
+function extractForwardedSender(bodyText) {
+  if (!bodyText) return null;
+
+  // Match: Von/From: Name <email@domain>
+  const withName = bodyText.match(/(?:Von|From):\s*([^<\n]{1,80})<([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})>/i);
+  if (withName) {
+    const email = withName[2].trim().toLowerCase();
+    if (!isInternalEmail(email)) {
+      return { name: withName[1].replace(/["']/g, '').trim(), email };
+    }
+  }
+
+  // Match: Von/From: email@domain  (no display name)
+  const emailOnly = bodyText.match(/(?:Von|From):\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
+  if (emailOnly) {
+    const email = emailOnly[1].trim().toLowerCase();
+    if (!isInternalEmail(email)) {
+      return { name: email, email };
+    }
+  }
+
+  // Match: Reply-To: or Antwort an:
+  const replyTo = bodyText.match(/(?:Reply-To|Antwort.?an):\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
+  if (replyTo) {
+    const email = replyTo[1].trim().toLowerCase();
+    if (!isInternalEmail(email)) {
+      return { name: email, email };
+    }
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// STRUCTURED CONTACT FORM PARSER
+// Handles German/English key: value blocks sent by website inquiry forms
+// ---------------------------------------------------------------------------
+
+function parseContactFormFields(bodyText) {
+  if (!bodyText) return {};
+  const fields = {};
+  const lines = bodyText.split(/\r?\n/);
+
+  for (const line of lines) {
+    const kv = line.match(/^([^:]{2,40}):\s*(.+)$/);
+    if (!kv) continue;
+    const rawKey = kv[1].trim();
+    const value  = kv[2].trim();
+    if (!value || value.length < 1) continue;
+    const key = rawKey.toLowerCase()
+      .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss');
+
+    // --- Contact ---
+    if (/^(name|full.?name|kontakt|contact.?name)$/.test(key))         fields.name       = value;
+    if (/^(vorname|first.?name)$/.test(key))                           fields.first_name  = value;
+    if (/^(nachname|surname|last.?name|familienname)$/.test(key))       fields.last_name   = value;
+    if (/^(e.?mail|email|e-mail.?adresse|mailadresse)$/.test(key))      fields.email       = value.toLowerCase().trim();
+    if (/^(telefon|phone|tel|mobile|mobil|handynummer|telefonnummer)$/.test(key)) fields.phone = value;
+    if (/^(firma|company|unternehmen|organisation|organization)$/.test(key))      fields.company = value;
+
+    // --- Inquiry content ---
+    if (/^(nachricht|message|anfrage|anliegen|request|kommentar|comment|text|inhalt|beschreibung|description|ihr.?anliegen|betreff|betreff.?text)$/.test(key)) fields.message = value;
+    if (/^(service|dienstleistung|leistung|gewunschte.?leistung|art.?der.?anfrage|anfrage.?typ|service.?art)$/.test(key)) fields.service = value;
+
+    // --- Boat ---
+    if (/^(boot|boat|bootsname|vessel|schiff|yachtname)$/.test(key))                        fields.boat_name   = value;
+    if (/^(bootslange|bootslänge|boat.?length|lange|length|lange.?des.?bootes)$/.test(key)) fields.boat_length = value;
+    if (/^(bootshersteller|boat.?brand|marke|hersteller|manufacturer|bootsmarke)$/.test(key)) fields.boat_brand = value;
+    if (/^(bootstyp|boat.?type|typ|type|yachttyp|motorboot|segelboot)$/.test(key))           fields.boat_type  = value;
+    if (/^(baujahr|year.?built|baujahr.?boot|modelljahr)$/.test(key))                        fields.boat_year  = value;
+    if (/^(bootsmodell|model|modell)$/.test(key))                                             fields.boat_model = value;
+
+    // --- Location ---
+    if (/^(marina|hafen|liegeplatz|port|standort|location|ort|aktueller.?standort|winterlager)$/.test(key)) fields.location = value;
+
+    // --- Timing ---
+    if (/^(termin|wunschtermin|datum|date|zeitraum|zeitpunkt|when|wann|gewunschter.?termin)$/.test(key)) fields.desired_date = value;
+  }
+
+  // Merge first + last name if only split parts available
+  if (!fields.name && (fields.first_name || fields.last_name)) {
+    fields.name = [fields.first_name, fields.last_name].filter(Boolean).join(' ');
+  }
+
+  return fields;
+}
+
+// ---------------------------------------------------------------------------
+// UTILITY
+// ---------------------------------------------------------------------------
 
 function normalizeEmail(email) {
   return (email || '').toLowerCase().trim();
@@ -33,9 +152,10 @@ function buildFingerprint(fromEmail, subject, receivedAt) {
   return `${normalizeEmail(fromEmail)}::${normalizeSubject(subject)}::${dateBucket(receivedAt)}`;
 }
 
-function extractPhone(text) {
+function extractPhoneFromText(text) {
   if (!text) return null;
-  const match = text.match(/(\+?[\d\s\-().]{7,20})/);
+  // Try to find a phone number pattern; require at least 7 digits
+  const match = text.match(/(\+?[\d\s\-().]{7,25})/);
   if (!match) return null;
   const candidate = match[1].replace(/\s+/g, ' ').trim();
   const digits = candidate.replace(/\D/g, '');
@@ -43,136 +163,168 @@ function extractPhone(text) {
   return null;
 }
 
-function extractBoatDetails(text) {
+function extractBoatDetailsFromText(text) {
   if (!text) return {};
   const details = {};
-  
-  // Boat length
-  const lengthMatch = text.match(/(\d+(?:\.\d+)?)\s*m(?:eter|etre)?(?:\s|,|\.|\b)/i);
-  if (lengthMatch) details.boat_length = lengthMatch[1];
 
-  // Boat type keywords
-  const types = ['sailboat', 'motorboat', 'yacht', 'catamaran', 'rib', 'motorjacht', 'segelyacht', 'segelboot', 'motoryacht', 'katamaran'];
+  const lengthMatch = text.match(/(\d+(?:[.,]\d+)?)\s*m(?:eter|etre)?(?:\s|,|\.|\b)/i);
+  if (lengthMatch) details.boat_length = lengthMatch[1].replace(',', '.');
+
+  const types = ['sailboat', 'motorboat', 'catamaran', 'rib', 'motorjacht', 'segelyacht', 'segelboot', 'motoryacht', 'katamaran'];
   for (const t of types) {
-    if (text.toLowerCase().includes(t)) {
-      details.boat_type = t;
-      break;
-    }
+    if (text.toLowerCase().includes(t)) { details.boat_type = t; break; }
   }
 
-  // Boat brand/manufacturer (common ones)
-  const brands = ['beneteau', 'jeanneau', 'Bavaria', 'hanse', 'dufour', 'sun odyssey', 'oceanis', 'elan', 'lagoon', 'fountaine pajot', 'nautitech', 'princess', 'azimut', 'fairline'];
+  const brands = ['beneteau', 'jeanneau', 'bavaria', 'hanse', 'dufour', 'sun odyssey', 'oceanis', 'elan', 'lagoon', 'fountaine pajot', 'nautitech', 'princess', 'azimut', 'fairline', 'hallberg-rassy', 'moody', 'dehler', 'catalina'];
   for (const b of brands) {
-    if (text.toLowerCase().includes(b.toLowerCase())) {
-      details.boat_brand = b;
-      break;
-    }
+    if (text.toLowerCase().includes(b)) { details.boat_brand = b; break; }
   }
 
   return details;
 }
 
 function classifyInquiryType(text, subject) {
-  const combined = `${subject || ''} ${text || ''}`.toLowerCase();
-  if (combined.match(/notr|emergency|notfall|urgent|dringend/)) return 'Emergency';
-  if (combined.match(/part|ersatzteil|teile|spare/)) return 'Parts Request';
-  if (combined.match(/service|wartung|maintenance|inspektion|inspection|winter|antifoul|osmose/)) return 'Maintenance';
+  const c = `${subject || ''} ${text || ''}`.toLowerCase();
+  if (c.match(/notfall|emergency|urgent|dringend/))                                            return 'Emergency';
+  if (c.match(/part|ersatzteil|teile|spare|ersatz/))                                          return 'Parts Request';
+  if (c.match(/service|wartung|maintenance|inspektion|inspection|winter|antifoul|osmose|pflege|überwinterung|winterlager/)) return 'Maintenance';
   return 'Service Inquiry';
 }
 
 function classifyPriority(text, subject) {
-  const combined = `${subject || ''} ${text || ''}`.toLowerCase();
-  if (combined.match(/urgent|dringend|sofort|emergency|notfall|asap/)) return 'Urgent';
-  if (combined.match(/soon|bald|quickly|schnell/)) return 'High';
+  const c = `${subject || ''} ${text || ''}`.toLowerCase();
+  if (c.match(/urgent|dringend|sofort|emergency|notfall|asap/)) return 'Urgent';
+  if (c.match(/soon|bald|quickly|schnell/))                     return 'High';
   return 'Medium';
 }
 
-function extractLeadPayload(sandboxRecord) {
-  const body = sandboxRecord.body_text || '';
-  const subject = sandboxRecord.subject || '(no subject)';
-  const fromName = sandboxRecord.from_name || sandboxRecord.from_email || 'Unknown';
-  const fromEmail = sandboxRecord.from_email || '';
+// ---------------------------------------------------------------------------
+// MAIN LEAD EXTRACTION
+// Combines contact-form structured fields + free-text fallbacks
+// ---------------------------------------------------------------------------
 
-  // Extract phone
-  const phone = extractPhone(body) || extractPhone(subject) || '';
+function extractLeadPayload(record) {
+  const body         = record.body_text || '';
+  const rawSubject   = record.subject || '(no subject)';
+  let   resolvedName  = record.from_name  || '';
+  let   resolvedEmail = record.from_email || '';
+  let   senderSource  = 'direct';
 
-  // Boat details
-  const boatDetails = extractBoatDetails(body);
-  const boatDetailsStr = Object.entries(boatDetails)
-    .map(([k, v]) => `${k}: ${v}`)
-    .join(', ');
+  // --- SENDER GUARD ---
+  // If from_email is internal, try to find the real external sender in the body
+  if (isInternalEmail(resolvedEmail)) {
+    const fwdSender = extractForwardedSender(body);
+    if (fwdSender) {
+      resolvedName  = fwdSender.name;
+      resolvedEmail = fwdSender.email;
+      senderSource  = 'forwarded_body';
+    } else {
+      // Could not find external sender — block
+      return { blocked: true, blockReason: 'internal_sender_no_external_found' };
+    }
+  }
 
-  // Inquiry type and priority
-  const inquiryType = classifyInquiryType(body, subject);
-  const priority = classifyPriority(body, subject);
+  // Final safety check: resolved email must be external
+  if (isInternalEmail(resolvedEmail)) {
+    return { blocked: true, blockReason: 'resolved_sender_still_internal' };
+  }
 
-  // Structured notes
+  // --- STRUCTURED CONTACT FORM FIELDS ---
+  const formFields = parseContactFormFields(body);
+
+  // Prefer form-extracted values over header values where available
+  const finalName  = formFields.name  || resolvedName || resolvedEmail;
+  const finalEmail = formFields.email || resolvedEmail;
+  const finalPhone = formFields.phone || extractPhoneFromText(body) || extractPhoneFromText(rawSubject) || '';
+
+  // --- BOAT DETAILS ---
+  // Prefer form fields, fall back to free-text scan
+  const textBoatDetails = extractBoatDetailsFromText(body);
+  const boatParts = [
+    formFields.boat_name   ? `vessel: ${formFields.boat_name}` : null,
+    formFields.boat_brand  || textBoatDetails.boat_brand  ? `brand: ${formFields.boat_brand || textBoatDetails.boat_brand}` : null,
+    formFields.boat_model  ? `model: ${formFields.boat_model}` : null,
+    formFields.boat_type   || textBoatDetails.boat_type   ? `type: ${formFields.boat_type || textBoatDetails.boat_type}` : null,
+    formFields.boat_length || textBoatDetails.boat_length ? `length: ${formFields.boat_length || textBoatDetails.boat_length}m` : null,
+    formFields.boat_year   ? `year: ${formFields.boat_year}` : null,
+  ].filter(Boolean);
+  const boatDetailsStr = boatParts.join(', ');
+
+  // --- INQUIRY TYPE & PRIORITY ---
+  const inquiryText  = formFields.message || formFields.service || body;
+  const inquiryType  = classifyInquiryType(inquiryText, rawSubject);
+  const priority     = classifyPriority(inquiryText, rawSubject);
+
+  // --- DESCRIPTION ---
+  // Use the structured message field if available, otherwise the full body
+  const description = (formFields.message || body).substring(0, 5000);
+
+  // --- STRUCTURED NOTES (audit trail) ---
   const structuredNotes = [
     `[Auto-created from website inquiry email]`,
-    `Source: ${sandboxRecord.mailbox_name}`,
-    `Message-ID: ${sandboxRecord.message_id || 'n/a'}`,
-    `Received: ${sandboxRecord.received_at || 'n/a'}`,
-    `Subject: ${subject}`,
-    boatDetailsStr ? `Detected boat info: ${boatDetailsStr}` : null,
-    `Conversation key: ${sandboxRecord.conversation_key || 'n/a'}`,
+    `Sender source: ${senderSource}`,
+    `Mailbox: ${record.mailbox_name || 'n/a'}`,
+    `Message-ID: ${record.message_id || 'n/a'}`,
+    `Received: ${record.received_at || 'n/a'}`,
+    `Subject: ${rawSubject}`,
+    formFields.company     ? `Company: ${formFields.company}`       : null,
+    formFields.service     ? `Requested service: ${formFields.service}` : null,
+    boatDetailsStr         ? `Boat: ${boatDetailsStr}`              : null,
+    formFields.location    ? `Location/marina: ${formFields.location}` : null,
+    formFields.desired_date? `Desired date: ${formFields.desired_date}` : null,
+    `Conversation key: ${record.conversation_key || 'n/a'}`,
   ].filter(Boolean).join('\n');
 
   const leadPayload = {
-    name: fromName,
-    email: fromEmail,
-    phone: phone || '+0',          // Lead.phone is required; fallback placeholder
+    name:           finalName,
+    email:          finalEmail,
+    phone:          finalPhone || '+0',    // phone is required in Lead schema
     contact_method: 'Website',
-    inquiry_type: inquiryType,
-    priority: priority,
-    status: 'Pending',
-    description: body.substring(0, 5000),
-    notes: structuredNotes,
+    inquiry_type:   inquiryType,
+    priority:       priority,
+    status:         'Pending',
+    description:    description,
+    notes:          structuredNotes,
   };
 
-  // Optional fields
-  if (boatDetails.boat_type || boatDetails.boat_brand || boatDetails.boat_length) {
-    leadPayload.boat_details = boatDetailsStr;
-  }
+  if (boatDetailsStr) leadPayload.boat_details = boatDetailsStr;
+  if (formFields.location) leadPayload.location = formFields.location;
 
-  return {
-    payload: leadPayload,
-    extractionStatus: (fromName && fromEmail) ? 'extracted' : 'partial',
-  };
+  const extractionStatus = (finalName && finalEmail && finalPhone) ? 'extracted' : 'partial';
+
+  return { blocked: false, payload: leadPayload, extractionStatus, senderSource, formFields };
 }
 
-// --- Main Handler ---
+// ---------------------------------------------------------------------------
+// MAIN HANDLER
+// ---------------------------------------------------------------------------
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    
-    // Accept both direct call (with sandbox_record_id) and entity automation payload
+
     const body = await req.json().catch(() => ({}));
-    
-    // Support entity automation event format
+
+    // Support entity automation event payload format
     let sandboxRecordId = body.sandbox_record_id || body.entity_id;
     if (body.event?.entity_id) sandboxRecordId = body.event.entity_id;
-    if (body.data?.id) sandboxRecordId = body.data.id;
+    if (body.data?.id)         sandboxRecordId = body.data.id;
 
-    // If called with a specific record, process only that one
-    // If called without a record ID (manual bulk run), process all unprocessed inbound messages
     let recordsToProcess = [];
 
     if (sandboxRecordId) {
-      // Single record mode
       const records = await base44.asServiceRole.entities.EmailMessageSandbox.filter({ id: sandboxRecordId });
       recordsToProcess = records || [];
     } else {
-      // Bulk mode: fetch all inbound, non-duplicate messages not yet bridged
-      const allInbound = await base44.asServiceRole.entities.EmailMessageSandbox.filter({ direction: 'inbound' });
-      const allBridges = await base44.asServiceRole.entities.EmailLeadBridgeSandbox.list('-auto_created_at', 500);
-      
-      const processedMessageIds = new Set((allBridges || []).map(b => b.source_sandbox_record_id).filter(Boolean));
-      
+      // Bulk mode: all unprocessed valid inbound messages
+      const allInbound  = await base44.asServiceRole.entities.EmailMessageSandbox.filter({ direction: 'inbound' });
+      const allBridges  = await base44.asServiceRole.entities.EmailLeadBridgeSandbox.list('-auto_created_at', 500);
+      const bridgedIds  = new Set((allBridges || []).map(b => b.source_sandbox_record_id).filter(Boolean));
+
       recordsToProcess = (allInbound || []).filter(r =>
         r.duplicate_status !== 'duplicate' &&
         (r.processing_status === 'stored' || r.processing_status === 'parsed' || r.processing_status === 'sanitized') &&
-        !processedMessageIds.has(r.id)
+        !bridgedIds.has(r.id)
       );
     }
 
@@ -180,20 +332,47 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, message: 'No new records to process', processed: 0 });
     }
 
-    // Load all existing bridges once for duplicate checking
-    const allBridges = await base44.asServiceRole.entities.EmailLeadBridgeSandbox.list('-auto_created_at', 500);
+    // Load bridges once for duplicate checking
+    const allBridges         = await base44.asServiceRole.entities.EmailLeadBridgeSandbox.list('-auto_created_at', 500);
     const existingMessageIds = new Set((allBridges || []).map(b => b.source_email_message_id).filter(Boolean));
     const existingFingerprints = new Set((allBridges || []).map(b => b.internal_notes).filter(n => n?.startsWith('fingerprint:')));
 
     const results = [];
 
     for (const record of recordsToProcess) {
-      const result = { record_id: record.id, subject: record.subject };
+      const result = { record_id: record.id, subject: record.subject, from_email: record.from_email };
 
       try {
-        // --- DUPLICATE CHECK ---
-        const messageId = record.message_id;
-        const fingerprint = `fingerprint:${buildFingerprint(record.from_email, record.subject, record.received_at)}`;
+        // --- SENDER GUARD + EXTRACTION ---
+        const extracted = extractLeadPayload(record);
+
+        if (extracted.blocked) {
+          // Log as blocked bridge record (auditable)
+          await base44.asServiceRole.entities.EmailLeadBridgeSandbox.create({
+            source_email_message_id: record.message_id,
+            source_sandbox_record_id: record.id,
+            source_from_email: record.from_email || 'unknown',
+            source_subject: record.subject || '(no subject)',
+            source_received_at: record.received_at,
+            lead_created: false,
+            duplicate_check_status: 'pending',
+            extraction_status: 'error',
+            creation_status: 'failed',
+            creation_error_log: `Blocked: ${extracted.blockReason}`,
+            auto_created_at: new Date().toISOString(),
+          });
+          result.status = 'blocked_internal_sender';
+          result.reason = extracted.blockReason;
+          results.push(result);
+          continue;
+        }
+
+        const { payload: leadPayload, extractionStatus, senderSource } = extracted;
+        const resolvedEmail = leadPayload.email;
+
+        // --- DUPLICATE CHECKS ---
+        const messageId   = record.message_id;
+        const fingerprint = `fingerprint:${buildFingerprint(resolvedEmail, record.subject, record.received_at)}`;
 
         // Check 1: Already bridged by sandbox record ID
         const alreadyBridged = allBridges.find(b => b.source_sandbox_record_id === record.id);
@@ -204,14 +383,14 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Check 2: Duplicate by message_id
+        // Check 2: Duplicate by Message-ID
         if (messageId && existingMessageIds.has(messageId)) {
           await base44.asServiceRole.entities.EmailLeadBridgeSandbox.create({
             source_email_message_id: messageId,
             source_sandbox_record_id: record.id,
             source_conversation_key: record.conversation_key,
-            source_from_email: record.from_email,
-            source_from_name: record.from_name,
+            source_from_email: resolvedEmail,
+            source_from_name: leadPayload.name,
             source_subject: record.subject,
             source_received_at: record.received_at,
             lead_created: false,
@@ -226,14 +405,14 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Check 3: Duplicate by fingerprint
+        // Check 3: Fallback fingerprint
         if (existingFingerprints.has(fingerprint)) {
           await base44.asServiceRole.entities.EmailLeadBridgeSandbox.create({
             source_email_message_id: messageId,
             source_sandbox_record_id: record.id,
             source_conversation_key: record.conversation_key,
-            source_from_email: record.from_email,
-            source_from_name: record.from_name,
+            source_from_email: resolvedEmail,
+            source_from_name: leadPayload.name,
             source_subject: record.subject,
             source_received_at: record.received_at,
             lead_created: false,
@@ -248,9 +427,6 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // --- EXTRACT ---
-        const { payload: leadPayload, extractionStatus } = extractLeadPayload(record);
-
         // --- CREATE LEAD ---
         const createdLead = await base44.asServiceRole.entities.Lead.create(leadPayload);
 
@@ -259,8 +435,8 @@ Deno.serve(async (req) => {
           source_email_message_id: messageId,
           source_sandbox_record_id: record.id,
           source_conversation_key: record.conversation_key,
-          source_from_email: record.from_email,
-          source_from_name: record.from_name,
+          source_from_email: resolvedEmail,
+          source_from_name: leadPayload.name,
           source_subject: record.subject,
           source_received_at: record.received_at,
           lead_created: true,
@@ -268,21 +444,21 @@ Deno.serve(async (req) => {
           duplicate_check_status: 'unique',
           extraction_status: extractionStatus,
           creation_status: 'created',
-          extracted_lead_payload_json: leadPayload,
+          extracted_lead_payload_json: { ...leadPayload, _sender_source: senderSource },
           auto_created_at: new Date().toISOString(),
           internal_notes: fingerprint,
         });
 
-        // Update sets for remaining iterations in bulk mode
+        // Update in-memory sets for remaining batch items
         if (messageId) existingMessageIds.add(messageId);
         existingFingerprints.add(fingerprint);
 
-        result.status = 'created';
-        result.lead_id = createdLead.id;
+        result.status      = 'created';
+        result.lead_id     = createdLead.id;
+        result.sender_source = senderSource;
         results.push(result);
 
       } catch (err) {
-        // Log failure to bridge, but do not crash the entire batch
         await base44.asServiceRole.entities.EmailLeadBridgeSandbox.create({
           source_email_message_id: record.message_id,
           source_sandbox_record_id: record.id,
@@ -295,10 +471,10 @@ Deno.serve(async (req) => {
           creation_status: 'failed',
           creation_error_log: err.message?.substring(0, 500),
           auto_created_at: new Date().toISOString(),
-        }).catch(() => {}); // silent — don't let bridge write failure break response
+        }).catch(() => {});
 
         result.status = 'error';
-        result.error = err.message;
+        result.error  = err.message;
         results.push(result);
       }
     }
@@ -308,12 +484,7 @@ Deno.serve(async (req) => {
       return acc;
     }, {});
 
-    return Response.json({
-      success: true,
-      processed: results.length,
-      summary,
-      results,
-    });
+    return Response.json({ success: true, processed: results.length, summary, results });
 
   } catch (error) {
     return Response.json({ success: false, error: error.message }, { status: 500 });
