@@ -6,8 +6,9 @@ import ConversationList from '@/components/emailEngine/ConversationList';
 import MessageDetail from '@/components/emailEngine/MessageDetail';
 import OutboundDraftPanel from '@/components/emailEngine/OutboundDraftPanel';
 import AuditLog from '@/components/emailEngine/AuditLog';
+import AutoCreatedLeads from '@/components/emailEngine/AutoCreatedLeads';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Inbox, MessageSquare, Send, ClipboardList } from 'lucide-react';
+import { Inbox, MessageSquare, Send, ClipboardList, Zap } from 'lucide-react';
 
 export default function EmailEngineSandbox() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -69,6 +70,9 @@ export default function EmailEngineSandbox() {
           <TabsTrigger value="audit" className="text-xs flex items-center gap-1.5">
             <ClipboardList className="h-4 w-4" /> Audit Log
           </TabsTrigger>
+          <TabsTrigger value="leads" className="text-xs flex items-center gap-1.5">
+            <Zap className="h-4 w-4 text-amber-500" /> Auto Leads
+          </TabsTrigger>
         </TabsList>
 
         {/* INBOX TAB */}
@@ -119,6 +123,11 @@ export default function EmailEngineSandbox() {
         {/* AUDIT TAB */}
         <TabsContent value="audit">
           <AuditLog refreshKey={refreshKey} />
+        </TabsContent>
+
+        {/* AUTO LEADS TAB */}
+        <TabsContent value="leads">
+          <AutoCreatedLeads refreshKey={refreshKey} />
         </TabsContent>
       </Tabs>
     </div>
