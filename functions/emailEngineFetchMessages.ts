@@ -26,40 +26,42 @@ function htmlToText(html) {
 }
 
 // Walk bodyStructure to find the best text part. Returns { num, isHtml } or null.
+// ImapFlow returns type as full MIME type string e.g. "text/plain", "multipart/alternative"
+function mimeType(struct) {
+  // type may be "text/plain" or just "text" with subtype "plain"
+  if (!struct) return '';
+  if (struct.type && struct.type.includes('/')) return struct.type.toLowerCase();
+  if (struct.type && struct.subtype) return `${struct.type}/${struct.subtype}`.toLowerCase();
+  return (struct.type || '').toLowerCase();
+}
+
 function findTextPartInfo(struct, parentNum = '') {
   if (!struct) return null;
+  const mt = mimeType(struct);
 
-  // Single-part: text node
-  if (struct.type === 'text') {
-    const num = parentNum || '1';
-    return { num, isHtml: struct.subtype === 'html' };
-  }
+  // Single text part
+  if (mt === 'text/plain') return { num: parentNum || '1', isHtml: false };
+  if (mt === 'text/html') return { num: parentNum || '1', isHtml: true };
 
-  if (struct.type === 'multipart' && struct.childNodes?.length > 0) {
+  // Multipart: recurse into children
+  if (mt.startsWith('multipart') && struct.childNodes?.length > 0) {
     // Pass 1: direct text/plain child
     for (let i = 0; i < struct.childNodes.length; i++) {
-      const child = struct.childNodes[i];
       const childNum = parentNum ? `${parentNum}.${i + 1}` : `${i + 1}`;
-      if (child.type === 'text' && child.subtype === 'plain') {
-        return { num: childNum, isHtml: false };
-      }
+      if (mimeType(struct.childNodes[i]) === 'text/plain') return { num: childNum, isHtml: false };
     }
-    // Pass 2: recurse into nested multiparts (e.g. multipart/mixed > multipart/alternative)
+    // Pass 2: recurse into nested multiparts
     for (let i = 0; i < struct.childNodes.length; i++) {
-      const child = struct.childNodes[i];
       const childNum = parentNum ? `${parentNum}.${i + 1}` : `${i + 1}`;
-      if (child.type === 'multipart') {
-        const result = findTextPartInfo(child, childNum);
+      if (mimeType(struct.childNodes[i]).startsWith('multipart')) {
+        const result = findTextPartInfo(struct.childNodes[i], childNum);
         if (result) return result;
       }
     }
     // Pass 3: fall back to text/html
     for (let i = 0; i < struct.childNodes.length; i++) {
-      const child = struct.childNodes[i];
       const childNum = parentNum ? `${parentNum}.${i + 1}` : `${i + 1}`;
-      if (child.type === 'text' && child.subtype === 'html') {
-        return { num: childNum, isHtml: true };
-      }
+      if (mimeType(struct.childNodes[i]) === 'text/html') return { num: childNum, isHtml: true };
     }
   }
 
