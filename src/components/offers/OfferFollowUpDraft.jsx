@@ -24,60 +24,84 @@ export default function OfferFollowUpDraft({ open, onOpenChange, offer, customer
     onOpenChange(isOpen);
   };
 
+  // Build salutation deterministically from customer data
+  const buildSalutation = (language) => {
+    const firstName = customer?.first_name || '';
+    const lastName  = customer?.last_name  || '';
+    const isCompany = customer?.customer_type !== 'Private' || !!customer?.company_name;
+
+    const salutations = {
+      German:    isCompany ? 'Sehr geehrte Damen und Herren,' : `Sehr geehrte/r ${firstName} ${lastName},`.trim(),
+      English:   isCompany ? 'Dear Sir or Madam,' : `Dear ${firstName} ${lastName},`.trim(),
+      Italian:   isCompany ? 'Gentili Signore e Signori,' : `Gentile ${firstName} ${lastName},`.trim(),
+      Croatian:  isCompany ? 'Poštovane dame i gospodo,' : `Poštovani/a ${lastName},`.trim(),
+      Slovenian: isCompany ? 'Spoštovane dame in gospodje,' : `Spoštovani/a ${lastName},`.trim(),
+    };
+    return salutations[language] || salutations['German'];
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     setDraft(null);
     try {
-      const firstName = customer?.first_name || '';
-      const lastName  = customer?.last_name  || '';
-      const isCompany = customer?.customer_type !== 'Private' || !!customer?.company_name;
-      const customerName = customer?.company_name || `${firstName} ${lastName}`.trim();
       const language = offer?.language || 'German';
+      const salutation = buildSalutation(language);
       const boatInfo = boat
         ? `${boat.vessel_name}${boat.manufacturer ? ` (${boat.manufacturer}${boat.model ? ' ' + boat.model : ''})` : ''}`
         : '';
 
+      const closingByLanguage = {
+        German:    'Mit freundlichen Grüßen,\nIhr Alpha Yachting Team',
+        English:   'Kind regards,\nYour Alpha Yachting Team',
+        Italian:   'Cordiali saluti,\nIl vostro team Alpha Yachting',
+        Croatian:  'S poštovanjem,\nVaš tim Alpha Yachting',
+        Slovenian: 'S spoštovanjem,\nVaša ekipa Alpha Yachting',
+      };
+      const closing = closingByLanguage[language] || closingByLanguage['German'];
+
+      const offerNumber = offer?.offer_number || '';
+      const subjectPrefix = {
+        German:    'Nachfrage zu Angebot',
+        English:   'Enquiry regarding Offer',
+        Italian:   'Richiesta relativa all\'offerta',
+        Croatian:  'Upit u vezi ponude',
+        Slovenian: 'Povpraševanje glede ponudbe',
+      }[language] || 'Nachfrage zu Angebot';
+
+      const subject = offerNumber ? `${subjectPrefix} #${offerNumber}` : subjectPrefix;
+
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are writing a short, polite follow-up email for Alpha Yachting, a professional yacht service company.
+        prompt: `You are writing the MESSAGE BODY of a short follow-up email for Alpha Yachting, a professional yacht service company.
 
 Language: ${language}
-Customer name: ${customerName || 'Customer'}
-Is company customer: ${isCompany}
-Customer email: ${customer?.email || ''}
-Offer number: ${offer?.offer_number || '(no number)'}
+Offer number: ${offerNumber || '(no number)'}
 Offer title: ${offer?.title || '(no title)'}
-Offer total: ${offer?.total_amount != null ? '€' + Number(offer.total_amount).toFixed(2) : 'not specified'}
 Boat: ${boatInfo || 'not specified'}
 
-Generate a JSON with exactly these fields:
-- "to": the customer email address
-- "subject": ALWAYS start with "Nachfrage zu Angebot" followed by the offer number if available (e.g. "Nachfrage zu Angebot #OFF-2026-0012"). If language is not German, translate "Nachfrage zu Angebot" accordingly (English: "Enquiry regarding Offer", Italian: "Richiesta relativa all'offerta", Croatian: "Upit u vezi ponude", Slovenian: "Povpraševanje glede ponudbe").
-- "salutation": the correct formal salutation line only (e.g. "Sehr geehrter Herr Müller," or "Dear Sir or Madam,")
-- "body": the FULL email text. It MUST start with the formal salutation on the first line, followed by a blank line, then the message. The email should:
-  • Greet the customer
-  • Politely ask if they have had a chance to review the offer
-  • Offer to answer any questions or provide clarification
-  • Friendly, professional closing signed "Ihr Alpha Yachting Team"
-  • Maximum 4 sentences total (excl. salutation and closing)
-  • NO payment pressure, NO legal language, NO aggressive tone
-  • Reference offer number and/or boat naturally if available
+Write ONLY the middle paragraph(s) of the email — do NOT include salutation, do NOT include closing/signature.
+- Politely ask if the customer has had a chance to review the offer
+- Offer to answer questions or provide clarification
+- Maximum 3 sentences
+- NO payment pressure, NO legal language, NO aggressive tone
+- Reference offer number and/or boat naturally if available
+- Respond ONLY in ${language}.
 
-Respond ONLY in ${language}.`,
+Return JSON with one field: "message" containing only the middle text.`,
         response_json_schema: {
           type: 'object',
           properties: {
-            to:         { type: 'string' },
-            subject:    { type: 'string' },
-            salutation: { type: 'string' },
-            body:       { type: 'string' },
+            message: { type: 'string' },
           },
         },
       });
 
+      const message = result.message || '';
+      const fullBody = `${salutation}\n\n${message}\n\n${closing}`;
+
       setDraft({
-        to:      result.to      || customer?.email || '',
-        subject: result.subject || '',
-        body:    result.body    || '',
+        to:      customer?.email || '',
+        subject,
+        body:    fullBody,
       });
     } catch (err) {
       console.error(err);
