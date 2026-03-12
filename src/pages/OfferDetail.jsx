@@ -990,32 +990,9 @@ Requirements:
           {isNewOffer ? 'New Offer' : formData.title}
         </h1>
         
-        {/* Row 3: Meta Info + inline auto-saving status selector */}
-        {!isNewOffer && (
-          <div className="flex items-center gap-3 flex-wrap">
-            {formData.offer_number && (
-              <p className="text-slate-600">#{formData.offer_number}</p>
-            )}
-            <Select value={formData.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className={`w-36 h-8 text-sm font-semibold border-0 focus:ring-0 ${
-                formData.status === 'Approved'  ? 'bg-green-100 text-green-700' :
-                formData.status === 'Sent'      ? 'bg-blue-100 text-blue-700' :
-                formData.status === 'Rejected'  ? 'bg-red-100 text-red-700' :
-                formData.status === 'Expired'   ? 'bg-orange-100 text-orange-700' :
-                formData.status === 'Converted' ? 'bg-purple-100 text-purple-700' :
-                'bg-slate-100 text-slate-700'
-              }`}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Draft">Draft</SelectItem>
-                <SelectItem value="Sent">Sent</SelectItem>
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-                <SelectItem value="Expired">Expired</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Row 3: Meta Info */}
+        {!isNewOffer && formData.offer_number && (
+          <p className="text-slate-600">#{formData.offer_number}</p>
         )}
       </div>
 
@@ -1094,7 +1071,30 @@ Requirements:
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Offer Details</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Offer Details</CardTitle>
+                {!isNewOffer && (
+                  <Select value={formData.status} onValueChange={handleStatusChange}>
+                    <SelectTrigger className={`w-36 h-8 text-sm font-semibold border-0 focus:ring-0 ${
+                      formData.status === 'Approved'  ? 'bg-green-100 text-green-700' :
+                      formData.status === 'Sent'      ? 'bg-blue-100 text-blue-700' :
+                      formData.status === 'Rejected'  ? 'bg-red-100 text-red-700' :
+                      formData.status === 'Expired'   ? 'bg-orange-100 text-orange-700' :
+                      formData.status === 'Converted' ? 'bg-purple-100 text-purple-700' :
+                      'bg-slate-100 text-slate-700'
+                    }`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Draft">Draft</SelectItem>
+                      <SelectItem value="Sent">Sent</SelectItem>
+                      <SelectItem value="Approved">Approved</SelectItem>
+                      <SelectItem value="Rejected">Rejected</SelectItem>
+                      <SelectItem value="Expired">Expired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
