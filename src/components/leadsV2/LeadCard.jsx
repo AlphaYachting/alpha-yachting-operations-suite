@@ -213,13 +213,14 @@ export default function LeadCard({
                 <Eye className="h-3 w-3" />
               </Link>
             </Button>
-            {lead.status === 'Pending' && (
+            {lead.status !== 'Converted' && lead.status !== 'Lost' && (
               <Button
                 size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 px-2 text-xs"
-                onClick={() => onStatusChange(lead.id, 'Converted')}
+                className="bg-violet-600 hover:bg-violet-700 text-white h-7 px-2 text-xs"
+                onClick={() => onConvertToOpportunity?.(lead)}
+                title="Convert to Opportunity"
               >
-                Convert
+                → Opp
               </Button>
             )}
             <Button
