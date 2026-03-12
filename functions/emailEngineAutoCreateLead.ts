@@ -116,6 +116,17 @@ function extractForwardedSender(bodyText) {
     }
   }
 
+  // Last resort: find ANY external email address in the body (handles contact form submissions)
+  const allEmails = bodyText.match(/\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b/g);
+  if (allEmails) {
+    for (const em of allEmails) {
+      const e = em.toLowerCase();
+      if (!isInternalEmail(e)) {
+        return { name: e, email: e };
+      }
+    }
+  }
+
   return null;
 }
 
