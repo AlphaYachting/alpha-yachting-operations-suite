@@ -22,7 +22,12 @@ Deno.serve(async (req) => {
   }
 
   // 4. Fetch the lead
-  const leads = await base44.asServiceRole.entities.Lead.filter({ id: offer.lead_id });
+  let leads;
+  try {
+    leads = await base44.asServiceRole.entities.Lead.filter({ id: offer.lead_id });
+  } catch (_) {
+    return Response.json({ skipped: true, reason: 'lead_fetch_error', lead_id: offer.lead_id });
+  }
   if (!leads || leads.length === 0) {
     return Response.json({ skipped: true, reason: 'lead_not_found', lead_id: offer.lead_id });
   }
