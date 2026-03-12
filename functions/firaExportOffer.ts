@@ -145,6 +145,7 @@ function buildFiraPayload(offer, tasks, customer, location) {
         taxRate: vatRateDecimal,
       };
       if (task.code) item.kpdCode = task.code;
+      if (lineDiscountPercent > 0) item.discountPercentage = lineDiscountPercent;
       return item;
     });
 
