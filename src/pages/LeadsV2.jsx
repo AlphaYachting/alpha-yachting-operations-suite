@@ -10,10 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Clock, PhoneCall, CheckCircle2, XCircle, Search, Mail, TrendingUp } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
-import { createPageUrl } from '@/utils';
-import { Link } from 'react-router-dom';
+import { Plus, Clock, PhoneCall, CheckCircle2, XCircle, Search, Mail } from 'lucide-react';
 import { useLeadData, getAgingLevel } from '@/components/leadsV2/useLeadData';
 import LeadsList from '@/components/leadsV2/LeadsList';
 import LeadForm from '@/components/leads/LeadForm';
@@ -61,18 +58,6 @@ export default function LeadsV2() {
     }
   };
 
-  const handleConvertToOpportunity = async (lead) => {
-    try {
-      const res = await base44.functions.invoke('convertLeadToOpportunity', { lead_id: lead.id });
-      if (res.data?.opportunity_id) {
-        await refetchAll();
-        window.location.href = createPageUrl('SalesPipeline');
-      }
-    } catch (err) {
-      console.error('Error converting to opportunity:', err);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -101,12 +86,6 @@ export default function LeadsV2() {
           <p className="text-slate-500 text-sm mt-1">Manage customer inquiries and opportunities</p>
         </div>
         <div className="flex gap-2">
-          <Link to={createPageUrl('SalesPipeline')}>
-            <Button variant="outline" className="border-violet-300 text-violet-700 hover:bg-violet-50">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Pipeline
-            </Button>
-          </Link>
           <Button
             variant="outline"
             onClick={() => setShowEmailParser(true)}
@@ -192,7 +171,6 @@ export default function LeadsV2() {
         onEdit={handleEditLead}
         onDelete={handleDeleteLead}
         onStatusChange={handleStatusChange}
-        onConvertToOpportunity={handleConvertToOpportunity}
         onViewDetail={() => {}}
         getAgingLevel={getAgingLevel}
       />

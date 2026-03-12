@@ -65,7 +65,6 @@ export default function LeadCard({
   onDelete,
   onStatusChange,
   onViewDetail,
-  onConvertToOpportunity,
 }) {
   const iconBgColor = {
     'Pending': 'bg-amber-50',
@@ -214,16 +213,6 @@ export default function LeadCard({
                 <Eye className="h-3 w-3" />
               </Link>
             </Button>
-            {lead.status !== 'Converted' && lead.status !== 'Lost' && (
-              <Button
-                size="sm"
-                className="bg-violet-600 hover:bg-violet-700 text-white h-7 px-2 text-xs"
-                onClick={() => onConvertToOpportunity?.(lead)}
-                title="Convert to Opportunity"
-              >
-                → Opp
-              </Button>
-            )}
             <Button
               size="sm"
               variant="outline"
