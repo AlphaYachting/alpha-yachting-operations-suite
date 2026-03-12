@@ -188,7 +188,6 @@ function buildFiraPayload(offer, tasks, customer, location) {
     brutto,
     netto,
     lineItems,
-    discounts,
     totalShipping: null,
     internalNote: `Alpha Yachting Offer ${offer.offer_number || ''} | AY CRM Export`,
     paymentType: 'TRANSAKCIJSKI',
