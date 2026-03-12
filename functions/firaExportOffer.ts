@@ -148,16 +148,13 @@ function buildFiraPayload(offer, tasks, customer, location) {
       return item;
     });
 
-  // Discounts
-  const discounts = [];
-  if (offer.discount_mode && offer.discount_mode !== 'NONE' && offer.discount_amount > 0) {
-    discounts.push({
-      discountType: offer.discount_mode === 'PERCENT' ? 'PERCENT' : 'AMOUNT',
-      discountValue: offer.discount_mode === 'PERCENT'
-        ? (offer.discount_percent || 0)
-        : parseFloat((offer.discount_amount || 0).toFixed(2)),
-      description: 'Discount',
-    });
+  // Discount percentage per line item (FIRA expects discountPercentage on each item)
+  let lineDiscountPercent = 0;
+  if (offer.discount_mode === 'PERCENT' && offer.discount_percent > 0) {
+    lineDiscountPercent = offer.discount_percent;
+  } else if ((offer.discount_mode === 'TARGET_TOTAL' || offer.discount_mode === 'AMOUNT') && offer.discount_amount > 0 && netto > 0) {
+    // Convert amount discount to percentage
+    lineDiscountPercent = parseFloat(((offer.discount_amount / (netto + offer.discount_amount)) * 100).toFixed(4));
   }
 
   // Terms — by customer country
