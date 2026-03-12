@@ -12,6 +12,7 @@ export default function LeadsList({
   onDelete,
   onStatusChange,
   onViewDetail,
+  onConvertToOpportunity,
   getAgingLevel,
 }) {
   const filteredLeads = leads
