@@ -154,6 +154,11 @@ export default function OfferDetail() {
     }
   }, [pdfTemplate]);
 
+  // Scroll to top whenever the offer page is opened
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [offerId]);
+
   useEffect(() => {
     if (offer) {
       setFormData({
@@ -726,6 +731,21 @@ Requirements:
     return c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
   })();
 
+  // Auto-save status change without full form save
+  const handleStatusChange = async (newStatus) => {
+    updateField('status', newStatus);
+    if (!offerId) return; // new offer: just update local state
+    try {
+      await base44.entities.Offer.update(offerId, { status: newStatus });
+      queryClient.invalidateQueries(['offer', offerId]);
+      queryClient.invalidateQueries(['offers']);
+      toast.success(`Status: ${newStatus}`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Status konnte nicht gespeichert werden');
+    }
+  };
+
   const handleSendEmail = () => {
     const customer = customers.find(c => c.id === formData.customer_id);
     if (!customer?.email) {
@@ -970,19 +990,31 @@ Requirements:
           {isNewOffer ? 'New Offer' : formData.title}
         </h1>
         
-        {/* Row 3: Meta Info */}
+        {/* Row 3: Meta Info + inline auto-saving status selector */}
         {!isNewOffer && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {formData.offer_number && (
               <p className="text-slate-600">#{formData.offer_number}</p>
             )}
-            <Badge className={
-              formData.status === 'Approved' ? 'bg-green-100 text-green-700' :
-              formData.status === 'Sent' ? 'bg-blue-100 text-blue-700' :
-              'bg-slate-100 text-slate-700'
-            }>
-              {formData.status}
-            </Badge>
+            <Select value={formData.status} onValueChange={handleStatusChange}>
+              <SelectTrigger className={`w-36 h-8 text-sm font-semibold border-0 focus:ring-0 ${
+                formData.status === 'Approved'  ? 'bg-green-100 text-green-700' :
+                formData.status === 'Sent'      ? 'bg-blue-100 text-blue-700' :
+                formData.status === 'Rejected'  ? 'bg-red-100 text-red-700' :
+                formData.status === 'Expired'   ? 'bg-orange-100 text-orange-700' :
+                formData.status === 'Converted' ? 'bg-purple-100 text-purple-700' :
+                'bg-slate-100 text-slate-700'
+              }`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Draft">Draft</SelectItem>
+                <SelectItem value="Sent">Sent</SelectItem>
+                <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="Rejected">Rejected</SelectItem>
+                <SelectItem value="Expired">Expired</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
@@ -1227,7 +1259,7 @@ Requirements:
                 </div>
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <Select value={formData.status} onValueChange={(v) => updateField('status', v)}>
+                  <Select value={formData.status} onValueChange={handleStatusChange}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
