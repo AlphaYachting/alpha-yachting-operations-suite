@@ -1547,6 +1547,15 @@ Requirements:
         </div>
       </div>
 
+      {/* Follow-up Email Draft */}
+      <OfferFollowUpDraft
+        open={showFollowUpDraft}
+        onOpenChange={setShowFollowUpDraft}
+        offer={{ ...formData, id: offerId }}
+        customer={customers.find(c => c.id === formData.customer_id) || null}
+        boat={boats.find(b => b.id === formData.boat_id) || null}
+      />
+
       {/* AI Generator Dialog */}
       <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
         <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
