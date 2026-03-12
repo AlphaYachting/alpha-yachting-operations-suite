@@ -83,8 +83,9 @@ export default function LeadCard({
     'Lost': 'text-slate-400'
   }[lead.status] || 'text-slate-400';
 
-  // Aging border classes
+  // Aging border classes — Won gets green, open leads get red/yellow aging
   const agingBorderClass =
+    lead.status === 'Won' ? 'border-emerald-400 border-2' :
     agingLevel === 'danger' ? 'border-red-300 border-2' : 
     agingLevel === 'warn' ? 'border-yellow-300 border-2' : '';
 

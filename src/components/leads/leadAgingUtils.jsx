@@ -4,8 +4,13 @@
  * Isolated from page/styling changes
  */
 
+const CLOSED_STATUSES = ['Won', 'Converted', 'Rejected', 'Lost'];
+
 export function getLeadAgingLevel(lead) {
   if (!lead) return 'none';
+
+  // Closed/terminal leads never age
+  if (CLOSED_STATUSES.includes(lead.status)) return 'none';
 
   // Priority order for determining when lead was last active
   const movementTime =
