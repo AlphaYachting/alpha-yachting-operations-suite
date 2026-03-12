@@ -91,6 +91,7 @@ export default function OfferDetail() {
   const [tasks, setTasks] = useState([]);
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [showFollowUpDraft, setShowFollowUpDraft] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
