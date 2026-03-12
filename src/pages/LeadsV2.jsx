@@ -192,6 +192,7 @@ export default function LeadsV2() {
         onEdit={handleEditLead}
         onDelete={handleDeleteLead}
         onStatusChange={handleStatusChange}
+        onConvertToOpportunity={handleConvertToOpportunity}
         onViewDetail={() => {}}
         getAgingLevel={getAgingLevel}
       />
