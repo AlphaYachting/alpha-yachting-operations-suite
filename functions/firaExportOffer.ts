@@ -131,6 +131,14 @@ function buildFiraPayload(offer, tasks, customer, location) {
     };
   }
 
+  // Discount percentage per line item (FIRA expects discountPercentage on each item)
+  let lineDiscountPercent = 0;
+  if (offer.discount_mode === 'PERCENT' && offer.discount_percent > 0) {
+    lineDiscountPercent = offer.discount_percent;
+  } else if ((offer.discount_mode === 'TARGET_TOTAL' || offer.discount_mode === 'AMOUNT') && offer.discount_amount > 0 && netto > 0) {
+    lineDiscountPercent = parseFloat(((offer.discount_amount / (netto + offer.discount_amount)) * 100).toFixed(4));
+  }
+
   // Line items — non-optional tasks only
   const lineItems = tasks
     .filter(t => !t.is_optional)
@@ -148,15 +156,6 @@ function buildFiraPayload(offer, tasks, customer, location) {
       if (lineDiscountPercent > 0) item.discountPercentage = lineDiscountPercent;
       return item;
     });
-
-  // Discount percentage per line item (FIRA expects discountPercentage on each item)
-  let lineDiscountPercent = 0;
-  if (offer.discount_mode === 'PERCENT' && offer.discount_percent > 0) {
-    lineDiscountPercent = offer.discount_percent;
-  } else if ((offer.discount_mode === 'TARGET_TOTAL' || offer.discount_mode === 'AMOUNT') && offer.discount_amount > 0 && netto > 0) {
-    // Convert amount discount to percentage
-    lineDiscountPercent = parseFloat(((offer.discount_amount / (netto + offer.discount_amount)) * 100).toFixed(4));
-  }
 
   // Terms — by customer country
   const termsDE = 'Dieses Angebot gilt 30 Tage ab Ausstellungsdatum. Eigentumsvorbehalt bis zur vollständigen Bezahlung.';
