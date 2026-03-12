@@ -15,6 +15,7 @@ import { useLeadData, getAgingLevel } from '@/components/leadsV2/useLeadData';
 import LeadsList from '@/components/leadsV2/LeadsList';
 import LeadForm from '@/components/leads/LeadForm';
 import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
+import ConvertLeadModal from '@/components/salesPipeline/ConvertLeadModal';
 
 export default function LeadsV2() {
   const { leads, customers, locations, users, boats, isLoading, updateLeadStatus, saveLead, deleteLead, refetchAll } = useLeadData();
@@ -24,6 +25,7 @@ export default function LeadsV2() {
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [showEmailParser, setShowEmailParser] = useState(false);
+  const [convertingLead, setConvertingLead] = useState(null);
 
   const handleEditLead = (lead) => {
     setEditingLead(lead);
@@ -172,8 +174,18 @@ export default function LeadsV2() {
         onDelete={handleDeleteLead}
         onStatusChange={handleStatusChange}
         onViewDetail={() => {}}
+        onConvertToOpportunity={(lead) => setConvertingLead(lead)}
         getAgingLevel={getAgingLevel}
       />
+
+      {/* Convert to Opportunity Modal */}
+      {convertingLead && (
+        <ConvertLeadModal
+          lead={convertingLead}
+          onClose={() => setConvertingLead(null)}
+          onConverted={() => { setConvertingLead(null); refetchAll(); }}
+        />
+      )}
 
       {/* Email to Lead Parser Dialog */}
       <Dialog open={showEmailParser} onOpenChange={setShowEmailParser}>

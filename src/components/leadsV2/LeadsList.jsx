@@ -56,6 +56,7 @@ export default function LeadsList({
             onDelete={onDelete}
             onStatusChange={onStatusChange}
             onViewDetail={onViewDetail}
+            onConvertToOpportunity={onConvertToOpportunity}
           />
         );
       })}
