@@ -181,6 +181,29 @@ function parseContactFormFields(bodyText) {
     fields.name = [fields.first_name, fields.last_name].filter(Boolean).join(' ');
   }
 
+  // --- WIDGET/CMS FORM FORMAT ---
+  // Handles label-per-line format:  "Email\n aaaaa@aaaa.at\nText\n +43..."
+  // where labels are single words and values are on the next line (possibly indented)
+  if (!fields.email || !fields.phone || !fields.name) {
+    const widgetLines = bodyText.split(/\r?\n/);
+    for (let i = 0; i < widgetLines.length - 1; i++) {
+      const label = widgetLines[i].trim().toLowerCase();
+      const value = widgetLines[i + 1].trim();
+      if (!value) continue;
+      if (!fields.email && /^e.?mail$/.test(label) && value.includes('@')) {
+        fields.email = value.toLowerCase();
+      } else if (!fields.phone && /^(text|phone|telefon|tel|mobil|mobile|handy)$/.test(label) && /\+?[\d\s\-()]{6,}/.test(value)) {
+        fields.phone = value;
+      } else if (!fields.name && /^(name|kontakt|text)$/.test(label) && value.length > 1 && !value.includes('@')) {
+        fields.name = value;
+      } else if (!fields.message && /^(textarea|nachricht|message|anfrage|anliegen)$/.test(label) && value.length > 1) {
+        fields.message = value;
+      } else if (!fields.service && /^(select|service|leistung|dienstleistung)$/.test(label) && value.length > 1) {
+        fields.service = value;
+      }
+    }
+  }
+
   return fields;
 }
 
