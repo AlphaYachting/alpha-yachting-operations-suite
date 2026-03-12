@@ -65,6 +65,7 @@ export default function LeadCard({
   onDelete,
   onStatusChange,
   onViewDetail,
+  onConvertToOpportunity,
 }) {
   const iconBgColor = {
     'Pending': 'bg-amber-50',
