@@ -34,7 +34,9 @@ import {
                     Database,
                     Brain,
                     Mail,
-                    Calendar as CalendarIcon
+                    Calendar as CalendarIcon,
+                    TrendingUp,
+                    Shield
                   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';

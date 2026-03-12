@@ -124,6 +124,7 @@ import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
 import SalesPipeline from './pages/SalesPipeline';
 import SalesDashboard from './pages/SalesDashboard';
+import SalesPipelineAuditReport from './pages/SalesPipelineAuditReport';
 import __Layout from './Layout.jsx';
 
 
@@ -205,6 +206,7 @@ export const PAGES = {
     "WorkshopDisplay": WorkshopDisplay,
     "SalesPipeline": SalesPipeline,
     "SalesDashboard": SalesDashboard,
+    "SalesPipelineAuditReport": SalesPipelineAuditReport,
 }
 
 export const pagesConfig = {
