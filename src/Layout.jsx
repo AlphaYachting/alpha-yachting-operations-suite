@@ -34,9 +34,7 @@ import {
                     Database,
                     Brain,
                     Mail,
-                    Calendar as CalendarIcon,
-                    TrendingUp,
-                    Shield
+                    Calendar as CalendarIcon
                   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -68,7 +66,6 @@ const navItems = [
   { name: 'Leads', icon: Phone, page: 'LeadsV2' },
   { name: 'Sales Pipeline', icon: TrendingUp, page: 'SalesPipeline' },
   { name: 'Sales Dashboard', icon: BarChart3, page: 'SalesDashboard', subLevel: true },
-  { name: 'V2 Audit Report', icon: Shield, page: 'SalesPipelineAuditReport', subLevel: true, adminOnly: true },
   // Storage & Transport is now integrated into New Case Wizard (intent: storage_transport)
   { name: 'Customers', icon: Users, page: 'Customers' },
   { name: 'Boats', icon: Ship, page: 'Boats' },
