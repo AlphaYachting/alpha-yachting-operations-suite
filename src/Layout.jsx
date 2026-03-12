@@ -64,11 +64,11 @@ const navItems = [
   // SALES & CUSTOMER FLOW
   { header: 'SALES & CUSTOMER FLOW' },
   { name: 'Leads', icon: Phone, page: 'LeadsV2' },
+  { name: 'Offers', icon: FileText, page: 'Offers' },
   // Storage & Transport is now integrated into New Case Wizard (intent: storage_transport)
   { name: 'Customers', icon: Users, page: 'Customers' },
   { name: 'Boats', icon: Ship, page: 'Boats' },
   { name: 'Locations', icon: MapPin, page: 'Locations' },
-  { name: 'Offers', icon: FileText, page: 'Offers' },
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   
   // RESOURCES
