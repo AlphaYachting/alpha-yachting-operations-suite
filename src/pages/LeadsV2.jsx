@@ -101,6 +101,12 @@ export default function LeadsV2() {
           <p className="text-slate-500 text-sm mt-1">Manage customer inquiries and opportunities</p>
         </div>
         <div className="flex gap-2">
+          <Link to={createPageUrl('SalesPipeline')}>
+            <Button variant="outline" className="border-violet-300 text-violet-700 hover:bg-violet-50">
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Pipeline
+            </Button>
+          </Link>
           <Button
             variant="outline"
             onClick={() => setShowEmailParser(true)}
