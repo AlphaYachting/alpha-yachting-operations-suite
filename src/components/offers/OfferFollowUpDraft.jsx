@@ -51,9 +51,9 @@ Boat: ${boatInfo || 'not specified'}
 
 Generate a JSON with exactly these fields:
 - "to": the customer email address
-- "subject": a short professional follow-up email subject line (reference the offer if number exists)
+- "subject": ALWAYS start with "Nachfrage zu Angebot" followed by the offer number if available (e.g. "Nachfrage zu Angebot #OFF-2026-0012"). If language is not German, translate "Nachfrage zu Angebot" accordingly (English: "Enquiry regarding Offer", Italian: "Richiesta relativa all'offerta", Croatian: "Upit u vezi ponude", Slovenian: "Povpraševanje glede ponudbe").
 - "salutation": the correct formal salutation line only (e.g. "Sehr geehrter Herr Müller," or "Dear Sir or Madam,")
-- "body": the FULL email text including salutation at the top. The email should:
+- "body": the FULL email text. It MUST start with the formal salutation on the first line, followed by a blank line, then the message. The email should:
   • Greet the customer
   • Politely ask if they have had a chance to review the offer
   • Offer to answer any questions or provide clarification
