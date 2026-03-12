@@ -61,6 +61,18 @@ export default function LeadsV2() {
     }
   };
 
+  const handleConvertToOpportunity = async (lead) => {
+    try {
+      const res = await base44.functions.invoke('convertLeadToOpportunity', { lead_id: lead.id });
+      if (res.data?.opportunity_id) {
+        await refetchAll();
+        window.location.href = createPageUrl('SalesPipeline');
+      }
+    } catch (err) {
+      console.error('Error converting to opportunity:', err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
