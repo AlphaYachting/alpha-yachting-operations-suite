@@ -909,6 +909,16 @@ Requirements:
                 E-Mail senden
               </Button>
             )}
+            {!isNewOffer && formData.status === 'Sent' && formData.customer_id && (
+              <Button
+                onClick={() => setShowFollowUpDraft(true)}
+                variant="outline"
+                className="border-amber-500 text-amber-600 hover:bg-amber-50"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Follow-up E-Mail
+              </Button>
+            )}
             {formData.converted_job_id ? (
               <Button
                 onClick={() => navigate(createPageUrl('JobDetail') + `?id=${formData.converted_job_id}`)}
