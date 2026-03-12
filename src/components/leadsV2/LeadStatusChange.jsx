@@ -13,6 +13,7 @@ const statusOptions = [
   { value: 'Converted', label: 'Converted' },
   { value: 'Rejected', label: 'Rejected' },
   { value: 'Lost', label: 'Lost' },
+  { value: 'Won', label: 'Won' },
 ];
 
 export default function LeadStatusChange({ lead, onStatusChange }) {

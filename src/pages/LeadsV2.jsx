@@ -75,6 +75,7 @@ export default function LeadsV2() {
     contacted: leads.filter((l) => l.status === 'Contacted').length,
     converted: leads.filter((l) => l.status === 'Converted').length,
     lost: leads.filter((l) => l.status === 'Lost').length,
+    won: leads.filter((l) => l.status === 'Won').length,
   };
 
   return (
@@ -108,12 +109,13 @@ export default function LeadsV2() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {[
           { label: 'Pending', value: stats.pending, icon: Clock, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
           { label: 'Contacted', value: stats.contacted, icon: PhoneCall, iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
           { label: 'Converted', value: stats.converted, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
           { label: 'Lost', value: stats.lost, icon: XCircle, iconBg: 'bg-slate-50', iconColor: 'text-slate-400' },
+          { label: 'Won', value: stats.won, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-700' },
         ].map((stat) => (
           <Card key={stat.label} className="shadow-sm">
             <CardContent className="p-4">
