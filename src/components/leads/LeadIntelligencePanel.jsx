@@ -123,14 +123,21 @@ export default function LeadIntelligencePanel({ lead }) {
     setLoading(true);
     try {
       const criticalMissingInfo = extractCriticalMissingInfo();
+      console.log('🔍 DEBUG extractCriticalMissingInfo RAW:', criticalMissingInfo);
+      
       const criticalMissingInfoClean = criticalMissingInfo.map(info => 
         info.replace('⚠️ FEHLENDE INFO:', '').trim()
       );
 
-      // If no backend-extracted info, fall back to basic questions
+      console.log('🔍 DEBUG criticalMissingInfoClean:', criticalMissingInfoClean);
+
+      // FALLBACK ONLY if truly empty (backend did not generate questions)
       if (criticalMissingInfoClean.length === 0) {
+        console.warn('⚠️ No backend questions found - using fallback generic questions');
         criticalMissingInfoClean.push('Informationen zum Boot (Typ, Modell, Größe)');
         criticalMissingInfoClean.push('Standort des Bootes oder Lieferadresse');
+      } else {
+        console.log('✅ Using backend-generated questions:', criticalMissingInfoClean.length, 'items');
       }
 
       const result = await base44.integrations.Core.InvokeLLM({
