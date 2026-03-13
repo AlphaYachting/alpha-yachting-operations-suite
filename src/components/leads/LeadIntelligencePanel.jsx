@@ -63,67 +63,51 @@ export default function LeadIntelligencePanel({ lead }) {
     return criticalMissingInfo;
   };
 
-  const buildPrompt = () => {
+  const buildPrompt = (criticalMissingInfo) => {
     const parts = [];
-    parts.push(`You are an expert marine services sales qualifier. Analyze this customer lead and return structured JSON.`);
-    parts.push(`\nLEAD DATA:`);
-    parts.push(`Name: ${lead.name || 'Unknown'}`);
-    if (lead.email) parts.push(`Email: ${lead.email}`);
-    if (lead.phone) parts.push(`Phone: ${lead.phone}`);
-    if (lead.boat_name) parts.push(`Boat: ${lead.boat_name}`);
-    if (lead.boat_details) parts.push(`Boat details: ${lead.boat_details}`);
-    if (lead.location) parts.push(`Location: ${lead.location}`);
-    if (lead.inquiry_type) parts.push(`Inquiry type: ${lead.inquiry_type}`);
-    if (lead.contact_method) parts.push(`Contact method: ${lead.contact_method}`);
-    if (lead.description) parts.push(`\nInquiry text:\n${lead.description}`);
-    if (lead.notes) parts.push(`\nAdditional notes:\n${lead.notes}`);
+    
+    // Determine inquiry context from lead data
+    const fullText = `${lead.description || ''} ${lead.notes || ''}`.toLowerCase();
+    const isPartsRequest = fullText.includes('teil') || fullText.includes('part') || fullText.includes('ersatz');
+    const isServiceRequest = fullText.includes('reparatur') || fullText.includes('service') || fullText.includes('wartung');
+    
+    let roleContext = 'marine services sales representative';
+    if (isPartsRequest) roleContext = 'marine parts specialist';
+    else if (isServiceRequest) roleContext = 'marine service advisor';
+    
+    parts.push(`You are a ${roleContext}. Your job is to qualify this lead and write a professional follow-up email.`);
+    parts.push(`\nCUSTOMER INQUIRY:`);
+    if (lead.name) parts.push(`Name: ${lead.name}`);
+    if (lead.description) parts.push(`\n${lead.description}`);
+    
+    parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    parts.push(`🎯 YOUR TASK: Write a professional email reply that:`);
+    parts.push(`1. Thanks the customer for their inquiry`);
+    parts.push(`2. Asks for the following REQUIRED information (${criticalMissingInfo.length} items):`);
+    parts.push(``);
+    criticalMissingInfo.forEach((info, idx) => {
+      const cleanInfo = info.replace('⚠️ FEHLENDE INFO:', '').trim();
+      parts.push(`   ${idx + 1}. ${cleanInfo}`);
+    });
+    parts.push(``);
+    parts.push(`3. Explains why this information is needed (to serve them better)`);
+    parts.push(`4. Maintains a helpful, professional tone`);
+    parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    
+    parts.push(`\n🔴 CRITICAL RULES:`);
+    parts.push(`• You MUST ask for ALL ${criticalMissingInfo.length} items listed above`);
+    parts.push(`• Do NOT skip or replace any item, especially "Motornummer" if listed`);
+    parts.push(`• Write in the SAME LANGUAGE as the customer inquiry (German/English/etc.)`);
+    parts.push(`• Keep it concise but complete`);
+    parts.push(`• Use the customer's name if provided\n`);
 
-    const criticalMissingInfo = extractCriticalMissingInfo();
-
-    if (criticalMissingInfo.length > 0) {
-      parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      parts.push(`🚨 MANDATORY: EXACT QUESTIONS TO ASK IN EMAIL REPLY 🚨`);
-      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      parts.push(`The backend system has identified these CRITICAL missing items based on the inquiry type.`);
-      parts.push(`You MUST ask for EVERY SINGLE ONE in your email reply:`);
-      parts.push(``);
-      criticalMissingInfo.forEach((info, idx) => {
-        const cleanInfo = info.replace('⚠️ FEHLENDE INFO:', '').trim();
-        parts.push(`${idx + 1}. ${cleanInfo}`);
-      });
-      parts.push(``);
-      parts.push(`🔴 ABSOLUTE REQUIREMENTS:`);
-      parts.push(`• Ask for EACH item listed above (total: ${criticalMissingInfo.length} items)`);
-      parts.push(`• Do NOT substitute with different questions`);
-      parts.push(`• Do NOT generalize (e.g., "boat details" when specific "Motornummer" is required)`);
-      parts.push(`• If "Motornummer" or "Engine Serial Number" is listed above, you MUST ask for it`);
-      parts.push(`• If "erforderlich" or "ERFORDERLICH" appears, emphasize it is mandatory`);
-      parts.push(`• Format the questions naturally in the email, but ensure ALL items are covered`);
-      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-    }
-
-    parts.push(`\nSCORING RULES:
-Positive signals: boat brand/model mentioned, size given, marina/location mentioned, clear service scope, timeline mentioned, photos attached, concrete next step.
-Negative signals: only price request, vague wording, missing vessel info, no location, no timeline, no clear scope.
-
-EMAIL REPLY REQUIREMENTS:
-- Write in the same language as the customer inquiry
-- Be professional, friendly, and helpful
-- If MANDATORY REQUIREMENTS section exists above, include ALL questions from that section
-- Do NOT invent different questions - use the exact information items specified
-
-Return ONLY valid JSON matching this schema exactly:
+    parts.push(`Return ONLY valid JSON with this structure:
 {
-  "intent_score": <0-100 integer>,
-  "deal_probability": <0-100 integer>,
+  "intent_score": <0-100, estimate customer's buying intent>,
+  "deal_probability": <0-100, likelihood of conversion>,
   "lead_type": <"Hot Lead" | "Qualified Prospect" | "Information Seeker" | "Price Shopper">,
-  "analysis_explanation": <1-2 sentence explanation>,
-  "missing_information": [<string>, ...],
-  "verification_questions": [
-    { "group": "<group name>", "questions": ["<question>", ...] },
-    ...
-  ],
-  "reply_email_draft": "<full email text ready to send, professional, friendly, in the same language as the inquiry>"
+  "analysis_explanation": <brief 1-sentence analysis>,
+  "reply_email_draft": "<the complete email text>"
 }`);
 
     return parts.join('\n');
