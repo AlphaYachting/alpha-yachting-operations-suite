@@ -56,11 +56,14 @@ export default function LeadIntelligencePanel({ lead }) {
     if (lead.notes) parts.push(`\nAdditional notes:\n${lead.notes}`);
 
     // Extract context-based questions from notes
-    const contextQuestionsMatch = lead.notes?.match(/--- NACHFRAGEN \(KI-ANALYSE\) ---\n([\s\S]+?)(?=\n\n|$)/);
+    const contextQuestionsMatch = lead.notes?.match(/--- NACHFRAGEN \(KI-ANALYSE\) ---\n([\s\S]+?)(?=Conversation key:|$)/);
     if (contextQuestionsMatch) {
-      parts.push(`\n⚠️ CRITICAL MISSING INFORMATION (MUST ASK IN REPLY):`);
-      parts.push(contextQuestionsMatch[1].trim());
-      parts.push(`\n** You MUST ask for ALL missing information listed above in your email reply. **`);
+      const questions = contextQuestionsMatch[1].trim();
+      if (questions) {
+        parts.push(`\n⚠️ CRITICAL: The following information is MISSING and MUST be requested in your reply email:`);
+        parts.push(questions);
+        parts.push(`\n** IMPORTANT: You MUST explicitly ask for EVERY item listed above in your reply. Do not skip any. **`);
+      }
     }
 
     parts.push(`\nSCORING RULES:
