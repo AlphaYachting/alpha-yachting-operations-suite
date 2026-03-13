@@ -121,8 +121,14 @@ export default function LeadIntelligencePanel({ lead }) {
         info.replace('⚠️ FEHLENDE INFO:', '').trim()
       );
 
+      // If no backend-extracted info, fall back to basic questions
+      if (criticalMissingInfoClean.length === 0) {
+        criticalMissingInfoClean.push('Informationen zum Boot (Typ, Modell, Größe)');
+        criticalMissingInfoClean.push('Standort des Bootes oder Lieferadresse');
+      }
+
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: buildPrompt(),
+        prompt: buildPrompt(criticalMissingInfoClean),
         response_json_schema: {
           type: 'object',
           properties: {
@@ -130,27 +136,19 @@ export default function LeadIntelligencePanel({ lead }) {
             deal_probability:       { type: 'number' },
             lead_type:              { type: 'string' },
             analysis_explanation:   { type: 'string' },
-            missing_information:    { type: 'array', items: { type: 'string' } },
-            verification_questions: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  group:     { type: 'string' },
-                  questions: { type: 'array', items: { type: 'string' } }
-                }
-              }
-            },
-            reply_email_draft: { type: 'string' }
+            reply_email_draft:      { type: 'string' }
           }
         }
       });
       
-      // CRITICAL: Override missing_information with backend-extracted critical info
-      // This ensures the UI always displays the context-specific requirements (e.g., Motornummer for parts)
-      if (criticalMissingInfoClean.length > 0) {
-        result.missing_information = criticalMissingInfoClean;
-      }
+      // HARDCODE: missing_information comes ONLY from backend analysis, NOT from LLM
+      result.missing_information = criticalMissingInfoClean;
+      
+      // HARDCODE: verification_questions based on missing_information
+      result.verification_questions = [{
+        group: 'Required Information',
+        questions: criticalMissingInfoClean.map(info => `${info}`)
+      }];
       
       setAnalysis(result);
     } catch (e) {
