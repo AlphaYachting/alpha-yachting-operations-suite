@@ -163,6 +163,10 @@ export default function LeadIntelligencePanel({ lead }) {
         questions: criticalMissingInfoClean.map(info => `${info}`)
       }];
       
+      // DEBUG: Add extraction metadata to result
+      result._debug_extracted_count = criticalMissingInfo.length;
+      result._debug_raw_notes = lead.notes;
+      
       setAnalysis(result);
     } catch (e) {
       console.error('LeadIntelligencePanel analysis error:', e);
@@ -297,7 +301,14 @@ export default function LeadIntelligencePanel({ lead }) {
               {/* Section 2 — Missing Information */}
               {analysis.missing_information?.length > 0 && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Missing Information</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                    Missing Information
+                    {analysis._debug_extracted_count !== undefined && (
+                      <span className="ml-2 text-purple-600">
+                        [Backend extracted: {analysis._debug_extracted_count} items]
+                      </span>
+                    )}
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
                     {analysis.missing_information.map((item, i) => (
                       <span key={i} className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs flex items-center gap-1">
