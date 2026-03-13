@@ -79,17 +79,19 @@ export default function LeadIntelligencePanel({ lead }) {
       parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       parts.push(`🚨 MANDATORY REQUIREMENTS FOR EMAIL REPLY 🚨`);
       parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      parts.push(`The following information is MISSING and MUST be asked in your reply:`);
+      parts.push(`You MUST ask for the following information in your reply email:`);
       parts.push(``);
       criticalMissingInfo.forEach((info, idx) => {
-        parts.push(`${idx + 1}. ${info.replace('⚠️ FEHLENDE INFO:', '').trim()}`);
+        const cleanInfo = info.replace('⚠️ FEHLENDE INFO:', '').trim();
+        parts.push(`QUESTION ${idx + 1}: ${cleanInfo}`);
       });
       parts.push(``);
-      parts.push(`CRITICAL RULES:`);
-      parts.push(`• You MUST ask for EVERY SINGLE item listed above (${criticalMissingInfo.length} items total)`);
-      parts.push(`• Do NOT replace any item with a different question`);
-      parts.push(`• Do NOT skip any item, especially if it says "erforderlich" (required)`);
-      parts.push(`• Include all items in your email reply naturally and professionally`);
+      parts.push(`🔴 NON-NEGOTIABLE RULES:`);
+      parts.push(`1. You MUST include ALL ${criticalMissingInfo.length} questions above in your email`);
+      parts.push(`2. Do NOT skip the "Motornummer" question if it appears above`);
+      parts.push(`3. Do NOT replace any question with something similar`);
+      parts.push(`4. Ask for each item explicitly and clearly`);
+      parts.push(`5. If "erforderlich" (required) is mentioned, emphasize it's needed`);
       parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     }
 
@@ -97,10 +99,11 @@ export default function LeadIntelligencePanel({ lead }) {
 Positive signals: boat brand/model mentioned, size given, marina/location mentioned, clear service scope, timeline mentioned, photos attached, concrete next step.
 Negative signals: only price request, vague wording, missing vessel info, no location, no timeline, no clear scope.
 
-CRITICAL INSTRUCTION FOR REPLY EMAIL:
-- If there are items marked "⚠️ FEHLENDE INFO:" in the notes above, you MUST ask for EVERY SINGLE ONE in your reply email
-- Do NOT skip any required information
-- Frame questions naturally but ensure ALL missing items are covered
+EMAIL REPLY REQUIREMENTS:
+- Write in the same language as the customer inquiry
+- Be professional, friendly, and helpful
+- If MANDATORY REQUIREMENTS section exists above, include ALL questions from that section
+- Do NOT invent different questions - use the exact information items specified
 
 Return ONLY valid JSON matching this schema exactly:
 {
