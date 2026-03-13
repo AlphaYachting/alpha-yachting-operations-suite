@@ -368,11 +368,9 @@ function extractLeadPayload(record) {
     contextQuestions.push('⚠️ FEHLENDE INFO: Wo steht das Boot / Wohin soll geliefert werden? (Marina, Hafen, Adresse)');
   }
   
-  // Engine/motor parts inquiry - require engine number
-  if (fullText.match(/motor|engine|steuergerät|ecu|einspritz|pumpe|kühlung|getriebe|antrieb|volvo penta|yanmar|nanni|solé|mercruiser/)) {
-    if (!fullText.match(/motor.?nummer|engine.?number|serial|s.?n.?:|teil.?nr|part.?no/)) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Motornummer / Engine Serial Number erforderlich');
-    }
+  // Engine/motor parts inquiry - ALWAYS require engine number
+  if (fullText.match(/motor|engine|steuergerät|ecu|einspritz|pumpe|kühlung|getriebe|antrieb|volvo penta|yanmar|nanni|solé|mercruiser|ersatzteil|spare.?part|teil/)) {
+    contextQuestions.push('⚠️ FEHLENDE INFO: Motornummer / Engine Serial Number erforderlich');
   }
   
   // Boat-related inquiry without boat details
