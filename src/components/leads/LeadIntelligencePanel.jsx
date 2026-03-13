@@ -55,15 +55,36 @@ export default function LeadIntelligencePanel({ lead }) {
     if (lead.description) parts.push(`\nInquiry text:\n${lead.description}`);
     if (lead.notes) parts.push(`\nAdditional notes:\n${lead.notes}`);
 
-    // Extract context-based questions from notes
-    const contextQuestionsMatch = lead.notes?.match(/--- NACHFRAGEN \(KI-ANALYSE\) ---\n([\s\S]+?)(?=Conversation key:|$)/);
-    if (contextQuestionsMatch) {
-      const questions = contextQuestionsMatch[1].trim();
-      if (questions) {
-        parts.push(`\n⚠️ CRITICAL: The following information is MISSING and MUST be requested in your reply email:`);
-        parts.push(questions);
-        parts.push(`\n** IMPORTANT: You MUST explicitly ask for EVERY item listed above in your reply. Do not skip any. **`);
+    // Extract context-based questions from notes - CRITICAL for email reply
+    let criticalMissingInfo = [];
+    if (lead.notes) {
+      const notesLines = lead.notes.split('\n');
+      let inNachfragenSection = false;
+      
+      for (const line of notesLines) {
+        if (line.includes('--- NACHFRAGEN (KI-ANALYSE) ---')) {
+          inNachfragenSection = true;
+          continue;
+        }
+        if (line.startsWith('Conversation key:') || line.startsWith('[') || line.startsWith('---')) {
+          inNachfragenSection = false;
+        }
+        if (inNachfragenSection && line.trim() && line.includes('⚠️ FEHLENDE INFO:')) {
+          criticalMissingInfo.push(line.trim());
+        }
       }
+    }
+
+    if (criticalMissingInfo.length > 0) {
+      parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      parts.push(`🚨 MANDATORY REQUIREMENTS FOR EMAIL REPLY 🚨`);
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      parts.push(`The following information is MISSING and MUST be requested:`);
+      criticalMissingInfo.forEach(info => parts.push(`  ${info}`));
+      parts.push(`\n✓ YOU MUST ask for ALL items above in your reply email`);
+      parts.push(`✓ Do NOT skip any of these questions`);
+      parts.push(`✓ Frame them naturally in the email but ensure ALL are covered`);
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     }
 
     parts.push(`\nSCORING RULES:
