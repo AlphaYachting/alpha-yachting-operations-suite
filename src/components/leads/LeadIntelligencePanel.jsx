@@ -79,11 +79,17 @@ export default function LeadIntelligencePanel({ lead }) {
       parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       parts.push(`🚨 MANDATORY REQUIREMENTS FOR EMAIL REPLY 🚨`);
       parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      parts.push(`The following information is MISSING and MUST be requested:`);
-      criticalMissingInfo.forEach(info => parts.push(`  ${info}`));
-      parts.push(`\n✓ YOU MUST ask for ALL items above in your reply email`);
-      parts.push(`✓ Do NOT skip any of these questions`);
-      parts.push(`✓ Frame them naturally in the email but ensure ALL are covered`);
+      parts.push(`The following information is MISSING and MUST be asked in your reply:`);
+      parts.push(``);
+      criticalMissingInfo.forEach((info, idx) => {
+        parts.push(`${idx + 1}. ${info.replace('⚠️ FEHLENDE INFO:', '').trim()}`);
+      });
+      parts.push(``);
+      parts.push(`CRITICAL RULES:`);
+      parts.push(`• You MUST ask for EVERY SINGLE item listed above (${criticalMissingInfo.length} items total)`);
+      parts.push(`• Do NOT replace any item with a different question`);
+      parts.push(`• Do NOT skip any item, especially if it says "erforderlich" (required)`);
+      parts.push(`• Include all items in your email reply naturally and professionally`);
       parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     }
 
