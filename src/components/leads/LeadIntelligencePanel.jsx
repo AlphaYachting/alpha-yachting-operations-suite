@@ -70,6 +70,11 @@ export default function LeadIntelligencePanel({ lead }) {
 Positive signals: boat brand/model mentioned, size given, marina/location mentioned, clear service scope, timeline mentioned, photos attached, concrete next step.
 Negative signals: only price request, vague wording, missing vessel info, no location, no timeline, no clear scope.
 
+CRITICAL INSTRUCTION FOR REPLY EMAIL:
+- If there are items marked "⚠️ FEHLENDE INFO:" in the notes above, you MUST ask for EVERY SINGLE ONE in your reply email
+- Do NOT skip any required information
+- Frame questions naturally but ensure ALL missing items are covered
+
 Return ONLY valid JSON matching this schema exactly:
 {
   "intent_score": <0-100 integer>,
