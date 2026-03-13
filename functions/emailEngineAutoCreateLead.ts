@@ -363,26 +363,68 @@ function extractLeadPayload(record) {
   const contextQuestions = [];
   const fullText = `${rawSubject} ${inquiryText}`.toLowerCase();
   
-  // Always ask for location if not provided
-  if (!formFields.location) {
-    contextQuestions.push('⚠️ FEHLENDE INFO: Wo steht das Boot / Wohin soll geliefert werden? (Marina, Hafen, Adresse)');
-  }
+  // Determine inquiry context (what is the customer actually asking for?)
+  const isEnginePartRequest = fullText.match(/steuergerät|ecu|teil.?nr|part.?number|ersatzteil|spare.?part|komponente|bauteil/) && 
+                               fullText.match(/motor|engine|volvo penta|yanmar|nanni|solé|mercruiser/);
   
-  // Engine/motor parts inquiry - ALWAYS require engine number
-  if (fullText.match(/motor|engine|steuergerät|ecu|einspritz|pumpe|kühlung|getriebe|antrieb|volvo penta|yanmar|nanni|solé|mercruiser|ersatzteil|spare.?part|teil/)) {
-    contextQuestions.push('⚠️ FEHLENDE INFO: Motornummer / Engine Serial Number erforderlich');
-  }
+  const isServiceRequest = fullText.match(/reparatur|service|wartung|maintenance|inspektion|überholung|repair|fix/);
   
-  // Boat-related inquiry without boat details
-  if (!boatDetailsStr && fullText.match(/boot|boat|yacht|schiff|vessel|segelboot|motorboot/)) {
+  const isBoatCareRequest = fullText.match(/reinigung|polieren|wachsen|cleaning|polish|detailing|pflege/);
+  
+  const isAccessoryRequest = fullText.match(/plane|cover|verdeck|bimini|sprayhood|zubehör|accessory/) && 
+                             !fullText.match(/reparatur|repair/);
+  
+  // CONTEXT 1: Engine/Motor Parts Request - Critical: Need exact engine serial number
+  if (isEnginePartRequest) {
+    contextQuestions.push('⚠️ FEHLENDE INFO: Motornummer / Engine Serial Number (auf dem Typenschild am Motor) - ERFORDERLICH für Ersatzteilbestellung');
     if (!formFields.boat_name && !formFields.boat_brand) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp, Hersteller oder Modell');
+      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp oder Hersteller (hilft bei der Zuordnung)');
+    }
+  }
+  
+  // CONTEXT 2: Service/Repair Request - Need boat location and details
+  else if (isServiceRequest) {
+    if (!formFields.location) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Wo liegt das Boot? (Marina, Hafen, genaue Adresse für Anfahrt)');
+    }
+    if (!formFields.boat_name && !formFields.boat_brand) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp, Hersteller und Modell');
     }
     if (!formFields.boat_length && !textBoatDetails.boat_length) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Bootslänge in Metern');
+      contextQuestions.push('⚠️ FEHLENDE INFO: Bootslänge in Metern (wichtig für Arbeitsplanung)');
     }
-    if (!formFields.boat_year && fullText.match(/baujahr|year|alter|age/)) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Baujahr des Bootes');
+  }
+  
+  // CONTEXT 3: Boat Care (cleaning, polishing) - Need boat size and location
+  else if (isBoatCareRequest) {
+    if (!formFields.location) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Wo liegt das Boot? (Marina, Liegeplatz)');
+    }
+    if (!formFields.boat_length && !textBoatDetails.boat_length) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Bootslänge (für Kostenberechnung)');
+    }
+    if (!formFields.boat_name && !formFields.boat_brand) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp (Segelboot/Motorboot)');
+    }
+  }
+  
+  // CONTEXT 4: Accessory/Cover Request - Need boat dimensions
+  else if (isAccessoryRequest) {
+    if (!formFields.boat_length && !textBoatDetails.boat_length) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Bootslänge und Breite (für passgenaue Fertigung)');
+    }
+    if (!formFields.boat_name && !formFields.boat_brand) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp, Hersteller und Modell');
+    }
+  }
+  
+  // CONTEXT 5: General/Unclear - Ask basic info
+  else {
+    if (!formFields.location) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Standort des Bootes oder Lieferadresse');
+    }
+    if (!boatDetailsStr) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Informationen zum Boot (Typ, Größe, Hersteller)');
     }
   }
   
