@@ -197,7 +197,18 @@ function parseContactFormFields(bodyText) {
       } else if (!fields.name && /^(name|kontakt|text)$/.test(label) && value.length > 1 && !value.includes('@')) {
         fields.name = value;
       } else if (!fields.message && /^(textarea|nachricht|message|anfrage|anliegen)$/.test(label) && value.length > 1) {
-        fields.message = value;
+        // For textarea, collect all subsequent lines until next label
+        const messageLines = [value];
+        for (let j = i + 2; j < widgetLines.length; j++) {
+          const nextLine = widgetLines[j].trim();
+          // Stop if we hit another label (single word followed by newline with value)
+          if (nextLine && j < widgetLines.length - 1 && 
+              /^(text|email|name|select|textarea|phone|telefon)$/i.test(nextLine)) {
+            break;
+          }
+          if (nextLine) messageLines.push(nextLine);
+        }
+        fields.message = messageLines.join('\n');
       } else if (!fields.service && /^(select|service|leistung|dienstleistung)$/.test(label) && value.length > 1) {
         fields.service = value;
       }
