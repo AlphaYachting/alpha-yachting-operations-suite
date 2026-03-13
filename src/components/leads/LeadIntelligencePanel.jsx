@@ -130,25 +130,10 @@ Return ONLY valid JSON matching this schema exactly:
   const runAnalysis = async () => {
     setLoading(true);
     try {
-      // Extract context-based questions from backend-generated notes
-      let criticalMissingInfo = [];
-      if (lead.notes) {
-        const notesLines = lead.notes.split('\n');
-        let inNachfragenSection = false;
-        
-        for (const line of notesLines) {
-          if (line.includes('--- NACHFRAGEN (KI-ANALYSE) ---')) {
-            inNachfragenSection = true;
-            continue;
-          }
-          if (line.startsWith('Conversation key:') || line.startsWith('[') || line.startsWith('---')) {
-            inNachfragenSection = false;
-          }
-          if (inNachfragenSection && line.trim() && line.includes('⚠️ FEHLENDE INFO:')) {
-            criticalMissingInfo.push(line.trim().replace('⚠️ FEHLENDE INFO:', '').trim());
-          }
-        }
-      }
+      const criticalMissingInfo = extractCriticalMissingInfo();
+      const criticalMissingInfoClean = criticalMissingInfo.map(info => 
+        info.replace('⚠️ FEHLENDE INFO:', '').trim()
+      );
 
       const result = await base44.integrations.Core.InvokeLLM({
         prompt: buildPrompt(),
@@ -175,9 +160,10 @@ Return ONLY valid JSON matching this schema exactly:
         }
       });
       
-      // Override missing_information with backend-extracted critical info if available
-      if (criticalMissingInfo.length > 0) {
-        result.missing_information = criticalMissingInfo;
+      // CRITICAL: Override missing_information with backend-extracted critical info
+      // This ensures the UI always displays the context-specific requirements (e.g., Motornummer for parts)
+      if (criticalMissingInfoClean.length > 0) {
+        result.missing_information = criticalMissingInfoClean;
       }
       
       setAnalysis(result);
