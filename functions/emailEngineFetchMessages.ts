@@ -86,6 +86,9 @@ function safeErr(err) {
 }
 
 Deno.serve(async (req) => {
+  const startTime = Date.now();
+  const MAX_EXECUTION_TIME = 150000; // 2.5 minutes max execution
+  
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -114,12 +117,15 @@ Deno.serve(async (req) => {
       secure: true,
       auth: { user: imapUser, pass: imapPass },
       logger: false,
-      connectionTimeout: 10000,
-      greetingTimeout: 6000,
-      socketTimeout: 30000,
+      connectionTimeout: 15000,
+      greetingTimeout: 8000,
+      socketTimeout: 45000,
     });
 
-    await client.connect();
+    await Promise.race([
+      client.connect(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP connection timeout')), 20000))
+    ]);
 
     const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
 
@@ -159,6 +165,15 @@ Deno.serve(async (req) => {
 
         // PASS 2: Download only the specific text part per message
         for (const info of msgInfos) {
+          // Check timeout before processing each message
+          if (Date.now() - startTime > MAX_EXECUTION_TIME) {
+            results.messages.push({ 
+              status: 'timeout', 
+              info: `Stopped processing after ${results.stored} messages due to time limit` 
+            });
+            break;
+          }
+          
           try {
             let bodyText = '';
             const debugInfo = {
@@ -274,6 +289,7 @@ Deno.serve(async (req) => {
 
     await client.logout();
 
+    const executionTime = Date.now() - startTime;
     return Response.json({
       success: true,
       summary: {
@@ -281,11 +297,17 @@ Deno.serve(async (req) => {
         stored: results.stored,
         duplicates: results.duplicates,
         errors: results.errors,
+        execution_time_ms: executionTime,
       },
       message_log: results.messages,
     });
 
   } catch (error) {
-    return Response.json({ success: false, error: safeErr(error) }, { status: 500 });
+    const executionTime = Date.now() - startTime;
+    return Response.json({ 
+      success: false, 
+      error: safeErr(error),
+      execution_time_ms: executionTime 
+    }, { status: 500 });
   }
 });
