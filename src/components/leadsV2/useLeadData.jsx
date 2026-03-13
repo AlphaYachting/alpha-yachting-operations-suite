@@ -34,11 +34,21 @@ export function useLeadData() {
         base44.entities.User.list(),
         base44.entities.Boat.list(),
       ]);
-      setLeads(allLeads);
-      setCustomers(allCustomers);
-      setLocations(allLocations);
-      setUsers(allUsers);
-      setBoats(allBoats);
+      
+      // Flatten entity structure: merge id, created_date, updated_date from root with data fields
+      const flattenEntity = (entity) => ({
+        ...entity.data,
+        id: entity.id,
+        created_date: entity.created_date,
+        updated_date: entity.updated_date,
+        created_by: entity.created_by
+      });
+      
+      setLeads((allLeads || []).map(flattenEntity));
+      setCustomers((allCustomers || []).map(flattenEntity));
+      setLocations((allLocations || []).map(flattenEntity));
+      setUsers((allUsers || []).map(flattenEntity));
+      setBoats((allBoats || []).map(flattenEntity));
     } catch (err) {
       setError(err.message);
       console.error('Error loading lead data:', err);
@@ -50,7 +60,14 @@ export function useLeadData() {
   const fetchLeadsOnly = async () => {
     try {
       const allLeads = await base44.entities.Lead.list('-created_date');
-      setLeads(allLeads);
+      const flattenEntity = (entity) => ({
+        ...entity.data,
+        id: entity.id,
+        created_date: entity.created_date,
+        updated_date: entity.updated_date,
+        created_by: entity.created_by
+      });
+      setLeads((allLeads || []).map(flattenEntity));
     } catch (err) {
       console.error('Error refetching leads:', err);
     }
