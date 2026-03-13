@@ -359,6 +359,35 @@ function extractLeadPayload(record) {
   // Use the structured message field if available, otherwise the customer body
   const description = (formFields.message || customerBody).substring(0, 5000);
 
+  // --- CONTEXT-BASED MISSING INFO ANALYSIS ---
+  const contextQuestions = [];
+  const fullText = `${rawSubject} ${inquiryText}`.toLowerCase();
+  
+  // Always ask for location if not provided
+  if (!formFields.location) {
+    contextQuestions.push('⚠️ FEHLENDE INFO: Wo steht das Boot / Wohin soll geliefert werden? (Marina, Hafen, Adresse)');
+  }
+  
+  // Engine/motor parts inquiry - require engine number
+  if (fullText.match(/motor|engine|steuergerät|ecu|einspritz|pumpe|kühlung|getriebe|antrieb|volvo penta|yanmar|nanni|solé|mercruiser/)) {
+    if (!fullText.match(/motor.?nummer|engine.?number|serial|s.?n.?:|teil.?nr|part.?no/)) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Motornummer / Engine Serial Number erforderlich');
+    }
+  }
+  
+  // Boat-related inquiry without boat details
+  if (!boatDetailsStr && fullText.match(/boot|boat|yacht|schiff|vessel|segelboot|motorboot/)) {
+    if (!formFields.boat_name && !formFields.boat_brand) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp, Hersteller oder Modell');
+    }
+    if (!formFields.boat_length && !textBoatDetails.boat_length) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Bootslänge in Metern');
+    }
+    if (!formFields.boat_year && fullText.match(/baujahr|year|alter|age/)) {
+      contextQuestions.push('⚠️ FEHLENDE INFO: Baujahr des Bootes');
+    }
+  }
+  
   // --- STRUCTURED NOTES (audit trail) ---
   const structuredNotes = [
     `[Auto-created from website inquiry email]`,
@@ -372,6 +401,7 @@ function extractLeadPayload(record) {
     boatDetailsStr         ? `Boat: ${boatDetailsStr}`              : null,
     formFields.location    ? `Location/marina: ${formFields.location}` : null,
     formFields.desired_date? `Desired date: ${formFields.desired_date}` : null,
+    contextQuestions.length > 0 ? `\n--- NACHFRAGEN (KI-ANALYSE) ---\n${contextQuestions.join('\n')}` : null,
     `Conversation key: ${record.conversation_key || 'n/a'}`,
   ].filter(Boolean).join('\n');
 
