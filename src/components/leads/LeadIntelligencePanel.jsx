@@ -55,6 +55,14 @@ export default function LeadIntelligencePanel({ lead }) {
     if (lead.description) parts.push(`\nInquiry text:\n${lead.description}`);
     if (lead.notes) parts.push(`\nAdditional notes:\n${lead.notes}`);
 
+    // Extract context-based questions from notes
+    const contextQuestionsMatch = lead.notes?.match(/--- NACHFRAGEN \(KI-ANALYSE\) ---\n([\s\S]+?)(?=\n\n|$)/);
+    if (contextQuestionsMatch) {
+      parts.push(`\n⚠️ CRITICAL MISSING INFORMATION (MUST ASK IN REPLY):`);
+      parts.push(contextQuestionsMatch[1].trim());
+      parts.push(`\n** You MUST ask for ALL missing information listed above in your email reply. **`);
+    }
+
     parts.push(`\nSCORING RULES:
 Positive signals: boat brand/model mentioned, size given, marina/location mentioned, clear service scope, timeline mentioned, photos attached, concrete next step.
 Negative signals: only price request, vague wording, missing vessel info, no location, no timeline, no clear scope.
