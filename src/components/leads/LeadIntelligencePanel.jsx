@@ -81,23 +81,25 @@ export default function LeadIntelligencePanel({ lead }) {
     const criticalMissingInfo = extractCriticalMissingInfo();
 
     if (criticalMissingInfo.length > 0) {
-      parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      parts.push(`🚨 MANDATORY REQUIREMENTS FOR EMAIL REPLY 🚨`);
-      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-      parts.push(`You MUST ask for the following information in your reply email:`);
+      parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      parts.push(`🚨 MANDATORY: EXACT QUESTIONS TO ASK IN EMAIL REPLY 🚨`);
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      parts.push(`The backend system has identified these CRITICAL missing items based on the inquiry type.`);
+      parts.push(`You MUST ask for EVERY SINGLE ONE in your email reply:`);
       parts.push(``);
       criticalMissingInfo.forEach((info, idx) => {
         const cleanInfo = info.replace('⚠️ FEHLENDE INFO:', '').trim();
-        parts.push(`QUESTION ${idx + 1}: ${cleanInfo}`);
+        parts.push(`${idx + 1}. ${cleanInfo}`);
       });
       parts.push(``);
-      parts.push(`🔴 NON-NEGOTIABLE RULES:`);
-      parts.push(`1. You MUST include ALL ${criticalMissingInfo.length} questions above in your email`);
-      parts.push(`2. Do NOT skip the "Motornummer" question if it appears above`);
-      parts.push(`3. Do NOT replace any question with something similar`);
-      parts.push(`4. Ask for each item explicitly and clearly`);
-      parts.push(`5. If "erforderlich" (required) is mentioned, emphasize it's needed`);
-      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+      parts.push(`🔴 ABSOLUTE REQUIREMENTS:`);
+      parts.push(`• Ask for EACH item listed above (total: ${criticalMissingInfo.length} items)`);
+      parts.push(`• Do NOT substitute with different questions`);
+      parts.push(`• Do NOT generalize (e.g., "boat details" when specific "Motornummer" is required)`);
+      parts.push(`• If "Motornummer" or "Engine Serial Number" is listed above, you MUST ask for it`);
+      parts.push(`• If "erforderlich" or "ERFORDERLICH" appears, emphasize it is mandatory`);
+      parts.push(`• Format the questions naturally in the email, but ensure ALL items are covered`);
+      parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     }
 
     parts.push(`\nSCORING RULES:
