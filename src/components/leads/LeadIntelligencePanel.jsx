@@ -40,23 +40,9 @@ export default function LeadIntelligencePanel({ lead }) {
   const [collapsed, setCollapsed] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
 
-  const buildPrompt = () => {
-    const parts = [];
-    parts.push(`You are an expert marine services sales qualifier. Analyze this customer lead and return structured JSON.`);
-    parts.push(`\nLEAD DATA:`);
-    parts.push(`Name: ${lead.name || 'Unknown'}`);
-    if (lead.email) parts.push(`Email: ${lead.email}`);
-    if (lead.phone) parts.push(`Phone: ${lead.phone}`);
-    if (lead.boat_name) parts.push(`Boat: ${lead.boat_name}`);
-    if (lead.boat_details) parts.push(`Boat details: ${lead.boat_details}`);
-    if (lead.location) parts.push(`Location: ${lead.location}`);
-    if (lead.inquiry_type) parts.push(`Inquiry type: ${lead.inquiry_type}`);
-    if (lead.contact_method) parts.push(`Contact method: ${lead.contact_method}`);
-    if (lead.description) parts.push(`\nInquiry text:\n${lead.description}`);
-    if (lead.notes) parts.push(`\nAdditional notes:\n${lead.notes}`);
-
-    // Extract context-based questions from notes - CRITICAL for email reply
-    let criticalMissingInfo = [];
+  // Extract context-based questions from backend-generated notes (ONCE, shared across functions)
+  const extractCriticalMissingInfo = () => {
+    const criticalMissingInfo = [];
     if (lead.notes) {
       const notesLines = lead.notes.split('\n');
       let inNachfragenSection = false;
@@ -74,6 +60,25 @@ export default function LeadIntelligencePanel({ lead }) {
         }
       }
     }
+    return criticalMissingInfo;
+  };
+
+  const buildPrompt = () => {
+    const parts = [];
+    parts.push(`You are an expert marine services sales qualifier. Analyze this customer lead and return structured JSON.`);
+    parts.push(`\nLEAD DATA:`);
+    parts.push(`Name: ${lead.name || 'Unknown'}`);
+    if (lead.email) parts.push(`Email: ${lead.email}`);
+    if (lead.phone) parts.push(`Phone: ${lead.phone}`);
+    if (lead.boat_name) parts.push(`Boat: ${lead.boat_name}`);
+    if (lead.boat_details) parts.push(`Boat details: ${lead.boat_details}`);
+    if (lead.location) parts.push(`Location: ${lead.location}`);
+    if (lead.inquiry_type) parts.push(`Inquiry type: ${lead.inquiry_type}`);
+    if (lead.contact_method) parts.push(`Contact method: ${lead.contact_method}`);
+    if (lead.description) parts.push(`\nInquiry text:\n${lead.description}`);
+    if (lead.notes) parts.push(`\nAdditional notes:\n${lead.notes}`);
+
+    const criticalMissingInfo = extractCriticalMissingInfo();
 
     if (criticalMissingInfo.length > 0) {
       parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
