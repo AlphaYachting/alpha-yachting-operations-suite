@@ -48,13 +48,19 @@ export default function LeadIntelligencePanel({ lead }) {
       let inNachfragenSection = false;
       
       for (const line of notesLines) {
+        // Start marker
         if (line.includes('--- NACHFRAGEN (KI-ANALYSE) ---')) {
           inNachfragenSection = true;
           continue;
         }
-        if (line.startsWith('Conversation key:') || line.startsWith('[') || line.startsWith('---')) {
+        
+        // End markers
+        if (line.startsWith('Conversation key:') || line.startsWith('---')) {
           inNachfragenSection = false;
+          continue;
         }
+        
+        // Extract lines that contain the missing info marker
         if (inNachfragenSection && line.trim() && line.includes('⚠️ FEHLENDE INFO:')) {
           criticalMissingInfo.push(line.trim());
         }
