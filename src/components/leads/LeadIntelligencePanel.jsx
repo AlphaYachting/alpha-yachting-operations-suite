@@ -182,6 +182,18 @@ export default function LeadIntelligencePanel({ lead }) {
         response_json_schema: {
           type: 'object',
           properties: {
+            request_category: { type: 'string' },
+            technical_interpretation: { type: 'string' },
+            missing_information: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            work_complexity: { type: 'string' },
+            clarification_questions: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            reply_email_draft: { type: 'string' },
             extracted_info: {
               type: 'object',
               properties: {
@@ -195,16 +207,11 @@ export default function LeadIntelligencePanel({ lead }) {
                 customer_motivation: { type: ['string', 'null'] }
               }
             },
-            missing_critical_info: {
-              type: 'array',
-              items: { type: 'string' }
-            },
             intent_score: { type: 'number' },
             deal_probability: { type: 'number' },
             urgency_level: { type: 'string' },
             lead_type: { type: 'string' },
-            analysis_explanation: { type: 'string' },
-            reply_email_draft: { type: 'string' }
+            analysis_explanation: { type: 'string' }
           }
         }
       });
