@@ -359,74 +359,13 @@ function extractLeadPayload(record) {
   // Use the structured message field if available, otherwise the customer body
   const description = (formFields.message || customerBody).substring(0, 5000);
 
-  // --- CONTEXT-BASED MISSING INFO ANALYSIS ---
-  const contextQuestions = [];
-  const fullText = `${rawSubject} ${inquiryText}`.toLowerCase();
-  
-  // Determine inquiry context (what is the customer actually asking for?)
-  const isEnginePartRequest = fullText.match(/steuergerät|ecu|teil.?nr|part.?number|ersatzteil|spare.?part|komponente|bauteil/) && 
-                               fullText.match(/motor|engine|volvo penta|yanmar|nanni|solé|mercruiser/);
-  
-  const isServiceRequest = fullText.match(/reparatur|service|wartung|maintenance|inspektion|überholung|repair|fix/);
-  
-  const isBoatCareRequest = fullText.match(/reinigung|polieren|wachsen|cleaning|polish|detailing|pflege/);
-  
-  const isAccessoryRequest = fullText.match(/plane|cover|verdeck|bimini|sprayhood|zubehör|accessory/) && 
-                             !fullText.match(/reparatur|repair/);
-  
-  // CONTEXT 1: Engine/Motor Parts Request - Critical: Need exact engine serial number
-  if (isEnginePartRequest) {
-    contextQuestions.push('⚠️ FEHLENDE INFO: Motornummer / Engine Serial Number (auf dem Typenschild am Motor) - ERFORDERLICH für Ersatzteilbestellung');
-    if (!formFields.boat_name && !formFields.boat_brand) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp oder Hersteller (hilft bei der Zuordnung)');
-    }
-  }
-  
-  // CONTEXT 2: Service/Repair Request - Need boat location and details
-  else if (isServiceRequest) {
-    if (!formFields.location) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Wo liegt das Boot? (Marina, Hafen, genaue Adresse für Anfahrt)');
-    }
-    if (!formFields.boat_name && !formFields.boat_brand) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp, Hersteller und Modell');
-    }
-    if (!formFields.boat_length && !textBoatDetails.boat_length) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Bootslänge in Metern (wichtig für Arbeitsplanung)');
-    }
-  }
-  
-  // CONTEXT 3: Boat Care (cleaning, polishing) - Need boat size and location
-  else if (isBoatCareRequest) {
-    if (!formFields.location) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Wo liegt das Boot? (Marina, Liegeplatz)');
-    }
-    if (!formFields.boat_length && !textBoatDetails.boat_length) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Bootslänge (für Kostenberechnung)');
-    }
-    if (!formFields.boat_name && !formFields.boat_brand) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp (Segelboot/Motorboot)');
-    }
-  }
-  
-  // CONTEXT 4: Accessory/Cover Request - Need boat dimensions
-  else if (isAccessoryRequest) {
-    if (!formFields.boat_length && !textBoatDetails.boat_length) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Bootslänge und Breite (für passgenaue Fertigung)');
-    }
-    if (!formFields.boat_name && !formFields.boat_brand) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Bootstyp, Hersteller und Modell');
-    }
-  }
-  
-  // CONTEXT 5: General/Unclear - Ask basic info
-  else {
-    if (!formFields.location) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Standort des Bootes oder Lieferadresse');
-    }
-    if (!boatDetailsStr) {
-      contextQuestions.push('⚠️ FEHLENDE INFO: Informationen zum Boot (Typ, Größe, Hersteller)');
-    }
-  }
+  // --- AI-BASED MISSING INFO ANALYSIS ---
+  // Note: This runs server-side during lead creation, NOT in frontend
+  // We intentionally skip LLM call here to keep lead creation fast
+  // The REAL AI analysis happens later in LeadIntelligencePanel when user opens the lead
+  const contextQuestions = [
+    '🤖 KI-ANALYSE AUSSTEHEND: Bitte Lead öffnen und "Run Analysis" klicken für intelligente Nachfragen-Generierung'
+  ];
   
   // --- STRUCTURED NOTES (audit trail) ---
   const structuredNotes = [

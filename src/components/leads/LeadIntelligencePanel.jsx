@@ -69,51 +69,56 @@ export default function LeadIntelligencePanel({ lead }) {
     return criticalMissingInfo;
   };
 
-  const buildPrompt = (criticalMissingInfo) => {
+  const buildAnalysisPrompt = () => {
     const parts = [];
     
-    // Determine inquiry context from lead data
-    const fullText = `${lead.description || ''} ${lead.notes || ''}`.toLowerCase();
-    const isPartsRequest = fullText.includes('teil') || fullText.includes('part') || fullText.includes('ersatz');
-    const isServiceRequest = fullText.includes('reparatur') || fullText.includes('service') || fullText.includes('wartung');
-    
-    let roleContext = 'marine services sales representative';
-    if (isPartsRequest) roleContext = 'marine parts specialist';
-    else if (isServiceRequest) roleContext = 'marine service advisor';
-    
-    parts.push(`You are a ${roleContext}. Your job is to qualify this lead and write a professional follow-up email.`);
-    parts.push(`\nCUSTOMER INQUIRY:`);
+    parts.push(`You are an expert marine services business analyst. Analyze this customer inquiry and extract structured information.`);
+    parts.push(`\n📧 CUSTOMER INQUIRY:`);
     if (lead.name) parts.push(`Name: ${lead.name}`);
-    if (lead.description) parts.push(`\n${lead.description}`);
+    if (lead.email) parts.push(`Email: ${lead.email}`);
+    if (lead.phone) parts.push(`Phone: ${lead.phone}`);
+    if (lead.description) parts.push(`\nMessage:\n${lead.description}`);
+    if (lead.boat_name) parts.push(`\nBoat: ${lead.boat_name}`);
+    if (lead.location) parts.push(`Location mentioned: ${lead.location}`);
     
     parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    parts.push(`🎯 YOUR TASK: Write a professional email reply that:`);
-    parts.push(`1. Thanks the customer for their inquiry`);
-    parts.push(`2. Asks for the following REQUIRED information (${criticalMissingInfo.length} items):`);
-    parts.push(``);
-    criticalMissingInfo.forEach((info, idx) => {
-      const cleanInfo = info.replace('⚠️ FEHLENDE INFO:', '').trim();
-      parts.push(`   ${idx + 1}. ${cleanInfo}`);
-    });
-    parts.push(``);
-    parts.push(`3. Explains why this information is needed (to serve them better)`);
-    parts.push(`4. Maintains a helpful, professional tone`);
+    parts.push(`🎯 YOUR TASK:`);
+    parts.push(`1. EXTRACT all information the customer HAS PROVIDED (boat location, type, size, engine details, etc.)`);
+    parts.push(`2. IDENTIFY what critical information is MISSING to fulfill their request`);
+    parts.push(`3. UNDERSTAND the customer's motivation/context (why do they need this service?)`);
+    parts.push(`4. ASSESS their buying intent and urgency`);
+    parts.push(`5. GENERATE a professional follow-up email in the SAME LANGUAGE as the inquiry`);
     parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     
-    parts.push(`\n🔴 CRITICAL RULES:`);
-    parts.push(`• You MUST ask for ALL ${criticalMissingInfo.length} items listed above`);
-    parts.push(`• Do NOT skip or replace any item, especially "Motornummer" if listed`);
-    parts.push(`• Write in the SAME LANGUAGE as the customer inquiry (German/English/etc.)`);
-    parts.push(`• Keep it concise but complete`);
-    parts.push(`• Use the customer's name if provided\n`);
+    parts.push(`🔴 CRITICAL RULES:`);
+    parts.push(`• DO NOT ask for information the customer already provided!`);
+    parts.push(`• DO ask about context/motivation if unclear (e.g., "why compression test?")`);
+    parts.push(`• BE SPECIFIC in what you ask for (not just "boat info" but "boat length in meters")`);
+    parts.push(`• MATCH the customer's language (German ↔ German, English ↔ English)`);
+    parts.push(`• KEEP email professional but friendly\n`);
 
-    parts.push(`Return ONLY valid JSON with this structure:
+    parts.push(`Return ONLY valid JSON:
 {
-  "intent_score": <0-100, estimate customer's buying intent>,
-  "deal_probability": <0-100, likelihood of conversion>,
+  "extracted_info": {
+    "boat_location": "<marina/harbor name if mentioned, or null>",
+    "boat_type": "<sailboat/motorboat/etc if mentioned, or null>",
+    "boat_length": "<length in meters if mentioned, or null>",
+    "boat_brand": "<manufacturer if mentioned, or null>",
+    "engine_details": "<engine type/model if mentioned, or null>",
+    "service_requested": "<what they want done>",
+    "timeline": "<when they need it, or null>",
+    "customer_motivation": "<why they need this service, or null>"
+  },
+  "missing_critical_info": [
+    "<specific question 1>",
+    "<specific question 2>"
+  ],
+  "intent_score": <0-100>,
+  "deal_probability": <0-100>,
+  "urgency_level": <"Low" | "Medium" | "High" | "Urgent">,
   "lead_type": <"Hot Lead" | "Qualified Prospect" | "Information Seeker" | "Price Shopper">,
-  "analysis_explanation": <brief 1-sentence analysis>,
-  "reply_email_draft": "<the complete email text>"
+  "analysis_explanation": "<1-2 sentence analysis>",
+  "reply_email_draft": "<complete professional email in customer's language>"
 }`);
 
     return parts.join('\n');
@@ -122,55 +127,67 @@ export default function LeadIntelligencePanel({ lead }) {
   const runAnalysis = async () => {
     setLoading(true);
     try {
-      const criticalMissingInfo = extractCriticalMissingInfo();
-      console.log('🔍 DEBUG extractCriticalMissingInfo RAW:', criticalMissingInfo);
-      
-      const criticalMissingInfoClean = criticalMissingInfo.map(info => 
-        info.replace('⚠️ FEHLENDE INFO:', '').trim()
-      );
-
-      console.log('🔍 DEBUG criticalMissingInfoClean:', criticalMissingInfoClean);
-
-      // FALLBACK ONLY if truly empty (backend did not generate questions)
-      if (criticalMissingInfoClean.length === 0) {
-        console.warn('⚠️ No backend questions found - using fallback generic questions');
-        criticalMissingInfoClean.push('Informationen zum Boot (Typ, Modell, Größe)');
-        criticalMissingInfoClean.push('Standort des Bootes oder Lieferadresse');
-      } else {
-        console.log('✅ Using backend-generated questions:', criticalMissingInfoClean.length, 'items');
-      }
+      console.log('🤖 Starting AI-powered lead analysis...');
 
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: buildPrompt(criticalMissingInfoClean),
+        prompt: buildAnalysisPrompt(),
         response_json_schema: {
           type: 'object',
           properties: {
-            intent_score:           { type: 'number' },
-            deal_probability:       { type: 'number' },
-            lead_type:              { type: 'string' },
-            analysis_explanation:   { type: 'string' },
-            reply_email_draft:      { type: 'string' }
+            extracted_info: {
+              type: 'object',
+              properties: {
+                boat_location: { type: ['string', 'null'] },
+                boat_type: { type: ['string', 'null'] },
+                boat_length: { type: ['string', 'null'] },
+                boat_brand: { type: ['string', 'null'] },
+                engine_details: { type: ['string', 'null'] },
+                service_requested: { type: 'string' },
+                timeline: { type: ['string', 'null'] },
+                customer_motivation: { type: ['string', 'null'] }
+              }
+            },
+            missing_critical_info: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            intent_score: { type: 'number' },
+            deal_probability: { type: 'number' },
+            urgency_level: { type: 'string' },
+            lead_type: { type: 'string' },
+            analysis_explanation: { type: 'string' },
+            reply_email_draft: { type: 'string' }
           }
         }
       });
       
-      // HARDCODE: missing_information comes ONLY from backend analysis, NOT from LLM
-      result.missing_information = criticalMissingInfoClean;
+      console.log('✅ AI Analysis complete:', result);
       
-      // HARDCODE: verification_questions based on missing_information
+      // Format for UI display
+      result.missing_information = result.missing_critical_info || [];
       result.verification_questions = [{
-        group: 'Required Information',
-        questions: criticalMissingInfoClean.map(info => `${info}`)
+        group: 'AI-Identified Missing Information',
+        questions: result.missing_critical_info || []
       }];
       
-      // DEBUG: Add extraction metadata to result
-      result._debug_extracted_count = criticalMissingInfo.length;
-      result._debug_raw_notes = lead.notes;
+      // Add extracted info display
+      if (result.extracted_info) {
+        const extractedItems = Object.entries(result.extracted_info)
+          .filter(([_, value]) => value !== null && value !== '')
+          .map(([key, value]) => `${key.replace(/_/g, ' ')}: ${value}`);
+        
+        if (extractedItems.length > 0) {
+          result.verification_questions.unshift({
+            group: 'Information Already Provided by Customer',
+            questions: extractedItems
+          });
+        }
+      }
       
       setAnalysis(result);
     } catch (e) {
       console.error('LeadIntelligencePanel analysis error:', e);
-      setAnalysis({ _error: true });
+      setAnalysis({ _error: true, _errorMessage: e.message });
     } finally {
       setLoading(false);
     }
