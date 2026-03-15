@@ -72,65 +72,101 @@ export default function LeadIntelligencePanel({ lead }) {
   const buildAnalysisPrompt = () => {
     const parts = [];
     
-    parts.push(`You are an expert marine services business analyst. Analyze this customer inquiry and extract structured information.`);
-    parts.push(`\n📧 CUSTOMER INQUIRY:`);
+    parts.push(`ROLE`);
+    parts.push(`You are a senior marine surveyor and yacht service coordinator working for Alpha Yachting.`);
+    parts.push(`Your task is to analyze incoming customer inquiries and prepare a structured technical clarification.\n`);
+    
+    parts.push(`GOAL`);
+    parts.push(`1. Understand the customer's request.`);
+    parts.push(`2. Identify the likely technical problem.`);
+    parts.push(`3. Detect missing information required to prepare a service quote.`);
+    parts.push(`4. Generate a clear and friendly response email asking only the necessary questions.\n`);
+    
+    parts.push(`CONTEXT`);
+    parts.push(`Alpha Yachting provides yacht service, repair and maintenance for motorboats and sailing yachts up to approx. 20m.`);
+    parts.push(`Typical services include:`);
+    parts.push(`• engine diagnostics`);
+    parts.push(`• antifouling and hull service`);
+    parts.push(`• polishing and detailing`);
+    parts.push(`• electrical systems`);
+    parts.push(`• electronics`);
+    parts.push(`• propulsion systems`);
+    parts.push(`• leak diagnostics`);
+    parts.push(`• mechanical repairs`);
+    parts.push(`• retrofit installations`);
+    parts.push(`• marina service support\n`);
+    
+    parts.push(`Customers often provide incomplete information.`);
+    parts.push(`The AI must therefore identify missing technical and logistical data required for an estimate.\n`);
+    
+    parts.push(`INPUT`);
+    parts.push(`Customer inquiry:`);
     if (lead.name) parts.push(`Name: ${lead.name}`);
     if (lead.email) parts.push(`Email: ${lead.email}`);
     if (lead.phone) parts.push(`Phone: ${lead.phone}`);
     if (lead.description) parts.push(`\nMessage:\n${lead.description}`);
     if (lead.boat_name) parts.push(`\nBoat: ${lead.boat_name}`);
-    if (lead.location) parts.push(`Location mentioned: ${lead.location}`);
+    if (lead.boat_details) parts.push(`Boat details: ${lead.boat_details}`);
+    if (lead.location) parts.push(`Location: ${lead.location}`);
+    parts.push(`\n`);
     
-    parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    parts.push(`🎯 YOUR TASK:`);
-    parts.push(`1. EXTRACT all information the customer HAS PROVIDED`);
-    parts.push(`2. IDENTIFY what critical information is MISSING to fulfill their SPECIFIC request`);
-    parts.push(`3. UNDERSTAND the customer's motivation/context (WHY do they need this?)`);
-    parts.push(`4. ASSESS their buying intent and urgency`);
-    parts.push(`5. GENERATE a professional follow-up email in the SAME LANGUAGE as the inquiry`);
-    parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
+    parts.push(`ANALYSIS TASKS\n`);
     
-    parts.push(`🔴 CRITICAL RULES - READ CAREFULLY:`);
-    parts.push(`\n1. CHECK WHAT CUSTOMER ALREADY PROVIDED:`);
-    parts.push(`   • If they mentioned location → DO NOT ASK FOR LOCATION`);
-    parts.push(`   • If they mentioned boat type → DO NOT ASK FOR BOAT TYPE`);
-    parts.push(`   • If they mentioned engine model → DO NOT ASK FOR ENGINE MODEL`);
-    parts.push(`   • Example: "ACI Marina Pomer" = LOCATION PROVIDED ✓`);
-    parts.push(`\n2. ASK ONLY SERVICE-SPECIFIC QUESTIONS:`);
-    parts.push(`   • Compression test → WHY? (Symptoms: hard start, smoke, power loss?), TIMELINE, ACCESS`);
-    parts.push(`   • Antifouling → TIMELINE, boat length only if not mentioned`);
-    parts.push(`   • Engine parts → ENGINE SERIAL NUMBER (mandatory!)`);
-    parts.push(`   • Repair → PROBLEM DESCRIPTION, symptoms, when did it start?`);
-    parts.push(`\n3. NEVER ASK:`);
-    parts.push(`   • "Wo liegt das Boot?" if location already mentioned`);
-    parts.push(`   • "Bootstyp/Hersteller/Modell" for simple service tasks (compression test, inspection)`);
-    parts.push(`   • "Bootslänge" unless it's pricing-relevant (antifouling, painting, transport)`);
-    parts.push(`\n4. LANGUAGE & TONE:`);
-    parts.push(`   • Match customer's language exactly (German ↔ German)`);
-    parts.push(`   • Professional but warm tone\n`);
-
+    parts.push(`Step 1 — Request Classification`);
+    parts.push(`Determine the main category of the request:`);
+    parts.push(`Possible categories: Engine problem, Electrical problem, Hull/antifouling, Polishing/detailing, Mechanical repair, Leak/water ingress, Electronics, Installation/retrofit, General service, Unknown\n`);
+    
+    parts.push(`Step 2 — Problem Interpretation`);
+    parts.push(`Explain briefly what the customer's problem most likely means from a technical perspective.\n`);
+    
+    parts.push(`Step 3 — Missing Information Detection`);
+    parts.push(`Identify missing information required to prepare a quotation or schedule a technician.`);
+    parts.push(`Typical required information:`);
+    parts.push(`Boat Information: boat brand, boat model, boat length, engine type and brand, engine power`);
+    parts.push(`Location: marina/harbor, country, berth number if known`);
+    parts.push(`Technical details: symptoms, when the problem occurs, error messages, previous repairs, photos or videos available`);
+    parts.push(`Service context: urgency, boat currently in water or on land, accessibility of the boat\n`);
+    
+    parts.push(`Step 4 — Work Complexity Estimation`);
+    parts.push(`Classify the likely work scope: small service task, medium repair, complex diagnostic case, unclear/requires inspection\n`);
+    
+    parts.push(`Step 5 — Generate Clarification Questions`);
+    parts.push(`Generate 5–10 concise questions that will help Alpha Yachting prepare an offer or plan the service.`);
+    parts.push(`Questions must be: simple, technical but understandable, directly relevant for diagnosis or pricing\n`);
+    
+    parts.push(`Step 6 — Write Reply Email`);
+    parts.push(`Write a short professional reply email in the SAME LANGUAGE as the customer inquiry that:`);
+    parts.push(`• thanks the customer`);
+    parts.push(`• briefly acknowledges the problem`);
+    parts.push(`• asks the generated questions`);
+    parts.push(`• keeps a friendly tone`);
+    parts.push(`• invites the customer to send photos if helpful\n`);
+    
+    parts.push(`EMAIL STYLE: Professional, clear and helpful. Avoid technical jargon where possible.\n`);
+    
     parts.push(`Return ONLY valid JSON:
 {
+  "request_category": "<category>",
+  "technical_interpretation": "<short explanation>",
+  "missing_information": ["item1", "item2"],
+  "work_complexity": "<assessment>",
+  "clarification_questions": ["q1", "q2", "q3", "q4", "q5"],
+  "reply_email_draft": "<complete ready-to-send email>",
   "extracted_info": {
-    "boat_location": "<marina/harbor name if mentioned, or null>",
-    "boat_type": "<sailboat/motorboat/etc if mentioned, or null>",
-    "boat_length": "<length in meters if mentioned, or null>",
-    "boat_brand": "<manufacturer if mentioned, or null>",
-    "engine_details": "<engine type/model if mentioned, or null>",
-    "service_requested": "<what they want done>",
-    "timeline": "<when they need it, or null>",
-    "customer_motivation": "<why they need this service, or null>"
+    "boat_location": "<if mentioned>",
+    "boat_type": "<if mentioned>",
+    "boat_length": "<if mentioned>",
+    "boat_brand": "<if mentioned>",
+    "engine_details": "<if mentioned>",
+    "service_requested": "<what they want>",
+    "timeline": "<if mentioned>",
+    "customer_motivation": "<if mentioned>"
   },
-  "missing_critical_info": [
-    "<specific question 1>",
-    "<specific question 2>"
-  ],
   "intent_score": <0-100>,
   "deal_probability": <0-100>,
-  "urgency_level": <"Low" | "Medium" | "High" | "Urgent">,
-  "lead_type": <"Hot Lead" | "Qualified Prospect" | "Information Seeker" | "Price Shopper">,
-  "analysis_explanation": "<1-2 sentence analysis>",
-  "reply_email_draft": "<complete professional email in customer's language>"
+  "urgency_level": "<Low|Medium|High|Urgent>",
+  "lead_type": "<Hot Lead|Qualified Prospect|Information Seeker|Price Shopper>",
+  "analysis_explanation": "<1-2 sentences>"
 }`);
 
     return parts.join('\n');
