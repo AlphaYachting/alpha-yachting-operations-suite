@@ -83,17 +83,21 @@ export default function LeadIntelligencePanel({ lead }) {
     
     parts.push(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     parts.push(`🎯 YOUR TASK:`);
-    parts.push(`1. EXTRACT all information the customer HAS PROVIDED (boat location, type, size, engine details, etc.)`);
-    parts.push(`2. IDENTIFY what critical information is MISSING to fulfill their request`);
-    parts.push(`3. UNDERSTAND the customer's motivation/context (why do they need this service?)`);
+    parts.push(`1. EXTRACT all information the customer HAS PROVIDED`);
+    parts.push(`2. IDENTIFY what critical information is MISSING to fulfill their SPECIFIC request`);
+    parts.push(`3. UNDERSTAND the customer's motivation/context (WHY do they need this?)`);
     parts.push(`4. ASSESS their buying intent and urgency`);
     parts.push(`5. GENERATE a professional follow-up email in the SAME LANGUAGE as the inquiry`);
     parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     
-    parts.push(`🔴 CRITICAL RULES:`);
+    parts.push(`🔴 CRITICAL RULES FOR MISSING INFORMATION:`);
+    parts.push(`• ONLY ask for information that is DIRECTLY NECESSARY to fulfill their specific request`);
+    parts.push(`• DO NOT ask generic questions like "boat length" or "boat type" unless it's ESSENTIAL for the service they requested`);
+    parts.push(`• Example: Compression test → Need WHY (symptom/problem), WHEN (timeline), maybe access/keys`);
+    parts.push(`• Example: Antifouling → Need boat length (pricing), location access, timeline`);
+    parts.push(`• Example: Part request → Need engine serial number, NOT boat length`);
     parts.push(`• DO NOT ask for information the customer already provided!`);
-    parts.push(`• DO ask about context/motivation if unclear (e.g., "why compression test?")`);
-    parts.push(`• BE SPECIFIC in what you ask for (not just "boat info" but "boat length in meters")`);
+    parts.push(`• ALWAYS ask about context/motivation if unclear (e.g., "Warum möchten Sie die Kompression prüfen lassen? Gibt es Symptome?")`);
     parts.push(`• MATCH the customer's language (German ↔ German, English ↔ English)`);
     parts.push(`• KEEP email professional but friendly\n`);
 
