@@ -386,16 +386,35 @@ export default function LeadIntelligencePanel({ lead }) {
                 )}
               </div>
 
-              {/* Section 2 — Missing Information */}
+              {/* Section 2 — Analysis Details */}
+              {(analysis.request_category || analysis.technical_interpretation || analysis.work_complexity) && (
+                <div className="space-y-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  {analysis.request_category && (
+                    <div>
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Category: </span>
+                      <span className="text-sm text-slate-700">{analysis.request_category}</span>
+                    </div>
+                  )}
+                  {analysis.technical_interpretation && (
+                    <div>
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Technical Assessment: </span>
+                      <p className="text-sm text-slate-700 mt-0.5">{analysis.technical_interpretation}</p>
+                    </div>
+                  )}
+                  {analysis.work_complexity && (
+                    <div>
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Complexity: </span>
+                      <span className="text-sm text-slate-700">{analysis.work_complexity}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Missing Information */}
               {analysis.missing_information?.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
                     Missing Information
-                    {analysis._debug_extracted_count !== undefined && (
-                      <span className="ml-2 text-purple-600">
-                        [Backend extracted: {analysis._debug_extracted_count} items]
-                      </span>
-                    )}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {analysis.missing_information.map((item, i) => (
