@@ -90,16 +90,24 @@ export default function LeadIntelligencePanel({ lead }) {
     parts.push(`5. GENERATE a professional follow-up email in the SAME LANGUAGE as the inquiry`);
     parts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
     
-    parts.push(`🔴 CRITICAL RULES FOR MISSING INFORMATION:`);
-    parts.push(`• ONLY ask for information that is DIRECTLY NECESSARY to fulfill their specific request`);
-    parts.push(`• DO NOT ask generic questions like "boat length" or "boat type" unless it's ESSENTIAL for the service they requested`);
-    parts.push(`• Example: Compression test → Need WHY (symptom/problem), WHEN (timeline), maybe access/keys`);
-    parts.push(`• Example: Antifouling → Need boat length (pricing), location access, timeline`);
-    parts.push(`• Example: Part request → Need engine serial number, NOT boat length`);
-    parts.push(`• DO NOT ask for information the customer already provided!`);
-    parts.push(`• ALWAYS ask about context/motivation if unclear (e.g., "Warum möchten Sie die Kompression prüfen lassen? Gibt es Symptome?")`);
-    parts.push(`• MATCH the customer's language (German ↔ German, English ↔ English)`);
-    parts.push(`• KEEP email professional but friendly\n`);
+    parts.push(`🔴 CRITICAL RULES - READ CAREFULLY:`);
+    parts.push(`\n1. CHECK WHAT CUSTOMER ALREADY PROVIDED:`);
+    parts.push(`   • If they mentioned location → DO NOT ASK FOR LOCATION`);
+    parts.push(`   • If they mentioned boat type → DO NOT ASK FOR BOAT TYPE`);
+    parts.push(`   • If they mentioned engine model → DO NOT ASK FOR ENGINE MODEL`);
+    parts.push(`   • Example: "ACI Marina Pomer" = LOCATION PROVIDED ✓`);
+    parts.push(`\n2. ASK ONLY SERVICE-SPECIFIC QUESTIONS:`);
+    parts.push(`   • Compression test → WHY? (Symptoms: hard start, smoke, power loss?), TIMELINE, ACCESS`);
+    parts.push(`   • Antifouling → TIMELINE, boat length only if not mentioned`);
+    parts.push(`   • Engine parts → ENGINE SERIAL NUMBER (mandatory!)`);
+    parts.push(`   • Repair → PROBLEM DESCRIPTION, symptoms, when did it start?`);
+    parts.push(`\n3. NEVER ASK:`);
+    parts.push(`   • "Wo liegt das Boot?" if location already mentioned`);
+    parts.push(`   • "Bootstyp/Hersteller/Modell" for simple service tasks (compression test, inspection)`);
+    parts.push(`   • "Bootslänge" unless it's pricing-relevant (antifouling, painting, transport)`);
+    parts.push(`\n4. LANGUAGE & TONE:`);
+    parts.push(`   • Match customer's language exactly (German ↔ German)`);
+    parts.push(`   • Professional but warm tone\n`);
 
     parts.push(`Return ONLY valid JSON:
 {
