@@ -218,12 +218,28 @@ export default function LeadIntelligencePanel({ lead }) {
       
       console.log('✅ AI Analysis complete:', result);
       
-      // Format for UI display
-      result.missing_information = result.missing_critical_info || [];
-      result.verification_questions = [{
-        group: 'AI-Identified Missing Information',
-        questions: result.missing_critical_info || []
-      }];
+      // Format for UI display (backward compatibility)
+      if (!result.missing_information && result.missing_critical_info) {
+        result.missing_information = result.missing_critical_info;
+      }
+      
+      result.verification_questions = [];
+      
+      // Add clarification questions as primary section
+      if (result.clarification_questions?.length > 0) {
+        result.verification_questions.push({
+          group: 'Clarification Questions',
+          questions: result.clarification_questions
+        });
+      }
+      
+      // Add missing information
+      if (result.missing_information?.length > 0) {
+        result.verification_questions.push({
+          group: 'Missing Information',
+          questions: result.missing_information
+        });
+      }
       
       // Add extracted info display
       if (result.extracted_info) {
