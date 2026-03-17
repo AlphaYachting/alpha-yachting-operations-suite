@@ -189,28 +189,31 @@ export async function notifyLeadAssignment(lead, assignedUser) {
   const leadDetails = lead.boat_name ? ` (${lead.boat_name})` : '';
   
   try {
-    const appUrl = 'https://preview-sandbox--b5d6997ad3a5f562c7aad0549632426f.base44.app';
+    const appUrl = window.location.origin;
     
     await base44.integrations.Core.SendEmail({
       to: assignedUser.email,
-      subject: `[Alpha Yachting] New Lead Assigned`,
+      subject: `[Alpha Yachting] Neuer Lead zugewiesen`,
       body: `
-        <h2>New Lead Assigned to You</h2>
-        <div style="font-family: Arial, sans-serif; color: #333;">
-          <p><strong>Lead:</strong> ${leadIdentifier}${leadDetails}</p>
-          <p><strong>Inquiry Type:</strong> ${lead.inquiry_type || 'Not specified'}</p>
-          <p><strong>Priority:</strong> ${lead.priority || 'Medium'}</p>
-          <p><strong>Status:</strong> ${lead.status || 'Pending'}</p>
-          ${lead.description ? `<p><strong>Description:</strong><br>${lead.description}</p>` : ''}
+        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #1e40af;">Neuer Lead wurde Ihnen zugewiesen</h2>
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Lead:</strong> ${leadIdentifier}${leadDetails}</p>
+            <p><strong>Anfrageart:</strong> ${lead.inquiry_type || 'Nicht angegeben'}</p>
+            <p><strong>Priorität:</strong> ${lead.priority || 'Medium'}</p>
+            <p><strong>Status:</strong> ${lead.status || 'Pending'}</p>
+            ${lead.notes ? `<p><strong>Notizen:</strong> ${lead.notes}</p>` : ''}
+            ${lead.description ? `<p><strong>Beschreibung:</strong><br>${lead.description}</p>` : ''}
+          </div>
           <p style="margin-top: 20px;">
             <a href="${appUrl}/LeadDetail?id=${lead.id}" 
-               style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              View Lead Details
+               style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              → Lead Details öffnen
             </a>
           </p>
+          <br>
+          <p style="color: #666; font-size: 12px;">Automatische Benachrichtigung von Alpha Yachting Service Management.</p>
         </div>
-        <br>
-        <p style="color: #666; font-size: 12px;">This is an automated notification from Alpha Yachting Service Management.</p>
       `
     });
 
