@@ -55,9 +55,9 @@ Deno.serve(async (req) => {
       );
       if (components && components.length > 0) {
         const componentList = components.map(c =>
-          `- ${c.name} (${c.category}, ${c.item_type}): ${c.description || ''} — ${c.base_price_eur ? `€${c.base_price_eur}/${c.unit_type || 'Std'}` : 'Preis variabel'}`
+          `- ${c.name}: ${c.base_price_eur ? `€${c.base_price_eur}/${c.unit_type || 'Std'}` : ''}`
         ).join('\n');
-        knowledgeContext = `\n\n## BEKANNTE SERVICELEISTUNGEN AUS UNSERER WISSENSDATENBANK\nNutze diese als Referenz für Preise und Beschreibungen:\n${componentList}`;
+        knowledgeContext = `\n\nPreisreferenzen:\n${componentList}`;
       }
     } catch (e) {
       console.log('Could not load knowledge base:', e.message);
