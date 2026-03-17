@@ -44,7 +44,8 @@ Deno.serve(async (req) => {
           key: 'OfferAIAssistantPrompt'
         });
         if (fallbackConfigs && fallbackConfigs.length > 0 && fallbackConfigs[0].value) {
-          systemPrompt = fallbackConfigs[0].value;
+          const raw = fallbackConfigs[0].value;
+          systemPrompt = raw.length > 4000 ? raw.substring(0, 4000) : raw;
         }
       }
     } catch (e) {
