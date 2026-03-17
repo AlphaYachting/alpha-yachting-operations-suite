@@ -156,10 +156,22 @@ Wichtig: Wenn response_type = "tasks_ready", generiere ALLE Tasks (Labor + Mater
       }
     });
 
+    // Normalize response_type — LLM sometimes returns variants not in the enum
+    const validTypes = ['question', 'tasks_ready', 'clarification'];
+    let responseType = response.response_type || 'clarification';
+    if (!validTypes.includes(responseType)) {
+      // Map common variants
+      if (responseType.includes('task')) responseType = 'tasks_ready';
+      else responseType = 'clarification';
+    }
+
+    // Ensure message is always a string
+    const message = response.message || response.assistant_message || response.text || 'Ich habe Ihre Anfrage erhalten. Können Sie weitere Details angeben?';
+
     return Response.json({
       success: true,
-      response_type: response.response_type,
-      message: response.message,
+      response_type: responseType,
+      message: message,
       tasks: response.tasks || [],
       client_description: response.client_description || '',
       suggested_components: response.suggested_components || []
