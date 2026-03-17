@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import {
   Loader2, Send, Mic, MicOff, Sparkles, CheckCircle2,
-  AlertCircle, RotateCcw, Bot, User
+  AlertCircle, RotateCcw, Bot, User, Bug, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 export default function AIAssistantChat({ formData, customers, boats, onTasksGenerated, onDescriptionGenerated, existingTasks = [] }) {
