@@ -91,9 +91,7 @@ Anfrage: ${user_input}`;
     console.log('[AI Assistant] Full prompt length:', fullPrompt.length);
     console.log('[AI Assistant] System prompt preview (first 300 chars):', systemPrompt.substring(0, 300));
 
-    let response;
-    try {
-      response = await base44.asServiceRole.integrations.Core.InvokeLLM({
+    const response = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: fullPrompt,
       response_json_schema: {
         type: 'object',
