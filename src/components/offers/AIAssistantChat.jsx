@@ -200,6 +200,45 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
         </Alert>
       )}
 
+      {/* Prompt too long warning */}
+      {lastDebug?.prompt_source?.includes('truncated') && (
+        <Alert className="border-amber-300 bg-amber-50">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800 text-xs">
+            <strong>Warnung:</strong> Ihr System-Prompt in den Einstellungen ist zu lang ({lastDebug.prompt_source.match(/\d+/)?.[0]} Zeichen) und wurde auf 3.000 Zeichen gekürzt. Das kann zu ungenauen Ergebnissen führen.{' '}
+            <a href="/AIAssistantSettings" className="underline font-medium">→ Prompt kürzen</a>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Debug Info */}
+      {lastDebug && (
+        <div className="border border-slate-200 rounded-lg bg-slate-50 text-xs">
+          <button
+            onClick={() => setShowDebug(v => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 text-slate-500 hover:text-slate-700"
+          >
+            <span className="flex items-center gap-1.5">
+              <Bug className="h-3 w-3" />
+              Debug-Info — Letzte Antwort: {lastDebug.llm_ms}ms LLM / {lastDebug.total_ms}ms gesamt
+              {lastDebug.prompt_source?.includes('truncated') && (
+                <span className="text-amber-600 font-medium">⚠ Prompt gekürzt</span>
+              )}
+            </span>
+            {showDebug ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
+          {showDebug && (
+            <div className="px-3 pb-3 space-y-1 font-mono text-slate-600 border-t border-slate-200 pt-2">
+              <div>Prompt-Quelle: <span className="text-slate-800">{lastDebug.prompt_source}</span></div>
+              <div>Prompt-Länge: <span className={lastDebug.prompt_length > 3000 ? 'text-red-600 font-bold' : 'text-slate-800'}>{lastDebug.prompt_length} Zeichen</span></div>
+              <div>Verlauf gesendet: <span className="text-slate-800">{lastDebug.history_used} Nachrichten</span></div>
+              <div>LLM-Zeit: <span className="text-slate-800">{lastDebug.llm_ms}ms</span></div>
+              <div>Gesamt: <span className="text-slate-800">{lastDebug.total_ms}ms</span></div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Chat Messages */}
       <div className="flex-1 border border-slate-200 rounded-lg bg-slate-50 p-3 overflow-y-auto min-h-[300px] max-h-[400px] space-y-3">
         {messages.map((msg, idx) => (
