@@ -7,6 +7,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+// Add page imports here
+import AIAssistantSettings from './pages/AIAssistantSettings';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -58,6 +60,7 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/AIAssistantSettings" element={<LayoutWrapper currentPageName="AIAssistantSettings"><AIAssistantSettings /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

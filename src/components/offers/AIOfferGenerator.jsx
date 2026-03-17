@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import AIAssistantChat from './AIAssistantChat';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Sparkles, AlertCircle, FileText, Upload, Trash2, Edit2, DollarSign, Percent } from 'lucide-react';
+import { Loader2, Sparkles, AlertCircle, FileText, Upload, Trash2, Edit2, DollarSign, Percent, Bot } from 'lucide-react';
 import { processExtractedPosition } from './priceParser';
 import { calculateFinalPrice } from './markupCalculator';
 import { Switch } from '@/components/ui/switch';
@@ -36,7 +37,7 @@ import {
 } from '@/components/ui/dialog';
 
 export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated, onDescriptionGenerated, existingTasks = [] }) {
-  const [mode, setMode] = useState('text'); // 'text' or 'pdf'
+  const [mode, setMode] = useState('text'); // 'text', 'pdf', or 'assistant'
   const [prompt, setPrompt] = useState('');
   const [defaultUnitPrice, setDefaultUnitPrice] = useState(70);
   const [detailedExplanations, setDetailedExplanations] = useState(false);
@@ -433,6 +434,17 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
         >
           <Upload className="h-4 w-4 inline mr-2" />
           Generate from PDF
+        </button>
+        <button
+          onClick={() => setMode('assistant')}
+          className={`flex-1 px-4 py-2 rounded text-sm font-medium transition-colors ${
+            mode === 'assistant' 
+              ? 'bg-white text-slate-900 shadow' 
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Bot className="h-4 w-4 inline mr-2" />
+          KI-Assistent
         </button>
       </div>
 
