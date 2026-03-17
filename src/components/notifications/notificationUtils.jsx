@@ -62,7 +62,7 @@ export async function createNotification(userEmail, type, title, message, relate
     // Send email notification if enabled
     if (method === 'both' || method === 'email_only') {
       try {
-        const appUrl = 'https://preview-sandbox--b5d6997ad3a5f562c7aad0549632426f.base44.app';
+        const appUrl = window.location.origin;
         await base44.integrations.Core.SendEmail({
           to: userEmail,
           subject: `[Alpha Yachting] ${title}`,
