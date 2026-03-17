@@ -51,13 +51,12 @@ Deno.serve(async (req) => {
       const components = await base44.asServiceRole.entities.OfferTemplateComponent.filter(
         { is_active: true },
         '-usage_count',
-        20
+        5  // Only top 5 to keep prompt short
       );
+      console.log('[AI Assistant] Knowledge base components loaded:', components?.length || 0);
       if (components && components.length > 0) {
-        const componentList = components.map(c =>
-          `- ${c.name}: ${c.base_price_eur ? `€${c.base_price_eur}/${c.unit_type || 'Std'}` : ''}`
-        ).join('\n');
-        knowledgeContext = `\n\nPreisreferenzen:\n${componentList}`;
+        const componentList = components.map(c => `- ${c.name}${c.base_price_eur ? ` €${c.base_price_eur}` : ''}`).join('\n');
+        knowledgeContext = `\nReferenz:\n${componentList}`;
       }
     } catch (e) {
       console.log('Could not load knowledge base:', e.message);
