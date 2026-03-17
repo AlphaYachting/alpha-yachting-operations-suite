@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, ChevronRight, Bell, Layout, Bug, Smartphone, Ruler, Download, Upload, ClipboardList, Mail } from 'lucide-react';
+import { FileText, ChevronRight, Bell, Layout, Bug, Smartphone, Ruler, Download, Upload, ClipboardList, Mail, Bot } from 'lucide-react';
 import PDFDiagnosticsPanel from '@/components/pdf/PDFDiagnosticsPanel';
 
 export default function Settings() {
@@ -64,6 +64,12 @@ export default function Settings() {
       description: 'Visually design page layout, margins, and block positions',
       icon: Layout,
       page: 'PDFLayoutEditor'
+    },
+    {
+      title: 'KI-Assistent Einstellungen',
+      description: 'System-Prompt und Wissensdatenbank für den KI-Angebots-Assistenten konfigurieren',
+      icon: Bot,
+      page: 'AIAssistantSettings'
     }
   ];
 
