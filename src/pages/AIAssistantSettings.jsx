@@ -260,9 +260,18 @@ export default function AIAssistantSettings() {
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
               rows={18}
-              className="font-mono text-xs leading-relaxed"
+              className={`font-mono text-xs leading-relaxed ${promptText.length > 4000 ? 'border-red-400 focus:border-red-400' : ''}`}
               placeholder="System-Prompt für den KI-Assistenten..."
             />
+            <div className={`flex items-center justify-between text-xs mt-1 ${promptText.length > 4000 ? 'text-red-600 font-medium' : 'text-slate-400'}`}>
+              <span>{promptText.length} / 4000 Zeichen empfohlen</span>
+              {promptText.length > 4000 && (
+                <span className="flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Prompt zu lang! KI wird bei 4000 Zeichen abgeschnitten → schlechtere Ergebnisse
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2">
