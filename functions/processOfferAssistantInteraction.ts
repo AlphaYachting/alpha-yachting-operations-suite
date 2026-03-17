@@ -85,9 +85,11 @@ Deno.serve(async (req) => {
 
 Anfrage: ${user_input}`;
 
-    console.log('[AI Assistant] Sending prompt to LLM, length:', fullPrompt.length);
-    console.log('[AI Assistant] Offer context:', JSON.stringify(offer_details));
     console.log('[AI Assistant] History length:', conversation_history.length);
+    console.log('[AI Assistant] Offer context:', JSON.stringify(offer_details));
+    console.log('[AI Assistant] System prompt length:', systemPrompt.length);
+    console.log('[AI Assistant] Full prompt length:', fullPrompt.length);
+    console.log('[AI Assistant] System prompt preview (first 300 chars):', systemPrompt.substring(0, 300));
 
     const response = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: fullPrompt,
