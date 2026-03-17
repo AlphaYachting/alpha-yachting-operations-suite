@@ -185,48 +185,11 @@ export async function notifyTaskStatusChange(task, workOrder, technicians, oldSt
 export async function notifyLeadAssignment(lead, assignedUser) {
   if (!assignedUser || !assignedUser.email) return;
 
-  const leadIdentifier = lead.name || 'Unknown Lead';
-  const leadDetails = lead.boat_name ? ` (${lead.boat_name})` : '';
-  
   try {
-    const appUrl = window.location.origin;
-    
-    await base44.integrations.Core.SendEmail({
-      to: assignedUser.email,
-      subject: `[Alpha Yachting] Neuer Lead zugewiesen`,
-      body: `
-        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #1e40af;">Neuer Lead wurde Ihnen zugewiesen</h2>
-          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p><strong>Lead:</strong> ${leadIdentifier}${leadDetails}</p>
-            <p><strong>Anfrageart:</strong> ${lead.inquiry_type || 'Nicht angegeben'}</p>
-            <p><strong>Priorität:</strong> ${lead.priority || 'Medium'}</p>
-            <p><strong>Status:</strong> ${lead.status || 'Pending'}</p>
-            ${lead.notes ? `<p><strong>Notizen:</strong> ${lead.notes}</p>` : ''}
-            ${lead.description ? `<p><strong>Beschreibung:</strong><br>${lead.description}</p>` : ''}
-          </div>
-          <p style="margin-top: 20px;">
-            <a href="${appUrl}/LeadDetail?id=${lead.id}" 
-               style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-              → Lead Details öffnen
-            </a>
-          </p>
-          <br>
-          <p style="color: #666; font-size: 12px;">Automatische Benachrichtigung von Alpha Yachting Service Management.</p>
-        </div>
-      `
-    });
-
-    // Also create in-app notification
-    await base44.entities.Notification.create({
-      user_email: assignedUser.email,
-      type: 'work_order_assignment',
-      title: 'New Lead Assigned',
-      message: `Lead "${leadIdentifier}${leadDetails}" has been assigned to you`,
-      related_work_order_id: null,
-      related_task_id: null,
-      is_read: false,
-      email_sent: true
+    // Use backend function so APP_DOMAIN secret is used for correct production URL
+    await base44.functions.invoke('notifyLeadAssignment', {
+      lead_id: lead.id,
+      assigned_user_email: assignedUser.email
     });
   } catch (error) {
     console.error('Failed to send lead assignment notification:', error);
