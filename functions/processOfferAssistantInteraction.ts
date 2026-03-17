@@ -72,28 +72,19 @@ Deno.serve(async (req) => {
       'Croatian': 'Hrvatski'
     };
 
-    const offerContext = offer_details.customer_name || offer_details.boat_name
-      ? `\n\n## ANGEBOTS-KONTEXT\nKunde: ${offer_details.customer_name || 'Unbekannt'}\nBoot: ${offer_details.boat_name || 'Unbekannt'}\n${offer_details.boat_details || ''}`
+    const offerContext = (offer_details.customer_name || offer_details.boat_name)
+      ? `\nKunde: ${offer_details.customer_name || ''}, Boot: ${offer_details.boat_name || ''} ${offer_details.boat_details || ''}`
       : '';
 
     const historyText = conversation_history.length > 0
-      ? '\n\n## BISHERIGER GESPRÄCHSVERLAUF\n' + conversation_history.map(m =>
-          `${m.role === 'user' ? 'Kunde/Nutzer' : 'Assistent'}: ${m.content}`
+      ? '\nVerlauf:\n' + conversation_history.map(m =>
+          `${m.role === 'user' ? 'User' : 'AI'}: ${m.content}`
         ).join('\n')
       : '';
 
     const fullPrompt = `${systemPrompt}${knowledgeContext}${offerContext}${historyText}
 
-## AKTUELLE NACHRICHT
-${user_input}
-
-## ANTWORTANWEISUNG
-Antworte auf ${languageMap[language] || 'Deutsch'}. Analysiere die Anfrage und entscheide:
-- Wenn mehr Informationen benötigt werden: response_type = "question"
-- Wenn du genug weißt für ein vollständiges Angebot: response_type = "tasks_ready"
-- Bei Unklarheiten: response_type = "clarification"
-
-Wichtig: Wenn response_type = "tasks_ready", generiere ALLE Tasks (Labor + Material getrennt).`;
+Anfrage: ${user_input}`;
 
     console.log('[AI Assistant] Sending prompt to LLM, length:', fullPrompt.length);
     console.log('[AI Assistant] Offer context:', JSON.stringify(offer_details));
