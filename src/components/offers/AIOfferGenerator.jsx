@@ -514,6 +514,15 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
             )}
           </Button>
         </>
+      ) : mode === 'assistant' ? (
+        <AIAssistantChat
+          formData={formData}
+          customers={customers}
+          boats={boats}
+          onTasksGenerated={onTasksGenerated}
+          onDescriptionGenerated={onDescriptionGenerated}
+          existingTasks={existingTasks}
+        />
       ) : (
         <>
           {/* PDF Upload Mode */}
