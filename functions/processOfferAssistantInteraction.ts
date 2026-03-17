@@ -31,7 +31,13 @@ Deno.serve(async (req) => {
         key: `OfferAIAssistantPrompt_${language}`
       });
       if (configs && configs.length > 0 && configs[0].value) {
-        systemPrompt = configs[0].value;
+        const raw = configs[0].value;
+        if (raw.length > 4000) {
+          console.warn(`[AI Assistant] Custom prompt too long (${raw.length} chars), truncating to 4000.`);
+          systemPrompt = raw.substring(0, 4000);
+        } else {
+          systemPrompt = raw;
+        }
       } else {
         // Try language-neutral fallback
         const fallbackConfigs = await base44.asServiceRole.entities.AppConfiguration.filter({
