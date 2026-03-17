@@ -112,6 +112,10 @@ Antworte auf ${languageMap[language] || 'Deutsch'}. Analysiere die Anfrage und e
 
 Wichtig: Wenn response_type = "tasks_ready", generiere ALLE Tasks (Labor + Material getrennt).`;
 
+    console.log('[AI Assistant] Sending prompt to LLM, length:', fullPrompt.length);
+    console.log('[AI Assistant] Offer context:', JSON.stringify(offer_details));
+    console.log('[AI Assistant] History length:', conversation_history.length);
+
     const response = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: fullPrompt,
       response_json_schema: {
@@ -119,54 +123,52 @@ Wichtig: Wenn response_type = "tasks_ready", generiere ALLE Tasks (Labor + Mater
         properties: {
           response_type: {
             type: 'string',
-            enum: ['question', 'tasks_ready', 'clarification'],
-            description: 'Type of response'
+            description: 'Either "question" (need more info), "tasks_ready" (enough info to generate offer), or "clarification"'
           },
           message: {
             type: 'string',
-            description: 'The assistant message to show the user (question, clarification, or summary)'
+            description: 'The assistant message shown to the user. Always required, never null.'
           },
           tasks: {
             type: 'array',
-            description: 'Only filled when response_type = tasks_ready',
+            description: 'List of offer tasks. Only fill this when response_type is tasks_ready.',
             items: {
               type: 'object',
               properties: {
                 title: { type: 'string' },
                 description: { type: 'string' },
-                item_type: { type: 'string', enum: ['Labor', 'Material'] },
-                unit_type: { type: 'string' },
+                item_type: { type: 'string', description: 'Labor or Material' },
+                unit_type: { type: 'string', description: 'Hour, Piece, Liter, etc.' },
                 quantity: { type: 'number' },
                 unit_price: { type: 'number' }
-              },
-              required: ['title', 'item_type', 'quantity']
+              }
             }
           },
           client_description: {
             type: 'string',
-            description: 'Professional client-facing offer description (only when tasks_ready)'
-          },
-          suggested_components: {
-            type: 'array',
-            description: 'IDs of OfferTemplateComponents that might be relevant',
-            items: { type: 'string' }
+            description: 'Short professional offer intro text for the client. Only when tasks_ready.'
           }
         },
         required: ['response_type', 'message']
       }
     });
 
-    // Normalize response_type — LLM sometimes returns variants not in the enum
+    console.log('[AI Assistant] Raw LLM response:', JSON.stringify(response));
+
+    // Normalize response_type
     const validTypes = ['question', 'tasks_ready', 'clarification'];
-    let responseType = response.response_type || 'clarification';
+    let responseType = (response.response_type || '').toLowerCase();
     if (!validTypes.includes(responseType)) {
-      // Map common variants
-      if (responseType.includes('task')) responseType = 'tasks_ready';
+      if (responseType.includes('task') || responseType.includes('ready')) responseType = 'tasks_ready';
+      else if (responseType.includes('question')) responseType = 'question';
       else responseType = 'clarification';
     }
 
-    // Ensure message is always a string
-    const message = response.message || response.assistant_message || response.text || 'Ich habe Ihre Anfrage erhalten. Können Sie weitere Details angeben?';
+    const message = response.message || response.text || response.assistant_message || '(Keine Antwort vom Modell erhalten)';
+
+    console.log('[AI Assistant] Normalized response_type:', responseType);
+    console.log('[AI Assistant] Message:', message);
+    console.log('[AI Assistant] Tasks count:', (response.tasks || []).length);
 
     return Response.json({
       success: true,
@@ -174,7 +176,7 @@ Wichtig: Wenn response_type = "tasks_ready", generiere ALLE Tasks (Labor + Mater
       message: message,
       tasks: response.tasks || [],
       client_description: response.client_description || '',
-      suggested_components: response.suggested_components || []
+      suggested_components: []
     });
 
   } catch (error) {
