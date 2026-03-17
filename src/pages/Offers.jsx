@@ -399,7 +399,7 @@ export default function Offers() {
                       <div className="flex-1 min-w-0">
                         {/* Row 1: Title, Status, Offer Number */}
                         <div className="flex items-center gap-2 flex-wrap mb-2">
-                          <h3 className="font-semibold text-slate-900">{offer.title}</h3>
+                          <Link to={createPageUrl('OfferDetail') + `?id=${offer.id}`} className="font-semibold text-slate-900 hover:text-blue-600 hover:underline">{offer.title}</Link>
                           <Badge className={statusConfig[offer.status]?.color}>
                             <StatusIcon className="h-3 w-3 mr-1" />
                             {offer.status}
