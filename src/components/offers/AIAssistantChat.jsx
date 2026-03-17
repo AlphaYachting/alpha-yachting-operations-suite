@@ -84,6 +84,8 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
 
       const data = result.data;
 
+      if (data._debug) setLastDebug(data._debug);
+
       if (!data.message) {
         throw new Error('Keine Antwort vom KI-Assistenten erhalten.');
       }
