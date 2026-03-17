@@ -18,6 +18,8 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
   const [generatedTasks, setGeneratedTasks] = useState(null);
   const [generatedDescription, setGeneratedDescription] = useState('');
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [lastDebug, setLastDebug] = useState(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
