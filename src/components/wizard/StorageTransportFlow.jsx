@@ -163,7 +163,7 @@ export function StorageTransportFlow() {
                 .filter(num => num && num.startsWith(`OFF-${currentYear}-`))
                 .map(num => parseInt(num.split('-')[2]) || 0);
             const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
-            const offerNumber = `OFF-2026-${String(maxNumber + 1).padStart(4, '0')}`;
+            const offerNumber = `OFF-${currentYear}-${String(maxNumber + 1).padStart(4, '0')}`;
 
             // Resolve boat_id and location_id from wizard context
             const boatId = typeof wizardData.vessel?.existing === 'string'
