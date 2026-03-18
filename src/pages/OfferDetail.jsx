@@ -574,13 +574,6 @@ Requirements:
         throw new Error(woResponse.data?.message || 'Failed to create work order');
       }
       const workOrder = woResponse.data.work_order;
-        title: formData.title,
-        description: formData.description,
-        work_order_number: woNumber,
-        status: 'Draft',
-        scheduled_date: new Date().toISOString().split('T')[0],
-        internal_notes: `Converted from offer ${formData.offer_number}`,
-      });
 
       // Create tasks from offer tasks
       if (tasks.length > 0) {
