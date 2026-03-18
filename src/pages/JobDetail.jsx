@@ -420,11 +420,13 @@ export default function ProjectDetail() {
     }
   };
 
-  const handlePrintProjectSheet = async () => {
+  const handlePrintProjectSheet = async (lang) => {
     setPrintLoading(true);
+    setShowPrintDialog(false);
     try {
       const response = await base44.functions.invoke('printProjectSheet', {
-        job_id: projectId
+        job_id: projectId,
+        language: lang || printLanguage
       });
 
       const blob = new Blob([response.data], { type: 'application/pdf' });
@@ -527,7 +529,7 @@ export default function ProjectDetail() {
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            onClick={handlePrintProjectSheet}
+            onClick={() => setShowPrintDialog(true)}
             disabled={printLoading}
             className="gap-2"
           >
