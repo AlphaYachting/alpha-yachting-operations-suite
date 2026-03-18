@@ -156,10 +156,11 @@ export function StorageTransportFlow() {
 
         try {
             // Generate offer number (same logic as StorageTransportWizard)
+            const currentYear = new Date().getFullYear();
             const allOffers = await base44.entities.Offer.list();
             const existingNumbers = allOffers
                 .map(o => o.offer_number)
-                .filter(num => num && num.startsWith('OFF-2026-'))
+                .filter(num => num && num.startsWith(`OFF-${currentYear}-`))
                 .map(num => parseInt(num.split('-')[2]) || 0);
             const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
             const offerNumber = `OFF-2026-${String(maxNumber + 1).padStart(4, '0')}`;
