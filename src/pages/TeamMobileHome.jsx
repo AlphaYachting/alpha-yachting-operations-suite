@@ -91,6 +91,20 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
         setResolvedTechnicianId(technicianId);
 
+        // Set display user: in preview mode, fetch the technician's name for welcome message
+        if (previewUserId && technicianId) {
+          const techs = await base44.entities.Technician.filter({ id: technicianId });
+          if (techs?.[0]) {
+            setDisplayUser({
+              id: technicianId,
+              full_name: `${techs[0].first_name} ${techs[0].last_name}`,
+              role: 'technician'
+            });
+          }
+        } else {
+          setDisplayUser(currentUser);
+        }
+
         if (!technicianId) {
           setWorkOrders([]);
           setLocations([]);
