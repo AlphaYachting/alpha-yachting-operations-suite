@@ -55,6 +55,7 @@ export default function Offers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [monthFilter, setMonthFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('updated_date');
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
