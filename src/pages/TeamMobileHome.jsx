@@ -27,6 +27,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const [showPreviewMode, setShowPreviewMode] = useState(false);
   const [previewTechnicianName, setPreviewTechnicianName] = useState(null);
   const [resolvedTechnicianId, setResolvedTechnicianId] = useState(null);
+  const [displayUser, setDisplayUser] = useState(null);
 
   useEffect(() => {
     // Monitor connection status
