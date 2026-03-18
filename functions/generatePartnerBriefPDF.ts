@@ -17,8 +17,9 @@ async function fetchImageBase64(url) {
     const arrayBuffer = await response.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
     let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
     }
     return btoa(binary);
   } catch (e) {
