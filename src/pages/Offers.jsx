@@ -200,8 +200,15 @@ export default function Offers() {
       return offerMonth === monthFilter;
     })();
     
-    return matchesSearch && matchesStatus && matchesMonth;
-  });
+      return matchesSearch && matchesStatus && matchesMonth;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'updated_date') return new Date(b.updated_date) - new Date(a.updated_date);
+      if (sortBy === 'created_date') return new Date(b.created_date) - new Date(a.created_date);
+      if (sortBy === 'offer_number') return (b.offer_number || '').localeCompare(a.offer_number || '');
+      if (sortBy === 'amount') return (b.total_amount || 0) - (a.total_amount || 0);
+      return 0;
+    });
 
   const stats = {
     total: offers.length,
