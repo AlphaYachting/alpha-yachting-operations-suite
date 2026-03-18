@@ -9,6 +9,7 @@ Regeln:
 - Nutze realistische Stundensätze für Bootsservice (1-8h je nach Aufwand)
 - Antworte immer auf Deutsch`;
 
+const MAX_PROMPT_CHARS = 6000; // allow up to 6000 chars for custom prompts
 const MAX_HISTORY = 6; // last 6 messages only
 
 Deno.serve(async (req) => {
