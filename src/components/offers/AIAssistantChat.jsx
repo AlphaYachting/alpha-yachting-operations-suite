@@ -23,6 +23,7 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
 
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
+  const interimTranscriptRef = useRef('');
 
   useEffect(() => {
     // Check Web Speech API support
