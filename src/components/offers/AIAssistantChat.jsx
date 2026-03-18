@@ -137,15 +137,33 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
+    recognition.onstart = () => {
+      interimTranscriptRef.current = '';
+      setIsListening(true);
+    };
+    recognition.onend = () => {
+      interimTranscriptRef.current = '';
+      setIsListening(false);
+    };
 
     recognition.onresult = (event) => {
-      let transcript = '';
+      let interimTranscript = '';
+      let finalTranscript = '';
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        } else {
+          interimTranscript += result[0].transcript;
+        }
       }
-      setInputText(prev => prev + (prev ? ' ' : '') + transcript);
+
+      if (finalTranscript) {
+        setInputText(prev => prev + (prev ? ' ' : '') + finalTranscript.trim());
+      }
+      // Store interim for potential display (not added to input)
+      interimTranscriptRef.current = interimTranscript;
     };
 
     recognition.onerror = () => {
