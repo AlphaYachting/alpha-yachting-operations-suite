@@ -679,16 +679,6 @@ Requirements:
         throw new Error(woResponse2.data?.message || 'Failed to create work order');
       }
       const workOrder = woResponse2.data.work_order;
-      // (legacy block replaced — keeping reference fields below)
-      const _legacyRef = {
-        job_id: job.id,
-        offer_id: offerId,
-        title: formData.title,
-        description: formData.description || '',
-        status: 'Draft',
-        scheduled_date: new Date().toISOString().split('T')[0],
-        internal_notes: `Created from Offer #${formData.offer_number}`,
-      });
 
       // Create Tasks with EXACT text from OfferTasks
       if (tasks.length > 0) {
