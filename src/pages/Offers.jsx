@@ -62,7 +62,7 @@ export default function Offers() {
 
   const { data: offers = [], isLoading: offersLoading } = useQuery({
     queryKey: ['offers'],
-    queryFn: () => base44.entities.Offer.list('-created_date'),
+    queryFn: () => base44.entities.Offer.list('-updated_date'),
   });
 
   const { data: customers = [] } = useQuery({
