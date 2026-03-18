@@ -20,6 +20,18 @@ const TRANSLATIONS = {
     generated: 'Erstellt',
     page: 'Seite',
     of: 'von',
+    status: {
+      'Draft': 'Entwurf',
+      'Scheduled': 'Geplant',
+      'Dispatched': 'Versandt',
+      'In Transit': 'Unterwegs',
+      'In Progress': 'In Arbeit',
+      'Paused': 'Pausiert',
+      'Waiting for Parts': 'Wartet auf Teile',
+      'Waiting for Approval': 'Wartet auf Genehmigung',
+      'Completed': 'Abgeschlossen',
+      'Cancelled': 'Storniert',
+    }
   },
   en: {
     title: 'Project Work Sheet',
@@ -39,6 +51,7 @@ const TRANSLATIONS = {
     generated: 'Generated',
     page: 'Page',
     of: 'of',
+    status: {}
   },
   si: {
     title: 'Projektni delovni list',
@@ -58,24 +71,53 @@ const TRANSLATIONS = {
     generated: 'Ustvarjeno',
     page: 'Stran',
     of: 'od',
+    status: {
+      'Draft': 'Osnutek',
+      'Scheduled': 'Nacrtovano',
+      'In Progress': 'V teku',
+      'Completed': 'Zakljuceno',
+      'Cancelled': 'Preklicano',
+    }
   }
 };
 
-// Strip non-latin1 characters to prevent jsPDF encoding artifacts
+// Strip non-Latin1 characters to prevent jsPDF encoding artifacts.
+// jsPDF default font (Helvetica) is Latin-1 only.
 function safe(str) {
-  if (!str) return '';
+  if (str === null || str === undefined) return '';
   return String(str)
-    .replace(/\u2019/g, "'")
-    .replace(/\u2018/g, "'")
-    .replace(/\u201c/g, '"')
-    .replace(/\u201d/g, '"')
-    .replace(/\u2013/g, '-')
-    .replace(/\u2014/g, '-')
+    .replace(/\u00e4/g, 'ae').replace(/\u00f6/g, 'oe').replace(/\u00fc/g, 'ue')
+    .replace(/\u00c4/g, 'Ae').replace(/\u00d6/g, 'Oe').replace(/\u00dc/g, 'Ue')
+    .replace(/\u00df/g, 'ss')
+    .replace(/\u010d/g, 'c').replace(/\u0161/g, 's').replace(/\u017e/g, 'z')
+    .replace(/\u010c/g, 'C').replace(/\u0160/g, 'S').replace(/\u017d/g, 'Z')
+    .replace(/\u2019|\u2018/g, "'")
+    .replace(/\u201c|\u201d/g, '"')
+    .replace(/\u2013|\u2014/g, '-')
     .replace(/\u2026/g, '...')
+    .replace(/\u2192/g, '>')
     .replace(/[^\x00-\xFF]/g, '?');
 }
 
+// Logo as a JPEG URL (more reliable in jsPDF than transparent PNG)
 const LOGO_URL = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png';
+
+async function loadLogoBase64() {
+  try {
+    const resp = await fetch(LOGO_URL);
+    if (!resp.ok) return null;
+    const buffer = await resp.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  } catch (_) {
+    return null;
+  }
+}
 
 Deno.serve(async (req) => {
   try {
@@ -88,14 +130,15 @@ Deno.serve(async (req) => {
 
     const t = TRANSLATIONS[language] || TRANSLATIONS['de'];
 
-    const [jobs, workOrders, allTasks, technicians, customers, boats, locations] = await Promise.all([
+    const [jobs, workOrders, allTasks, technicians, customers, boats, locations, logoB64] = await Promise.all([
       base44.entities.Job.filter({ id: job_id }),
       base44.entities.WorkOrder.filter({ job_id }),
       base44.entities.Task.list(),
       base44.entities.Technician.list(),
       base44.entities.Customer.list(),
       base44.entities.Boat.list(),
-      base44.entities.Location.list()
+      base44.entities.Location.list(),
+      loadLogoBase64()
     ]);
 
     const job = jobs[0];
@@ -104,11 +147,11 @@ Deno.serve(async (req) => {
     const customer = customers.find(c => c.id === job.customer_id);
     const boat = boats.find(b => b.id === job.boat_id);
     const location = locations.find(l => l.id === job.location_id);
-    const leadTech = technicians.find(t => t.id === job.lead_technician_id);
+    const leadTech = technicians.find(tech => tech.id === job.lead_technician_id);
 
     const sortedWOs = workOrders.sort((a, b) => (a.sort_index || 0) - (b.sort_index || 0));
     const woIds = workOrders.map(wo => wo.id);
-    const projectTasks = allTasks.filter(t => woIds.includes(t.work_order_id));
+    const projectTasks = allTasks.filter(task => woIds.includes(task.work_order_id));
 
     const formatDate = (dateStr) => {
       if (!dateStr) return '';
@@ -121,156 +164,157 @@ Deno.serve(async (req) => {
       return timeStr ? `${formatDate(dateStr)} ${timeStr}` : formatDate(dateStr);
     };
 
+    const translateStatus = (status) => {
+      if (!status) return '';
+      return t.status[status] || safe(status);
+    };
+
+    // ---- PDF GENERATION ----
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    let y = margin;
+    const PW = doc.internal.pageSize.getWidth();
+    const PH = doc.internal.pageSize.getHeight();
+    const M = 15;
+    let y = M;
 
     const checkPageBreak = (needed) => {
-      if (y + needed > pageHeight - margin - 10) {
+      if (y + needed > PH - M - 10) {
         doc.addPage();
-        y = margin;
+        y = M;
         return true;
       }
       return false;
     };
 
-    // --- LOGO ---
-    let logoLoaded = false;
-    try {
-      const logoResp = await fetch(LOGO_URL);
-      if (logoResp.ok) {
-        const buffer = await logoResp.arrayBuffer();
-        const bytes = new Uint8Array(buffer);
-        // Convert to binary string for btoa
-        let binary = '';
-        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-        const b64 = btoa(binary);
-        doc.addImage(`data:image/png;base64,${b64}`, 'PNG', pageWidth - margin - 50, margin - 5, 50, 20);
-        logoLoaded = true;
-      }
-    } catch (_) { /* logo is optional */ }
+    // ---- LOGO (top-right) ----
+    if (logoB64) {
+      try {
+        doc.addImage(`data:image/png;base64,${logoB64}`, 'PNG', PW - M - 52, M - 5, 52, 20);
+      } catch (_) { /* skip */ }
+    }
 
-    // --- HEADER ---
+    // ---- HEADER ----
     doc.setFontSize(20);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(25, 55, 95);
-    doc.text('ALPHA YACHTING', margin, y + 5);
+    doc.text('ALPHA YACHTING', M, y + 5);
     y += 11;
 
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(60, 60, 60);
-    doc.text(safe(t.title), margin, y);
+    doc.text(t.title, M, y);
     y += 8;
 
-    // Horizontal rule
+    // Divider
     doc.setDrawColor(25, 55, 95);
     doc.setLineWidth(0.7);
-    doc.line(margin, y, pageWidth - margin, y);
+    doc.line(M, y, PW - M, y);
     y += 6;
 
-    // Project info
+    // Project info row
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     doc.setTextColor(70, 70, 70);
-    doc.text(`${t.project}: ${safe(job.title)}`, margin, y);
-    doc.text(`${t.projectNo}: ${safe(job.job_number || 'N/A')}`, pageWidth / 2, y);
+    doc.text(`${t.project}: ${safe(job.title)}`, M, y);
+    doc.text(`${t.projectNo}: ${safe(job.job_number || 'N/A')}`, PW / 2, y);
     y += 10;
 
-    // --- CONTEXT BLOCK ---
-    checkPageBreak(42);
+    // ---- CONTEXT BLOCK ----
+    checkPageBreak(44);
     doc.setFillColor(242, 246, 255);
-    doc.roundedRect(margin, y - 2, pageWidth - margin * 2, 40, 2, 2, 'F');
+    doc.roundedRect(M, y - 2, PW - M * 2, 42, 2, 2, 'F');
 
     doc.setFont(undefined, 'bold');
     doc.setFontSize(9);
     doc.setTextColor(25, 55, 95);
-    doc.text(safe(t.projectContext), margin + 3, y + 5);
+    doc.text(t.projectContext, M + 3, y + 5);
 
     doc.setFont(undefined, 'normal');
     doc.setTextColor(50, 50, 50);
-    const col2 = pageWidth / 2;
+    const col2 = PW / 2;
     let cy = y + 13;
 
     if (customer) {
       const name = safe(customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim());
-      doc.text(`${t.customer}: ${name}`, margin + 3, cy);
+      doc.text(`${t.customer}: ${name}`, M + 3, cy);
     }
     if (boat) doc.text(`${t.boat}: ${safe(boat.vessel_name)}`, col2, cy);
     cy += 7;
 
-    if (location) doc.text(`${t.location}: ${safe(location.name)}`, margin + 3, cy);
+    if (location) doc.text(`${t.location}: ${safe(location.name)}`, M + 3, cy);
     if (job.requested_date) doc.text(`${t.dueDate}: ${formatDate(job.requested_date)}`, col2, cy);
     cy += 7;
 
-    if (leadTech) doc.text(`${t.leadTech}: ${safe(leadTech.first_name)} ${safe(leadTech.last_name)}`, margin + 3, cy);
+    if (leadTech) doc.text(`${t.leadTech}: ${safe(leadTech.first_name)} ${safe(leadTech.last_name)}`, M + 3, cy);
 
-    y += 46;
+    y += 48;
 
-    // --- WORK ORDERS TITLE ---
+    // ---- WORK ORDERS TITLE ----
     checkPageBreak(16);
     doc.setFont(undefined, 'bold');
     doc.setFontSize(11);
     doc.setTextColor(25, 55, 95);
-    doc.text(safe(t.workToDo), margin, y);
+    doc.text(t.workToDo, M, y);
     doc.setDrawColor(25, 55, 95);
     doc.setLineWidth(0.5);
-    doc.line(margin, y + 2, pageWidth - margin, y + 2);
+    doc.line(M, y + 2, PW - M, y + 2);
     y += 11;
 
-    // --- WORK ORDERS ---
+    // ---- WORK ORDERS LOOP ----
     for (const wo of sortedWOs) {
       checkPageBreak(26);
 
       // WO header bar
       doc.setFillColor(230, 237, 250);
-      doc.roundedRect(margin, y - 4, pageWidth - margin * 2, 13, 1.5, 1.5, 'F');
+      doc.roundedRect(M, y - 4, PW - M * 2, 13, 1.5, 1.5, 'F');
 
       doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
       doc.setTextColor(20, 40, 80);
-      const woLabel = safe(`${wo.work_order_number || 'WO'}: ${wo.title}`);
-      // Truncate if too long
-      const maxW = pageWidth - margin * 2 - 35;
-      let displayLabel = woLabel;
-      while (doc.getTextWidth(displayLabel) > maxW && displayLabel.length > 10) {
-        displayLabel = displayLabel.slice(0, -1);
-      }
-      if (displayLabel !== woLabel) displayLabel += '...';
-      doc.text(displayLabel, margin + 3, y + 4);
 
-      // Status right aligned
+      const statusText = translateStatus(wo.status);
+      const statusWidth = doc.getTextWidth(statusText) + 4;
+      const maxTitleWidth = PW - M * 2 - statusWidth - 8;
+
+      let woLabel = safe(`${wo.work_order_number || 'WO'}: ${wo.title}`);
+      while (doc.getTextWidth(woLabel) > maxTitleWidth && woLabel.length > 10) {
+        woLabel = woLabel.slice(0, -1);
+      }
+      if (doc.getTextWidth(safe(`${wo.work_order_number || 'WO'}: ${wo.title}`)) > maxTitleWidth) {
+        woLabel += '...';
+      }
+      doc.text(woLabel, M + 3, y + 4);
+
+      // Status right-aligned
       doc.setFontSize(8);
       doc.setFont(undefined, 'normal');
       doc.setTextColor(80, 80, 80);
-      doc.text(safe(wo.status || ''), pageWidth - margin - 2, y + 4, { align: 'right' });
+      doc.text(statusText, PW - M - 2, y + 4, { align: 'right' });
       y += 14;
 
-      // WO meta
+      // WO meta lines
       doc.setFontSize(8.5);
       doc.setFont(undefined, 'normal');
       doc.setTextColor(70, 70, 70);
 
       if (wo.scheduled_date) {
-        doc.text(`${t.scheduled}: ${formatDateTime(wo.scheduled_date, wo.scheduled_start_time)}`, margin + 4, y);
+        doc.text(`${t.scheduled}: ${formatDateTime(wo.scheduled_date, wo.scheduled_start_time)}`, M + 4, y);
         y += 4.5;
       }
 
       if (wo.assigned_technicians && wo.assigned_technicians.length > 0) {
         const techNames = wo.assigned_technicians
           .map(id => {
-            const tech = technicians.find(t => t.id === id);
+            const tech = technicians.find(tech => tech.id === id);
             return tech ? safe(`${tech.first_name} ${tech.last_name}`) : '?';
           })
           .join(', ');
-        doc.text(`${t.assigned}: ${techNames}`, margin + 4, y);
+        doc.text(`${t.assigned}: ${techNames}`, M + 4, y);
         y += 4.5;
       }
 
       if (wo.estimated_duration_hours) {
-        doc.text(`${t.estHours}: ${wo.estimated_duration_hours} h`, margin + 4, y);
+        doc.text(`${t.estHours}: ${wo.estimated_duration_hours} h`, M + 4, y);
         y += 4.5;
       }
 
@@ -286,7 +330,7 @@ Deno.serve(async (req) => {
         doc.setFont(undefined, 'bold');
         doc.setFontSize(8.5);
         doc.setTextColor(50, 50, 50);
-        doc.text(`${t.tasks}:`, margin + 4, y);
+        doc.text(`${t.tasks}:`, M + 4, y);
         y += 5;
 
         for (const task of woTasks) {
@@ -297,14 +341,13 @@ Deno.serve(async (req) => {
           doc.setFont(undefined, 'normal');
           doc.setFontSize(8.5);
           doc.setTextColor(isCompleted ? 150 : 45, isCompleted ? 150 : 45, isCompleted ? 150 : 45);
-          doc.text(taskLabel, margin + 7, y);
+          doc.text(taskLabel, M + 7, y);
 
-          // Strikethrough line for completed tasks
           if (isCompleted) {
             const tw = doc.getTextWidth(taskLabel);
             doc.setDrawColor(150, 150, 150);
             doc.setLineWidth(0.35);
-            doc.line(margin + 7, y - 1.2, margin + 7 + tw, y - 1.2);
+            doc.line(M + 7, y - 1.2, M + 7 + tw, y - 1.2);
           }
 
           y += 5;
@@ -315,11 +358,11 @@ Deno.serve(async (req) => {
       y += 3;
       doc.setDrawColor(200, 212, 232);
       doc.setLineWidth(0.25);
-      doc.line(margin, y, pageWidth - margin, y);
+      doc.line(M, y, PW - M, y);
       y += 5;
     }
 
-    // --- FOOTER on all pages ---
+    // ---- FOOTER on all pages ----
     const totalPages = doc.getNumberOfPages();
     const now = new Date();
     const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -331,9 +374,9 @@ Deno.serve(async (req) => {
       doc.setTextColor(160, 160, 160);
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.25);
-      doc.line(margin, pageHeight - margin - 6, pageWidth - margin, pageHeight - margin - 6);
-      doc.text(`${t.generated}: ${ts}`, margin, pageHeight - margin - 2);
-      doc.text(`${t.page} ${i} ${t.of} ${totalPages}`, pageWidth - margin, pageHeight - margin - 2, { align: 'right' });
+      doc.line(M, PH - M - 6, PW - M, PH - M - 6);
+      doc.text(`${t.generated}: ${ts}`, M, PH - M - 2);
+      doc.text(`${t.page} ${i} ${t.of} ${totalPages}`, PW - M, PH - M - 2, { align: 'right' });
     }
 
     const pdfBytes = doc.output('arraybuffer');
@@ -346,7 +389,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('Error generating project sheet:', error);
+    console.error('printProjectSheet error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
