@@ -155,12 +155,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Normalize response_type
+    // Normalize response_type — handles both old schema and new prompt schema
     let responseType = (response.response_type || '').toLowerCase().trim();
-    if (!['question', 'tasks_ready', 'clarification'].includes(responseType)) {
+    if (!['question', 'tasks_ready'].includes(responseType)) {
       if (responseType.includes('task') || responseType.includes('ready')) responseType = 'tasks_ready';
-      else if (responseType.includes('question') || responseType.includes('frage')) responseType = 'question';
-      else responseType = 'clarification';
+      else if (
+        responseType.includes('question') || responseType.includes('frage') ||
+        responseType.includes('clarification') || responseType.includes('investigation') ||
+        responseType.includes('insufficient')
+      ) responseType = 'question';
+      else responseType = 'question';
     }
 
     const message = response.message || '(Keine Antwort vom Modell)';
