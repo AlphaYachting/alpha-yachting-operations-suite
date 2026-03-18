@@ -350,6 +350,18 @@ export default function Offers() {
                 })}
               </SelectContent>
             </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full sm:w-52">
+                <ArrowUpDown className="h-4 w-4 mr-2 text-slate-400" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="updated_date">Zuletzt bearbeitet</SelectItem>
+                <SelectItem value="created_date">Erstellungsdatum</SelectItem>
+                <SelectItem value="offer_number">Angebotsnummer</SelectItem>
+                <SelectItem value="amount">Betrag (hoch → tief)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
