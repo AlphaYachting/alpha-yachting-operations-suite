@@ -362,7 +362,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     <div className="min-h-screen bg-slate-50">
       {/* Improved Header with Welcome Message */}
       <MobileHeaderWithWelcome
-        user={user}
+        user={displayUser || user}
         taskCount={sections.today.length}
         onSettingsClick={() => setShowPreviewMode(!showPreviewMode)}
         showSettings={showPreviewMode} />
