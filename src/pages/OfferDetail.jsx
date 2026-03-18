@@ -560,13 +560,20 @@ Requirements:
     setError(null);
 
     try {
-      // Generate work order number
-      const workOrders = await base44.entities.WorkOrder.list();
-      const woNumber = `WO-${String(workOrders.length + 1).padStart(5, '0')}`;
-
-      // Create work order
-      const workOrder = await base44.entities.WorkOrder.create({
+      // Use createWorkOrderWithNumber for canonical WO number
+      const woResponse = await base44.functions.invoke('createWorkOrderWithNumber', {
         job_id: formData.job_id,
+        offer_id: offerId,
+        title: formData.title,
+        description: formData.description,
+        scheduled_date: new Date().toISOString().split('T')[0],
+        status: 'Draft',
+        billable: true,
+      });
+      if (!woResponse.data?.success) {
+        throw new Error(woResponse.data?.message || 'Failed to create work order');
+      }
+      const workOrder = woResponse.data.work_order;
         title: formData.title,
         description: formData.description,
         work_order_number: woNumber,
@@ -626,9 +633,15 @@ Requirements:
         throw new Error('No tasks to convert');
       }
 
-      // Generate job number
-      const jobs = await base44.entities.Job.list();
-      const jobNumber = `JOB-${String(jobs.length + 1).padStart(5, '0')}`;
+      // Allocate canonical job number (same logic as allocateJobNumber function)
+      const allJobsForNum = await base44.entities.Job.list('-created_date', 100);
+      const validJobNums = allJobsForNum
+        .map(j => j.job_number)
+        .filter(num => num && /^J\d{5}$/.test(num))
+        .map(num => parseInt(num.substring(1), 10))
+        .filter(num => !isNaN(num));
+      const maxJobNum = validJobNums.length > 0 ? Math.max(...validJobNums) : 0;
+      const jobNumber = `J${String(maxJobNum + 1).padStart(5, '0')}`;
 
       // Create Job (Project)
       const job = await base44.entities.Job.create({
@@ -652,13 +665,22 @@ Requirements:
         converted_job_id: job.id,
       });
 
-      // Generate work order number
-      const workOrders = await base44.entities.WorkOrder.list();
-      const woNumber = `WO-${String(workOrders.length + 1).padStart(5, '0')}`;
-
-      // Create WorkOrder
-      const workOrder = await base44.entities.WorkOrder.create({
-        work_order_number: woNumber,
+      // Use createWorkOrderWithNumber for canonical WO number
+      const woResponse2 = await base44.functions.invoke('createWorkOrderWithNumber', {
+        job_id: job.id,
+        offer_id: offerId,
+        title: formData.title,
+        description: formData.description || '',
+        scheduled_date: new Date().toISOString().split('T')[0],
+        status: 'Draft',
+        billable: true,
+      });
+      if (!woResponse2.data?.success) {
+        throw new Error(woResponse2.data?.message || 'Failed to create work order');
+      }
+      const workOrder = woResponse2.data.work_order;
+      // (legacy block replaced — keeping reference fields below)
+      const _legacyRef = {
         job_id: job.id,
         offer_id: offerId,
         title: formData.title,

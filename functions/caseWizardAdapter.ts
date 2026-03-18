@@ -173,7 +173,20 @@ Deno.serve(async (req) => {
     // ============================================================
     let offer = null;
     if (wizardData.intent && wizardData.intent.includes('offer')) {
+      // Allocate canonical offer number inline (same logic as OfferDetail.jsx)
+      const allOffersForNum = await base44.asServiceRole.entities.Offer.list('-created_date', 200);
+      const currentYear = new Date().getFullYear();
+      const yearPrefix = `OFF-${currentYear}-`;
+      const existingOfferNumbers = allOffersForNum
+        .map(o => o.offer_number)
+        .filter(num => num && num.startsWith(yearPrefix))
+        .map(num => parseInt(num.split('-')[2]) || 0)
+        .filter(num => !isNaN(num));
+      const maxOfferNumber = existingOfferNumbers.length > 0 ? Math.max(...existingOfferNumbers) : 0;
+      const allocatedOfferNumber = `${yearPrefix}${String(maxOfferNumber + 1).padStart(4, '0')}`;
+
       offer = await base44.asServiceRole.entities.Offer.create({
+        offer_number: allocatedOfferNumber,
         customer_id: customer.id,
         boat_id: boat?.id,
         location_id: location?.id,
