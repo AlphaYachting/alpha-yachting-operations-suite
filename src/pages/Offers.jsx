@@ -385,7 +385,7 @@ export default function Offers() {
             </CardContent>
           </Card>
         ) : (
-          filteredOffers.map(offer => {
+          sortedAndFilteredOffers.map(offer => {
             const customer = getCustomer(offer.customer_id);
             const boat = getBoat(offer.boat_id);
             const job = getJob(offer.job_id);
