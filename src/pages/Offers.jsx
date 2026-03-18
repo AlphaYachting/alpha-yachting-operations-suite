@@ -186,7 +186,8 @@ export default function Offers() {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   }))].sort().reverse();
 
-  const filteredOffers = offers.filter(offer => {
+  const sortedAndFilteredOffers = offers
+    .filter(offer => {
     const matchesSearch = !searchTerm || 
       offer.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       offer.offer_number?.toLowerCase().includes(searchTerm.toLowerCase());
