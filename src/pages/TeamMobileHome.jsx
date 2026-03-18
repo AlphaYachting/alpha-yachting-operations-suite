@@ -247,7 +247,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     return (
       <div className="min-h-screen bg-slate-50">
         <MobileHeaderWithWelcome
-          user={user}
+          user={displayUser || user}
           taskCount={0}
           onSettingsClick={() => {}}
           showSettings={false} />
