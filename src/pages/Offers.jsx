@@ -368,7 +368,7 @@ export default function Offers() {
 
       {/* Offers List */}
       <div className="grid gap-4">
-        {filteredOffers.length === 0 ? (
+        {sortedAndFilteredOffers.length === 0 ? (
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-12">
