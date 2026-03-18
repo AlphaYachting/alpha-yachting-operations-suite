@@ -1054,6 +1054,40 @@ export default function ProjectDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Print Language Dialog */}
+      <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Printer className="h-5 w-5" />
+              Print Project Sheet
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-slate-600">Sprache / Language / Jezik auswählen:</p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { code: 'de', label: '🇩🇪 Deutsch' },
+                { code: 'en', label: '🇬🇧 English' },
+                { code: 'si', label: '🇸🇮 Slovensko' },
+              ].map(({ code, label }) => (
+                <button
+                  key={code}
+                  onClick={() => { setPrintLanguage(code); handlePrintProjectSheet(code); }}
+                  className={`p-3 rounded-lg border-2 text-sm font-medium transition-all hover:shadow-md ${
+                    printLanguage === code
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-slate-200 hover:border-blue-300 text-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete Work Order Confirmation */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
