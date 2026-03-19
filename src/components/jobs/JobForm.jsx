@@ -368,6 +368,8 @@ export default function JobForm({ job, customers, boats, locations, technicians,
               <SelectItem value="Plumbing">Plumbing</SelectItem>
               <SelectItem value="Installation">Installation</SelectItem>
               <SelectItem value="Diagnostics">Diagnostics</SelectItem>
+              <SelectItem value="Antifouling">Antifouling</SelectItem>
+              <SelectItem value="Polish">Polish</SelectItem>
               <SelectItem value="Other">Other</SelectItem>
             </SelectContent>
           </Select>
