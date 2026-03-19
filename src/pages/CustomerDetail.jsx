@@ -518,23 +518,33 @@ export default function CustomerDetail() {
           ) : (
             <div className="space-y-3">
               {workOrders.slice(0, 5).map(wo => (
-                <Link key={wo.id} to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}>
-                  <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-slate-900">{wo.title}</h4>
-                      <Badge className={woStatusColors[wo.status]}>{wo.status}</Badge>
+                <div key={wo.id} className="flex items-center gap-2">
+                  <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`} className="flex-1">
+                    <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-slate-900">{wo.title}</h4>
+                        <Badge className={woStatusColors[wo.status]}>{wo.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-slate-500">
+                        {wo.work_order_number && <span>#{wo.work_order_number}</span>}
+                        {wo.scheduled_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(wo.scheduled_date), 'MMM d, yyyy')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-slate-500">
-                      {wo.work_order_number && <span>#{wo.work_order_number}</span>}
-                      {wo.scheduled_date && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(wo.scheduled_date), 'MMM d, yyyy')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 flex-shrink-0"
+                    onClick={() => setEditingWorkOrder(wo)}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               ))}
               {workOrders.length > 5 && (
                 <Link to={createPageUrl('WorkOrders')}>
