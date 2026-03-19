@@ -28,7 +28,9 @@ const SKILLS = [
   'Cushion Making',
   'Carpentry',
   'Woodworking',
-  'Steel Work'
+  'Steel Work',
+  'Antifouling',
+  'Polish'
 ];
 
 const LANGUAGES = ['German', 'English', 'Italian', 'Slovenian', 'Croatian'];
