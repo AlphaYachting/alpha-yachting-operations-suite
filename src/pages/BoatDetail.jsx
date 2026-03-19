@@ -230,11 +230,9 @@ export default function BoatDetail() {
             )}
           </div>
         </div>
-        <Button asChild>
-          <Link to={createPageUrl('Boats') + `?edit=${boat.id}`}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Boat
-          </Link>
+        <Button onClick={() => setShowEditDialog(true)}>
+          <Edit className="h-4 w-4 mr-2" />
+          Edit Boat
         </Button>
       </div>
 
