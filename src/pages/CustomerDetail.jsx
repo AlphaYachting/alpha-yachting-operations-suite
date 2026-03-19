@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import CustomerForm from '@/components/customers/CustomerForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
+import JobForm from '@/components/jobs/JobForm';
 import SendInviteButton from '@/components/invites/SendInviteButton';
 import { format } from 'date-fns';
 import { toast } from 'sonner';

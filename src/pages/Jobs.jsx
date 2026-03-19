@@ -58,6 +58,7 @@ import {
 } from '@/components/ui/select';
 import { format, isPast, isToday, parseISO, differenceInDays } from 'date-fns';
 import JobForm from '@/components/jobs/JobForm';
+import { toast } from 'sonner';
 
 const priorityColors = {
   Low: 'bg-slate-100 text-slate-700',
