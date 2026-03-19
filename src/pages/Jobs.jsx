@@ -291,8 +291,10 @@ export default function Projects() {
 
       if (editingProject) {
         setProjects(prev => prev.map(p => p.id === result.id ? result : p));
+        toast.success('Project updated');
       } else {
         setProjects(prev => [result, ...prev]);
+        toast.success('Project created successfully');
       }
 
       setShowForm(false);
