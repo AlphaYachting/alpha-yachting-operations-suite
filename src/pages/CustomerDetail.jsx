@@ -88,12 +88,13 @@ export default function CustomerDetail() {
     try {
       setLoading(true);
       
-      const [customerData, boatsData, jobsData, offersData, techData] = await Promise.all([
+      const [customerData, boatsData, jobsData, offersData, techData, locationsData] = await Promise.all([
         base44.entities.Customer.filter({ id: customerId }),
         base44.entities.Boat.filter({ customer_id: customerId }),
         base44.entities.Job.filter({ customer_id: customerId }),
         base44.entities.Offer.filter({ customer_id: customerId }),
-        base44.entities.Technician.list()
+        base44.entities.Technician.list(),
+        base44.entities.Location.list()
       ]);
 
       if (customerData.length === 0) {
@@ -107,6 +108,7 @@ export default function CustomerDetail() {
       setJobs(jobsData);
       setOffers(offersData);
       setTechnicians(techData);
+      setLocations(locationsData);
 
       // Load work orders for all jobs
       const jobIds = jobsData.map(j => j.id);
