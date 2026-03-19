@@ -78,6 +78,10 @@ export default function CustomerDetail() {
   const [showJobForm, setShowJobForm] = useState(false);
   const [technicians, setTechnicians] = useState([]);
   const [locations, setLocations] = useState([]);
+  // Quick-edit state
+  const [editingBoat, setEditingBoat] = useState(null);
+  const [editingJob, setEditingJob] = useState(null);
+  const [editingWorkOrder, setEditingWorkOrder] = useState(null);
 
   useEffect(() => {
     if (customerId) {
