@@ -564,6 +564,33 @@ export default function CustomerDetail() {
         </CardContent>
       </Card>
 
+      {/* Create Project Dialog */}
+      <Dialog open={showJobForm} onOpenChange={setShowJobForm}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Project</DialogTitle>
+          </DialogHeader>
+          <JobForm
+            customers={[customer]}
+            boats={boats}
+            locations={locations}
+            technicians={technicians}
+            onSave={async (jobData) => {
+              const newJob = await base44.entities.Job.create({
+                ...jobData,
+                customer_id: customerId,
+                job_number: `P${Date.now().toString().slice(-6)}`,
+                intake_date: new Date().toISOString()
+              });
+              setJobs(prev => [newJob, ...prev]);
+              setShowJobForm(false);
+              toast.success('Project created successfully');
+            }}
+            onCancel={() => setShowJobForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Dialog */}
       <Dialog open={showEditForm} onOpenChange={setShowEditForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
