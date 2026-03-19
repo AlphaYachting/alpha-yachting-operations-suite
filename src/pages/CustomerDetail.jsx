@@ -666,8 +666,8 @@ export default function CustomerDetail() {
               onSave={async (boatData) => {
                 await base44.entities.Boat.update(editingBoat.id, boatData);
                 setEditingBoat(null);
-                toast.success('Boat updated');
-                await loadData();
+                toast.success('Boot gespeichert');
+                loadData();
               }}
               onCancel={() => setEditingBoat(null)}
             />
