@@ -104,12 +104,11 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
           </Select>
         </div>
         <div className="space-y-2">
-          <Label>Vessel Name *</Label>
+          <Label>Vessel Name</Label>
           <Input
             value={formData.vessel_name || ''}
             onChange={(e) => updateField('vessel_name', e.target.value)}
             placeholder="Vessel name"
-            required
           />
         </div>
       </div>
