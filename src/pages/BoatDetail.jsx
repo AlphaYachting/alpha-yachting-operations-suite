@@ -627,6 +627,26 @@ export default function BoatDetail() {
         </TabsContent>
       </Tabs>
 
+      {/* Edit Boat Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Boat</DialogTitle>
+          </DialogHeader>
+          <BoatForm
+            boat={boat}
+            customers={customers}
+            locations={locations}
+            onSave={async (boatData) => {
+              await base44.entities.Boat.update(boat.id, boatData);
+              setShowEditDialog(false);
+              loadBoatData();
+            }}
+            onCancel={() => setShowEditDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Image Preview Dialog */}
       <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
         <DialogContent className="max-w-4xl">
