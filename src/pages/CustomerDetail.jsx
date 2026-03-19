@@ -419,21 +419,31 @@ export default function CustomerDetail() {
           ) : (
             <div className="space-y-3">
               {boats.map(boat => (
-                <Link key={boat.id} to={createPageUrl('BoatDetail') + `?id=${boat.id}`}>
-                  <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-slate-900">{boat.vessel_name}</h4>
-                        <p className="text-sm text-slate-500">
-                          {boat.manufacturer && `${boat.manufacturer} `}
-                          {boat.model && `${boat.model} `}
-                          {boat.year && `(${boat.year})`}
-                        </p>
+                <div key={boat.id} className="flex items-center gap-2">
+                  <Link to={createPageUrl('BoatDetail') + `?id=${boat.id}`} className="flex-1">
+                    <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold text-slate-900">{boat.vessel_name}</h4>
+                          <p className="text-sm text-slate-500">
+                            {boat.manufacturer && `${boat.manufacturer} `}
+                            {boat.model && `${boat.model} `}
+                            {boat.year && `(${boat.year})`}
+                          </p>
+                        </div>
+                        <Badge variant="outline">{boat.vessel_type}</Badge>
                       </div>
-                      <Badge variant="outline">{boat.vessel_type}</Badge>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 flex-shrink-0"
+                    onClick={() => setEditingBoat(boat)}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               ))}
             </div>
           )}
