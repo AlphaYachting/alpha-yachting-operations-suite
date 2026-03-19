@@ -196,6 +196,14 @@ export default function CustomerDetail() {
             variant="outline"
             className="border-green-600 text-green-600 hover:bg-green-50"
           />
+          <Button
+            variant="outline"
+            className="border-purple-600 text-purple-600 hover:bg-purple-50"
+            onClick={() => setShowJobForm(true)}
+          >
+            <Briefcase className="h-4 w-4 mr-2" />
+            Create Project
+          </Button>
           <Button 
             variant="outline" 
             className="border-indigo-600 text-indigo-600 hover:bg-indigo-50"
