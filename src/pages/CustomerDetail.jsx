@@ -464,23 +464,33 @@ export default function CustomerDetail() {
           ) : (
             <div className="space-y-3">
               {jobs.slice(0, 5).map(job => (
-                <Link key={job.id} to={createPageUrl('JobDetail') + `?id=${job.id}`}>
-                  <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-slate-900">{job.title}</h4>
-                      <Badge className={jobStatusColors[job.status]}>{job.status}</Badge>
+                <div key={job.id} className="flex items-center gap-2">
+                  <Link to={createPageUrl('JobDetail') + `?id=${job.id}`} className="flex-1">
+                    <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-slate-900">{job.title}</h4>
+                        <Badge className={jobStatusColors[job.status]}>{job.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-slate-500">
+                        {job.job_number && <span>#{job.job_number}</span>}
+                        {job.intake_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(job.intake_date), 'MMM d, yyyy')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-slate-500">
-                      {job.job_number && <span>#{job.job_number}</span>}
-                      {job.intake_date && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(job.intake_date), 'MMM d, yyyy')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 flex-shrink-0"
+                    onClick={() => setEditingJob(job)}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               ))}
               {jobs.length > 5 && (
                 <Link to={createPageUrl('Jobs') + `?customer=${customerId}`}>
