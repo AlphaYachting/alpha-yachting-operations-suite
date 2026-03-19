@@ -48,7 +48,17 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
     e.preventDefault();
     setSaving(true);
     try {
-      await onSave(formData);
+      const numericFields = ['year', 'length_m', 'beam_m', 'draft_m', 'engine_hours'];
+      const cleanedData = { ...formData };
+      numericFields.forEach(field => {
+        if (cleanedData[field] === '' || cleanedData[field] === null || cleanedData[field] === undefined) {
+          cleanedData[field] = null;
+        } else {
+          const num = Number(cleanedData[field]);
+          cleanedData[field] = isNaN(num) ? null : num;
+        }
+      });
+      await onSave(cleanedData);
     } finally {
       setSaving(false);
     }
