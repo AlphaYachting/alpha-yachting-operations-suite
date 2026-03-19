@@ -226,7 +226,13 @@ export default function Layout({ children, currentPageName }) {
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {navItems.filter(item => !item.adminOnly || user?.role === 'admin').map((item, index) => {
+            {navItems.filter(item => {
+              const role = user?.role;
+              if (role === 'admin') return true; // admin sees everything
+              if (role === 'lead_technician') return item.leadTechAllowed || item.technicianAllowed;
+              if (role === 'technician') return item.technicianAllowed;
+              return false; // customer: no desktop nav
+            }).map((item, index) => {
               // Section header
               if (item.header) {
                 return (
