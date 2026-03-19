@@ -640,6 +640,79 @@ export default function CustomerDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Quick Edit: Boat */}
+      <Dialog open={!!editingBoat} onOpenChange={(open) => !open && setEditingBoat(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Boat</DialogTitle>
+          </DialogHeader>
+          {editingBoat && (
+            <BoatForm
+              boat={editingBoat}
+              customers={[customer]}
+              locations={locations}
+              onSave={async (boatData) => {
+                await base44.entities.Boat.update(editingBoat.id, boatData);
+                setEditingBoat(null);
+                toast.success('Boat updated');
+                await loadData();
+              }}
+              onCancel={() => setEditingBoat(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Edit: Project */}
+      <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+          </DialogHeader>
+          {editingJob && (
+            <JobForm
+              job={editingJob}
+              customers={[customer]}
+              boats={boats}
+              locations={locations}
+              technicians={technicians}
+              onSave={async (jobData) => {
+                await base44.entities.Job.update(editingJob.id, jobData);
+                setEditingJob(null);
+                toast.success('Project updated');
+                await loadData();
+              }}
+              onCancel={() => setEditingJob(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Edit: Work Order */}
+      <Dialog open={!!editingWorkOrder} onOpenChange={(open) => !open && setEditingWorkOrder(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Work Order</DialogTitle>
+          </DialogHeader>
+          {editingWorkOrder && (
+            <WorkOrderForm
+              workOrder={editingWorkOrder}
+              jobs={jobs}
+              technicians={technicians}
+              customers={[customer]}
+              boats={boats}
+              onSave={async (woData) => {
+                await base44.entities.WorkOrder.update(editingWorkOrder.id, woData);
+                setEditingWorkOrder(null);
+                toast.success('Work order updated');
+                await loadData();
+              }}
+              onCancel={() => setEditingWorkOrder(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Create Work Order Dialog */}
       <Dialog open={showWorkOrderForm} onOpenChange={setShowWorkOrderForm}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
