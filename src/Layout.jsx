@@ -49,26 +49,30 @@ import { cn } from '@/lib/utils';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { Toaster } from '@/components/ui/sonner';
 
+// All nav items — roles: admin / lead_technician / technician / customer
+// adminOnly: true → only admin
+// leadTechAllowed: true → admin + lead_technician
+// technicianAllowed: true → admin + lead_technician + technician
+// no flag → admin only (same as adminOnly)
 const navItems = [
   // OPERATIONS
-  { header: 'OPERATIONS' },
-  { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard', primary: true },
-  { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard' },
-  { name: 'My Tasks', icon: ClipboardList, page: 'MyTasks' },
-  { name: 'Schedule', icon: Clock, page: 'Schedule' },
-  { name: 'Projects', icon: Briefcase, page: 'Jobs' },
-  { name: 'Work Orders', icon: ClipboardList, page: 'WorkOrders' },
+  { header: 'OPERATIONS', technicianAllowed: true },
+  { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard', primary: true, leadTechAllowed: true },
+  { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', leadTechAllowed: true },
+  { name: 'My Tasks', icon: ClipboardList, page: 'MyTasks', technicianAllowed: true },
+  { name: 'Schedule', icon: Clock, page: 'Schedule', technicianAllowed: true },
+  { name: 'Projects', icon: Briefcase, page: 'Jobs', leadTechAllowed: true },
+  { name: 'Work Orders', icon: ClipboardList, page: 'WorkOrders', leadTechAllowed: true },
   { name: 'Team Orders', icon: Users, page: 'TeamOrders' },
   { name: 'Workshop Display', icon: Monitor, page: 'WorkshopDisplay' },
   
   // SALES & CUSTOMER FLOW
-  { header: 'SALES & CUSTOMER FLOW' },
-  { name: 'Leads', icon: Phone, page: 'LeadsV2' },
-  { name: 'Offers', icon: FileText, page: 'Offers' },
-  // Storage & Transport is now integrated into New Case Wizard (intent: storage_transport)
-  { name: 'Customers', icon: Users, page: 'Customers' },
-  { name: 'Boats', icon: Ship, page: 'Boats' },
-  { name: 'Locations', icon: MapPin, page: 'Locations' },
+  { header: 'SALES & CUSTOMER FLOW', leadTechAllowed: true },
+  { name: 'Leads', icon: Phone, page: 'LeadsV2', leadTechAllowed: true },
+  { name: 'Offers', icon: FileText, page: 'Offers', leadTechAllowed: true },
+  { name: 'Customers', icon: Users, page: 'Customers', leadTechAllowed: true },
+  { name: 'Boats', icon: Ship, page: 'Boats', leadTechAllowed: true },
+  { name: 'Locations', icon: MapPin, page: 'Locations', leadTechAllowed: true },
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   
   // RESOURCES
@@ -78,25 +82,25 @@ const navItems = [
   { name: 'Tools & Inventory', icon: Package, page: 'Inventory' },
   { name: 'Inventory Stats', icon: BarChart3, page: 'InventoryDashboard', subLevel: true },
   { name: 'Suppliers', icon: Briefcase, page: 'Suppliers' },
-  { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates', adminOnly: true },
-  { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates', adminOnly: true },
+  { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates' },
+  { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates' },
   
   // INTELLIGENCE
   { header: 'INTELLIGENCE' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },
-  { name: 'Project Intelligence', icon: Brain, page: 'ProjectIntelligence', adminOnly: true },
-  { name: 'Standardize WOs', icon: ClipboardList, page: 'StandardizeWorkOrders', adminOnly: true },
+  { name: 'Project Intelligence', icon: Brain, page: 'ProjectIntelligence' },
+  { name: 'Standardize WOs', icon: ClipboardList, page: 'StandardizeWorkOrders' },
   
   // ADMIN
   { header: 'ADMIN' },
   { name: 'Settings', icon: Settings, page: 'Settings' },
-  { name: 'Product Modules', icon: Package, page: 'AdminProductModules', adminOnly: true },
-  { name: 'Storage Pricing', icon: Database, page: 'StoragePricingAdmin', adminOnly: true },
-  { name: 'Calendar Feeds', icon: CalendarIcon, page: 'CalendarFeeds', adminOnly: true },
-  { name: 'App Invitations', icon: Mail, page: 'AppInvites', adminOnly: true },
-  { name: 'Email Engine', icon: Mail, page: 'EmailEngineSandbox', adminOnly: true },
-  { name: 'Database Backup', icon: Database, page: 'DatabaseBackup', adminOnly: true },
-  { name: 'Customer Portal Test', icon: Users, page: 'CustomerPortalTest', adminOnly: true },
+  { name: 'Product Modules', icon: Package, page: 'AdminProductModules' },
+  { name: 'Storage Pricing', icon: Database, page: 'StoragePricingAdmin' },
+  { name: 'Calendar Feeds', icon: CalendarIcon, page: 'CalendarFeeds' },
+  { name: 'App Invitations', icon: Mail, page: 'AppInvites' },
+  { name: 'Email Engine', icon: Mail, page: 'EmailEngineSandbox' },
+  { name: 'Database Backup', icon: Database, page: 'DatabaseBackup' },
+  { name: 'Customer Portal Test', icon: Users, page: 'CustomerPortalTest' },
 ];
 
 export default function Layout({ children, currentPageName }) {

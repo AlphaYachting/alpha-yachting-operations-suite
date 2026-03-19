@@ -41,12 +41,25 @@ const AuthenticatedApp = () => {
     }
   }
 
+  // Role-based landing page redirect
+  const getRoleLandingPage = () => {
+    if (!user) return mainPageKey;
+    const role = user.role;
+    if (role === 'technician') return 'MyTasks';
+    if (role === 'customer') return 'CustomerPortal';
+    // admin and lead_technician → Dashboard
+    return 'Dashboard';
+  };
+
+  const LandingPage = Pages[getRoleLandingPage()] || MainPage;
+  const landingPageName = getRoleLandingPage();
+
   // Render the main app
   return (
     <Routes>
       <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
+        <LayoutWrapper currentPageName={landingPageName}>
+          <LandingPage />
         </LayoutWrapper>
       } />
       {Object.entries(Pages).map(([path, Page]) => (
