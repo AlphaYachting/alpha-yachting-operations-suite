@@ -147,6 +147,10 @@ export default function InviteAccept() {
         accepted_at: new Date().toISOString()
       });
 
+      // Set the correct User.role based on invite role
+      const roleToSet = invite.role === 'CUSTOMER' ? 'customer' : 'technician';
+      await base44.auth.updateMe({ role: roleToSet });
+
       // Clear session
       sessionStorage.removeItem('pending_invite_id');
       sessionStorage.removeItem('pending_invite_token');
