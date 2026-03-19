@@ -68,10 +68,14 @@ export default function BoatDetail() {
 
   const loadBoatData = async () => {
     try {
-      const [boatData, jobsData] = await Promise.all([
+      const [boatData, jobsData, customersData, locationsData] = await Promise.all([
         base44.entities.Boat.filter({ id: boatId }),
-        base44.entities.Job.filter({ boat_id: boatId })
+        base44.entities.Job.filter({ boat_id: boatId }),
+        base44.entities.Customer.list(),
+        base44.entities.Location.list()
       ]);
+      setCustomers(customersData);
+      setLocations(locationsData);
 
       if (boatData.length === 0) {
         setLoading(false);
