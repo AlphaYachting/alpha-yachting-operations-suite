@@ -49,7 +49,7 @@ export default function BoatForm({ boat, customers, locations, preselectedCustom
     setSaving(true);
     try {
       await onSave(formData);
-    } catch (error) {
+    } finally {
       setSaving(false);
     }
   };
