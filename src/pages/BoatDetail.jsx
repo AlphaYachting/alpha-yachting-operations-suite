@@ -27,6 +27,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import BoatDocuments from '@/components/boats/BoatDocuments';
+import BoatForm from '@/components/boats/BoatForm';
 
 export default function BoatDetail() {
   const [searchParams] = useSearchParams();
@@ -41,6 +42,9 @@ export default function BoatDetail() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [locations, setLocations] = useState([]);
 
   useEffect(() => {
     const loadUser = async () => {
