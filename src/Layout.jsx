@@ -147,6 +147,12 @@ export default function Layout({ children, currentPageName }) {
                        currentPageName === 'CustomerBoatDetailSimulate' ||
                        currentPageName === 'CustomerProjectDetailSimulate';
 
+  // Customer role: redirect to CustomerPortal immediately
+  if (user && user.role === 'customer') {
+    window.location.replace('/CustomerPortal');
+    return null;
+  }
+
   if (isMobilePage) {
     return <>{children}</>;
   }
