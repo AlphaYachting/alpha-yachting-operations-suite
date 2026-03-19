@@ -476,7 +476,19 @@ export default function CustomerDetail() {
                         {job.intake_date && (
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(new Date(job.intake_date), 'MMM d, yyyy')}
+                            Start: {format(new Date(job.intake_date), 'dd.MM.yyyy')}
+                          </span>
+                        )}
+                        {job.requested_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Ende: {format(new Date(job.requested_date), 'dd.MM.yyyy')}
+                          </span>
+                        )}
+                        {job.completion_date && (
+                          <span className="flex items-center gap-1 text-emerald-600">
+                            <CheckCircle2 className="h-3 w-3" />
+                            Abgeschlossen: {format(new Date(job.completion_date), 'dd.MM.yyyy')}
                           </span>
                         )}
                       </div>
