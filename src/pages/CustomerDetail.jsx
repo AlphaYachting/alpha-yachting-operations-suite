@@ -483,7 +483,21 @@ export default function CustomerDetail() {
                     <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-semibold text-slate-900">{job.title}</h4>
-                        <Badge className={jobStatusColors[job.status]}>{job.status}</Badge>
+                        <div className="flex items-center gap-2">
+                          {job.attachments?.length > 0 && (
+                            <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                              <Camera className="h-3 w-3" />
+                              {job.attachments.length}
+                            </span>
+                          )}
+                          {(job.internal_notes || job.customer_notes) && (
+                            <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                              <MessageSquare className="h-3 w-3" />
+                              Notizen
+                            </span>
+                          )}
+                          <Badge className={jobStatusColors[job.status]}>{job.status}</Badge>
+                        </div>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-slate-500">
                         {job.job_number && <span>#{job.job_number}</span>}
