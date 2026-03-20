@@ -494,6 +494,21 @@ export default function Projects() {
             ))}
           </SelectContent>
         </Select>
+        <button
+          onClick={() => setWinterstorageOnly(prev => !prev)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors whitespace-nowrap ${
+            winterstorageOnly
+              ? 'bg-cyan-600 text-white border-cyan-700'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          ❄️ Winterstorage
+          {winterstorageOnly && (
+            <span className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded">
+              {filteredProjects.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Projects List */}
