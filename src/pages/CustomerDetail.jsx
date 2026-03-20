@@ -73,6 +73,7 @@ export default function CustomerDetail() {
   const [boats, setBoats] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
+  const [workOrderPhotoCounts, setWorkOrderPhotoCounts] = useState({});
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
