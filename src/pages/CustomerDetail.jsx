@@ -579,10 +579,10 @@ export default function CustomerDetail() {
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-semibold text-slate-900">{wo.title}</h4>
                         <div className="flex items-center gap-2">
-                          {((wo.photos_before?.length || 0) + (wo.photos_after?.length || 0) + (wo.photos_detail?.length || 0)) > 0 && (
+                          {(workOrderPhotoCounts[wo.id] || 0) > 0 && (
                             <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                               <Camera className="h-3 w-3" />
-                              {(wo.photos_before?.length || 0) + (wo.photos_after?.length || 0) + (wo.photos_detail?.length || 0)}
+                              {workOrderPhotoCounts[wo.id]}
                             </span>
                           )}
                           {(wo.work_summary || wo.internal_notes || wo.issues_found || wo.recommendations) && (
