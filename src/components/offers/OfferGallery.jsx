@@ -46,7 +46,10 @@ export default function OfferGallery({ offerId, attachments = [], galleryMeta = 
 
       const newUrls = [];
       for (const file of fileArray) {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        // Process image: fix EXIF orientation + compress before upload
+        const { main, originalName } = await processPhoto(file);
+        const correctedFile = new File([main.blob], originalName, { type: 'image/jpeg' });
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: correctedFile });
         newUrls.push(file_url);
       }
 
