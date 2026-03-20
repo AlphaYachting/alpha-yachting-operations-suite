@@ -431,7 +431,21 @@ export default function CustomerDetail() {
                             {boat.year && `(${boat.year})`}
                           </p>
                         </div>
-                        <Badge variant="outline">{boat.vessel_type}</Badge>
+                        <div className="flex items-center gap-2">
+                          {(boat.images?.length > 0 || boat.photo_url) && (
+                            <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                              <Camera className="h-3 w-3" />
+                              {(boat.images?.length || 0) + (boat.photo_url ? 1 : 0)}
+                            </span>
+                          )}
+                          {(boat.known_issues || boat.systems_notes || boat.access_details) && (
+                            <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                              <FileText className="h-3 w-3" />
+                              Notizen
+                            </span>
+                          )}
+                          <Badge variant="outline">{boat.vessel_type}</Badge>
+                        </div>
                       </div>
                     </div>
                   </Link>
