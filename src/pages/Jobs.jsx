@@ -400,7 +400,7 @@ export default function Projects() {
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
     const matchesPriority = priorityFilter === 'all' || project.priority === priorityFilter;
     const matchesBoat = boatFilter === 'all' || project.boat_id === boatFilter;
-    const matchesWinterstorage = !winterstorageOnly || project.title?.toLowerCase().includes('winterstorage');
+    const matchesWinterstorage = !winterstorageOnly || !project.title?.toLowerCase().includes('winterstorage');
 
     return matchesSearch && matchesStatus && matchesPriority && matchesBoat && matchesFilter && matchesWinterstorage;
   });
