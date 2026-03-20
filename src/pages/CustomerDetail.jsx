@@ -124,6 +124,18 @@ export default function CustomerDetail() {
         const allWorkOrders = await base44.entities.WorkOrder.list();
         const customerWorkOrders = allWorkOrders.filter(wo => jobIds.includes(wo.job_id));
         setWorkOrders(customerWorkOrders);
+
+        // Load photo counts from WorkOrderPhoto entity
+        if (customerWorkOrders.length > 0) {
+          const allPhotos = await base44.entities.WorkOrderPhoto.list();
+          const counts = {};
+          allPhotos.forEach(p => {
+            if (p.work_order_id) {
+              counts[p.work_order_id] = (counts[p.work_order_id] || 0) + 1;
+            }
+          });
+          setWorkOrderPhotoCounts(counts);
+        }
       } else {
         setWorkOrders([]);
       }
