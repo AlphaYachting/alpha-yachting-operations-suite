@@ -563,14 +563,34 @@ export default function CustomerDetail() {
                     <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-semibold text-slate-900">{wo.title}</h4>
-                        <Badge className={woStatusColors[wo.status]}>{wo.status}</Badge>
+                        <div className="flex items-center gap-2">
+                          {((wo.photos_before?.length || 0) + (wo.photos_after?.length || 0) + (wo.photos_detail?.length || 0)) > 0 && (
+                            <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                              <Camera className="h-3 w-3" />
+                              {(wo.photos_before?.length || 0) + (wo.photos_after?.length || 0) + (wo.photos_detail?.length || 0)}
+                            </span>
+                          )}
+                          {(wo.work_summary || wo.internal_notes || wo.issues_found || wo.recommendations) && (
+                            <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                              <MessageSquare className="h-3 w-3" />
+                              Notizen
+                            </span>
+                          )}
+                          {wo.customer_signature_url && (
+                            <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Unterschrift
+                            </span>
+                          )}
+                          <Badge className={woStatusColors[wo.status]}>{wo.status}</Badge>
+                        </div>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-slate-500">
                         {wo.work_order_number && <span>#{wo.work_order_number}</span>}
                         {wo.scheduled_date && (
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(new Date(wo.scheduled_date), 'MMM d, yyyy')}
+                            {format(new Date(wo.scheduled_date), 'dd.MM.yyyy')}
                           </span>
                         )}
                       </div>
