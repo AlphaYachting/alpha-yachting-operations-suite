@@ -347,6 +347,7 @@ export default function JobForm({ job, customers, boats, locations, technicians,
               <SelectItem value="Scheduled Maintenance">Scheduled Maintenance</SelectItem>
               <SelectItem value="Emergency">Emergency</SelectItem>
               <SelectItem value="Refit Project">Refit Project</SelectItem>
+              <SelectItem value="Winter Storage">❄️ Winter Storage</SelectItem>
             </SelectContent>
           </Select>
         </div>
