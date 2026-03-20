@@ -502,7 +502,7 @@ export default function Projects() {
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
           }`}
         >
-          ❄️ Winterstorage
+          ❄️ Winterstorage ausblenden
           {winterstorageOnly && (
             <span className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded">
               {filteredProjects.length}
