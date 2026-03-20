@@ -100,6 +100,7 @@ export default function Projects() {
    const [statusFilter, setStatusFilter] = useState('all');
    const [priorityFilter, setPriorityFilter] = useState('all');
    const [boatFilter, setBoatFilter] = useState('all');
+   const [winterstorageOnly, setWinterstorageOnly] = useState(false);
    const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
 
     // Apply filter from dashboard
