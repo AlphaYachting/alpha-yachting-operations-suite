@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { processPhoto } from '@/components/photos/ImageCompressor';
 
 export default function OfferGallery({ offerId, attachments = [], galleryMeta = {}, onGalleryUpdated }) {
   const [uploading, setUploading] = useState(false);
