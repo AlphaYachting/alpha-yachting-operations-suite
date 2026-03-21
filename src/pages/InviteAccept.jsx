@@ -78,6 +78,11 @@ export default function InviteAccept() {
         } else {
           navigate(createPageUrl('TeamMobileHome'));
         }
+      } else if (result.valid === false) {
+        setStatus('error');
+        setMessage(result.error || 'Zugriff verweigert');
+        setProcessing(false);
+        return;
       } else {
         throw new Error(result.error || 'Fehler beim Aktivieren');
       }
