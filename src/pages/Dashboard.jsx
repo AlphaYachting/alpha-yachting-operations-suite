@@ -60,7 +60,7 @@ const statusColors = {
   Completed: 'bg-emerald-100 text-emerald-700'
 };
 
-export default function Dashboard() {
+function DashboardContent() {
   const [loading, setLoading] = useState(true);
   const [workOrders, setWorkOrders] = useState([]);
   const [jobs, setJobs] = useState([]);
