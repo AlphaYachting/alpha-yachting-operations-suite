@@ -25,16 +25,21 @@ const AuthenticatedApp = () => {
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  // CRITICAL: If not authenticated after loading → redirect to login immediately, return NULL
+  // CRITICAL: If not authenticated → do NOT render anything, just redirect
   if (!isAuthenticated) {
     navigateToLogin();
-    return null; // Return NULL to prevent ANY rendering
+    // Return empty white screen while redirect happens
+    return (
+      <div className="fixed inset-0 bg-white flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   // Handle authentication errors
@@ -42,20 +47,21 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
       navigateToLogin();
-      return null; // Return NULL to prevent ANY rendering
+      return (
+        <div className="fixed inset-0 bg-white flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+        </div>
+      );
     }
   }
 
-  // ONLY render app content if we get here (means user IS authenticated)
-  // Role-based landing page redirect
+  // ONLY render app content if we get here (means user IS 100% authenticated with no errors)
   const getRoleLandingPage = () => {
     if (!user) return mainPageKey;
     const role = user.role;
     if (role === 'technician') return 'MyTasks';
     if (role === 'customer') return 'CustomerPortal';
-    // admin and lead_technician → Dashboard
     return 'Dashboard';
   };
 
