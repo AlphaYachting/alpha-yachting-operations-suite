@@ -91,10 +91,16 @@ Deno.serve(async (req) => {
         from: fromEmail,
         to: email,
         subject: 'Ihre Einladung zur Alpha Yachting App',
-        template: {
-          id: 'alpha-team-app-invitation',
-          variables: { magicLink }
-        }
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png" alt="Alpha Yachting" style="height: 50px; margin-bottom: 20px;" />
+            <h2 style="color: #1e293b;">Sie wurden eingeladen</h2>
+            <p style="color: #475569;">Sie haben eine Einladung zur Alpha Yachting App erhalten. Klicken Sie auf den Button um Ihren Zugang zu aktivieren.</p>
+            <a href="${magicLink}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin: 20px 0;">Einladung annehmen</a>
+            <p style="color: #94a3b8; font-size: 12px;">Oder kopieren Sie diesen Link: ${magicLink}</p>
+            <p style="color: #94a3b8; font-size: 12px;">Dieser Link ist 7 Tage gültig.</p>
+          </div>
+        `
       })
     });
     const emailResult = await emailResponse.json();
