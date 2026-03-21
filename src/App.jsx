@@ -46,24 +46,19 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     }
-    // For any auth error, redirect to login
+    // For any auth error, redirect to login immediately
+    console.log('🔴 REDIRECTING TO LOGIN (auth error)');
     navigateToLogin();
-    return (
-      <div className="fixed inset-0 bg-white flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+    // Return absolutely nothing while redirect happens
+    return null;
   }
 
   // Phase 3: CRITICAL - If not authenticated, redirect immediately
   if (!isAuthenticated || !user) {
-    console.log('🔴 NOT AUTHENTICATED - Redirecting to login');
+    console.log('🔴 NOT AUTHENTICATED - REDIRECTING TO LOGIN');
     navigateToLogin();
-    return (
-      <div className="fixed inset-0 bg-white flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
+    // Return absolutely nothing while redirect happens
+    return null;
   }
 
   // Phase 4: Only render app if 100% authenticated with no errors
