@@ -74,6 +74,8 @@ Deno.serve(async (req) => {
     // Strip any existing protocol prefix to avoid double https://
     const appDomain = rawDomain.replace(/^https?:\/\//, '');
     const magicLink = `https://${appDomain}/InviteAccept?token=${rawToken}`;
+    console.log('✓ Magic link generated:', magicLink);
+    console.log('✓ APP_DOMAIN env:', Deno.env.get('APP_DOMAIN'));
 
     // Send email via Resend using template
     const fromEmail = Deno.env.get('CUSTOM_EMAIL_FROM') || 'onboarding@resend.dev';
