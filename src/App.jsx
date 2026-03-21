@@ -84,21 +84,21 @@ const AuthenticatedApp = () => {
 function App() {
   return (
     <Router>
-      <QueryClientProvider client={queryClientInstance}>
-        {/* InviteAccept route — OUTSIDE AuthProvider, NO layout */}
-        <Routes>
-          <Route path="/InviteAccept" element={<InviteAccept />} />
-          
-          {/* All other routes with Auth */}
-          <Route path="*" element={
+      <Routes>
+        {/* InviteAccept route — OUTSIDE AuthProvider, NO layout, NO QueryClient wrapper */}
+        <Route path="/InviteAccept" element={<InviteAccept />} />
+        
+        {/* All other routes with Auth, QueryClient, and Layout */}
+        <Route path="*" element={
+          <QueryClientProvider client={queryClientInstance}>
             <AuthProvider>
               <NavigationTracker />
               <AuthenticatedApp />
             </AuthProvider>
-          } />
-        </Routes>
-      </QueryClientProvider>
-      <Toaster />
+            <Toaster />
+          </QueryClientProvider>
+        } />
+      </Routes>
     </Router>
   );
 }
