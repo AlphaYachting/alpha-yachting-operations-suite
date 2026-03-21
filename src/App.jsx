@@ -31,10 +31,10 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // If not authenticated after loading → redirect to login immediately
+  // CRITICAL: If not authenticated after loading → redirect to login immediately, return NULL
   if (!isAuthenticated) {
     navigateToLogin();
-    return null;
+    return null; // Return NULL to prevent ANY rendering
   }
 
   // Handle authentication errors
@@ -44,10 +44,11 @@ const AuthenticatedApp = () => {
     } else if (authError.type === 'auth_required') {
       // Redirect to login automatically
       navigateToLogin();
-      return null;
+      return null; // Return NULL to prevent ANY rendering
     }
   }
 
+  // ONLY render app content if we get here (means user IS authenticated)
   // Role-based landing page redirect
   const getRoleLandingPage = () => {
     if (!user) return mainPageKey;
