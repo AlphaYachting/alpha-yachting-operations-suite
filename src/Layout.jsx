@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from './utils';
+import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
 import MobileAppModal from '@/components/mobile/MobileAppModal';
 import SearchIndexManager from '@/components/search/SearchIndexManager';
