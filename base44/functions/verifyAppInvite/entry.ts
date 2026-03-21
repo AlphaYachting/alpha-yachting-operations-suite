@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, role: invite.role });
     }
 
-    return Response.json({ valid: true, role: invite.role, invite_id: invite.id });
+    return Response.json({ valid: true, role: invite.role, invite_id: invite.id, invite_email: invite.email });
 
   } catch (error) {
     console.error('verifyAppInvite error:', error.message);
