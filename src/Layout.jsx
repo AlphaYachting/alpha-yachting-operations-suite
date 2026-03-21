@@ -155,6 +155,15 @@ export default function Layout({ children, currentPageName }) {
                        currentPageName === 'CustomerBoatDetailSimulate' ||
                        currentPageName === 'CustomerProjectDetailSimulate';
 
+  // Wait until auth is loaded before rendering anything
+  if (!authLoaded) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   // Mobile-only roles: redirect away from desktop immediately
   if (user && user.role === 'customer') {
     window.location.replace('/CustomerPortal');
