@@ -106,7 +106,7 @@ const navItems = [
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
-  const { user: authUser, isAuthenticated, isLoadingAuth } = useAuth();
+  const { user: authUser, isAuthenticated, isLoadingAuth, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileAppOpen, setMobileAppOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState(null);
@@ -348,7 +348,7 @@ export default function Layout({ children, currentPageName }) {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
-                  onClick={() => base44.auth.logout()}
+                  onClick={() => logout(true)}
                   className="text-red-600"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
