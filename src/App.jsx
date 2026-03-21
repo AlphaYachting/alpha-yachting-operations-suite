@@ -82,6 +82,21 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+  // Check if this is the InviteAccept route BEFORE any auth/layout is loaded
+  const isInvitePage = window.location.pathname === '/InviteAccept';
+
+  if (isInvitePage) {
+    return (
+      <QueryClientProvider client={queryClientInstance}>
+        <Router>
+          <Routes>
+            <Route path="/InviteAccept" element={<InviteAccept />} />
+          </Routes>
+        </Router>
+        <Toaster />
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <AuthProvider>
