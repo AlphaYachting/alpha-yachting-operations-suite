@@ -51,6 +51,7 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
+import AuthGuard from '@/components/AuthGuard';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -218,9 +219,9 @@ export default function Dashboard() {
     };
   };
 
-  // ACTION REQUIRED: Overdue WorkOrders (excludes active/running statuses)
+  // ACTION REQUIRED: Overdue WorkOrders
   const overdueWorkOrders = workOrders.filter(wo => {
-    if (['Completed', 'Cancelled', 'Draft', 'In Progress', 'Dispatched', 'In Transit'].includes(wo.status)) return false;
+    if (['Completed', 'Cancelled'].includes(wo.status)) return false;
     if (!wo.scheduled_date) return false;
     const schedDate = parseISO(wo.scheduled_date);
     return isPast(schedDate) && !isToday(schedDate);
