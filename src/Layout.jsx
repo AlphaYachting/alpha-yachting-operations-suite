@@ -106,10 +106,16 @@ const navItems = [
 export default function Layout({ children, currentPageName }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState(null);
+  const [authLoaded, setAuthLoaded] = useState(false);
   const [mobileAppOpen, setMobileAppOpen] = useState(false);
-  const [logoUrl, setLogoUrl] = useState(user?.company_logo);
+  const [logoUrl, setLogoUrl] = useState(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
+
+  // Never render layout on InviteAccept page
+  if (location.pathname === '/InviteAccept') {
+    return <>{children}</>;
+  }
 
   useEffect(() => {
     const loadUser = async () => {
@@ -119,6 +125,8 @@ export default function Layout({ children, currentPageName }) {
         setLogoUrl(userData?.company_logo);
       } catch (e) {
         console.log('User not logged in');
+      } finally {
+        setAuthLoaded(true);
       }
     };
     loadUser();
