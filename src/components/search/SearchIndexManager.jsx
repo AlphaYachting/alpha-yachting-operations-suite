@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 
 const SearchIndexContext = createContext(null);
 
@@ -12,12 +13,17 @@ export const useSearchIndex = () => {
 };
 
 export default function SearchIndexManager({ children }) {
+  const { isAuthenticated, user } = useAuth();
   const [searchIndex, setSearchIndex] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadSearchIndex();
-  }, []);
+    if (isAuthenticated && user) {
+      loadSearchIndex();
+    } else {
+      setLoading(false);
+    }
+  }, [isAuthenticated, user]);
 
   const loadSearchIndex = async () => {
     try {
