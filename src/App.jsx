@@ -22,8 +22,17 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated } = useAuth();
 
-  // Show loading spinner while checking app public settings or auth
+  console.log('📊 AuthenticatedApp state:', { 
+    isLoadingAuth, 
+    isLoadingPublicSettings, 
+    isAuthenticated, 
+    hasUser: !!user,
+    authError: authError?.type 
+  });
+
+  // Phase 1: Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
+    console.log('⏳ Still loading auth...');
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
@@ -31,10 +40,14 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // CRITICAL: If not authenticated → do NOT render anything, just redirect
-  if (!isAuthenticated) {
+  // Phase 2: If auth errors exist, handle them first
+  if (authError) {
+    console.log('⚠️ Auth error detected:', authError.type);
+    if (authError.type === 'user_not_registered') {
+      return <UserNotRegisteredError />;
+    }
+    // For any auth error, redirect to login
     navigateToLogin();
-    // Return empty white screen while redirect happens
     return (
       <div className="fixed inset-0 bg-white flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
@@ -42,23 +55,21 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return (
-        <div className="fixed inset-0 bg-white flex items-center justify-center">
-          <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-        </div>
-      );
-    }
+  // Phase 3: CRITICAL - If not authenticated, redirect immediately
+  if (!isAuthenticated || !user) {
+    console.log('🔴 NOT AUTHENTICATED - Redirecting to login');
+    navigateToLogin();
+    return (
+      <div className="fixed inset-0 bg-white flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
-  // ONLY render app content if we get here (means user IS 100% authenticated with no errors)
+  // Phase 4: Only render app if 100% authenticated with no errors
+  console.log('✅ AUTHENTICATED - Rendering app');
+  
   const getRoleLandingPage = () => {
-    if (!user) return mainPageKey;
     const role = user.role;
     if (role === 'technician') return 'MyTasks';
     if (role === 'customer') return 'CustomerPortal';
@@ -68,7 +79,6 @@ const AuthenticatedApp = () => {
   const LandingPage = Pages[getRoleLandingPage()] || MainPage;
   const landingPageName = getRoleLandingPage();
 
-  // Render the main app
   return (
     <Routes>
       <Route path="/" element={
