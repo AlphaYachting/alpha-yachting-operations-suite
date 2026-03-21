@@ -66,72 +66,14 @@ Deno.serve(async (req) => {
     const protocol = 'https';
     const magicLink = `${protocol}://${appDomain}/invite-accept?token=${rawToken}`;
 
-    // Send email via Resend
+    // Send email via Resend using template
     const fromEmail = Deno.env.get('CUSTOM_EMAIL_FROM') || 'onboarding@resend.dev';
-    const emailContent = invite.role === 'CUSTOMER' 
-      ? {
-          subject: 'Accept Your Invitation - Alpha Yachting',
-          body: `Hello,
-
-You have been invited to access your yacht service projects on the Alpha Yachting platform.
-
-ACCEPT YOUR INVITATION:
-${magicLink}
-
-If the link above doesn't work, copy and paste this URL into your browser:
-${magicLink}
-
-IMPORTANT:
-• This link is valid for 7 days
-• You'll need to create a password after accepting
-• Keep this link confidential - don't share it
-
-TROUBLESHOOTING:
-If you cannot access the link, please contact us at info@alpha-yachting.hr
-
-Best regards,
-Alpha Yachting Team
-📧 info@alpha-yachting.hr
-📞 +385 52 757 907`
-        }
-      : {
-          subject: 'Accept Your Team Invitation - Alpha Yachting',
-          body: `Hello,
-
-Welcome to the Alpha Yachting Team! You have been invited to access the technician management platform.
-
-ACCEPT YOUR INVITATION:
-${magicLink}
-
-If the link above doesn't work, copy and paste this URL into your browser:
-${magicLink}
-
-IMPORTANT:
-• This link is valid for 7 days
-• You'll need to create a password after accepting
-• Keep this link confidential - don't share it
-
-ONCE YOU JOIN:
-• View your assigned work orders
-• Manage daily tasks
-• Log work hours and expenses
-• Upload photos and notes
-• Access offline
-
-TROUBLESHOOTING:
-If you cannot access the link, please contact your supervisor.
-
-Best regards,
-Alpha Yachting Management
-📧 info@alpha-yachting.hr
-📞 +385 52 757 907`
-        };
 
     await resend.emails.send({
       from: fromEmail,
       to: invite.email,
-      subject: emailContent.subject,
-      text: emailContent.body
+      template_id: 'alpha-team-app-invitation',
+      template_data: { magicLink }
     });
 
     // Update invite record
