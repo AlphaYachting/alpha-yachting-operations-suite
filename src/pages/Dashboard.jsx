@@ -51,7 +51,6 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
-import AuthGuard from '@/components/AuthGuard';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -60,7 +59,7 @@ const statusColors = {
   Completed: 'bg-emerald-100 text-emerald-700'
 };
 
-function DashboardContent() {
+export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [workOrders, setWorkOrders] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -1231,13 +1230,5 @@ function DashboardContent() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-export default function Dashboard() {
-  return (
-    <AuthGuard>
-      <DashboardContent />
-    </AuthGuard>
   );
 }
