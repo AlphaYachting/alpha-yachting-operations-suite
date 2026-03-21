@@ -147,8 +147,8 @@ export default function Layout({ children, currentPageName }) {
     return <>{children}</>;
   }
 
-  // Wait until auth is loaded before rendering anything
-  if (!authLoaded) {
+  // CRITICAL: Wait for auth to be determined
+  if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
@@ -156,17 +156,17 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // CRITICAL: If no user after auth is loaded, do NOT render layout
-  if (!user) {
+  // CRITICAL: If not authenticated, do NOT render layout at all
+  if (!isAuthenticated || !authUser) {
     return null;
   }
 
-  // Mobile-only roles: redirect away from desktop immediately
-  if (user.role === 'customer') {
+  // Mobile-only roles: redirect away from desktop
+  if (authUser.role === 'customer') {
     window.location.replace('/CustomerPortal');
     return null;
   }
-  if (user.role === 'technician') {
+  if (authUser.role === 'technician') {
     window.location.replace('/TeamMobileHome');
     return null;
   }
