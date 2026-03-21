@@ -63,7 +63,7 @@ export default function InviteAccept() {
     }
 
     const run = async () => {
-      // Check if someone is logged in
+      // Check if someone is logged in (second safety layer)
       let currentUser = null;
       try {
         currentUser = await base44.auth.me();
@@ -74,7 +74,7 @@ export default function InviteAccept() {
       const postLoginFlow = localStorage.getItem('invite_accepted_flow') === 'true';
 
       if (currentUser && !postLoginFlow) {
-        // Someone is logged in but NOT as part of our invite flow → log them out
+        // Still logged in (e.g. async race) → force logout
         localStorage.setItem('invite_token', token);
         base44.auth.logout(window.location.href);
         return;
