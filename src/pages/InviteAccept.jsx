@@ -136,29 +136,6 @@ export default function InviteAccept() {
     run();
   }, []);
 
-  const doAccept = async (token) => {
-    try {
-      const response = await base44.functions.invoke('verifyAppInvite', { token, action: 'accept' });
-      const result = response.data;
-
-      if (result.success) {
-        localStorage.removeItem('invite_token');
-        setInviteRole(result.role);
-        setPhase('done');
-        setTimeout(() => {
-          window.location.href = result.role === 'CUSTOMER' ? '/CustomerPortal' : '/TeamMobileHome';
-        }, 1500);
-      } else {
-        localStorage.removeItem('invite_token');
-        setMessage(result.error || 'Zugriff verweigert. Bitte melden Sie sich mit der richtigen E-Mail-Adresse an.');
-        setPhase('error');
-      }
-    } catch (err) {
-      setMessage(err.message || 'Fehler beim Aktivieren der Einladung.');
-      setPhase('error');
-    }
-  };
-
   const handleLoginAndAccept = () => {
     // Mark that after login we should auto-accept
     localStorage.setItem('invite_accepted_flow', 'true');
