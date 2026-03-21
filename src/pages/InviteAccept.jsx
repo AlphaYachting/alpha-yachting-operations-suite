@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, AlertCircle, Loader2, Smartphone, Ship } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Smartphone, Ship, LogOut } from 'lucide-react';
 
 export default function InviteAccept() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState(null); // 'valid' | 'expired' | 'error' | 'accepted'
+  const [status, setStatus] = useState(null); // 'valid' | 'wrong_user' | 'expired' | 'error' | 'accepted'
   const [inviteRole, setInviteRole] = useState(null);
+  const [inviteEmail, setInviteEmail] = useState(null);
   const [message, setMessage] = useState('');
-  const [user, setUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [rawToken, setRawToken] = useState(null);
 
@@ -21,14 +19,10 @@ export default function InviteAccept() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     setRawToken(token);
-
-    // Check auth state (non-blocking)
-    base44.auth.me().then(setUser).catch(() => setUser(null));
-
-    verifyToken(token);
+    initPage(token);
   }, []);
 
-  const verifyToken = async (token) => {
+  const initPage = async (token) => {
     if (!token) {
       setStatus('error');
       setMessage('Ungültiger Einladungslink');
@@ -36,6 +30,16 @@ export default function InviteAccept() {
       return;
     }
 
+    // Check who is currently logged in (non-blocking)
+    let loggedInUser = null;
+    try {
+      loggedInUser = await base44.auth.me();
+      setCurrentUser(loggedInUser);
+    } catch {
+      loggedInUser = null;
+    }
+
+    // Verify the token
     try {
       const response = await base44.functions.invoke('verifyAppInvite', { token, action: 'open' });
       const result = response.data;
@@ -45,8 +49,15 @@ export default function InviteAccept() {
         setInviteRole(result.role);
         setMessage(result.error);
       } else if (result.valid) {
-        setStatus('valid');
+        setInviteEmail(result.invite_email);
         setInviteRole(result.role);
+
+        // If someone else is logged in → show wrong_user state
+        if (loggedInUser && result.invite_email && loggedInUser.email.toLowerCase() !== result.invite_email.toLowerCase()) {
+          setStatus('wrong_user');
+        } else {
+          setStatus('valid');
+        }
       } else {
         setStatus('error');
         setMessage(result.error || 'Ungültiger Einladungslink');
@@ -60,9 +71,13 @@ export default function InviteAccept() {
     }
   };
 
+  const handleLogoutAndRelogin = () => {
+    // Logout and redirect back to this invite page after login
+    base44.auth.logout(window.location.href);
+  };
+
   const handleAccept = async () => {
-    if (!user) {
-      // Redirect to login with return URL
+    if (!currentUser) {
       base44.auth.redirectToLogin(window.location.href);
       return;
     }
@@ -74,15 +89,14 @@ export default function InviteAccept() {
 
       if (result.success) {
         if (result.role === 'CUSTOMER') {
-          navigate(createPageUrl('CustomerPortal'));
+          window.location.href = '/CustomerPortal';
         } else {
-          navigate(createPageUrl('TeamMobileHome'));
+          window.location.href = '/TeamMobileHome';
         }
       } else if (result.valid === false) {
         setStatus('error');
         setMessage(result.error || 'Zugriff verweigert');
         setProcessing(false);
-        return;
       } else {
         throw new Error(result.error || 'Fehler beim Aktivieren');
       }
@@ -95,7 +109,7 @@ export default function InviteAccept() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4 z-50">
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600 mb-4" />
@@ -107,8 +121,8 @@ export default function InviteAccept() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-4">
+    <div className="fixed inset-0 bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div className="w-full max-w-md space-y-4 my-auto">
         {/* Logo */}
         <div className="text-center mb-6">
           <Ship className="h-12 w-12 mx-auto text-blue-600 mb-2" />
@@ -119,12 +133,36 @@ export default function InviteAccept() {
           <CardHeader>
             <CardTitle className="text-center">
               {status === 'valid' && 'Willkommen bei der Alpha App'}
+              {status === 'wrong_user' && 'Falsche Anmeldung'}
               {status === 'accepted' && 'Bereits aktiviert'}
               {status === 'expired' && 'Einladung abgelaufen'}
               {status === 'error' && 'Ungültige Einladung'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+
+            {/* Wrong user logged in */}
+            {status === 'wrong_user' && (
+              <>
+                <Alert className="bg-amber-50 border-amber-200">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800">
+                    Sie sind als <strong>{currentUser?.email}</strong> angemeldet, aber diese Einladung gilt für <strong>{inviteEmail}</strong>.
+                    <br /><br />
+                    Bitte melden Sie sich ab und mit der richtigen E-Mail-Adresse an.
+                  </AlertDescription>
+                </Alert>
+                <Button
+                  onClick={handleLogoutAndRelogin}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Abmelden & neu anmelden
+                </Button>
+              </>
+            )}
+
+            {/* Valid invite */}
             {status === 'valid' && (
               <>
                 <Alert className="bg-green-50 border-green-200">
@@ -148,7 +186,7 @@ export default function InviteAccept() {
                   </p>
                 )}
 
-                {!user && (
+                {!currentUser && (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
@@ -171,7 +209,7 @@ export default function InviteAccept() {
                 >
                   {processing ? (
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Wird verarbeitet...</>
-                  ) : user ? 'Einladung annehmen' : 'Anmelden & Einladung annehmen'}
+                  ) : currentUser ? 'Einladung annehmen' : 'Anmelden & Einladung annehmen'}
                 </Button>
 
                 {/* Install Instructions */}
@@ -201,7 +239,7 @@ export default function InviteAccept() {
                   <AlertDescription>{message}</AlertDescription>
                 </Alert>
                 <Button
-                  onClick={() => navigate(inviteRole === 'CUSTOMER' ? createPageUrl('CustomerPortal') : createPageUrl('TeamMobileHome'))}
+                  onClick={() => window.location.href = inviteRole === 'CUSTOMER' ? '/CustomerPortal' : '/TeamMobileHome'}
                   className="w-full"
                 >
                   App öffnen
