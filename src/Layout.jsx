@@ -105,33 +105,19 @@ const navItems = [
 ];
 
 export default function Layout({ children, currentPageName }) {
+  const location = useLocation();
+  const { user: authUser, isAuthenticated, isLoadingAuth } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState(null);
-  const [authLoaded, setAuthLoaded] = useState(false);
   const [mobileAppOpen, setMobileAppOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState(null);
   const fileInputRef = useRef(null);
-  const location = useLocation();
 
+  // Sync logo from authenticated user
   useEffect(() => {
-    // Don't load user on invite page
-    if (location.pathname === '/InviteAccept') {
-      setAuthLoaded(true);
-      return;
+    if (authUser?.company_logo) {
+      setLogoUrl(authUser.company_logo);
     }
-    const loadUser = async () => {
-      try {
-        const userData = await base44.auth.me();
-        setUser(userData);
-        setLogoUrl(userData?.company_logo);
-      } catch (e) {
-        console.log('User not logged in');
-      } finally {
-        setAuthLoaded(true);
-      }
-    };
-    loadUser();
-  }, []);
+  }, [authUser]);
 
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
