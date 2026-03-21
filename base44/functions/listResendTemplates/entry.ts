@@ -12,7 +12,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    const result = await resend.templates.list();
+    const response = await fetch('https://api.resend.com/templates', {
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
     console.log('Templates:', JSON.stringify(result));
 
     return Response.json(result);
