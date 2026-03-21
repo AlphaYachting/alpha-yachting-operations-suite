@@ -60,6 +60,7 @@ const statusColors = {
 };
 
 export default function Dashboard() {
+  const { isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [workOrders, setWorkOrders] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -84,8 +85,10 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (isAuthenticated && user) {
+      loadDashboardData();
+    }
+  }, [isAuthenticated, user]);
 
   const loadDashboardData = async () => {
     try {
