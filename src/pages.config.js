@@ -74,7 +74,6 @@ import Inventory from './pages/Inventory';
 import InventoryDashboard from './pages/InventoryDashboard';
 import InventoryExportSchema from './pages/InventoryExportSchema';
 import InventoryImport from './pages/InventoryImport';
-import InviteAccept from './pages/InviteAccept';
 import InvoiceDetail from './pages/InvoiceDetail';
 import Invoices from './pages/Invoices';
 import JobDetail from './pages/JobDetail';
