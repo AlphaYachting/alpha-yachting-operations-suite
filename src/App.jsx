@@ -75,7 +75,6 @@ const AuthenticatedApp = () => {
         />
       ))}
       <Route path="/AIAssistantSettings" element={<LayoutWrapper currentPageName="AIAssistantSettings"><AIAssistantSettings /></LayoutWrapper>} />
-      <Route path="/InviteAccept" element={<InviteAccept />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
