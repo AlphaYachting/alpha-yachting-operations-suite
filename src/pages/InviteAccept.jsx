@@ -19,6 +19,15 @@ export default function InviteAccept() {
   const [phase, setPhase] = useState('init');
   const [inviteRole, setInviteRole] = useState(null);
   const [message, setMessage] = useState('');
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+
+  // Detect in-app browser
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const inApp = /\b(fban|fbav|gsa|instagram|whatsapp|mail|outlook|gmail|thunderbird|promo_manager)\b/i.test(ua) ||
+                 /\b(iphone|ipad|android)\b/i.test(ua) && /\b(mail|inbox|email|message)\b/i.test(ua);
+    setIsInAppBrowser(inApp);
+  }, []);
 
   const doAccept = async (token) => {
     try {
