@@ -183,7 +183,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="h-full flex items-center justify-between gap-4">
             <HeaderSearch />
             <div className="flex items-center gap-3">
-              {user && <NotificationBell userEmail={user.email} />}
+              {authUser && <NotificationBell userEmail={authUser.email} />}
             </div>
           </div>
         </div>
