@@ -78,12 +78,16 @@ Deno.serve(async (req) => {
     const fromEmail = Deno.env.get('CUSTOM_EMAIL_FROM') || 'onboarding@resend.dev';
 
     console.log('→ Sending email via Resend template...');
-    await resend.emails.send({
+    const emailResult = await resend.emails.send({
       from: fromEmail,
       to: email,
-      template_id: 'alpha-team-app-invitation',
-      template_data: { magicLink }
+      subject: 'Ihre Einladung zur Alpha Yachting App',
+      template: {
+        id: 'alpha-team-app-invitation',
+        variables: { magicLink }
+      }
     });
+    console.log('✓ Resend result:', JSON.stringify(emailResult));
     console.log('✓ Email sent successfully');
 
     // Update invite status to SENT
