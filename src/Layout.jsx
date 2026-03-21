@@ -169,12 +169,17 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
+  // CRITICAL: If no user after auth is loaded, do NOT render layout
+  if (!user) {
+    return null;
+  }
+
   // Mobile-only roles: redirect away from desktop immediately
-  if (user && user.role === 'customer') {
+  if (user.role === 'customer') {
     window.location.replace('/CustomerPortal');
     return null;
   }
-  if (user && user.role === 'technician') {
+  if (user.role === 'technician') {
     window.location.replace('/TeamMobileHome');
     return null;
   }
