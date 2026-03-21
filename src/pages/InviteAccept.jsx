@@ -1,29 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-
-// SECURITY: If someone lands on this page, immediately check if logged in and force logout.
-// This runs synchronously before ANY component renders.
-(async () => {
-  if (window.location.pathname !== '/InviteAccept') return;
-  const params = new URLSearchParams(window.location.search);
-  const urlToken = params.get('token');
-  if (urlToken) {
-    localStorage.setItem('invite_token', urlToken);
-    localStorage.removeItem('invite_accepted_flow');
-  }
-  const alreadyInFlow = localStorage.getItem('invite_accepted_flow') === 'true';
-  if (!alreadyInFlow) {
-    try {
-      const user = await base44.auth.me();
-      if (user) {
-        // Someone is logged in — force logout back to this page
-        base44.auth.logout(window.location.href);
-      }
-    } catch {
-      // Not logged in, continue normally
-    }
-  }
-})();
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
