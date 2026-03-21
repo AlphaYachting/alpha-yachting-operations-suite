@@ -62,9 +62,10 @@ Deno.serve(async (req) => {
     const token_hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     // Generate magic link
-    const appDomain = Deno.env.get('APP_DOMAIN') || req.headers.get('host');
-    const protocol = 'https';
-    const magicLink = `${protocol}://${appDomain}/invite-accept?token=${rawToken}`;
+    const rawDomain = Deno.env.get('APP_DOMAIN') || req.headers.get('host') || '';
+    // Strip any existing protocol prefix to avoid double https://
+    const appDomain = rawDomain.replace(/^https?:\/\//, '');
+    const magicLink = `https://${appDomain}/invite-accept?token=${rawToken}`;
 
     // Send email via Resend using template
     const fromEmail = Deno.env.get('CUSTOM_EMAIL_FROM') || 'onboarding@resend.dev';
