@@ -1233,3 +1233,11 @@ function DashboardContent() {
     </div>
   );
 }
+
+export default function Dashboard() {
+  return (
+    <AuthGuard>
+      <DashboardContent />
+    </AuthGuard>
+  );
+}
