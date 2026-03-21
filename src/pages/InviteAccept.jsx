@@ -162,6 +162,15 @@ export default function InviteAccept() {
             {/* Ready to accept — user is NOT logged in */}
             {phase === 'ready' && (
               <>
+                {isInAppBrowser && (
+                  <Alert className="bg-amber-50 border-amber-200">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-800">
+                      <strong>Wichtig:</strong> Öffnen Sie diesen Link bitte in Ihrem Standard-Browser (Chrome, Safari, Firefox), nicht im E-Mail-Programm.
+                      Tippen Sie auf die drei Punkte ⋮ und wählen Sie „In Browser öffnen".
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <Alert className="bg-green-50 border-green-200">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                   <AlertDescription className="text-green-800">
