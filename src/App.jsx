@@ -82,29 +82,29 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+  // CRITICAL: Check for InviteAccept BEFORE anything else renders
+  if (window.location.pathname === '/InviteAccept') {
+    return (
+      <QueryClientProvider client={queryClientInstance}>
+        <InviteAccept />
+        <Toaster />
+      </QueryClientProvider>
+    );
+  }
+
+  // Alle anderen Routes mit Auth & Layout
   return (
-    <Router>
-      <Routes>
-        {/* InviteAccept MUSS völlig isoliert sein - KEIN AuthProvider, KEIN Layout */}
-        <Route path="/InviteAccept" element={
-          <QueryClientProvider client={queryClientInstance}>
-            <InviteAccept />
-            <Toaster />
-          </QueryClientProvider>
-        } />
-        
-        {/* Alles andere mit Auth & Layout */}
-        <Route path="*" element={
-          <AuthProvider>
-            <QueryClientProvider client={queryClientInstance}>
-              <NavigationTracker />
-              <AuthenticatedApp />
-              <Toaster />
-            </QueryClientProvider>
-          </AuthProvider>
-        } />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <QueryClientProvider client={queryClientInstance}>
+        <Router>
+          <NavigationTracker />
+          <Routes>
+            <Route path="*" element={<AuthenticatedApp />} />
+          </Routes>
+        </Router>
+        <Toaster />
+      </QueryClientProvider>
+    </AuthProvider>
   )
 }
 
