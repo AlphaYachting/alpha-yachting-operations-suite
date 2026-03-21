@@ -155,6 +155,11 @@ export default function Layout({ children, currentPageName }) {
                        currentPageName === 'CustomerBoatDetailSimulate' ||
                        currentPageName === 'CustomerProjectDetailSimulate';
 
+  // Never show layout on InviteAccept page
+  if (location.pathname === '/InviteAccept') {
+    return <>{children}</>;
+  }
+
   // Wait until auth is loaded before rendering anything
   if (!authLoaded) {
     return (
