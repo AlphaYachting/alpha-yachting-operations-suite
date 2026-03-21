@@ -152,7 +152,6 @@ export const PAGES = {
     "InventoryDashboard": InventoryDashboard,
     "InventoryExportSchema": InventoryExportSchema,
     "InventoryImport": InventoryImport,
-    "InviteAccept": InviteAccept,
     "InvoiceDetail": InvoiceDetail,
     "Invoices": Invoices,
     "JobDetail": JobDetail,
