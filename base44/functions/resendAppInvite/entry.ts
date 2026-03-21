@@ -72,8 +72,11 @@ Deno.serve(async (req) => {
     await resend.emails.send({
       from: fromEmail,
       to: invite.email,
-      template_id: 'alpha-team-app-invitation',
-      template_data: { magicLink }
+      subject: 'Ihre Einladung zur Alpha Yachting App',
+      template: {
+        id: 'alpha-team-app-invitation',
+        variables: { magicLink }
+      }
     });
 
     // Update invite record
