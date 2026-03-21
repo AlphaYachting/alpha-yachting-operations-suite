@@ -112,12 +112,12 @@ export default function Layout({ children, currentPageName }) {
   const fileInputRef = useRef(null);
   const location = useLocation();
 
-  // Never render layout on InviteAccept page
-  if (location.pathname === '/InviteAccept') {
-    return <>{children}</>;
-  }
-
   useEffect(() => {
+    // Don't load user on invite page
+    if (location.pathname === '/InviteAccept') {
+      setAuthLoaded(true);
+      return;
+    }
     const loadUser = async () => {
       try {
         const userData = await base44.auth.me();
