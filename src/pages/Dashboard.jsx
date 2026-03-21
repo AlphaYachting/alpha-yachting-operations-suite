@@ -1241,3 +1241,6 @@ export default function Dashboard() {
     </AuthGuard>
   );
 }
+
+// Dummy named export für pages.config.js-Kompatibilität
+export { Dashboard as default };
