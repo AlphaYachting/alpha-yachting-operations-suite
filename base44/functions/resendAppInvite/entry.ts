@@ -69,15 +69,26 @@ Deno.serve(async (req) => {
     // Send email via Resend using template
     const fromEmail = Deno.env.get('CUSTOM_EMAIL_FROM') || 'onboarding@resend.dev';
 
-    await resend.emails.send({
-      from: fromEmail,
-      to: invite.email,
-      subject: 'Ihre Einladung zur Alpha Yachting App',
-      template: {
-        id: 'alpha-team-app-invitation',
-        variables: { magicLink }
-      }
+    const emailResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: invite.email,
+        subject: 'Ihre Einladung zur Alpha Yachting App',
+        template: {
+          id: 'alpha-team-app-invitation',
+          variables: { magicLink }
+        }
+      })
     });
+    const emailResult = await emailResponse.json();
+    if (emailResult.error || !emailResult.id) {
+      throw new Error(`Resend error: ${JSON.stringify(emailResult)}`);
+    }
 
     // Update invite record
     const now = new Date().toISOString();
