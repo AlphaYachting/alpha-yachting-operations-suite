@@ -40,7 +40,7 @@ import { CheckCircle2, AlertCircle, Loader2, Smartphone, Ship } from 'lucide-rea
  * localStorage key 'invite_accepted_flow' = 'true' prevents re-logout after returning from login.
  */
 export default function InviteAccept() {
-  const [phase, setPhase] = useState('init'); // init | verifying | ready | accepting | done | already_accepted | error
+  const [phase, setPhase] = useState('init');
   const [inviteRole, setInviteRole] = useState(null);
   const [message, setMessage] = useState('');
 
@@ -48,7 +48,6 @@ export default function InviteAccept() {
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
 
-    // If there's a fresh token in the URL, always save it and restart flow
     if (urlToken) {
       localStorage.setItem('invite_token', urlToken);
       localStorage.removeItem('invite_accepted_flow');
@@ -63,7 +62,7 @@ export default function InviteAccept() {
     }
 
     const run = async () => {
-      // Check if someone is logged in (second safety layer)
+      // Always check auth status first
       let currentUser = null;
       try {
         currentUser = await base44.auth.me();
@@ -74,10 +73,11 @@ export default function InviteAccept() {
       const postLoginFlow = localStorage.getItem('invite_accepted_flow') === 'true';
 
       if (currentUser && !postLoginFlow) {
-        // Still logged in (e.g. async race) → force logout
+        // Someone is logged in → force logout, stay on loading screen until redirect
         localStorage.setItem('invite_token', token);
+        setPhase('init'); // keep showing spinner
         base44.auth.logout(window.location.href);
-        return;
+        return; // page will reload after logout
       }
 
       if (currentUser && postLoginFlow) {
