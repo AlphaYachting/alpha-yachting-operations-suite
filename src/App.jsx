@@ -91,19 +91,21 @@ function App() {
   return (
     <Router>
       <QueryClientProvider client={queryClientInstance}>
-        <Routes>
-          {/* InviteAccept route — OUTSIDE AuthProvider, NO layout, NO QueryClient wrapper */}
-          <Route path="/InviteAccept" element={<InviteAccept />} />
-          
-          {/* All other routes with Auth, QueryClient, and Layout */}
-          <Route path="*" element={
-            <AuthProvider>
-              <NavigationTracker />
-              <AuthenticatedApp />
-            </AuthProvider>
-          } />
-        </Routes>
-        <Toaster />
+        <AuthProvider>
+          <Routes>
+            {/* InviteAccept route — OUTSIDE AuthProvider, NO layout, NO QueryClient wrapper */}
+            <Route path="/InviteAccept" element={<InviteAccept />} />
+            
+            {/* Auth check happens inside AuthenticatedApp before rendering any content */}
+            <Route path="*" element={
+              <>
+                <NavigationTracker />
+                <AuthenticatedApp />
+              </>
+            } />
+          </Routes>
+          <Toaster />
+        </AuthProvider>
       </QueryClientProvider>
     </Router>
   );
