@@ -48,16 +48,14 @@ const AuthenticatedApp = () => {
     }
     // For any auth error, redirect to login immediately
     console.log('🔴 REDIRECTING TO LOGIN (auth error)');
-    navigateToLogin();
-    // Return absolutely nothing while redirect happens
+    setTimeout(() => navigateToLogin(), 0);
     return null;
   }
 
   // Phase 3: CRITICAL - If not authenticated, redirect immediately
   if (!isAuthenticated || !user) {
     console.log('🔴 NOT AUTHENTICATED - REDIRECTING TO LOGIN');
-    navigateToLogin();
-    // Return absolutely nothing while redirect happens
+    setTimeout(() => navigateToLogin(), 0);
     return null;
   }
 
