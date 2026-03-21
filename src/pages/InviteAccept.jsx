@@ -6,19 +6,31 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle2, AlertCircle, Loader2, Smartphone, Ship } from 'lucide-react';
 
 /**
- * SECURITY: This page forces logout of any existing session when opened.
- * The invite token is preserved in localStorage so after fresh login
- * the user lands back here and can accept with the correct account.
+ * SECURITY FLOW:
+ * 1. User opens invite link → token saved to localStorage
+ * 2. If someone is already logged in → immediately logout, return to this page
+ * 3. After logout (nobody logged in), token is verified → user sees "Login & Accept"
+ * 4. User logs in → platform redirects back here
+ * 5. Now logged in + token in localStorage → auto-accept → redirect to app
+ *
+ * localStorage key 'invite_accepted_flow' = 'true' prevents re-logout after returning from login.
  */
 export default function InviteAccept() {
-  const [phase, setPhase] = useState('init'); // 'init' | 'ready' | 'done' | 'error'
+  const [phase, setPhase] = useState('init'); // init | verifying | ready | accepting | done | already_accepted | error
   const [inviteRole, setInviteRole] = useState(null);
   const [message, setMessage] = useState('');
-  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
+    const urlToken = params.get('token');
+
+    // If there's a fresh token in the URL, always save it and restart flow
+    if (urlToken) {
+      localStorage.setItem('invite_token', urlToken);
+      localStorage.removeItem('invite_accepted_flow');
+    }
+
+    const token = urlToken || localStorage.getItem('invite_token');
 
     if (!token) {
       setMessage('Ungültiger Einladungslink – kein Token gefunden.');
@@ -26,34 +38,41 @@ export default function InviteAccept() {
       return;
     }
 
-    // Always store token so it survives logout/login redirect
-    localStorage.setItem('invite_token', token);
-
     const run = async () => {
-      // Step 1: Is anyone logged in? → Force logout immediately
-      let isLoggedIn = false;
+      // Check if someone is logged in
+      let currentUser = null;
       try {
-        await base44.auth.me();
-        isLoggedIn = true;
+        currentUser = await base44.auth.me();
       } catch {
-        isLoggedIn = false;
+        currentUser = null;
       }
 
-      if (isLoggedIn) {
-        // Log out silently, then redirect back to this page (token is in localStorage)
-        // Use window.location to clear the session properly
+      const postLoginFlow = localStorage.getItem('invite_accepted_flow') === 'true';
+
+      if (currentUser && !postLoginFlow) {
+        // Someone is logged in but NOT as part of our invite flow → log them out
+        localStorage.setItem('invite_token', token);
         base44.auth.logout(window.location.href);
-        return; // page will reload after logout
+        return;
       }
 
-      // Step 2: No one logged in → verify token
+      if (currentUser && postLoginFlow) {
+        // User just logged in as part of the invite flow → auto-accept
+        localStorage.removeItem('invite_accepted_flow');
+        setPhase('accepting');
+        await doAccept(token);
+        return;
+      }
+
+      // Nobody logged in → verify token and show UI
+      setPhase('verifying');
       try {
         const response = await base44.functions.invoke('verifyAppInvite', { token, action: 'open' });
         const result = response.data;
 
         if (result.already_accepted) {
-          setPhase('already_accepted');
           setInviteRole(result.role);
+          setPhase('already_accepted');
         } else if (result.valid) {
           setInviteRole(result.role);
           setPhase('ready');
@@ -61,7 +80,7 @@ export default function InviteAccept() {
           setMessage(result.error || 'Ungültiger oder abgelaufener Einladungslink.');
           setPhase('error');
         }
-      } catch (err) {
+      } catch {
         setMessage('Fehler beim Überprüfen des Einladungslinks.');
         setPhase('error');
       }
@@ -70,42 +89,33 @@ export default function InviteAccept() {
     run();
   }, []);
 
-  const handleLoginAndAccept = () => {
-    // Redirect to login; after login the platform returns here (token still in localStorage)
-    base44.auth.redirectToLogin(window.location.href);
-  };
-
-  const handleAcceptAfterLogin = async () => {
-    const token = localStorage.getItem('invite_token');
-    if (!token) {
-      setMessage('Token nicht gefunden. Bitte öffnen Sie den Einladungslink erneut.');
-      setPhase('error');
-      return;
-    }
-
+  const doAccept = async (token) => {
     try {
-      setProcessing(true);
       const response = await base44.functions.invoke('verifyAppInvite', { token, action: 'accept' });
       const result = response.data;
 
       if (result.success) {
         localStorage.removeItem('invite_token');
-        setPhase('done');
         setInviteRole(result.role);
-        // Redirect after short delay
+        setPhase('done');
         setTimeout(() => {
           window.location.href = result.role === 'CUSTOMER' ? '/CustomerPortal' : '/TeamMobileHome';
         }, 1500);
       } else {
+        localStorage.removeItem('invite_token');
         setMessage(result.error || 'Zugriff verweigert. Bitte melden Sie sich mit der richtigen E-Mail-Adresse an.');
         setPhase('error');
       }
     } catch (err) {
       setMessage(err.message || 'Fehler beim Aktivieren der Einladung.');
       setPhase('error');
-    } finally {
-      setProcessing(false);
     }
+  };
+
+  const handleLoginAndAccept = () => {
+    // Mark that after login we should auto-accept
+    localStorage.setItem('invite_accepted_flow', 'true');
+    base44.auth.redirectToLogin(window.location.href);
   };
 
   return (
@@ -120,31 +130,33 @@ export default function InviteAccept() {
         <Card>
           <CardHeader>
             <CardTitle className="text-center text-lg">
-              {phase === 'init' && 'Einladung wird geladen...'}
+              {(phase === 'init' || phase === 'verifying') && 'Einladung wird überprüft...'}
               {phase === 'ready' && 'Willkommen bei der Alpha App'}
+              {phase === 'accepting' && 'Einladung wird aktiviert...'}
               {phase === 'done' && 'Erfolgreich aktiviert!'}
               {phase === 'already_accepted' && 'Bereits aktiviert'}
-              {phase === 'error' && 'Fehler'}
+              {phase === 'error' && 'Einladung ungültig'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
 
-            {/* Loading / logging out */}
-            {phase === 'init' && (
-              <div className="text-center py-4">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600 mb-3" />
-                <p className="text-slate-600 text-sm">Sicherheitsüberprüfung läuft...</p>
+            {/* Loading states */}
+            {(phase === 'init' || phase === 'verifying' || phase === 'accepting') && (
+              <div className="text-center py-6">
+                <Loader2 className="h-10 w-10 animate-spin mx-auto text-blue-600 mb-3" />
+                <p className="text-slate-500 text-sm">
+                  {phase === 'accepting' ? 'Einladung wird aktiviert...' : 'Sicherheitsüberprüfung läuft...'}
+                </p>
               </div>
             )}
 
-            {/* Ready to accept — user is logged out */}
+            {/* Ready to accept — user is NOT logged in */}
             {phase === 'ready' && (
               <>
                 <Alert className="bg-green-50 border-green-200">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                   <AlertDescription className="text-green-800">
-                    Ihre Einladung ist gültig. Bitte melden Sie sich an (oder registrieren Sie sich),
-                    um die Einladung anzunehmen.
+                    Ihre Einladung ist gültig. Bitte melden Sie sich an, um fortzufahren.
                   </AlertDescription>
                 </Alert>
 
@@ -170,36 +182,26 @@ export default function InviteAccept() {
 
                 {/* Install instructions */}
                 <div className="pt-4 border-t border-slate-200">
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-2">
                     <Smartphone className="h-4 w-4 text-slate-500" />
                     <p className="text-sm font-semibold text-slate-700">App auf dem Handy installieren</p>
                   </div>
-                  <div className="space-y-2 text-xs text-slate-600">
-                    <div>
-                      <p className="font-medium">iPhone (Safari):</p>
-                      <p>Teilen → „Zum Home-Bildschirm"</p>
-                    </div>
-                    <div>
-                      <p className="font-medium">Android (Chrome):</p>
-                      <p>Menü → „App installieren" / „Zum Startbildschirm"</p>
-                    </div>
+                  <div className="space-y-1 text-xs text-slate-600">
+                    <p><strong>iPhone:</strong> Teilen → „Zum Home-Bildschirm"</p>
+                    <p><strong>Android:</strong> Menü → „App installieren"</p>
                   </div>
                 </div>
               </>
             )}
 
-            {/* After returning from login — accept button */}
-            {/* NOTE: This state is reached when user comes back after login redirect */}
-            {/* The page reloads → if now logged in AND token in localStorage, we show accept */}
-
             {/* Success */}
             {phase === 'done' && (
               <div className="text-center py-4">
                 <CheckCircle2 className="h-12 w-12 mx-auto text-green-500 mb-3" />
-                <p className="text-slate-700">
+                <p className="text-slate-700 font-medium">
                   {inviteRole === 'CUSTOMER'
-                    ? 'Ihr Zugang zum Kundenportal wurde aktiviert.'
-                    : 'Ihr Zugang zur Team App wurde aktiviert.'}
+                    ? 'Ihr Kundenportal-Zugang wurde aktiviert.'
+                    : 'Ihr Team App-Zugang wurde aktiviert.'}
                 </p>
                 <p className="text-slate-500 text-sm mt-2">Sie werden weitergeleitet...</p>
               </div>
@@ -216,7 +218,7 @@ export default function InviteAccept() {
                 </Alert>
                 <Button
                   className="w-full"
-                  onClick={() => window.location.href = inviteRole === 'CUSTOMER' ? '/CustomerPortal' : '/TeamMobileHome'}
+                  onClick={() => base44.auth.redirectToLogin(inviteRole === 'CUSTOMER' ? '/CustomerPortal' : '/TeamMobileHome')}
                 >
                   Zur App
                 </Button>
