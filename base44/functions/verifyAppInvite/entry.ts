@@ -56,6 +56,14 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Authentication required' }, { status: 401 });
       }
 
+      // SECURITY: Ensure the logged-in user's email matches the invite email
+      if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
+        return Response.json({ 
+          valid: false, 
+          error: 'Diese Einladung gilt nur für ' + invite.email + '. Bitte melden Sie sich mit der richtigen E-Mail-Adresse an.' 
+        }, { status: 403 });
+      }
+
       await base44.asServiceRole.entities.AppInvite.update(invite.id, {
         status: 'ACCEPTED',
         accepted_at: new Date().toISOString()
