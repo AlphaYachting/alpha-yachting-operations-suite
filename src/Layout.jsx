@@ -251,7 +251,7 @@ export default function Layout({ children, currentPageName }) {
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {navItems.filter(item => {
-              const role = user?.role;
+              const role = authUser?.role;
               if (role === 'admin') return true; // admin sees everything
               if (role === 'lead_technician') return item.leadTechAllowed || item.technicianAllowed;
               if (role === 'technician') return item.technicianAllowed;
