@@ -178,6 +178,15 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
 
       if (response.tasks && Array.isArray(response.tasks)) {
         const tasksWithPrices = response.tasks.map(task => {
+          if (task.item_type === 'Chapter') {
+            return {
+              title: task.title,
+              item_type: 'Chapter',
+              quantity: 0,
+              unit_price: 0,
+              total_amount: 0
+            };
+          }
           const unitPrice = (task.unit_price != null && task.unit_price > 0)
             ? task.unit_price
             : defaultUnitPrice;
