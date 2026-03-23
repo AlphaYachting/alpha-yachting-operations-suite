@@ -772,10 +772,15 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
                 }
                 if (item.item_type === 'Chapter') {
                   const colSpan = template.show_vat_column ? 7 : 6;
+                  // Strip leading numbering like "1. ", "2. ", "1) " etc. from title
+                  const chapterTitle = (item.title || '').replace(/^\d+[\.\)]\s*/, '');
                   return `
-                    <tr>
-                      <td colspan="${colSpan}" style="padding: 10px 3px 4px 3px; background-color: #1e293b; color: #ffffff; font-weight: bold; font-size: 11pt; border-radius: 2px; letter-spacing: 0.3px;">
-                        &nbsp;&nbsp;${item.title || ''}
+                    <tr style="page-break-inside: avoid;">
+                      <td style="padding: 0; border: none; height: 12px;" colspan="${colSpan}"></td>
+                    </tr>
+                    <tr style="page-break-inside: avoid;">
+                      <td colspan="${colSpan}" style="padding: 7px 8px 7px 0; background-color: transparent; border-bottom: 2px solid #1e293b; font-weight: bold; font-size: 11pt; color: #1e293b; letter-spacing: 0.2px;">
+                        ${chapterTitle}
                       </td>
                     </tr>
                   `;
