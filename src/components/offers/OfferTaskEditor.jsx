@@ -62,6 +62,20 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
     setShowDialog(true);
   };
 
+  const addChapterHeading = () => {
+    const newHeading = {
+      title: 'Kapitelüberschrift',
+      description: '',
+      item_type: 'Chapter',
+      unit_type: 'Lump Sum',
+      quantity: 0,
+      unit_price: 0,
+      total_amount: 0,
+      is_optional: false,
+    };
+    setTasks([...tasks, newHeading]);
+  };
+
   const openEditTask = (task, index) => {
     setTaskForm(task);
     setEditingTask(index);
