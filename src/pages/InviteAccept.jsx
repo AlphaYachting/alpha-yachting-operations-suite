@@ -86,8 +86,8 @@ export default function InviteAccept() {
       // Always check auth status first
       let currentUser = null;
       try {
-        const isAuth = await base44.auth.isAuthenticated();
-        if (isAuth) currentUser = await base44.auth.me();
+        const isAuth = await publicClient.auth.isAuthenticated();
+        if (isAuth) currentUser = await publicClient.auth.me();
       } catch {
         currentUser = null;
       }
