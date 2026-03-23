@@ -764,20 +764,39 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
             </tr>
           </thead>
           <tbody>
-            ${lineItems.map((item, idx) => `
-              <tr ${item.is_optional ? 'style="opacity: 0.7; background-color: #fffbeb;"' : ''}>
-                <td class="col-index">${idx + 1}</td>
-                <td class="col-description">
-                  <span class="item-title">${item.title || ''}${item.is_optional ? ' <span style="font-size: 8pt; font-weight: bold; color: #92400e; background: #fef3c7; padding: 2px 6px; border-radius: 3px; border: 1px solid #fde68a;">(Optional)</span>' : ''}</span>
-                  ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
-                </td>
-                <td class="col-qty">${(item.quantity || 0).toFixed(2)}</td>
-                <td class="col-unit">${item.unit || '-'}</td>
-                <td class="col-price">${currency}${(item.unit_price || 0).toFixed(2)}</td>
-                ${template.show_vat_column ? `<td class="col-vat">-</td>` : ''}
-                <td class="col-total">${item.is_optional ? '<span style="color: #92400e; font-weight: bold;">Optional</span>' : `${currency}${(item.total_net || 0).toFixed(2)}`}</td>
-              </tr>
-            `).join('')}
+            ${(() => {
+              let rowNum = 0;
+              return lineItems.map((item) => {
+                if (item.item_type === 'Chapter' || item.unit_type === 'Lump Sum' && item.quantity === 0 && item.unit_price === 0 && item.total_net === 0 && item.title) {
+                  // Check more robustly
+                }
+                if (item.item_type === 'Chapter') {
+                  const colSpan = template.show_vat_column ? 7 : 6;
+                  return `
+                    <tr>
+                      <td colspan="${colSpan}" style="padding: 10px 3px 4px 3px; background-color: #1e293b; color: #ffffff; font-weight: bold; font-size: 11pt; border-radius: 2px; letter-spacing: 0.3px;">
+                        &nbsp;&nbsp;${item.title || ''}
+                      </td>
+                    </tr>
+                  `;
+                }
+                rowNum++;
+                return `
+                  <tr ${item.is_optional ? 'style="opacity: 0.7; background-color: #fffbeb;"' : ''}>
+                    <td class="col-index">${rowNum}</td>
+                    <td class="col-description">
+                      <span class="item-title">${item.title || ''}${item.is_optional ? ' <span style="font-size: 8pt; font-weight: bold; color: #92400e; background: #fef3c7; padding: 2px 6px; border-radius: 3px; border: 1px solid #fde68a;">(Optional)</span>' : ''}</span>
+                      ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
+                    </td>
+                    <td class="col-qty">${(item.quantity || 0).toFixed(2)}</td>
+                    <td class="col-unit">${item.unit || '-'}</td>
+                    <td class="col-price">${currency}${(item.unit_price || 0).toFixed(2)}</td>
+                    ${template.show_vat_column ? `<td class="col-vat">-</td>` : ''}
+                    <td class="col-total">${item.is_optional ? '<span style="color: #92400e; font-weight: bold;">Optional</span>' : `${currency}${(item.total_net || 0).toFixed(2)}`}</td>
+                  </tr>
+                `;
+              }).join('');
+            })()}
           </tbody>
         </table>
 
