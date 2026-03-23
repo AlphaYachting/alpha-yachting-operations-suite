@@ -250,7 +250,7 @@ export default function InviteAccept() {
                 </Alert>
                 <Button
                   className="w-full"
-                  onClick={() => base44.auth.redirectToLogin(inviteRole === 'CUSTOMER' ? '/CustomerPortal' : '/TeamMobileHome')}
+                  onClick={() => publicClient.auth.redirectToLogin(inviteRole === 'CUSTOMER' ? '/CustomerPortal' : '/TeamMobileHome')}
                 >
                   Zur App
                 </Button>
