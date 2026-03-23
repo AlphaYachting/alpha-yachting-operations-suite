@@ -89,15 +89,14 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
     } catch (error) {
-      console.error('❌ User auth check failed:', error);
+      console.error('❌ User auth check failed → redirecting to login');
       setUser(null);
       setIsAuthenticated(false);
       setIsLoadingAuth(false);
-      
-      setAuthError({
-        type: 'auth_required',
-        message: 'Authentication required'
-      });
+      // Token is invalid/expired — clear it and redirect immediately
+      localStorage.removeItem('base44_access_token');
+      const returnUrl = window.location.pathname + window.location.search;
+      base44.auth.redirectToLogin(returnUrl);
     }
   };
 
