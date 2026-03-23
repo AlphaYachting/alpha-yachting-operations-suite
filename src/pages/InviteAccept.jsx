@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { createClient } from '@base44/sdk';
+import { appParams } from '@/lib/app-params';
+
+// InviteAccept needs its own client WITHOUT requiresAuth
+// so the flow works before the user is logged in
+const publicClient = createClient({
+  appId: appParams.appId,
+  token: appParams.token,
+  functionsVersion: appParams.functionsVersion,
+  serverUrl: '',
+  requiresAuth: false,
+  appBaseUrl: appParams.appBaseUrl,
+});
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
