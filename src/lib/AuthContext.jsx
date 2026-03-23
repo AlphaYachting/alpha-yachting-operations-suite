@@ -72,12 +72,28 @@ export const AuthProvider = ({ children }) => {
 
   const checkUserAuth = async () => {
     try {
-      console.log('🔐 Checking user auth with token...');
-      const currentUser = await base44.auth.me();
+      console.log('🔐 Checking if authenticated...');
       
-      // CRITICAL: A public app returns an anonymous user without email — treat as not authenticated
+      // First check: is there actually a token at all?
+      const isAuth = await base44.auth.isAuthenticated();
+      console.log('🔑 isAuthenticated:', isAuth);
+      
+      if (!isAuth) {
+        console.error('❌ Not authenticated → redirecting to login');
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoadingAuth(false);
+        const returnUrl = window.location.pathname + window.location.search;
+        base44.auth.redirectToLogin(returnUrl);
+        return;
+      }
+
+      const currentUser = await base44.auth.me();
+      console.log('👤 me() result:', currentUser?.email, '| id:', currentUser?.id);
+      
+      // CRITICAL: must have a real email — anonymous/public users don't
       if (!currentUser?.email) {
-        console.error('❌ No authenticated user (anonymous/empty) → redirecting to login');
+        console.error('❌ No email on user (anonymous) → redirecting to login');
         setUser(null);
         setIsAuthenticated(false);
         setIsLoadingAuth(false);
@@ -87,12 +103,12 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      console.log('✅ User authenticated:', currentUser?.email);
+      console.log('✅ User authenticated:', currentUser.email);
       setUser(currentUser);
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
     } catch (error) {
-      console.error('❌ User auth check failed → redirecting to login');
+      console.error('❌ User auth check failed → redirecting to login', error?.message);
       setUser(null);
       setIsAuthenticated(false);
       setIsLoadingAuth(false);
