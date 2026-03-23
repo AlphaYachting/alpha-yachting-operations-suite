@@ -35,19 +35,9 @@ export const AuthProvider = ({ children }) => {
         
         console.log('✓ App settings loaded');
         
-        // If we have a token, verify user auth
-        if (appParams.token) {
-          console.log('📋 Token found, checking user auth...');
-          await checkUserAuth();
-        } else {
-          console.log('❌ No token found → redirecting to login NOW');
-          setIsAuthenticated(false);
-          setIsLoadingAuth(false);
-          // Redirect immediately — no setTimeout, no React render cycle
-          const returnUrl = window.location.pathname + window.location.search;
-          base44.auth.redirectToLogin(returnUrl);
-          return; // stop further execution
-        }
+        // Always verify user auth (token present or not — public app can still have anonymous session)
+        console.log('📋 Checking user auth...');
+        await checkUserAuth();
         setIsLoadingPublicSettings(false);
       } catch (appError) {
         console.error('❌ App state check failed:', appError);
