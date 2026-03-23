@@ -20,19 +20,10 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <>{children}</>;
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin, user, isAuthenticated } = useAuth();
+  const { isLoadingAuth, authError, navigateToLogin, user, isAuthenticated } = useAuth();
 
-  console.log('📊 AuthenticatedApp state:', { 
-    isLoadingAuth, 
-    isLoadingPublicSettings, 
-    isAuthenticated, 
-    hasUser: !!user,
-    authError: authError?.type 
-  });
-
-  // Phase 1: Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    console.log('⏳ Still loading auth...');
+  // Loading
+  if (isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white">
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
@@ -40,27 +31,16 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Phase 2: If auth errors exist, handle them first
-  if (authError) {
-    console.log('⚠️ Auth error detected:', authError.type);
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    }
-    // For any auth error, redirect to login immediately
-    console.log('🔴 REDIRECTING TO LOGIN (auth error)');
-    navigateToLogin();
-    return null;
+  // Auth error
+  if (authError?.type === 'user_not_registered') {
+    return <UserNotRegisteredError />;
   }
 
-  // Phase 3: CRITICAL - If not authenticated, redirect immediately
+  // Not authenticated → redirect to login
   if (!isAuthenticated || !user) {
-    console.log('🔴 NOT AUTHENTICATED - REDIRECTING TO LOGIN');
     navigateToLogin();
     return null;
   }
-
-  // Phase 4: Only render app if 100% authenticated with no errors
-  console.log('✅ AUTHENTICATED - Rendering app');
   
   const getRoleLandingPage = () => {
     const role = user.role;
