@@ -98,7 +98,7 @@ export default function InviteAccept() {
         // Someone is logged in → force logout, stay on loading screen until redirect
         localStorage.setItem('invite_token', token);
         setPhase('init'); // keep showing spinner
-        base44.auth.logout(window.location.href);
+        publicClient.auth.logout(window.location.href);
         return; // page will reload after logout
       }
 
