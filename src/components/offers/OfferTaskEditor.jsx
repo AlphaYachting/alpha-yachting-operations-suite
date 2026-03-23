@@ -314,7 +314,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                             </div>
                             </div>
                           )}
-                        </Card>
+                        </div>
                         )}
                       </Draggable>
                     );
