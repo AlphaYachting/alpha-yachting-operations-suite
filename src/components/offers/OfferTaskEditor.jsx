@@ -312,9 +312,9 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                                 </Button>
                               </div>
                             </div>
+                            </Card>
+                            )}
                             </div>
-                          )}
-                        </div>
                         )}
                       </Draggable>
                     );
