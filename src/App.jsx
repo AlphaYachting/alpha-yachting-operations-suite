@@ -48,7 +48,7 @@ const AuthenticatedApp = () => {
     }
     // For any auth error, redirect to login immediately
     console.log('🔴 REDIRECTING TO LOGIN (auth error)');
-    setTimeout(() => navigateToLogin(), 0);
+    navigateToLogin();
     return null;
   }
 
