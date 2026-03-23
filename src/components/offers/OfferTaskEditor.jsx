@@ -158,32 +158,32 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                     return (
                       <Draggable key={stableKey} draggableId={stableKey} index={index}>
                         {(provided, snapshot) => (
-                        <Card 
+                        <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           data-task-index={index}
-                          className={`${task.item_type === 'Chapter' ? 'bg-slate-800 border-slate-700' : 'p-4'} ${snapshot.isDragging ? 'shadow-lg' : ''} transition-all`}
+                          className={snapshot.isDragging ? 'shadow-lg' : ''}
                         >
                           {task.item_type === 'Chapter' ? (
-                            /* Chapter Heading Row */
-                            <div className="flex items-center gap-3 px-4 py-3">
+                            /* Chapter Heading Row — clean underline style */
+                            <div className="flex items-center gap-2 pt-4 pb-1 border-b-2 border-slate-800">
                               <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
-                                <GripVertical className="h-5 w-5 text-slate-400" />
+                                <GripVertical className="h-4 w-4 text-slate-400" />
                               </div>
-                              <Heading className="h-5 w-5 text-slate-300 shrink-0" />
+                              <Heading className="h-4 w-4 text-slate-500 shrink-0" />
                               <Input
                                 value={task.title}
                                 onChange={(e) => updateTaskField(index, 'title', e.target.value)}
-                                className="flex-1 h-8 text-base font-bold bg-transparent border-0 border-b border-slate-500 rounded-none text-white placeholder:text-slate-400 focus-visible:ring-0 focus-visible:border-slate-300"
+                                className="flex-1 h-8 text-base font-bold bg-transparent border-0 rounded-none text-slate-900 placeholder:text-slate-400 focus-visible:ring-0 focus-visible:shadow-none p-0"
                                 placeholder="Kapitelüberschrift eingeben..."
                               />
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleDeleteTask(index)}
-                                className="text-slate-400 hover:text-red-400 hover:bg-transparent"
+                                className="text-slate-400 hover:text-red-500 h-7 w-7"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           ) : (
