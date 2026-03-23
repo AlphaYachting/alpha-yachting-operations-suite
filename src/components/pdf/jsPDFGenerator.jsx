@@ -470,7 +470,32 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
   
   // Table rows
   doc.setFont(fontFamily, 'normal');
-  lineItems.forEach((item, idx) => {
+  let rowNum = 0;
+  lineItems.forEach((item) => {
+    const isChapter = item.item_type === 'Chapter';
+
+    if (isChapter) {
+      // Chapter heading row — full-width, bold, underlined
+      const chapterTitle = (item.title || '').replace(/^\d+[\.\)]\s*/, '');
+      checkPageBreak(12);
+      yPos += 4; // small gap before chapter
+      doc.setFont(fontFamily, 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(30, 41, 59);
+      doc.text(chapterTitle, margins.left, yPos);
+      // underline
+      doc.setDrawColor(30, 41, 59);
+      doc.setLineWidth(0.5);
+      doc.line(margins.left, yPos + 1.5, margins.left + contentWidth, yPos + 1.5);
+      yPos += 7;
+      doc.setFont(fontFamily, 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(51, 51, 51);
+      return;
+    }
+
+    rowNum++;
+
     // Calculate required height for this row
     const titleLines = doc.splitTextToSize(item.title || '', colWidths[1] - 4);
     const descSegments = item.description ? parseHtmlToSegments(item.description) : [];
@@ -480,21 +505,19 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     }, 0);
     const requiredHeight = (titleLines.length * 4) + (descLineCount > 0 ? 1.5 : 0) + (descLineCount * 3.8) + 10;
 
-    // Always check for page breaks to prevent overflow
     checkPageBreak(requiredHeight);
 
     xPos = margins.left;
     const rowY = yPos;
     
     // Index
-    doc.text((idx + 1).toString(), xPos + colWidths[0] / 2, rowY, { align: 'center' });
+    doc.text(rowNum.toString(), xPos + colWidths[0] / 2, rowY, { align: 'center' });
     xPos += colWidths[0];
     
     // Description with optional flag
     doc.setFont(fontFamily, 'bold');
     doc.setFontSize(9);
     
-    // Add "OPTIONAL" badge if item is optional
     if (item.is_optional) {
       doc.setFillColor(250, 204, 21);
       doc.setDrawColor(245, 158, 11);
@@ -511,7 +534,6 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     }
     let descY = rowY + (titleLines.length * 4) + 1.5;
     
-    // Add note for optional items
     if (item.is_optional) {
       doc.setFont(fontFamily, 'italic');
       doc.setFontSize(8);
@@ -526,16 +548,12 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
       doc.setFont(fontFamily, 'normal');
       doc.setFontSize(8);
       doc.setTextColor(85, 85, 85);
-
-      // Parse HTML into structured lines with bullet awareness
-      const descSegments = parseHtmlToSegments(item.description);
-      for (const seg of descSegments) {
+      const descSegs = parseHtmlToSegments(item.description);
+      for (const seg of descSegs) {
         const indent = seg.isBullet ? 6 : 2;
         const maxWidth = colWidths[1] - 4 - indent;
         const lines = doc.splitTextToSize(seg.text, maxWidth);
-        if (seg.isBullet) {
-          doc.text('•', xPos + 2, descY);
-        }
+        if (seg.isBullet) doc.text('•', xPos + 2, descY);
         doc.text(lines, xPos + indent, descY);
         descY += lines.length * 3.5;
       }
@@ -545,25 +563,20 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     doc.setFont(fontFamily, 'normal');
     xPos += colWidths[1];
     
-    // Quantity
     doc.text((item.quantity || 0).toFixed(2), xPos + colWidths[2] - 2, rowY, { align: 'right' });
     xPos += colWidths[2];
     
-    // Unit
     doc.text(item.unit || '-', xPos + colWidths[3] / 2, rowY, { align: 'center' });
     xPos += colWidths[3];
     
-    // Unit Price
     doc.text(formatCurrency(item.unit_price), xPos + colWidths[4] - 2, rowY, { align: 'right' });
     xPos += colWidths[4];
     
-    // VAT
     if (template.show_vat_column) {
       doc.text(`${item.tax_rate || 0}%`, xPos + colWidths[5] - 2, rowY, { align: 'right' });
       xPos += colWidths[5];
     }
     
-    // Total
     const totalColIdx = template.show_vat_column ? 6 : 5;
     doc.text(formatCurrency(item.total_gross), xPos + colWidths[totalColIdx] - 2, rowY, { align: 'right' });
     
