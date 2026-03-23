@@ -136,10 +136,16 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
       {tasks.length === 0 ? (
         <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg">
           <p className="text-slate-600 mb-4">No tasks added yet</p>
-          <Button onClick={openNewTask} variant="outline">
-            <Plus className="h-4 w-4 mr-2" />
-            Add First Task
-          </Button>
+          <div className="flex gap-2 justify-center">
+            <Button onClick={openNewTask} variant="outline">
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Task
+            </Button>
+            <Button onClick={addChapterHeading} variant="outline" className="border-slate-700 text-slate-700 hover:bg-slate-800 hover:text-white">
+              <Heading className="h-4 w-4 mr-2" />
+              Kapitel hinzufügen
+            </Button>
+          </div>
         </div>
       ) : (
         <>
