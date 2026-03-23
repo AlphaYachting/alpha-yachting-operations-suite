@@ -44,7 +44,7 @@ export default function InviteAccept() {
 
   const doAccept = async (token) => {
     try {
-      const response = await base44.functions.invoke('verifyAppInvite', { token, action: 'accept' });
+      const response = await publicClient.functions.invoke('verifyAppInvite', { token, action: 'accept' });
       const result = response.data;
 
       if (result.success) {
