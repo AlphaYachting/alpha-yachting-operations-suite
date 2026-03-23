@@ -138,7 +138,7 @@ export default function InviteAccept() {
   const handleLoginAndAccept = () => {
     // Mark that after login we should auto-accept
     localStorage.setItem('invite_accepted_flow', 'true');
-    base44.auth.redirectToLogin(window.location.href);
+    publicClient.auth.redirectToLogin(window.location.href);
   };
 
   return (
