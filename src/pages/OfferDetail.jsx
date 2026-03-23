@@ -836,16 +836,18 @@ Requirements:
   const getPDFLineItems = () => {
     const vatRate = formData.vat_rate || 0;
     return tasks.map((task, index) => {
+      const isChapter = task.item_type === 'Chapter';
       const unit = task.unit_type || 'Hour';
-      const totalNet = task.total_amount || 0;
+      const totalNet = isChapter ? 0 : (task.total_amount || 0);
       return {
         sort_order: task.sequence_order || index,
+        item_type: task.item_type || 'Labor',
         title: task.title,
         description: task.description,
         quantity: task.quantity || 0,
         unit: unit,
         unit_price: task.unit_price || 0,
-        tax_rate: vatRate,
+        tax_rate: isChapter ? 0 : vatRate,
         total_net: totalNet,
         total_tax: 0,
         total_gross: totalNet,
