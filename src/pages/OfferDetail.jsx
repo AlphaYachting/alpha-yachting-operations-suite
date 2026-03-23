@@ -38,6 +38,7 @@ import {
   Briefcase,
   Mail,
   Search,
+  Heading,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import OfferTaskEditor from '@/components/offers/OfferTaskEditor';
