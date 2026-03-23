@@ -115,8 +115,12 @@ Labor task titles describe the work action — use a verb or action phrase.
 ✓ CORRECT: "Kraftstofffilter wechseln", "Antifouling auftragen", "Motoröl wechseln", "Inspektion Motorraum"
 
 ## item_type CLASSIFICATION
+- "Chapter": a section heading to group tasks visually. Use it to divide the offer into logical sections (e.g. "1. Motorservice", "2. Elektrik"). A Chapter has NO price, quantity, or description.
 - "Material": physical products, parts, consumables, oil, filters, paint, antifouling, anodes, belts, hoses, sealants, adhesives, spare parts
 - "Labor": any work performed by a technician — service, inspection, installation, repair, diagnostics, travel, commissioning
+
+## CHAPTER HEADINGS (OPTIONAL)
+If the work involves multiple clearly separate areas (e.g. engine + electrical + rigging), you MAY insert Chapter headings to group them. A Chapter entry has ONLY a title — no quantity, no unit_price, no description.
 
 ## DESCRIPTIONS
 ${detailedExplanations
