@@ -188,7 +188,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                             </div>
                           ) : (
                             /* Normal Task Row */
-                            <div className="p-4">
+                            <Card className="p-4">
                             <div className="flex items-start gap-4">
                               <div 
                                 {...provided.dragHandleProps}
