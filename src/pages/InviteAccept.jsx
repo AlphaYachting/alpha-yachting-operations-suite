@@ -73,14 +73,15 @@ export default function InviteAccept() {
       // Always check auth status first
       let currentUser = null;
       try {
-        currentUser = await base44.auth.me();
+        const isAuth = await base44.auth.isAuthenticated();
+        if (isAuth) currentUser = await base44.auth.me();
       } catch {
         currentUser = null;
       }
 
       const postLoginFlow = localStorage.getItem('invite_accepted_flow') === 'true';
 
-      if (currentUser && !postLoginFlow) {
+      if (currentUser?.email && !postLoginFlow) {
         // Someone is logged in → force logout, stay on loading screen until redirect
         localStorage.setItem('invite_token', token);
         setPhase('init'); // keep showing spinner
