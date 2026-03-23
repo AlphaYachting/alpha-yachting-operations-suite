@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { appParams } from '@/lib/app-params';
 
 const AuthContext = createContext();
 
@@ -8,151 +7,61 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
 
   useEffect(() => {
-    checkAppState();
+    checkAuth();
   }, []);
 
-  const checkAppState = async () => {
+  const checkAuth = async () => {
+    setIsLoadingAuth(true);
+    setAuthError(null);
     try {
-      setIsLoadingPublicSettings(true);
-      setIsLoadingAuth(true);
-      setAuthError(null);
-      setIsAuthenticated(false);
-      
-      console.log('🔍 AUTH CHECK START:', { hasToken: !!appParams.token });
-      
-      // First, check app public settings (with token if available)
-      try {
-        const headers = { 'X-App-Id': appParams.appId };
-        if (appParams.token) headers['Authorization'] = `Bearer ${appParams.token}`;
-        const res = await fetch(`/api/apps/public/prod/public-settings/by-id/${appParams.appId}`, { headers });
-        const publicSettings = res.ok ? await res.json() : null;
-        setAppPublicSettings(publicSettings);
-        
-        console.log('✓ App settings loaded');
-        
-        // Always verify user auth (token present or not — public app can still have anonymous session)
-        console.log('📋 Checking user auth...');
-        await checkUserAuth();
-        setIsLoadingPublicSettings(false);
-      } catch (appError) {
-        console.error('❌ App state check failed:', appError);
-        setIsLoadingPublicSettings(false);
-        setIsLoadingAuth(false);
-        setIsAuthenticated(false);
-        
-        if (appError.status === 403 && appError.data?.extra_data?.reason) {
-          const reason = appError.data.extra_data.reason;
-          setAuthError({
-            type: reason,
-            message: appError.message
-          });
-        } else {
-          setAuthError({
-            type: 'unknown',
-            message: appError.message || 'Failed to load app'
-          });
-        }
-      }
-    } catch (error) {
-      console.error('❌ Unexpected error:', error);
-      setAuthError({
-        type: 'unknown',
-        message: error.message || 'An unexpected error occurred'
-      });
-      setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
-      setIsAuthenticated(false);
-    }
-  };
-
-  const checkUserAuth = async () => {
-    try {
-      console.log('🔐 Checking if authenticated...');
-      
-      // First check: is there actually a token at all?
-      const isAuth = await base44.auth.isAuthenticated();
-      console.log('🔑 isAuthenticated:', isAuth);
-      
-      if (!isAuth) {
-        console.error('❌ Not authenticated → redirecting to login');
-        setUser(null);
-        setIsAuthenticated(false);
-        setIsLoadingAuth(false);
-        const returnUrl = window.location.pathname + window.location.search;
-        base44.auth.redirectToLogin(returnUrl);
-        return;
-      }
-
       const currentUser = await base44.auth.me();
-      console.log('👤 me() result:', currentUser?.email, '| id:', currentUser?.id);
-      
-      // CRITICAL: must have a real email — anonymous/public users don't
-      if (!currentUser?.email) {
-        console.error('❌ No email on user (anonymous) → redirecting to login');
+      if (currentUser?.email) {
+        setUser(currentUser);
+        setIsAuthenticated(true);
+      } else {
         setUser(null);
         setIsAuthenticated(false);
-        setIsLoadingAuth(false);
-        localStorage.removeItem('base44_access_token');
-        const returnUrl = window.location.pathname + window.location.search;
-        base44.auth.redirectToLogin(returnUrl);
-        return;
       }
-
-      console.log('✅ User authenticated:', currentUser.email);
-      setUser(currentUser);
-      setIsAuthenticated(true);
-      setIsLoadingAuth(false);
     } catch (error) {
-      console.error('❌ User auth check failed → redirecting to login', error?.message);
-      setUser(null);
-      setIsAuthenticated(false);
+      if (error?.status === 401 || error?.status === 403) {
+        setUser(null);
+        setIsAuthenticated(false);
+      } else if (error?.data?.extra_data?.reason === 'user_not_registered') {
+        setAuthError({ type: 'user_not_registered' });
+      } else {
+        // Network error, rate limit, etc. — don't redirect, just mark not authenticated
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    } finally {
       setIsLoadingAuth(false);
-      localStorage.removeItem('base44_access_token');
-      const returnUrl = window.location.pathname + window.location.search;
-      base44.auth.redirectToLogin(returnUrl);
     }
   };
 
-  const logout = (shouldRedirect = true) => {
+  const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
-    setAuthError(null);
-    
-    // Clear app state completely
-    setAppPublicSettings(null);
-    
-    if (shouldRedirect) {
-      // Logout and redirect to root (will trigger fresh auth check)
-      base44.auth.logout('/');
-    } else {
-      // Just remove the token without redirect
-      base44.auth.logout();
-    }
+    base44.auth.logout('/');
   };
 
   const navigateToLogin = () => {
-    // Use the SDK's redirectToLogin method
-    // Pass current URL so we return here after login
     const returnUrl = window.location.pathname + window.location.search;
     base44.auth.redirectToLogin(returnUrl);
   };
 
   return (
-    <AuthContext.Provider value={{ 
+    <AuthContext.Provider value={{
       user,
-      isAuthenticated, 
+      isAuthenticated,
       isLoadingAuth,
-      isLoadingPublicSettings,
+      isLoadingPublicSettings: false,
       authError,
-      appPublicSettings,
       logout,
       navigateToLogin,
-      checkAppState
+      checkAppState: checkAuth
     }}>
       {children}
     </AuthContext.Provider>
