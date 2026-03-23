@@ -84,6 +84,19 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔐 Checking user auth with token...');
       const currentUser = await base44.auth.me();
+      
+      // CRITICAL: A public app returns an anonymous user without email — treat as not authenticated
+      if (!currentUser?.email) {
+        console.error('❌ No authenticated user (anonymous/empty) → redirecting to login');
+        setUser(null);
+        setIsAuthenticated(false);
+        setIsLoadingAuth(false);
+        localStorage.removeItem('base44_access_token');
+        const returnUrl = window.location.pathname + window.location.search;
+        base44.auth.redirectToLogin(returnUrl);
+        return;
+      }
+
       console.log('✅ User authenticated:', currentUser?.email);
       setUser(currentUser);
       setIsAuthenticated(true);
@@ -93,7 +106,6 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       setIsLoadingAuth(false);
-      // Token is invalid/expired — clear it and redirect immediately
       localStorage.removeItem('base44_access_token');
       const returnUrl = window.location.pathname + window.location.search;
       base44.auth.redirectToLogin(returnUrl);
