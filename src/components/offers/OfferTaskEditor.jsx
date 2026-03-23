@@ -156,131 +156,158 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           data-task-index={index}
-                          className={`p-4 ${snapshot.isDragging ? 'shadow-lg' : ''} transition-all`}
+                          className={`${task.item_type === 'Chapter' ? 'bg-slate-800 border-slate-700' : 'p-4'} ${snapshot.isDragging ? 'shadow-lg' : ''} transition-all`}
                         >
-                          <div className="flex items-start gap-4">
-                            <div 
-                              {...provided.dragHandleProps}
-                              className="flex flex-col gap-1 cursor-grab active:cursor-grabbing pt-1"
-                            >
-                              <GripVertical className="h-5 w-5 text-slate-400" />
-                            </div>
-                            <div className="flex-1 space-y-3">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <h4 className="font-semibold text-slate-900">{task.title}</h4>
-                                    {task.item_type === 'Material' ? (
-                                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded flex items-center gap-1">
-                                        <Package className="h-3 w-3" />Material
-                                      </span>
-                                    ) : (
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded flex items-center gap-1">
-                                        <Wrench className="h-3 w-3" />Labor
-                                      </span>
-                                    )}
-                                    {task.is_optional && (
-                                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Optional</span>
-                                    )}
-                                  </div>
-                                  {task.description && (
-                                    <div
-                                      className="text-sm text-slate-600 mt-1 prose prose-sm max-w-none"
-                                      dangerouslySetInnerHTML={{ __html: task.description }}
-                                    />
-                                  )}
-                                </div>
+                          {task.item_type === 'Chapter' ? (
+                            /* Chapter Heading Row */
+                            <div className="flex items-center gap-3 px-4 py-3">
+                              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing">
+                                <GripVertical className="h-5 w-5 text-slate-400" />
                               </div>
-                              <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                  <Label className="text-xs text-slate-500">Quantity</Label>
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    min="0"
-                                    value={task.quantity || 0}
-                                    onChange={(e) => updateTaskField(index, 'quantity', parseFloat(e.target.value) || 0)}
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
-                                <div>
-                                  <Label className="text-xs text-slate-500">Unit</Label>
-                                  <Select 
-                                    value={task.unit_type || 'Hour'} 
-                                    onValueChange={(v) => updateTaskField(index, 'unit_type', v)}
-                                  >
-                                    <SelectTrigger className="h-8 text-sm">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {unitOptions.map(unit => (
-                                        <SelectItem key={unit.value} value={unit.value}>
-                                          {unit.display}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div>
-                                  <Label className="text-xs text-slate-500">Price/Unit (€)</Label>
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={task.unit_price || 0}
-                                    onChange={(e) => updateTaskField(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                                    className="h-8 text-sm"
-                                  />
-                                </div>
-                              </div>
-                              <div className="flex justify-between items-center pt-2 border-t">
-                                <div className="flex items-center gap-2">
-                                  <Checkbox
-                                    checked={task.is_optional || false}
-                                    onCheckedChange={(checked) => updateTaskField(index, 'is_optional', checked)}
-                                    id={`optional-${index}`}
-                                  />
-                                  <label htmlFor={`optional-${index}`} className="text-sm text-slate-600 cursor-pointer">
-                                    Optional
-                                  </label>
-                                </div>
-                                <div className="text-right">
-                                  <span className={`text-lg font-bold ${task.is_optional ? 'text-amber-600' : 'text-slate-900'}`}>
-                                    €{((task.quantity || 0) * (task.unit_price || 0)).toFixed(2)}
-                                  </span>
-                                  {task.is_optional && (
-                                    <div className="text-xs text-amber-600">Not in total</div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openEditTask(task, index)}
-                                title="Edit"
-                              >
-                                <Edit className="h-4 w-4 text-slate-600" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDuplicateTask(index)}
-                                title="Duplicate"
-                              >
-                                <Copy className="h-4 w-4 text-blue-500" />
-                              </Button>
+                              <Heading className="h-5 w-5 text-slate-300 shrink-0" />
+                              <Input
+                                value={task.title}
+                                onChange={(e) => updateTaskField(index, 'title', e.target.value)}
+                                className="flex-1 h-8 text-base font-bold bg-transparent border-0 border-b border-slate-500 rounded-none text-white placeholder:text-slate-400 focus-visible:ring-0 focus-visible:border-slate-300"
+                                placeholder="Kapitelüberschrift eingeben..."
+                              />
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleDeleteTask(index)}
-                                title="Delete"
+                                className="text-slate-400 hover:text-red-400 hover:bg-transparent"
                               >
-                                <Trash2 className="h-4 w-4 text-red-600" />
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-                          </div>
+                          ) : (
+                            /* Normal Task Row */
+                            <div className="p-4">
+                            <div className="flex items-start gap-4">
+                              <div 
+                                {...provided.dragHandleProps}
+                                className="flex flex-col gap-1 cursor-grab active:cursor-grabbing pt-1"
+                              >
+                                <GripVertical className="h-5 w-5 text-slate-400" />
+                              </div>
+                              <div className="flex-1 space-y-3">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h4 className="font-semibold text-slate-900">{task.title}</h4>
+                                      {task.item_type === 'Material' ? (
+                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                          <Package className="h-3 w-3" />Material
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded flex items-center gap-1">
+                                          <Wrench className="h-3 w-3" />Labor
+                                        </span>
+                                      )}
+                                      {task.is_optional && (
+                                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Optional</span>
+                                      )}
+                                    </div>
+                                    {task.description && (
+                                      <div
+                                        className="text-sm text-slate-600 mt-1 prose prose-sm max-w-none"
+                                        dangerouslySetInnerHTML={{ __html: task.description }}
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3">
+                                  <div>
+                                    <Label className="text-xs text-slate-500">Quantity</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.1"
+                                      min="0"
+                                      value={task.quantity || 0}
+                                      onChange={(e) => updateTaskField(index, 'quantity', parseFloat(e.target.value) || 0)}
+                                      className="h-8 text-sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs text-slate-500">Unit</Label>
+                                    <Select 
+                                      value={task.unit_type || 'Hour'} 
+                                      onValueChange={(v) => updateTaskField(index, 'unit_type', v)}
+                                    >
+                                      <SelectTrigger className="h-8 text-sm">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {unitOptions.map(unit => (
+                                          <SelectItem key={unit.value} value={unit.value}>
+                                            {unit.display}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs text-slate-500">Price/Unit (€)</Label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={task.unit_price || 0}
+                                      onChange={(e) => updateTaskField(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                                      className="h-8 text-sm"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex justify-between items-center pt-2 border-t">
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      checked={task.is_optional || false}
+                                      onCheckedChange={(checked) => updateTaskField(index, 'is_optional', checked)}
+                                      id={`optional-${index}`}
+                                    />
+                                    <label htmlFor={`optional-${index}`} className="text-sm text-slate-600 cursor-pointer">
+                                      Optional
+                                    </label>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className={`text-lg font-bold ${task.is_optional ? 'text-amber-600' : 'text-slate-900'}`}>
+                                      €{((task.quantity || 0) * (task.unit_price || 0)).toFixed(2)}
+                                    </span>
+                                    {task.is_optional && (
+                                      <div className="text-xs text-amber-600">Not in total</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditTask(task, index)}
+                                  title="Edit"
+                                >
+                                  <Edit className="h-4 w-4 text-slate-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDuplicateTask(index)}
+                                  title="Duplicate"
+                                >
+                                  <Copy className="h-4 w-4 text-blue-500" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDeleteTask(index)}
+                                  title="Delete"
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            </div>
+                            </div>
+                          )}
                         </Card>
                         )}
                       </Draggable>
