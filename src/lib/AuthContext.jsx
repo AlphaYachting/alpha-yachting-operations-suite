@@ -40,9 +40,13 @@ export const AuthProvider = ({ children }) => {
           console.log('📋 Token found, checking user auth...');
           await checkUserAuth();
         } else {
-          console.log('❌ No token found, user NOT authenticated');
+          console.log('❌ No token found → redirecting to login NOW');
           setIsAuthenticated(false);
           setIsLoadingAuth(false);
+          // Redirect immediately — no setTimeout, no React render cycle
+          const returnUrl = window.location.pathname + window.location.search;
+          base44.auth.redirectToLogin(returnUrl);
+          return; // stop further execution
         }
         setIsLoadingPublicSettings(false);
       } catch (appError) {
