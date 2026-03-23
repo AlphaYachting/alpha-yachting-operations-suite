@@ -113,7 +113,7 @@ export default function InviteAccept() {
       // Nobody logged in → verify token and show UI
       setPhase('verifying');
       try {
-        const response = await base44.functions.invoke('verifyAppInvite', { token, action: 'open' });
+        const response = await publicClient.functions.invoke('verifyAppInvite', { token, action: 'open' });
         const result = response.data;
 
         if (result.already_accepted) {
