@@ -7,6 +7,7 @@ export function computeOfferTotals(offer, tasks) {
   // 1. Calculate subtotal (excl tax) from line items
   const subtotal_excl_tax = tasks.reduce((sum, task) => {
     if (task.is_optional) return sum;
+    if (task.item_type === 'Chapter') return sum; // Chapter headings have no price
     return sum + (task.total_amount || 0);
   }, 0);
 
