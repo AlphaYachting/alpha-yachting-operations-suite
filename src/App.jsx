@@ -55,7 +55,7 @@ const AuthenticatedApp = () => {
   // Phase 3: CRITICAL - If not authenticated, redirect immediately
   if (!isAuthenticated || !user) {
     console.log('🔴 NOT AUTHENTICATED - REDIRECTING TO LOGIN');
-    setTimeout(() => navigateToLogin(), 0);
+    navigateToLogin();
     return null;
   }
 
