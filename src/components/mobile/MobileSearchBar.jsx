@@ -1,26 +1,39 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ClipboardList, X } from 'lucide-react';
 
-export default function MobileSearchBar({ onNavigate, workOrders = [] }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [showResults, setShowResults] = useState(false);
-  const inputRef = useRef(null);
-  const containerRef = useRef(null);
-  const navigate = useNavigate();
+export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = [], boats = [] }) {
+  const [index, setIndex] = useState([]);
 
-  // Build index from workOrders prop
-  const index = useMemo(() => {
-    return (workOrders || []).map(wo => ({
-      id: wo.id,
-      type: 'Work Order',
-      name: wo.title || 'Untitled',
-      secondary: wo.work_order_number || '',
-      searchText: [wo.title, wo.work_order_number, wo.description].filter(Boolean).join(' ').toLowerCase(),
-      woId: wo.id,
-    }));
-  }, [workOrders]);
+  // Rebuild index whenever workOrders/jobs/boats data changes
+  useEffect(() => {
+    if (!workOrders || workOrders.length === 0) return;
+
+    const newIndex = workOrders.map(wo => {
+      const job = jobs.find(j => j.id === wo.job_id);
+      const boat = job?.boat_id ? boats.find(b => b.id === job.boat_id) : null;
+      const searchParts = [
+        wo.title,
+        wo.work_order_number,
+        wo.description,
+        job?.title,
+        boat?.vessel_name,
+        boat?.manufacturer,
+        boat?.model,
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      return {
+        id: wo.id,
+        type: 'Work Order',
+        name: wo.title || 'Untitled',
+        secondary: [wo.work_order_number, boat?.vessel_name].filter(Boolean).join(' · '),
+        searchText: searchParts,
+        woId: wo.id,
+      };
+    });
+
+    setIndex(newIndex);
+  }, [workOrders, jobs, boats]);
 
   // Search with debounce
   useEffect(() => {
