@@ -106,11 +106,12 @@ export default function MobileSearchBar({ onNavigate }) {
     setShowResults(false);
     inputRef.current?.blur();
 
+    const woId = item.woId || item.id;
     if (item.type === 'Work Order') {
       if (onNavigate) {
-        onNavigate('workOrderDetail', { woId: item.woId });
+        onNavigate('workOrderDetail', { woId });
       } else {
-        navigate(createPageUrl('TeamWorkOrderDetail') + `?woId=${item.woId}`);
+        navigate(createPageUrl('TeamWorkOrderDetail') + `?woId=${woId}`);
       }
     } else if (item.type === 'Project') {
       // Navigate to job detail (desktop route, best available)
