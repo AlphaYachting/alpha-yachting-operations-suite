@@ -22,6 +22,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const [locations, setLocations] = useState([]);
   const [boats, setBoats] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showPreviewMode, setShowPreviewMode] = useState(false);
@@ -140,12 +141,17 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           boatIds.length > 0 ? base44.entities.Boat.filter({ id: { $in: boatIds } }) : Promise.resolve([])
         ]);
 
+        // Fetch customers
+        const customerIds = [...new Set(jobsData.map(j => j.customer_id).filter(Boolean))];
+        const customersData = customerIds.length > 0 ? await base44.entities.Customer.filter({ id: { $in: customerIds } }) : [];
+
         // Update state with fresh data
         setWorkOrders(workOrdersData || []);
         setJobs(jobsData || []);
         setLocations(locationsData || []);
         setBoats(boatsData || []);
         setTasks(tasksData || []);
+        setCustomers(customersData || []);
 
         // Cache in background (non-blocking)
         Promise.all([
@@ -254,7 +260,10 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           onNavigate={onNavigate}
           workOrders={workOrders}
           jobs={jobs}
-          boats={boats} />
+          boats={boats}
+          locations={locations}
+          customers={customers}
+          tasks={tasks} />
 
         <div className="p-4 space-y-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
@@ -373,7 +382,10 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         onNavigate={onNavigate}
         workOrders={workOrders}
         jobs={jobs}
-        boats={boats} />
+        boats={boats}
+        locations={locations}
+        customers={customers}
+        tasks={tasks} />
 
 
       {/* KPI Mini Cards */}
