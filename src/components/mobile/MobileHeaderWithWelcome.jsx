@@ -1,65 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Settings, Loader2 } from 'lucide-react';
+import React from 'react';
+import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
+import MobileSearchBar from './MobileSearchBar';
 
-export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsClick, showSettings }) {
-  const [welcomeMessage, setWelcomeMessage] = useState('');
-  const [loadingWelcome, setLoadingWelcome] = useState(true);
-  const [config, setConfig] = useState(null);
+export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsClick, showSettings, onNavigate }) {
+  const [config, setConfig] = React.useState(null);
 
-  useEffect(() => {
-    loadConfig();
-    generateDailyWelcome();
-  }, [user]);
-
-  const loadConfig = async () => {
-    try {
-      const configs = await base44.entities.MobileHeaderConfig.list();
-      if (configs.length > 0) {
-        setConfig(configs[0]);
-      }
-    } catch (error) {
-      console.error('Error loading header config:', error);
-    }
-  };
-
-  const generateDailyWelcome = async () => {
-    if (!user) return;
-
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const cacheKey = `welcome_${user.id}_${today}`;
-
-    // Check if we have cached message for today
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      setWelcomeMessage(cached);
-      setLoadingWelcome(false);
-      return;
-    }
-
-    try {
-      const firstName = user.full_name?.split(' ')[0] || 'Team';
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `Generate one short, uplifting sentence (max 12 words) welcoming yacht service technician "${firstName}" to their day. Keep it encouraging and marine-related.`,
-        add_context_from_internet: false
-      });
-
-      const message = response.trim();
-      setWelcomeMessage(message);
-
-      // Cache for the day
-      localStorage.setItem(cacheKey, message);
-    } catch (error) {
-      console.error('Error generating welcome:', error);
-      // Fallback message
-      const firstName = user.full_name?.split(' ')[0] || 'Team';
-      setWelcomeMessage(`Welcome back, ${firstName}! Ready to make waves today?`);
-    } finally {
-      setLoadingWelcome(false);
-    }
-  };
+  React.useEffect(() => {
+    base44.entities.MobileHeaderConfig.list().then(configs => {
+      if (configs.length > 0) setConfig(configs[0]);
+    }).catch(() => {});
+  }, []);
 
   const now = new Date();
   const timeString = format(now, 'HH:mm');
@@ -89,22 +41,17 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
       key="logo"
       src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/6ff1c7bfe_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"
       alt="Alpha Yachting" className="mr-1 mb-1 ml-4 object-contain flex-shrink-0"
-
       style={{ height: layout.logoHeight }} />,
-
-
     time:
     <div key="time" className="flex-1">
         <p className="text-2xl md:text-3xl font-bold font-mono leading-none">{timeString}</p>
         <p className="text-xs text-blue-100">{dateString}</p>
       </div>,
-
     tasks:
     <div key="tasks" className="bg-white/20 px-4 py-1 rounded-full">
         <p className="text-white px-1 text-2xl font-bold md:text-3xl">{taskCount}</p>
         <p className="text-xs text-blue-100">tasks</p>
       </div>
-
   };
 
   const orderedElements = layout.elementsOrder.map((key) => elements[key]);
@@ -148,17 +95,8 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
         }
       </div>
 
-      {/* Welcome Message */}
-      <div className="px-4 md:px-5 pb-4">
-        <div className="bg-white/15 backdrop-blur-sm rounded-lg p-3 border border-white/20 flex items-start gap-2">
-          {loadingWelcome &&
-          <Loader2 className="h-4 w-4 mt-0.5 animate-spin flex-shrink-0" />
-          }
-          <p className="text-white text-sm font-medium leading-relaxed">
-            {welcomeMessage || 'Loading your message...'}
-          </p>
-        </div>
-      </div>
+      {/* Search Bar */}
+      <MobileSearchBar onNavigate={onNavigate} />
     </div>);
 
 }
