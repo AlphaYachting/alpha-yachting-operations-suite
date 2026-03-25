@@ -162,7 +162,7 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
 
       {/* Dropdown results — fixed so it stays visible above keyboard */}
       {showResults && (
-        <div style={dropdownStyle} className="bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden">
+        <div style={{ ...dropdownStyle, maxHeight: '40vh', overflowY: 'auto' }} className="bg-white rounded-xl shadow-2xl border border-slate-100">
           {results.map((item) => {
             const line3 = buildLine3(item);
             return (
