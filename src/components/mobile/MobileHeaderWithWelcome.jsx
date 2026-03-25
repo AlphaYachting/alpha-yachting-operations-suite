@@ -1,6 +1,7 @@
 import React from 'react';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
 import MobileSearchBar from './MobileSearchBar';
 
