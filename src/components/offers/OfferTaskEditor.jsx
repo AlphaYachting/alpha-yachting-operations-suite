@@ -32,6 +32,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
 
   const [taskForm, setTaskForm] = useState({
     title: '',
+    title_hr: '',
     description: '',
     item_type: 'Labor',
     unit_type: 'Hour',
@@ -51,7 +52,8 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
   const openNewTask = () => {
     setTaskForm({
       title: '',
-      description: '',
+      title_hr: '',
+      description: ''
       item_type: 'Labor',
       unit_type: 'Hour',
       quantity: 1,
@@ -200,7 +202,10 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      <h4 className="font-semibold text-slate-900">{task.title}</h4>
+                                      <h4 className="font-semibold text-slate-900">
+                                        {task.title}
+                                        {task.title_hr && <span className="font-normal text-slate-500"> / {task.title_hr}</span>}
+                                      </h4>
                                       {task.item_type === 'Material' ? (
                                         <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded flex items-center gap-1">
                                           <Package className="h-3 w-3" />Material
@@ -353,6 +358,16 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                 value={taskForm.title}
                 onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
                 placeholder="e.g., Engine Service"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                Kroatischer Titel <span className="text-xs text-slate-400 font-normal">(optional, für gesetzliche Anforderungen)</span>
+              </Label>
+              <Input
+                value={taskForm.title_hr || ''}
+                onChange={(e) => setTaskForm({ ...taskForm, title_hr: e.target.value })}
+                placeholder="z.B. Servis motora"
               />
             </div>
             <div className="space-y-2">

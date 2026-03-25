@@ -790,7 +790,7 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
                   <tr ${item.is_optional ? 'style="opacity: 0.7; background-color: #fffbeb;"' : ''}>
                     <td class="col-index">${rowNum}</td>
                     <td class="col-description">
-                      <span class="item-title">${item.title || ''}${item.is_optional ? ' <span style="font-size: 8pt; font-weight: bold; color: #92400e; background: #fef3c7; padding: 2px 6px; border-radius: 3px; border: 1px solid #fde68a;">(Optional)</span>' : ''}</span>
+                      <span class="item-title">${item.title || ''}${item.title_hr ? ` <span style="font-weight: normal; color: #64748b;">/ ${item.title_hr}</span>` : ''}${item.is_optional ? ' <span style="font-size: 8pt; font-weight: bold; color: #92400e; background: #fef3c7; padding: 2px 6px; border-radius: 3px; border: 1px solid #fde68a;">(Optional)</span>' : ''}</span>
                       ${item.description ? `<div class="item-desc">${item.description}</div>` : ''}
                     </td>
                     <td class="col-qty">${(item.quantity || 0).toFixed(2)}</td>
