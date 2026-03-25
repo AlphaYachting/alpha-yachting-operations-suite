@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ClipboardList, X } from 'lucide-react';
 
@@ -9,7 +9,21 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
   const [showResults, setShowResults] = useState(false);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
+  const [dropdownStyle, setDropdownStyle] = useState({});
   const navigate = useNavigate();
+
+  const updateDropdownPosition = useCallback(() => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 4,
+        left: rect.left,
+        right: window.innerWidth - rect.right,
+        zIndex: 9999,
+      });
+    }
+  }, []);
 
   // Rebuild index whenever data changes
   useEffect(() => {
@@ -75,6 +89,11 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
     return () => clearTimeout(timer);
   }, [query, index]);
 
+  // Update dropdown position on show
+  useEffect(() => {
+    if (showResults) updateDropdownPosition();
+  }, [showResults, updateDropdownPosition]);
+
   // Close on outside click
   useEffect(() => {
     const handler = (e) => {
@@ -123,7 +142,8 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setShowResults(true)}
-          className="w-full h-11 pl-10 pr-10 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 text-sm font-medium focus:outline-none focus:bg-white/30 focus:border-white/50 transition-all"
+          style={{ fontSize: '16px' }}
+          className="w-full h-11 pl-10 pr-10 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 font-medium focus:outline-none focus:bg-white/30 focus:border-white/50 transition-all"
         />
         {query.length > 0 && (
           <button
@@ -140,9 +160,9 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
         <p className="text-white/60 text-xs mt-1 pl-1">1 Buchstabe noch...</p>
       )}
 
-      {/* Dropdown results */}
+      {/* Dropdown results — fixed so it stays visible above keyboard */}
       {showResults && (
-        <div className="absolute left-4 right-4 top-full mt-1 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+        <div style={dropdownStyle} className="bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden">
           {results.map((item) => {
             const line3 = buildLine3(item);
             return (
