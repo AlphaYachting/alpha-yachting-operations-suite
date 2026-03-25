@@ -18,7 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus, Trash2, Edit, GripVertical, Tag, Copy, Wrench, Package, Heading } from 'lucide-react';
+import { Plus, Trash2, Edit, GripVertical, Tag, Copy, Wrench, Package, Heading, Languages, Loader2 } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,11 +30,11 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
   const [editingTask, setEditingTask] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
   const [unitOptions, setUnitOptions] = useState(UNIT_OPTIONS);
+  const [translating, setTranslating] = useState(false);
 
   const [taskForm, setTaskForm] = useState({
     title: '',
-    title_hr: '',
-    description: '',
+    description: ''
     item_type: 'Labor',
     unit_type: 'Hour',
     quantity: 1,
@@ -52,8 +53,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
   const openNewTask = () => {
     setTaskForm({
       title: '',
-      title_hr: '',
-      description: '',
+      description: ''
       item_type: 'Labor',
       unit_type: 'Hour',
       quantity: 1,
@@ -82,6 +82,18 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
     setTaskForm(task);
     setEditingTask(index);
     setShowDialog(true);
+  };
+
+  const handleTranslateTitle = async () => {
+    const baseTitle = taskForm.title.split(' / ')[0].trim();
+    if (!baseTitle) return;
+    setTranslating(true);
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt: `Translate this yacht service/product title to Croatian. Return ONLY the Croatian translation, nothing else: "${baseTitle}"`,
+    });
+    const hrTitle = (typeof result === 'string' ? result : result?.text || '').trim().replace(/[".]/g, '');
+    setTaskForm(prev => ({ ...prev, title: `${baseTitle} / ${hrTitle}` }));
+    setTranslating(false);
   };
 
   const handleSaveTask = () => {
@@ -354,21 +366,25 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Task Title *</Label>
-              <Input
-                value={taskForm.title}
-                onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-                placeholder="e.g., Engine Service"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1">
-                Kroatischer Titel <span className="text-xs text-slate-400 font-normal">(optional, für gesetzliche Anforderungen)</span>
-              </Label>
-              <Input
-                value={taskForm.title_hr || ''}
-                onChange={(e) => setTaskForm({ ...taskForm, title_hr: e.target.value })}
-                placeholder="z.B. Servis motora"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={taskForm.title}
+                  onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                  placeholder="e.g., Engine Service"
+                  className="flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={handleTranslateTitle}
+                  disabled={translating || !taskForm.title}
+                  title="Kroatisch anhängen (für FIRA Export)"
+                  className="flex items-center gap-1 px-3 py-2 text-xs rounded-md border border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-40 whitespace-nowrap"
+                >
+                  {translating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
+                  🇭🇷 HR
+                </button>
+              </div>
+              <p className="text-xs text-slate-400">Klick auf 🇭🇷 HR fügt automatisch die kroatische Übersetzung an: "Titel / Prijevod"</p>
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
