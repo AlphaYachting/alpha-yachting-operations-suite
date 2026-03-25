@@ -251,7 +251,8 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           taskCount={0}
           onSettingsClick={() => {}}
           showSettings={false}
-          onNavigate={onNavigate} />
+          onNavigate={onNavigate}
+          workOrders={workOrders} />
 
         <div className="p-4 space-y-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
@@ -367,7 +368,8 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         taskCount={sections.today.length}
         onSettingsClick={() => setShowPreviewMode(!showPreviewMode)}
         showSettings={showPreviewMode}
-        onNavigate={onNavigate} />
+        onNavigate={onNavigate}
+        workOrders={workOrders} />
 
 
       {/* KPI Mini Cards */}
