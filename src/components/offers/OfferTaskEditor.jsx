@@ -53,7 +53,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
     setTaskForm({
       title: '',
       title_hr: '',
-      description: ''
+      description: '',
       item_type: 'Labor',
       unit_type: 'Hour',
       quantity: 1,
