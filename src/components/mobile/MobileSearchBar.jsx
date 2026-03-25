@@ -1,67 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
-import { Search, ClipboardList, Briefcase, X } from 'lucide-react';
-import { offlineStorage } from '@/components/offline/offlineStorage';
+import { Search, ClipboardList, X } from 'lucide-react';
 
-const TYPE_ICONS = {
-  'Work Order': ClipboardList,
-  'Project': Briefcase,
-};
-
-// Build search index from localStorage cache (populated by desktop SearchIndexManager)
-// or fall back to offlineStorage (populated by TeamMobileHome)
-async function buildMobileIndex() {
-  // 1. Try desktop cache first (fast, already indexed)
-  try {
-    const cacheTs = localStorage.getItem('search_index_timestamp');
-    const cacheAge = cacheTs ? Date.now() - parseInt(cacheTs) : Infinity;
-    if (cacheAge < 10 * 60 * 1000) {
-      const cached = localStorage.getItem('search_index');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        // Filter to Work Orders only (no mobile project detail page exists)
-        return parsed.filter(i => i.type === 'Work Order');
-      }
-    }
-  } catch (e) { /* ignore */ }
-
-  // 2. Fall back to offlineStorage
-  try {
-    const [workOrders, jobs] = await Promise.all([
-      offlineStorage.getAllData(offlineStorage.STORES.workOrders),
-      offlineStorage.getAllData(offlineStorage.STORES.jobs),
-    ]);
-
-    const index = [
-      ...(workOrders || []).map(wo => ({
-        id: wo.id,
-        type: 'Work Order',
-        name: wo.title || 'Untitled Work Order',
-        secondary: wo.work_order_number || '',
-        searchText: [wo.title, wo.work_order_number].filter(Boolean).join(' ').toLowerCase(),
-        woId: wo.id,
-      })),
-    ];
-    return index;
-  } catch (e) {
-    return [];
-  }
-}
-
-export default function MobileSearchBar({ onNavigate }) {
+export default function MobileSearchBar({ onNavigate, workOrders = [] }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
-  const [index, setIndex] = useState([]);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
   const navigate = useNavigate();
 
-  // Load index on mount
-  useEffect(() => {
-    buildMobileIndex().then(setIndex);
-  }, []);
+  // Build index from workOrders prop
+  const index = useMemo(() => {
+    return (workOrders || []).map(wo => ({
+      id: wo.id,
+      type: 'Work Order',
+      name: wo.title || 'Untitled',
+      secondary: wo.work_order_number || '',
+      searchText: [wo.title, wo.work_order_number, wo.description].filter(Boolean).join(' ').toLowerCase(),
+      woId: wo.id,
+    }));
+  }, [workOrders]);
 
   // Search with debounce
   useEffect(() => {
