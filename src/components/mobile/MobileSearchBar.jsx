@@ -13,7 +13,10 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
 
   // Rebuild index whenever workOrders/jobs/boats data changes
   useEffect(() => {
-    if (!workOrders || workOrders.length === 0) return;
+    if (!workOrders || workOrders.length === 0) {
+      setIndex([]);
+      return;
+    }
 
     const newIndex = workOrders.map(wo => {
       const job = jobs.find(j => j.id === wo.job_id);
@@ -44,7 +47,7 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
   // Search with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query.length >= 3 && index.length > 0) {
+      if (query.length >= 2 && index.length > 0) {
         const lq = query.toLowerCase();
         const filtered = index
           .filter(item => item.searchText.includes(lq))
@@ -75,13 +78,10 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
     setShowResults(false);
     inputRef.current?.blur();
 
-    const woId = item.woId || item.id;
-    if (item.type === 'Work Order') {
-      if (onNavigate) {
-        onNavigate('workOrderDetail', { woId });
-      } else {
-        navigate('/TeamWorkOrderDetail?woId=' + woId);
-      }
+    if (onNavigate) {
+      onNavigate('workOrderDetail', { woId: item.woId });
+    } else {
+      navigate('/TeamWorkOrderDetail?woId=' + item.woId);
     }
   };
 
@@ -102,7 +102,7 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
           type="text"
           inputMode="search"
           autoComplete="off"
-          placeholder="Auftrag, Projekt suchen..."
+          placeholder="Auftrag suchen..."
           value={query}
           onChange={e => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setShowResults(true)}
@@ -119,35 +119,32 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
       </div>
 
       {/* Hint under input */}
-      {query.length > 0 && query.length < 3 && (
-        <p className="text-white/60 text-xs mt-1 pl-1">{3 - query.length} Buchstaben noch...</p>
+      {query.length > 0 && query.length < 2 && (
+        <p className="text-white/60 text-xs mt-1 pl-1">1 Buchstabe noch...</p>
       )}
 
       {/* Dropdown results */}
       {showResults && (
         <div className="absolute left-4 right-4 top-full mt-1 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
-          {results.map((item) => {
-            const Icon = TYPE_ICONS[item.type] || ClipboardList;
-            return (
-              <button
-                key={`${item.type}-${item.id}`}
-                onMouseDown={e => { e.preventDefault(); handleSelect(item); }}
-                onTouchEnd={e => { e.preventDefault(); handleSelect(item); }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 active:bg-slate-100 border-b border-slate-100 last:border-b-0 text-left transition-colors"
-              >
-                <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-4 w-4 text-blue-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-slate-500 mb-0.5">{item.type}</p>
-                  <p className="font-semibold text-slate-900 text-sm truncate">{item.name}</p>
-                  {item.secondary && (
-                    <p className="text-xs text-slate-400 truncate">{item.secondary}</p>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+          {results.map((item) => (
+            <button
+              key={item.id}
+              onMouseDown={e => { e.preventDefault(); handleSelect(item); }}
+              onTouchEnd={e => { e.preventDefault(); handleSelect(item); }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 active:bg-slate-100 border-b border-slate-100 last:border-b-0 text-left transition-colors"
+            >
+              <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <ClipboardList className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-slate-500 mb-0.5">Work Order</p>
+                <p className="font-semibold text-slate-900 text-sm truncate">{item.name}</p>
+                {item.secondary && (
+                  <p className="text-xs text-slate-400 truncate">{item.secondary}</p>
+                )}
+              </div>
+            </button>
+          ))}
         </div>
       )}
     </div>
