@@ -10,6 +10,7 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
   const inputRef = useRef(null);
   const containerRef = useRef(null);
   const [dropdownStyle, setDropdownStyle] = useState({});
+  const touchStartY = useRef(null);
   const navigate = useNavigate();
 
   const updateDropdownPosition = useCallback(() => {
@@ -167,9 +168,13 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
             const line3 = buildLine3(item);
             return (
               <button
-                key={item.id}
-                onMouseDown={e => { e.preventDefault(); handleSelect(item); }}
-                onTouchEnd={e => { e.preventDefault(); handleSelect(item); }}
+              key={item.id}
+              onMouseDown={e => { e.preventDefault(); handleSelect(item); }}
+              onTouchStart={e => { touchStartY.current = e.touches[0].clientY; }}
+              onTouchEnd={e => {
+                const delta = Math.abs(e.changedTouches[0].clientY - (touchStartY.current ?? 0));
+                if (delta < 10) { e.preventDefault(); handleSelect(item); }
+              }}
                 className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 active:bg-slate-100 border-b border-slate-100 last:border-b-0 text-left transition-colors"
               >
                 <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
