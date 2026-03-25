@@ -34,7 +34,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
 
   const [taskForm, setTaskForm] = useState({
     title: '',
-    description: ''
+    description: '',
     item_type: 'Labor',
     unit_type: 'Hour',
     quantity: 1,
