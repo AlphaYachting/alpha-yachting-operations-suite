@@ -62,7 +62,7 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
         id: wo.id,
         woNumber: wo.work_order_number,
         title: wo.title || 'Untitled',
-        taskName: firstTask?.title || null,
+        jobTitle: job?.title || null,
         customerName,
         locationName: location?.name || null,
         boatName: boat?.vessel_name || null,
@@ -124,10 +124,8 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
     inputRef.current?.focus();
   };
 
-  // Build line 3: customer · location · boat
-  const buildLine3 = (item) => {
-    return [item.customerName, item.locationName, item.boatName].filter(Boolean).join(' · ') || null;
-  };
+  const buildLine1 = (item) =>
+    [item.customerName, item.locationName, item.boatName].filter(Boolean).join(' · ') || null;
 
   return (
     <div ref={containerRef} className="relative px-4 pb-4">
@@ -181,17 +179,17 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
                   <ClipboardList className="h-4 w-4 text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  {/* Line 1: WO Number + Title */}
-                  <p className="font-semibold text-slate-900 text-sm truncate">
+                  {/* Line 1: Customer · Marina · Boat */}
+                  {buildLine1(item) && (
+                    <p className="font-semibold text-slate-900 text-sm truncate">{buildLine1(item)}</p>
+                  )}
+                  {/* Line 2: WO Number · Title */}
+                  <p className="text-xs text-blue-600 truncate mt-0.5">
                     {item.woNumber ? `${item.woNumber} · ${item.title}` : item.title}
                   </p>
-                  {/* Line 2: Task */}
-                  {item.taskName && (
-                    <p className="text-xs text-blue-600 truncate mt-0.5">{item.taskName}</p>
-                  )}
-                  {/* Line 3: Customer · Location · Boat */}
-                  {line3 && (
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{line3}</p>
+                  {/* Line 3: Project (Job title) */}
+                  {item.jobTitle && (
+                    <p className="text-xs text-slate-400 truncate mt-0.5">{item.jobTitle}</p>
                   )}
                 </div>
               </button>
