@@ -163,7 +163,6 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
       {showResults && (
         <div style={{ ...dropdownStyle, maxHeight: '40vh', overflowY: 'auto' }} className="bg-white rounded-xl shadow-2xl border border-slate-100">
           {results.map((item) => {
-            const line3 = buildLine3(item);
             return (
               <button
               key={item.id}
