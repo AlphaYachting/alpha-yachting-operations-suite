@@ -5,7 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
 import MobileSearchBar from './MobileSearchBar';
 
-export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsClick, showSettings, onNavigate }) {
+export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsClick, showSettings, onNavigate, workOrders }) {
   const [config, setConfig] = React.useState(null);
 
   React.useEffect(() => {
@@ -97,7 +97,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
       </div>
 
       {/* Search Bar */}
-      <MobileSearchBar onNavigate={onNavigate} />
+      <MobileSearchBar onNavigate={onNavigate} workOrders={workOrders} />
     </div>);
 
 }
