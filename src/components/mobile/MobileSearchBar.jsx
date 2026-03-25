@@ -20,8 +20,8 @@ async function buildMobileIndex() {
       const cached = localStorage.getItem('search_index');
       if (cached) {
         const parsed = JSON.parse(cached);
-        // Filter to mobile-relevant types only
-        return parsed.filter(i => i.type === 'Work Order' || i.type === 'Project');
+        // Filter to Work Orders only (no mobile project detail page exists)
+        return parsed.filter(i => i.type === 'Work Order');
       }
     }
   } catch (e) { /* ignore */ }
@@ -41,15 +41,6 @@ async function buildMobileIndex() {
         secondary: wo.work_order_number || '',
         searchText: [wo.title, wo.work_order_number].filter(Boolean).join(' ').toLowerCase(),
         woId: wo.id,
-      })),
-      ...(jobs || []).map(j => ({
-        id: j.id,
-        type: 'Project',
-        name: j.title || 'Untitled Project',
-        secondary: j.job_number || '',
-        searchText: [j.title, j.job_number].filter(Boolean).join(' ').toLowerCase(),
-        woId: null, // navigate to job detail
-        jobId: j.id,
       })),
     ];
     return index;
@@ -111,11 +102,8 @@ export default function MobileSearchBar({ onNavigate }) {
       if (onNavigate) {
         onNavigate('workOrderDetail', { woId });
       } else {
-        navigate(createPageUrl('TeamWorkOrderDetail') + `?woId=${woId}`);
+        navigate('/TeamWorkOrderDetail?woId=' + woId);
       }
-    } else if (item.type === 'Project') {
-      // Navigate to job detail (desktop route, best available)
-      navigate(createPageUrl('JobDetail') + `?id=${item.jobId || item.id}`);
     }
   };
 
