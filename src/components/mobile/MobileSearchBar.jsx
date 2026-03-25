@@ -4,6 +4,12 @@ import { Search, ClipboardList, X } from 'lucide-react';
 
 export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = [], boats = [] }) {
   const [index, setIndex] = useState([]);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [showResults, setShowResults] = useState(false);
+  const inputRef = useRef(null);
+  const containerRef = useRef(null);
+  const navigate = useNavigate();
 
   // Rebuild index whenever workOrders/jobs/boats data changes
   useEffect(() => {
