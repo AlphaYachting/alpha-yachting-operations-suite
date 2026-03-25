@@ -843,6 +843,7 @@ Requirements:
         sort_order: task.sequence_order || index,
         item_type: task.item_type || 'Labor',
         title: task.title,
+        title_hr: task.title_hr || null,
         description: task.description,
         quantity: task.quantity || 0,
         unit: unit,
