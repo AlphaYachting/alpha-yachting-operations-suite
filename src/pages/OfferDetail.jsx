@@ -678,9 +678,17 @@ Requirements:
       const orgaTasks = [
         {
           work_order_id: orgaWO.id,
+          title: 'Termine mit Kunden / Marina koordinieren',
+          description: 'Abstimmung aller notwendigen Termine für Liegeplatzzugang, Krantermin, Technikerplanung.',
+          sequence_order: 0,
+          status: 'Not Started',
+          task_stream: 'ORGANIZATION',
+        },
+        {
+          work_order_id: orgaWO.id,
           title: 'Benötigtes Material prüfen & bestellen',
           description: 'Alle Materialien aus dem Angebot auf Lagerbestand prüfen und ggf. bestellen.',
-          sequence_order: 0,
+          sequence_order: 1,
           status: 'Not Started',
           task_stream: 'ORGANIZATION',
         },
@@ -688,18 +696,10 @@ Requirements:
           work_order_id: orgaWO.id,
           title: `[Material] ${task.title}`,
           description: `Menge: ${task.quantity} ${task.unit_type || 'Stk.'}${task.description ? ' – ' + task.description : ''}`,
-          sequence_order: idx + 1,
+          sequence_order: idx + 2,
           status: 'Not Started',
           task_stream: 'ORGANIZATION',
         })),
-        {
-          work_order_id: orgaWO.id,
-          title: 'Termine mit Kunden / Marina koordinieren',
-          description: 'Abstimmung aller notwendigen Termine für Liegeplatzzugang, Krantermin, Technikerplanung.',
-          sequence_order: allMaterialTasks.length + 1,
-          status: 'Not Started',
-          task_stream: 'ORGANIZATION',
-        },
       ];
       await base44.entities.Task.bulkCreate(orgaTasks);
 
