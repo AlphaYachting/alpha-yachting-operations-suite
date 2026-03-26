@@ -35,9 +35,14 @@ export default function LeadsList({
     .sort((a, b) => {
       const aData = a.data || a;
       const bData = b.data || b;
-      const aLost = aData.status === 'Lost' ? 1 : 0;
-      const bLost = bData.status === 'Lost' ? 1 : 0;
-      if (aLost !== bLost) return aLost - bLost;
+      const getPriority = (status) => {
+        if (status === 'Pending' || status === 'Contacted') return 0;
+        if (status === 'Won' || status === 'Converted') return 1;
+        return 2; // Lost, Rejected, etc.
+      };
+      const aPriority = getPriority(aData.status);
+      const bPriority = getPriority(bData.status);
+      if (aPriority !== bPriority) return aPriority - bPriority;
       const aDate = a.created_date || a.data?.created_date;
       const bDate = b.created_date || b.data?.created_date;
       return new Date(bDate) - new Date(aDate);
