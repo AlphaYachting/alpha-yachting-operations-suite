@@ -14,7 +14,7 @@ const iconMap = {
   file: FileText
 };
 
-export default function HeaderSearch() {
+export default function HeaderSearch({ compact = false }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
@@ -107,18 +107,18 @@ export default function HeaderSearch() {
   }, []);
 
   return (
-    <div className="relative w-full max-w-md">
+    <div className={cn("relative w-full", !compact && "max-w-md")}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 text-slate-400", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Search customers, boats, projects..."
+          placeholder={compact ? "Suchen..." : "Search customers, boats, projects..."}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => query.length >= 2 && results.length > 0 && setShowResults(true)}
-          className="pl-9 pr-4"
+          className={cn("pl-8 pr-3", compact && "h-8 text-sm")}
           disabled={loading}
         />
       </div>
