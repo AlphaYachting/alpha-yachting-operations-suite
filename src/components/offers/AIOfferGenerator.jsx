@@ -742,6 +742,28 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
                           : position.unit_price;
                         const displayTotal = displayUnitPrice * position.quantity;
                         
+                        // Chapter rows get special rendering
+                        if (position.item_type === 'Chapter') {
+                          return (
+                            <TableRow key={position.id} className="bg-slate-800">
+                              <TableCell colSpan={9} className="py-2 px-4">
+                                <span className="text-white font-bold text-sm tracking-wide">{position.title}</span>
+                              </TableCell>
+                              <TableCell className="text-center sticky right-0 bg-slate-800 border-l border-slate-600">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeletePosition(position.id)}
+                                  className="h-7 w-7 p-0 text-red-300 hover:text-red-400 hover:bg-slate-700"
+                                  title="Delete Chapter"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+
                         return (
                         <TableRow key={position.id} className="hover:bg-slate-50">
                           <TableCell className="align-top">
