@@ -356,13 +356,16 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
 
       {/* Task Edit Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-xl flex flex-col max-h-[90vh] p-0">
+          <div className="px-6 pt-6 pb-4 border-b shrink-0">
           <DialogHeader>
             <DialogTitle>{editingTask !== null ? 'Edit Task' : 'New Task'}</DialogTitle>
             <DialogDescription>
               Define the task details, hours, and rate
             </DialogDescription>
           </DialogHeader>
+          </div>
+          <div className="overflow-y-auto flex-1 px-6 py-4">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Task Title *</Label>
@@ -486,7 +489,8 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-3 mt-4">
+          </div>
+          <div className="flex justify-end gap-3 px-6 py-4 border-t shrink-0">
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               Cancel
             </Button>
