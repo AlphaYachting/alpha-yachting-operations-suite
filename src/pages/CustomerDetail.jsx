@@ -492,7 +492,7 @@ export default function CustomerDetail() {
             <p className="text-slate-500 text-center py-8">No projects yet</p>
           ) : (
             <div className="space-y-3">
-              {jobs.slice(0, 5).map(job => (
+              {jobs.map(job => (
                 <div key={job.id} className="flex items-center gap-2">
                   <Link to={createPageUrl('JobDetail') + `?id=${job.id}`} className="flex-1">
                     <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
@@ -547,13 +547,6 @@ export default function CustomerDetail() {
                   </Button>
                 </div>
               ))}
-              {jobs.length > 5 && (
-                <Link to={createPageUrl('Jobs') + `?customer=${customerId}`}>
-                  <Button variant="outline" className="w-full">
-                    View All {jobs.length} Projects
-                  </Button>
-                </Link>
-              )}
             </div>
           )}
         </CardContent>
