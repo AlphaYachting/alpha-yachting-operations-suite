@@ -376,7 +376,7 @@ export default function MyTasks() {
         <div className="space-y-4">
           {sortedBoatGroups.map(([boatId, boatTasks]) => {
             const boat = boatMap[boatId];
-            const isExpanded = expandedBoats[boatId] !== false; // Default expanded
+            const isExpanded = expandedBoats[boatId] === true; // Default collapsed
             
             // Get boat context
             const firstTask = boatTasks[0];
