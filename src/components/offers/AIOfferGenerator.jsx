@@ -277,7 +277,7 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
             items: {
               type: 'object',
               properties: {
-                title: { type: 'string' },
+                title: { type: 'string', description: 'For Chapter items: use ONLY the short section name (e.g. "Motor & Technik", "Elektrik & Navigation"). Do NOT include document title suffixes like "– ANGEBOT", "– KALKULATION", "– Leistungsumfang", or phase prefixes like "PHASE 1 –". Strip everything except the core topic name.' },
                 description: { type: 'string' },
                 item_type: { type: 'string', enum: ['Labor', 'Material', 'Chapter'], description: 'Chapter = TOP-LEVEL section heading only (e.g. "Motor & Technik", "Unterwasserschiff & Service", "Navigation & Elektronik", "Decksausrüstung", "Pflege & Werterhalt", "Diverses / Innen & Sicherheit"). These are the MAIN chapters of the document. Do NOT create Chapter entries for sub-phases (PHASE 1, PHASE 2, PHASE 3), sub-sections (a, b), or headings that describe work scope (Leistungsumfang, Kalkulation, etc.). Only create ONE Chapter per top-level section. Material = physical part/product/consumable. Labor = any service work performed.' },
                 quantity: { type: 'number' },
