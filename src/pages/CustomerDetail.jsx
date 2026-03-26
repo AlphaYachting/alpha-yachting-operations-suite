@@ -559,20 +559,20 @@ export default function CustomerDetail() {
         </CardContent>
       </Card>
 
-      {/* Recent Work Orders */}
+      {/* Open Work Orders */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" />
-            Work Orders ({workOrders.length})
+            Offene Work Orders ({workOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status)).length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {workOrders.length === 0 ? (
-            <p className="text-slate-500 text-center py-8">No work orders yet</p>
+          {workOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status)).length === 0 ? (
+            <p className="text-slate-500 text-center py-8">Keine offenen Work Orders</p>
           ) : (
             <div className="space-y-3">
-              {workOrders.slice(0, 5).map(wo => (
+              {workOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status)).map(wo => (
                 <div key={wo.id} className="flex items-center gap-2">
                   <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`} className="flex-1">
                     <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
@@ -621,13 +621,7 @@ export default function CustomerDetail() {
                   </Button>
                 </div>
               ))}
-              {workOrders.length > 5 && (
-                <Link to={createPageUrl('WorkOrders')}>
-                  <Button variant="outline" className="w-full">
-                    View All {workOrders.length} Work Orders
-                  </Button>
-                </Link>
-              )}
+
             </div>
           )}
         </CardContent>
