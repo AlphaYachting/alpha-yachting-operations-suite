@@ -33,6 +33,11 @@ export default function LeadsList({
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
+      const aData = a.data || a;
+      const bData = b.data || b;
+      const aLost = aData.status === 'Lost' ? 1 : 0;
+      const bLost = bData.status === 'Lost' ? 1 : 0;
+      if (aLost !== bLost) return aLost - bLost;
       const aDate = a.created_date || a.data?.created_date;
       const bDate = b.created_date || b.data?.created_date;
       return new Date(bDate) - new Date(aDate);
