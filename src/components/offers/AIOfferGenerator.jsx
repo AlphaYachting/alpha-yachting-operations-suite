@@ -279,6 +279,7 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
               properties: {
                 title: { type: 'string' },
                 description: { type: 'string' },
+                item_type: { type: 'string', enum: ['Labor', 'Material', 'Chapter'], description: 'Chapter = section heading with no price (e.g. "1. Motorservice", "Elektrik"), Material = physical part/product, Labor = service work' },
                 quantity: { type: 'number' },
                 unit: { type: 'string' },
                 unit_price_raw: { type: 'string' },
@@ -316,11 +317,31 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
 
       // Normalize positions with price parsing
       const normalizedPositions = positions.map((pos, idx) => {
+        const isChapter = pos.item_type === 'Chapter';
+        if (isChapter) {
+          return {
+            id: `extracted-${idx}`,
+            title: pos.title || 'Chapter',
+            description: '',
+            item_type: 'Chapter',
+            quantity: 0,
+            unit: '',
+            group: '',
+            source_excerpt: '',
+            confidence: 'High',
+            unit_price: 0,
+            total_amount: 0,
+            price_confidence: 'None',
+            price_source: 'chapter',
+            currency_detected: null
+          };
+        }
         const processed = processExtractedPosition(pos, defaultUnitPrice);
         return {
           id: `extracted-${idx}`,
           title: pos.title || 'Untitled Position',
           description: pos.description || '',
+          item_type: pos.item_type || 'Labor',
           quantity: pos.quantity || 1,
           unit: pos.unit || 'Piece',
           group: pos.group || '',
@@ -381,6 +402,17 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
     }
 
     const tasksToCreate = extractedPositions.map(pos => {
+      if (pos.item_type === 'Chapter') {
+        return {
+          title: pos.title,
+          description: '',
+          item_type: 'Chapter',
+          unit_type: 'Lump Sum',
+          quantity: 0,
+          unit_price: 0,
+          total_amount: 0
+        };
+      }
       // Apply markup if enabled
       const finalUnitPrice = markupEnabled 
         ? calculateFinalPrice(pos.unit_price, markupPercent, rounding)
@@ -389,6 +421,7 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
       return {
         title: pos.title,
         description: pos.description,
+        item_type: pos.item_type || 'Labor',
         quantity: pos.quantity,
         unit_type: pos.unit,
         unit_price: finalUnitPrice,
