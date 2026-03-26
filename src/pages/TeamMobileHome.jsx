@@ -29,6 +29,11 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const [previewTechnicianName, setPreviewTechnicianName] = useState(null);
   const [resolvedTechnicianId, setResolvedTechnicianId] = useState(null);
   const [displayUser, setDisplayUser] = useState(null);
+  const [allSearchWorkOrders, setAllSearchWorkOrders] = useState([]);
+  const [allSearchJobs, setAllSearchJobs] = useState([]);
+  const [allSearchBoats, setAllSearchBoats] = useState([]);
+  const [allSearchLocations, setAllSearchLocations] = useState([]);
+  const [allSearchCustomers, setAllSearchCustomers] = useState([]);
 
   useEffect(() => {
     // Monitor connection status
@@ -152,6 +157,22 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         setBoats(boatsData || []);
         setTasks(tasksData || []);
         setCustomers(customersData || []);
+
+        // For admin users: load ALL work orders for global search
+        if (currentUser?.role === 'admin' || currentUser?.role === 'lead_technician') {
+          const [allWOs, allJs, allBs, allLs, allCs] = await Promise.all([
+            base44.entities.WorkOrder.list('-created_date', 500),
+            base44.entities.Job.list('-created_date', 500),
+            base44.entities.Boat.list('-created_date', 200),
+            base44.entities.Location.list('-created_date', 200),
+            base44.entities.Customer.list('-created_date', 200),
+          ]);
+          setAllSearchWorkOrders(allWOs || []);
+          setAllSearchJobs(allJs || []);
+          setAllSearchBoats(allBs || []);
+          setAllSearchLocations(allLs || []);
+          setAllSearchCustomers(allCs || []);
+        }
 
         // Cache in background (non-blocking)
         Promise.all([
@@ -380,11 +401,11 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         onSettingsClick={() => setShowPreviewMode(!showPreviewMode)}
         showSettings={showPreviewMode}
         onNavigate={onNavigate}
-        workOrders={workOrders}
-        jobs={jobs}
-        boats={boats}
-        locations={locations}
-        customers={customers}
+        workOrders={allSearchWorkOrders.length > 0 ? allSearchWorkOrders : workOrders}
+        jobs={allSearchJobs.length > 0 ? allSearchJobs : jobs}
+        boats={allSearchBoats.length > 0 ? allSearchBoats : boats}
+        locations={allSearchLocations.length > 0 ? allSearchLocations : locations}
+        customers={allSearchCustomers.length > 0 ? allSearchCustomers : customers}
         tasks={tasks} />
 
 

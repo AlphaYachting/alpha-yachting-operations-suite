@@ -189,18 +189,14 @@ export default function Layout({ children, currentPageName }) {
         </div>
 
         {/* Mobile Header */}
-        <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-              <Menu className="h-5 w-5" />
-            </Button>
-            <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
-              alt="Alpha Yachting"
-              className="h-6 object-contain"
-            />
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 px-3 h-16 flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="flex-shrink-0">
+            <Menu className="h-5 w-5" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <HeaderSearch />
           </div>
-        </div>
+          </div>
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
