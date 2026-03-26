@@ -627,7 +627,7 @@ Requirements:
         throw new Error('No tasks to convert');
       }
 
-      // Allocate canonical job number (same logic as allocateJobNumber function)
+      // Allocate canonical job number
       const allJobsForNum = await base44.entities.Job.list('-created_date', 100);
       const validJobNums = allJobsForNum
         .map(j => j.job_number)
@@ -642,6 +642,7 @@ Requirements:
         job_number: jobNumber,
         customer_id: formData.customer_id,
         boat_id: formData.boat_id || null,
+        location_id: formData.location_id || null,
         title: formData.title,
         description: formData.description || '',
         status: 'Approved',
@@ -659,36 +660,149 @@ Requirements:
         converted_job_id: job.id,
       });
 
-      // Use createWorkOrderWithNumber for canonical WO number
-      const woResponse2 = await base44.functions.invoke('createWorkOrderWithNumber', {
+      const today = new Date().toISOString().split('T')[0];
+
+      // --- Split tasks into chapters ---
+      // Group non-chapter tasks by their preceding chapter
+      const chapters = []; // { title, laborTasks[], materialTasks[] }
+      let currentChapter = { title: null, laborTasks: [], materialTasks: [] };
+
+      for (const task of tasks) {
+        if (task.item_type === 'Chapter') {
+          if (currentChapter.laborTasks.length > 0 || currentChapter.materialTasks.length > 0) {
+            chapters.push(currentChapter);
+          }
+          currentChapter = { title: task.title, laborTasks: [], materialTasks: [] };
+        } else if (task.item_type === 'Material') {
+          currentChapter.materialTasks.push(task);
+        } else {
+          if (!task.is_optional) currentChapter.laborTasks.push(task);
+        }
+      }
+      // Push last chapter
+      if (currentChapter.laborTasks.length > 0 || currentChapter.materialTasks.length > 0) {
+        chapters.push(currentChapter);
+      }
+
+      const hasChapters = chapters.some(c => c.title !== null);
+
+      // --- 1. Organisations-Work-Order ---
+      // Collect ALL material tasks from entire offer
+      const allMaterialTasks = tasks.filter(t => t.item_type === 'Material' && !t.is_optional);
+
+      const orgaWOResponse = await base44.functions.invoke('createWorkOrderWithNumber', {
         job_id: job.id,
         offer_id: offerId,
-        title: formData.title,
-        description: formData.description || '',
-        scheduled_date: new Date().toISOString().split('T')[0],
+        title: `Organisation – ${formData.title}`,
+        description: 'Organisationsaufgaben: Materialbestellung, Terminkoordination, Lagerprüfung.',
+        scheduled_date: today,
         status: 'Draft',
-        billable: true,
+        billable: false,
+        workorder_type: 'ORGANIZATION',
+        sort_index: 0,
       });
-      if (!woResponse2.data?.success) {
-        throw new Error(woResponse2.data?.message || 'Failed to create work order');
+      if (!orgaWOResponse.data?.success) {
+        throw new Error(orgaWOResponse.data?.message || 'Failed to create organisation work order');
       }
-      const workOrder = woResponse2.data.work_order;
+      const orgaWO = orgaWOResponse.data.work_order;
 
-      // Create Tasks with EXACT text from OfferTasks
-      if (tasks.length > 0) {
-        await base44.entities.Task.bulkCreate(
-          tasks
-            .filter(task => !task.is_optional)
-            .map((task, idx) => ({
-              work_order_id: workOrder.id,
+      // Orga tasks = all material items (to order/check) + generic org tasks
+      const orgaTasks = [
+        {
+          work_order_id: orgaWO.id,
+          title: 'Benötigtes Material prüfen & bestellen',
+          description: 'Alle Materialien aus dem Angebot auf Lagerbestand prüfen und ggf. bestellen.',
+          sequence_order: 0,
+          status: 'Not Started',
+          task_stream: 'ORGANIZATION',
+        },
+        ...allMaterialTasks.map((task, idx) => ({
+          work_order_id: orgaWO.id,
+          title: `[Material] ${task.title}`,
+          description: `Menge: ${task.quantity} ${task.unit_type || 'Stk.'}${task.description ? ' – ' + task.description : ''}`,
+          sequence_order: idx + 1,
+          status: 'Not Started',
+          task_stream: 'ORGANIZATION',
+        })),
+        {
+          work_order_id: orgaWO.id,
+          title: 'Termine mit Kunden / Marina koordinieren',
+          description: 'Abstimmung aller notwendigen Termine für Liegeplatzzugang, Krantermin, Technikerplanung.',
+          sequence_order: allMaterialTasks.length + 1,
+          status: 'Not Started',
+          task_stream: 'ORGANIZATION',
+        },
+      ];
+      await base44.entities.Task.bulkCreate(orgaTasks);
+
+      // --- 2. Execution Work Orders per Chapter (only Labor tasks) ---
+      if (hasChapters) {
+        for (let i = 0; i < chapters.length; i++) {
+          const chapter = chapters[i];
+          if (chapter.laborTasks.length === 0) continue; // skip chapters with no labor
+
+          const woTitle = chapter.title || formData.title;
+          const execWOResponse = await base44.functions.invoke('createWorkOrderWithNumber', {
+            job_id: job.id,
+            offer_id: offerId,
+            title: woTitle,
+            description: '',
+            scheduled_date: today,
+            status: 'Draft',
+            billable: true,
+            workorder_type: 'EXECUTION',
+            sort_index: i + 1,
+          });
+          if (!execWOResponse.data?.success) {
+            throw new Error(execWOResponse.data?.message || `Failed to create work order: ${woTitle}`);
+          }
+          const execWO = execWOResponse.data.work_order;
+
+          await base44.entities.Task.bulkCreate(
+            chapter.laborTasks.map((task, idx) => ({
+              work_order_id: execWO.id,
               title: task.title,
               description: task.description || '',
               sequence_order: task.sequence_order ?? idx,
               status: 'Not Started',
               estimated_minutes: task.unit_type === 'Hour' ? task.quantity * 60 : null,
               notes: task.notes || '',
+              task_stream: 'EXECUTION',
             }))
-        );
+          );
+        }
+      } else {
+        // No chapters: 1 Execution WO with all labor tasks
+        const allLaborTasks = tasks.filter(t => t.item_type !== 'Material' && t.item_type !== 'Chapter' && !t.is_optional);
+        if (allLaborTasks.length > 0) {
+          const execWOResponse = await base44.functions.invoke('createWorkOrderWithNumber', {
+            job_id: job.id,
+            offer_id: offerId,
+            title: formData.title,
+            description: formData.description || '',
+            scheduled_date: today,
+            status: 'Draft',
+            billable: true,
+            workorder_type: 'EXECUTION',
+            sort_index: 1,
+          });
+          if (!execWOResponse.data?.success) {
+            throw new Error(execWOResponse.data?.message || 'Failed to create work order');
+          }
+          const execWO = execWOResponse.data.work_order;
+          await base44.entities.Task.bulkCreate(
+            allLaborTasks.map((task, idx) => ({
+              work_order_id: execWO.id,
+              title: task.title,
+              description: task.description || '',
+              sequence_order: task.sequence_order ?? idx,
+              status: 'Not Started',
+              estimated_minutes: task.unit_type === 'Hour' ? task.quantity * 60 : null,
+              notes: task.notes || '',
+              task_stream: 'EXECUTION',
+            }))
+          );
+        }
       }
 
       queryClient.invalidateQueries(['offer', offerId]);
@@ -1670,12 +1784,28 @@ Requirements:
           </DialogHeader>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-4">
             <p className="text-sm text-blue-800">
-              <strong>Creating:</strong>
+              <strong>Wird erstellt:</strong>
             </p>
             <ul className="text-sm text-blue-700 mt-2 space-y-1 ml-4 list-disc">
-              <li>1 Project ({formData.title})</li>
-              <li>1 Work Order with {tasks.filter(t => !t.is_optional).length} tasks</li>
-              <li>Tasks copied with exact text from offer</li>
+              <li>1 Projekt: <strong>{formData.title}</strong></li>
+              <li>1 Organisations-WO mit allen Materialien & Org-Tasks</li>
+              {(() => {
+                const chapters = [];
+                let cur = { title: null, hasLabor: false };
+                for (const t of tasks) {
+                  if (t.item_type === 'Chapter') { if (cur.hasLabor) chapters.push(cur); cur = { title: t.title, hasLabor: false }; }
+                  else if (t.item_type !== 'Material' && !t.is_optional) cur.hasLabor = true;
+                }
+                if (cur.hasLabor) chapters.push(cur);
+                const hasChapters = chapters.some(c => c.title !== null);
+                if (hasChapters) {
+                  return chapters.filter(c => c.hasLabor).map((c, i) => (
+                    <li key={i}>Execution-WO: <strong>{c.title || formData.title}</strong></li>
+                  ));
+                }
+                return <li>1 Execution-WO mit allen Arbeitsschritten</li>;
+              })()}
+              <li className="text-slate-500 italic">Material-Tasks nur in Orga-WO, nicht in Execution-WOs</li>
             </ul>
           </div>
           <div className="flex justify-end gap-3 mt-4">
