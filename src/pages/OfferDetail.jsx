@@ -94,6 +94,7 @@ export default function OfferDetail() {
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showFollowUpDraft, setShowFollowUpDraft] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
+  const [projectStartDate, setProjectStartDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [template, setTemplate] = useState(null);
@@ -627,40 +628,7 @@ Requirements:
         throw new Error('No tasks to convert');
       }
 
-      // Allocate canonical job number
-      const allJobsForNum = await base44.entities.Job.list('-created_date', 100);
-      const validJobNums = allJobsForNum
-        .map(j => j.job_number)
-        .filter(num => num && /^J\d{5}$/.test(num))
-        .map(num => parseInt(num.substring(1), 10))
-        .filter(num => !isNaN(num));
-      const maxJobNum = validJobNums.length > 0 ? Math.max(...validJobNums) : 0;
-      const jobNumber = `J${String(maxJobNum + 1).padStart(5, '0')}`;
-
-      // Create Job (Project)
-      const job = await base44.entities.Job.create({
-        job_number: jobNumber,
-        customer_id: formData.customer_id,
-        boat_id: formData.boat_id || null,
-        location_id: formData.location_id || null,
-        title: formData.title,
-        description: formData.description || '',
-        status: 'Approved',
-        service_category: 'General Service',
-        quote_amount: formData.total_amount,
-        quote_approved: true,
-        quote_approved_date: new Date().toISOString().split('T')[0],
-        intake_source: 'Email',
-        intake_date: new Date().toISOString(),
-      });
-
-      // Update Offer with job link
-      await base44.entities.Offer.update(offerId, {
-        status: 'Converted',
-        converted_job_id: job.id,
-      });
-
-      const today = new Date().toISOString().split('T')[0];
+      const today = projectStartDate || new Date().toISOString().split('T')[0];
 
       // --- Split tasks into chapters ---
       // Group non-chapter tasks by their preceding chapter
@@ -1773,15 +1741,24 @@ Requirements:
       </Dialog>
 
       {/* Create Project Confirmation Dialog */}
-      <Dialog open={showCreateProjectDialog} onOpenChange={setShowCreateProjectDialog}>
+      <Dialog open={showCreateProjectDialog} onOpenChange={(open) => { setShowCreateProjectDialog(open); if (open && !projectStartDate) setProjectStartDate(new Date().toISOString().split('T')[0]); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Project from Offer?</DialogTitle>
             <DialogDescription>
-              This will create a new project with a work order containing all tasks from this offer.
-              Task text will be copied exactly as written. The offer status will be updated to "Converted".
+              This will create a new project with work orders from this offer.
+              The offer status will be updated to "Converted".
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-2 my-2">
+            <Label>Projektstart-Datum</Label>
+            <Input
+              type="date"
+              value={projectStartDate}
+              onChange={(e) => setProjectStartDate(e.target.value)}
+            />
+            <p className="text-xs text-slate-500">Wird als geplantes Datum für alle Work Orders verwendet.</p>
+          </div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-4">
             <p className="text-sm text-blue-800">
               <strong>Wird erstellt:</strong>
