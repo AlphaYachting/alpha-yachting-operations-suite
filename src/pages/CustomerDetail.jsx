@@ -566,40 +566,52 @@ export default function CustomerDetail() {
           ) : (
             <div className="space-y-3">
               {workOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status)).map(wo => (
-                <div key={wo.id} className="p-4 border border-slate-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-slate-900">{wo.title}</h4>
-                    <div className="flex items-center gap-2">
-                      {(workOrderPhotoCounts[wo.id] || 0) > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                          <Camera className="h-3 w-3" />
-                          {workOrderPhotoCounts[wo.id]}
-                        </span>
-                      )}
-                      {(wo.work_summary || wo.internal_notes || wo.issues_found || wo.recommendations) && (
-                        <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                          <MessageSquare className="h-3 w-3" />
-                          Notizen
-                        </span>
-                      )}
-                      {wo.customer_signature_url && (
-                        <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Unterschrift
-                        </span>
-                      )}
-                      <Badge className={woStatusColors[wo.status]}>{wo.status}</Badge>
+                <div key={wo.id} className="flex items-center gap-2">
+                  <Link to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`} className="flex-1">
+                    <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-slate-900">{wo.title}</h4>
+                        <div className="flex items-center gap-2">
+                          {(workOrderPhotoCounts[wo.id] || 0) > 0 && (
+                            <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                              <Camera className="h-3 w-3" />
+                              {workOrderPhotoCounts[wo.id]}
+                            </span>
+                          )}
+                          {(wo.work_summary || wo.internal_notes || wo.issues_found || wo.recommendations) && (
+                            <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                              <MessageSquare className="h-3 w-3" />
+                              Notizen
+                            </span>
+                          )}
+                          {wo.customer_signature_url && (
+                            <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Unterschrift
+                            </span>
+                          )}
+                          <Badge className={woStatusColors[wo.status]}>{wo.status}</Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-slate-500">
+                        {wo.work_order_number && <span>#{wo.work_order_number}</span>}
+                        {wo.scheduled_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(wo.scheduled_date), 'dd.MM.yyyy')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-slate-500">
-                    {wo.work_order_number && <span>#{wo.work_order_number}</span>}
-                    {wo.scheduled_date && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(wo.scheduled_date), 'dd.MM.yyyy')}
-                      </span>
-                    )}
-                  </div>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0 flex-shrink-0"
+                    onClick={() => setEditingWorkOrder(wo)}
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               ))}
             </div>
