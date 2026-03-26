@@ -205,6 +205,25 @@ export default function LeadCard({
               lead={lead}
               onStatusChange={onStatusChange}
             />
+            {lead.email && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const subject = encodeURIComponent(
+                    `Anfrage${lead.boat_name ? ` – ${lead.boat_name}` : ''}${lead.name ? ` (${lead.name})` : ''}`
+                  );
+                  const body = encodeURIComponent(
+                    `${lead.description ? lead.description + '\n\n' : ''}---\nAnfrage von: ${lead.name || ''}${lead.boat_name ? '\nBoot: ' + lead.boat_name : ''}${lead.phone ? '\nTel: ' + lead.phone : ''}`
+                  );
+                  window.open(`mailto:${lead.email}?subject=${subject}&body=${body}`, '_self');
+                }}
+                className="h-7 w-7 p-0 text-sky-600 hover:bg-sky-50"
+                title="E-Mail schreiben"
+              >
+                <Mail className="h-3 w-3" />
+              </Button>
+            )}
             <Button
               size="sm"
               variant="outline"
