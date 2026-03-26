@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { 
@@ -61,7 +60,6 @@ const statusColors = {
 };
 
 export default function Dashboard() {
-  const { isAuthenticated, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [workOrders, setWorkOrders] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -86,10 +84,8 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      loadDashboardData();
-    }
-  }, [isAuthenticated, user]);
+    loadDashboardData();
+  }, []);
 
   const loadDashboardData = async () => {
     try {
@@ -271,6 +267,12 @@ export default function Dashboard() {
     const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
     const activeWOs = jobWorkOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status));
     
+    // If all WOs are completed (or none exist but job is Completed), treat as done
+    const allWOsDone = jobWorkOrders.length > 0 && activeWOs.length === 0;
+    if (allWOsDone || job.status === 'Completed' || job.status === 'Invoiced') {
+      return { status: 'green', label: 'Completed', step: 'All work done' };
+    }
+    
     // Red: overdue WO OR no active WO OR missing planning
     const hasOverdueWO = activeWOs.some(wo => {
       if (!wo.scheduled_date) return false;
@@ -278,8 +280,12 @@ export default function Dashboard() {
       return isPast(schedDate) && !isToday(schedDate);
     });
     
-    if (hasOverdueWO || activeWOs.length === 0) {
-      return { status: 'red', label: 'Critical', step: hasOverdueWO ? 'Overdue work order' : 'No active work orders' };
+    if (hasOverdueWO) {
+      return { status: 'red', label: 'Critical', step: 'Overdue work order' };
+    }
+    
+    if (activeWOs.length === 0) {
+      return { status: 'red', label: 'Critical', step: 'No active work orders' };
     }
     
     const hasUnplannedWO = activeWOs.some(wo => !wo.scheduled_date || !wo.assigned_technicians || wo.assigned_technicians.length === 0);
