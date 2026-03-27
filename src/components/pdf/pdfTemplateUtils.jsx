@@ -347,6 +347,9 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
           margin-top: 2px;
           line-height: 1.2;
         }
+        .item-desc strong, .item-desc b { font-weight: bold; }
+        .item-desc em, .item-desc i { font-style: italic; }
+        .item-desc u { text-decoration: underline; }
         .item-desc ol, .item-desc ul {
           margin: 0;
           padding-left: 12pt;

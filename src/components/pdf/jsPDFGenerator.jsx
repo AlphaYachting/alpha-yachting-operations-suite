@@ -77,48 +77,87 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     } : { r: 37, g: 99, b: 235 };
   }
 
-  function parseHtmlToSegments(html) {
+  // Parse HTML into lines of formatted inline runs
+  function parseHtmlToLineRuns(html) {
     if (!html) return [];
-    const segments = [];
-    // Extract <li> items as bullet points, everything else as plain text
-    const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-    let lastIndex = 0;
-    let match;
-    // First get plain text before/between/after list items
-    const withoutLists = html.replace(/<(ol|ul)[^>]*>[\s\S]*?<\/(ol|ul)>/gi, '\n__LIST__\n');
-    const listContents = [];
-    const tempLi = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-    let lm;
-    while ((lm = tempLi.exec(html)) !== null) {
-      listContents.push(lm[1].replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ').trim());
-    }
-    let listIdx = 0;
-    const parts = withoutLists.split('__LIST__');
-    for (let i = 0; i < parts.length; i++) {
-      const plain = parts[i].replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ').trim();
-      if (plain) {
-        for (const line of plain.split('\n')) {
-          const l = line.trim();
-          if (l) segments.push({ text: l, isBullet: false });
+    const lines = [];
+    let currentLine = { isBullet: false, runs: [] };
+    let bold = false, italic = false, underline = false;
+    const parts = html.split(/(<[^>]*>)/g);
+    for (const part of parts) {
+      if (!part) continue;
+      if (part.startsWith('<')) {
+        const isClose = part.startsWith('</');
+        const tagMatch = part.match(/<\/?([a-z0-9]+)/i);
+        const tag = tagMatch ? tagMatch[1].toLowerCase() : '';
+        if (tag === 'strong' || tag === 'b') bold = !isClose;
+        else if (tag === 'em' || tag === 'i') italic = !isClose;
+        else if (tag === 'u') underline = !isClose;
+        else if (tag === 'li' && !isClose) {
+          if (currentLine.runs.length > 0) { lines.push(currentLine); }
+          currentLine = { isBullet: true, runs: [] };
+        } else if (['br'].includes(tag) || (['p','div','li'].includes(tag) && isClose)) {
+          if (currentLine.runs.length > 0) { lines.push(currentLine); currentLine = { isBullet: false, runs: [] }; }
         }
-      }
-      // Add bullet items that belong after this part
-      if (i < parts.length - 1 && listIdx < listContents.length) {
-        // Count how many <li> items are in the corresponding list block
-        const listBlockMatch = html.match(/<(ol|ul)[^>]*>([\s\S]*?)<\/(ol|ul)>/i);
-        const allListBlocks = [...html.matchAll(/<(ol|ul)[^>]*>([\s\S]*?)<\/(ol|ul)>/gi)];
-        const block = allListBlocks[i];
-        if (block) {
-          const blockLis = [...block[2].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
-          blockLis.forEach(lim => {
-            const text = lim[1].replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ').trim();
-            if (text) segments.push({ text, isBullet: true });
-          });
-          listIdx += blockLis.length;
+      } else {
+        const text = part.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
+        const textParts = text.split('\n');
+        for (let ti = 0; ti < textParts.length; ti++) {
+          if (ti > 0 && currentLine.runs.length > 0) {
+            lines.push(currentLine);
+            currentLine = { isBullet: false, runs: [] };
+          }
+          if (textParts[ti]) currentLine.runs.push({ text: textParts[ti], bold, italic, underline });
         }
       }
     }
-    return segments;
+    if (currentLine.runs.length > 0) lines.push(currentLine);
+    return lines;
+  }
+
+  // Render inline runs with bold/italic/underline support, returns final y position
+  function renderInlineRuns(lineRuns, colStartX, colWidth, startY) {
+    let y = startY;
+    const lineHeight = 3.8;
+    const savedFont = fontFamily;
+    for (const line of lineRuns) {
+      const bulletIndent = line.isBullet ? 4 : 0;
+      const textX = colStartX + 2 + bulletIndent;
+      const maxWidth = colWidth - 4 - bulletIndent;
+      if (line.isBullet) {
+        doc.setFont(fontFamily, 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(85, 85, 85);
+        doc.text('•', colStartX + 2, y);
+      }
+      let xOffset = 0;
+      for (const run of line.runs) {
+        const fontStyle = (run.bold && run.italic) ? 'bolditalic' : run.bold ? 'bold' : run.italic ? 'italic' : 'normal';
+        doc.setFont(fontFamily, fontStyle);
+        doc.setFontSize(8);
+        doc.setTextColor(85, 85, 85);
+        const words = run.text.split(/\s+/).filter(w => w);
+        for (let wi = 0; wi < words.length; wi++) {
+          const word = words[wi];
+          const wordWidth = doc.getTextWidth(word);
+          const spaceWidth = doc.getTextWidth(' ');
+          if (xOffset + wordWidth > maxWidth && xOffset > 0) {
+            y += lineHeight;
+            xOffset = 0;
+          }
+          doc.text(word, textX + xOffset, y);
+          if (run.underline) {
+            doc.setDrawColor(85, 85, 85);
+            doc.setLineWidth(0.15);
+            doc.line(textX + xOffset, y + 0.5, textX + xOffset + wordWidth, y + 0.5);
+          }
+          xOffset += wordWidth + spaceWidth;
+        }
+      }
+      y += lineHeight;
+    }
+    doc.setFont(fontFamily, 'normal');
+    return y;
   }
 
   function stripHtml(html) {
@@ -498,10 +537,11 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
 
     // Calculate required height for this row
     const titleLines = doc.splitTextToSize(item.title || '', colWidths[1] - 4);
-    const descSegments = item.description ? parseHtmlToSegments(item.description) : [];
-    const descLineCount = descSegments.reduce((sum, seg) => {
-      const indent = seg.isBullet ? 7 : 2;
-      return sum + doc.splitTextToSize(seg.text, colWidths[1] - 4 - indent).length;
+    const descLineRuns = item.description ? parseHtmlToLineRuns(item.description) : [];
+    const descLineCount = descLineRuns.reduce((sum, line) => {
+      const maxW = colWidths[1] - 4 - (line.isBullet ? 4 : 0);
+      const fullText = line.runs.map(r => r.text).join(' ');
+      return sum + Math.max(1, Math.ceil((fullText.length * 1.8) / maxW));
     }, 0);
     const requiredHeight = (titleLines.length * 4) + (descLineCount > 0 ? 1.5 : 0) + (descLineCount * 3.8) + 10;
 
@@ -544,19 +584,8 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
       doc.setTextColor(85, 85, 85);
     }
 
-    if (item.description) {
-      doc.setFont(fontFamily, 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(85, 85, 85);
-      const descSegs = parseHtmlToSegments(item.description);
-      for (const seg of descSegs) {
-        const indent = seg.isBullet ? 6 : 2;
-        const maxWidth = colWidths[1] - 4 - indent;
-        const lines = doc.splitTextToSize(seg.text, maxWidth);
-        if (seg.isBullet) doc.text('•', xPos + 2, descY);
-        doc.text(lines, xPos + indent, descY);
-        descY += lines.length * 3.5;
-      }
+    if (item.description && descLineRuns.length > 0) {
+      descY = renderInlineRuns(descLineRuns, xPos, colWidths[1], descY);
       doc.setFontSize(9);
       doc.setTextColor(51, 51, 51);
     }
