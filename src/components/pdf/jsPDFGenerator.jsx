@@ -77,12 +77,20 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     } : { r: 37, g: 99, b: 235 };
   }
 
-  // Parse HTML into lines of formatted inline runs
+  // Parse Quill HTML into lines of formatted inline runs
   function parseHtmlToLineRuns(html) {
     if (!html) return [];
     const lines = [];
     let currentLine = { isBullet: false, runs: [] };
     let bold = false, italic = false, underline = false;
+
+    const flushLine = () => {
+      if (currentLine.runs.some(r => r.text.trim())) {
+        lines.push(currentLine);
+      }
+      currentLine = { isBullet: false, runs: [] };
+    };
+
     const parts = html.split(/(<[^>]*>)/g);
     for (const part of parts) {
       if (!part) continue;
@@ -90,73 +98,78 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
         const isClose = part.startsWith('</');
         const tagMatch = part.match(/<\/?([a-z0-9]+)/i);
         const tag = tagMatch ? tagMatch[1].toLowerCase() : '';
-        if (tag === 'strong' || tag === 'b') bold = !isClose;
-        else if (tag === 'em' || tag === 'i') italic = !isClose;
-        else if (tag === 'u') underline = !isClose;
-        else if (tag === 'li' && !isClose) {
-          if (currentLine.runs.length > 0) { lines.push(currentLine); }
-          currentLine = { isBullet: true, runs: [] };
-        } else if (['br'].includes(tag) || (['p','div','li'].includes(tag) && isClose)) {
-          if (currentLine.runs.length > 0) { lines.push(currentLine); currentLine = { isBullet: false, runs: [] }; }
-        }
+        if (tag === 'strong' || tag === 'b') { bold = !isClose; }
+        else if (tag === 'em' || tag === 'i') { italic = !isClose; }
+        else if (tag === 'u') { underline = !isClose; }
+        else if (tag === 'li' && !isClose) { flushLine(); currentLine.isBullet = true; }
+        else if (tag === 'p' && !isClose) { flushLine(); }
+        else if (['br', 'p', 'div', 'li'].includes(tag) && isClose) { flushLine(); }
       } else {
-        const text = part.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ');
-        const textParts = text.split('\n');
-        for (let ti = 0; ti < textParts.length; ti++) {
-          if (ti > 0 && currentLine.runs.length > 0) {
-            lines.push(currentLine);
-            currentLine = { isBullet: false, runs: [] };
-          }
-          if (textParts[ti]) currentLine.runs.push({ text: textParts[ti], bold, italic, underline });
+        const text = part
+          .replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ');
+        if (text.trim()) {
+          currentLine.runs.push({ text, bold, italic, underline });
         }
       }
     }
-    if (currentLine.runs.length > 0) lines.push(currentLine);
+    flushLine();
     return lines;
   }
 
   // Render inline runs with bold/italic/underline support, returns final y position
   function renderInlineRuns(lineRuns, colStartX, colWidth, startY) {
     let y = startY;
-    const lineHeight = 3.8;
-    const savedFont = fontFamily;
+    const lineHeight = 4;
+
     for (const line of lineRuns) {
-      const bulletIndent = line.isBullet ? 4 : 0;
-      const textX = colStartX + 2 + bulletIndent;
-      const maxWidth = colWidth - 4 - bulletIndent;
+      const indent = line.isBullet ? 5 : 0;
+      const textX = colStartX + 2 + indent;
+      const maxRight = colStartX + colWidth - 2;
+
       if (line.isBullet) {
         doc.setFont(fontFamily, 'normal');
         doc.setFontSize(8);
         doc.setTextColor(85, 85, 85);
-        doc.text('•', colStartX + 2, y);
+        doc.text('\u2022', colStartX + 2, y);
       }
-      let xOffset = 0;
+
+      let x = textX;
+
       for (const run of line.runs) {
         const fontStyle = (run.bold && run.italic) ? 'bolditalic' : run.bold ? 'bold' : run.italic ? 'italic' : 'normal';
         doc.setFont(fontFamily, fontStyle);
         doc.setFontSize(8);
         doc.setTextColor(85, 85, 85);
-        const words = run.text.split(/\s+/).filter(w => w);
+
+        const words = run.text.split(/(\s+)/);
         for (let wi = 0; wi < words.length; wi++) {
-          const word = words[wi];
-          const wordWidth = doc.getTextWidth(word);
-          const spaceWidth = doc.getTextWidth(' ');
-          if (xOffset + wordWidth > maxWidth && xOffset > 0) {
-            y += lineHeight;
-            xOffset = 0;
+          const token = words[wi];
+          if (!token) continue;
+          const tokenWidth = doc.getTextWidth(token);
+          if (/\s/.test(token)) {
+            x += tokenWidth;
+            continue;
           }
-          doc.text(word, textX + xOffset, y);
+          if (x + tokenWidth > maxRight && x > textX) {
+            y += lineHeight;
+            x = textX;
+          }
+          doc.text(token, x, y);
           if (run.underline) {
             doc.setDrawColor(85, 85, 85);
             doc.setLineWidth(0.15);
-            doc.line(textX + xOffset, y + 0.5, textX + xOffset + wordWidth, y + 0.5);
+            doc.line(x, y + 0.5, x + tokenWidth, y + 0.5);
           }
-          xOffset += wordWidth + spaceWidth;
+          x += tokenWidth;
         }
       }
+
       y += lineHeight;
     }
+
     doc.setFont(fontFamily, 'normal');
+    doc.setTextColor(51, 51, 51);
     return y;
   }
 
