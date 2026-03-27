@@ -391,7 +391,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <div className="border rounded-md overflow-hidden">
+              <div className="border rounded-md overflow-hidden" style={{ minHeight: '160px' }}>
                 <ReactQuill
                   value={taskForm.description || ''}
                   onChange={(val) => setTaskForm({ ...taskForm, description: val })}
@@ -404,6 +404,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
                     ],
                   }}
                   style={{ minHeight: '120px' }}
+                  className="[&_.ql-container]:min-h-[120px] [&_.ql-editor]:min-h-[120px] [&_.ql-toolbar]:border-0 [&_.ql-toolbar]:border-b [&_.ql-toolbar]:border-slate-200 [&_.ql-container]:border-0 [&_.ql-editor]:text-sm [&_.ql-editor]:leading-relaxed"
                 />
               </div>
             </div>

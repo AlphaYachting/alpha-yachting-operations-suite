@@ -84,8 +84,8 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     let currentLine = { isBullet: false, runs: [] };
     let bold = false, italic = false, underline = false;
 
-    const flushLine = () => {
-      if (currentLine.runs.some(r => r.text.trim())) {
+    const flushLine = (allowEmpty = false) => {
+      if (currentLine.runs.some(r => r.text.trim()) || allowEmpty) {
         lines.push(currentLine);
       }
       currentLine = { isBullet: false, runs: [] };
@@ -102,8 +102,10 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
         else if (tag === 'em' || tag === 'i') { italic = !isClose; }
         else if (tag === 'u') { underline = !isClose; }
         else if (tag === 'li' && !isClose) { flushLine(); currentLine.isBullet = true; }
-        else if (tag === 'p' && !isClose) { flushLine(); }
-        else if (['br', 'p', 'div', 'li'].includes(tag) && isClose) { flushLine(); }
+        else if (tag === 'p' && !isClose) { /* opening p: don't flush yet */ }
+        else if (tag === 'p' && isClose) { flushLine(true); /* flush with empty=true to preserve blank lines */ }
+        else if (tag === 'br') { flushLine(true); }
+        else if (['div', 'li'].includes(tag) && isClose) { flushLine(); }
       } else {
         const text = part
           .replace(/&amp;/g, '&').replace(/&lt;/g, '<')
@@ -123,6 +125,11 @@ export async function generatePDFWithJsPDF(document, lineItems, template, paymen
     const lineHeight = 4;
 
     for (const line of lineRuns) {
+      // Empty line = blank paragraph (Enter in Quill) — just advance y
+      if (!line.runs.some(r => r.text.trim())) {
+        y += lineHeight * 0.7;
+        continue;
+      }
       const indent = line.isBullet ? 5 : 0;
       const textX = colStartX + 2 + indent;
       const maxRight = colStartX + colWidth - 2;
