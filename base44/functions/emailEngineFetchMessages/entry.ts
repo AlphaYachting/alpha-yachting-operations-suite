@@ -69,15 +69,19 @@ function buildConversationKey(messageId, fromEmail, normalizedSubject) {
 function safeErr(err) {
   return (err?.message || 'Unknown error')
     .replace(/pass(word)?\s*[=:][^\s]*/gi, '[REDACTED]')
-    .substring(0, 300);
+    .substring(0, 500);
 }
 
-async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, imapUser, startTime) {
-  const MAX_EXECUTION_TIME = 20000; // 20s inner limit
+async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, imapUser, startTime, log) {
+  const MAX_EXECUTION_TIME = 40000;
   const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
 
+  log.push({ step: 'imap_connect_start', ts: Date.now() - startTime });
   await client.connect();
+  log.push({ step: 'imap_connect_ok', ts: Date.now() - startTime });
+
   const lock = await client.getMailboxLock('INBOX');
+  log.push({ step: 'imap_inbox_locked', ts: Date.now() - startTime, exists: client.mailbox.exists });
 
   try {
     const total = client.mailbox.exists || 0;
@@ -87,8 +91,8 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
     } else {
       const start = Math.max(1, total - batchSize + 1);
       const range = `${start}:${total}`;
+      log.push({ step: 'fetch_range', range, total });
 
-      // PASS 1: Fetch envelopes + bodyStructure only (no body content)
       const msgInfos = [];
       for await (const msg of client.fetch(range, {
         envelope: true,
@@ -108,8 +112,8 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
           partInfo: findTextPartInfo(msg.bodyStructure),
         });
       }
+      log.push({ step: 'envelope_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates });
 
-      // PASS 2: Download text part per new message
       for (const info of msgInfos) {
         if (Date.now() - startTime > MAX_EXECUTION_TIME) {
           results.messages.push({ status: 'timeout', info: `Stopped after ${results.stored} messages` });
@@ -120,12 +124,20 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
           let bodyText = '';
 
           if (info.partInfo) {
-            const { content } = await client.download(info.uid, info.partInfo.num, { uid: true });
-            const chunks = [];
-            for await (const chunk of content) chunks.push(chunk);
-            const rawText = Buffer.concat(chunks).toString('utf-8');
-            bodyText = info.partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
-            bodyText = bodyText.substring(0, 10000);
+            try {
+              const { content } = await Promise.race([
+                client.download(info.uid, info.partInfo.num, { uid: true }),
+                new Promise((_, r) => setTimeout(() => r(new Error('body download timeout 8s')), 8000)),
+              ]);
+              const chunks = [];
+              for await (const chunk of content) chunks.push(chunk);
+              const rawText = Buffer.concat(chunks).toString('utf-8');
+              bodyText = info.partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
+              bodyText = bodyText.substring(0, 10000);
+            } catch (dlErr) {
+              log.push({ step: 'body_download_failed', uid: info.uid, error: safeErr(dlErr) });
+              bodyText = '[body download failed: ' + safeErr(dlErr) + ']';
+            }
           }
 
           const env = info.envelope;
@@ -220,6 +232,7 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
   } finally {
     lock.release();
     await client.logout().catch(() => {});
+    log.push({ step: 'imap_logout', ts: Date.now() - startTime });
   }
 
   return results;
@@ -227,10 +240,10 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
+  const log = [];
 
   try {
     const base44 = createClientFromRequest(req);
-    // Scheduled automation — no user context needed, uses service role
 
     const body = await req.json().catch(() => ({}));
     const batchSize = Math.min(parseInt(body.batch_size) || 5, 10);
@@ -240,31 +253,60 @@ Deno.serve(async (req) => {
     const imapUser = Deno.env.get('EMAIL_ENGINE_IMAP_USER');
     const imapPass = Deno.env.get('EMAIL_ENGINE_IMAP_PASSWORD');
 
+    log.push({
+      step: 'config_loaded',
+      host,
+      port,
+      user: imapUser,
+      pass_set: !!imapPass,
+      ts: Date.now() - startTime,
+    });
+
     if (!host || !imapUser || !imapPass) {
-      return Response.json({ success: false, error: 'IMAP secrets not configured' });
+      return Response.json({ success: false, error: 'IMAP secrets not configured', log });
     }
 
+    // DNS resolution check
+    log.push({ step: 'dns_lookup_start', host, ts: Date.now() - startTime });
+    try {
+      const dnsResult = await Deno.resolveDns(host, 'A');
+      log.push({ step: 'dns_lookup_ok', resolved: dnsResult, ts: Date.now() - startTime });
+    } catch (dnsErr) {
+      log.push({ step: 'dns_lookup_failed', error: safeErr(dnsErr), ts: Date.now() - startTime });
+    }
+
+    log.push({ step: 'loading_db_state', ts: Date.now() - startTime });
     const existingMessages = await base44.asServiceRole.entities.EmailMessageSandbox.list('-received_at', 200);
     const existingMsgIds = new Set((existingMessages || []).map(m => m.message_id).filter(Boolean));
-
     const existingConversations = await base44.asServiceRole.entities.EmailConversationSandbox.list('-last_message_at', 200);
     const convMap = new Map((existingConversations || []).map(c => [c.conversation_key, c]));
+    log.push({ step: 'db_state_loaded', existing_msg_ids: existingMsgIds.size, existing_convs: convMap.size, ts: Date.now() - startTime });
+
+    const imapLogger = {
+      debug: (obj) => { if (obj?.msg) log.push({ level: 'imap_debug', msg: obj.msg, ts: Date.now() - startTime }); },
+      info:  (obj) => { log.push({ level: 'imap_info',  msg: obj?.msg || JSON.stringify(obj), ts: Date.now() - startTime }); },
+      warn:  (obj) => { log.push({ level: 'imap_warn',  msg: obj?.msg || JSON.stringify(obj), ts: Date.now() - startTime }); },
+      error: (obj) => { log.push({ level: 'imap_error', msg: safeErr(obj?.err || new Error(obj?.msg || 'imap error')), ts: Date.now() - startTime }); },
+    };
 
     const client = new ImapFlow({
       host, port,
       secure: true,
       auth: { user: imapUser, pass: imapPass },
-      logger: false,
-      connectionTimeout: 8000,
-      greetingTimeout: 5000,
-      socketTimeout: 10000,
+      logger: imapLogger,
+      connectionTimeout: 10000,
+      greetingTimeout: 8000,
+      socketTimeout: 15000,
       disableAutoIdle: true,
     });
 
-    // Hard 25s timeout wrapping the entire IMAP operation
+    client.on('error', (err) => {
+      log.push({ step: 'imap_client_error_event', error: safeErr(err), ts: Date.now() - startTime });
+    });
+
     const results = await Promise.race([
-      runImapFetch(client, batchSize, existingMsgIds, convMap, base44, imapUser, startTime),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP hard timeout after 25s')), 25000)),
+      runImapFetch(client, batchSize, existingMsgIds, convMap, base44, imapUser, startTime, log),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP hard timeout after 50s')), 50000)),
     ]);
 
     return Response.json({
@@ -277,13 +319,16 @@ Deno.serve(async (req) => {
         execution_time_ms: Date.now() - startTime,
       },
       message_log: results.messages,
+      connection_log: log,
     });
 
   } catch (error) {
+    log.push({ step: 'top_level_error', error: safeErr(error), ts: Date.now() - startTime });
     return Response.json({
       success: false,
       error: safeErr(error),
       execution_time_ms: Date.now() - startTime,
+      connection_log: log,
     }, { status: 500 });
   }
 });
