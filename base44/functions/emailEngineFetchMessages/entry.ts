@@ -1,6 +1,5 @@
 // EMAIL ENGINE SANDBOX - Fetch & Store Inbound Messages
-// Two-pass approach: 1) fetch envelopes+structure (fast), 2) download only the text part per message
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import { ImapFlow } from 'npm:imapflow@1.0.167';
 import { Buffer } from 'node:buffer';
 
@@ -26,10 +25,7 @@ function htmlToText(html) {
     .trim();
 }
 
-// Walk bodyStructure to find the best text part. Returns { num, isHtml } or null.
-// ImapFlow returns type as full MIME type string e.g. "text/plain", "multipart/alternative"
 function mimeType(struct) {
-  // type may be "text/plain" or just "text" with subtype "plain"
   if (!struct) return '';
   if (struct.type && struct.type.includes('/')) return struct.type.toLowerCase();
   if (struct.type && struct.subtype) return `${struct.type}/${struct.subtype}`.toLowerCase();
@@ -39,19 +35,13 @@ function mimeType(struct) {
 function findTextPartInfo(struct, parentNum = '') {
   if (!struct) return null;
   const mt = mimeType(struct);
-
-  // Single text part
   if (mt === 'text/plain') return { num: parentNum || '1', isHtml: false };
   if (mt === 'text/html') return { num: parentNum || '1', isHtml: true };
-
-  // Multipart: recurse into children
   if (mt.startsWith('multipart') && struct.childNodes?.length > 0) {
-    // Pass 1: direct text/plain child
     for (let i = 0; i < struct.childNodes.length; i++) {
       const childNum = parentNum ? `${parentNum}.${i + 1}` : `${i + 1}`;
       if (mimeType(struct.childNodes[i]) === 'text/plain') return { num: childNum, isHtml: false };
     }
-    // Pass 2: recurse into nested multiparts
     for (let i = 0; i < struct.childNodes.length; i++) {
       const childNum = parentNum ? `${parentNum}.${i + 1}` : `${i + 1}`;
       if (mimeType(struct.childNodes[i]).startsWith('multipart')) {
@@ -59,19 +49,16 @@ function findTextPartInfo(struct, parentNum = '') {
         if (result) return result;
       }
     }
-    // Pass 3: fall back to text/html
     for (let i = 0; i < struct.childNodes.length; i++) {
       const childNum = parentNum ? `${parentNum}.${i + 1}` : `${i + 1}`;
       if (mimeType(struct.childNodes[i]) === 'text/html') return { num: childNum, isHtml: true };
     }
   }
-
   return null;
 }
 
-function buildConversationKey(messageId, inReplyTo, fromEmail, normalizedSubject) {
+function buildConversationKey(messageId, fromEmail, normalizedSubject) {
   const clean = (id) => id ? id.replace(/[<>\s]/g, '') : null;
-  if (inReplyTo && clean(inReplyTo)) return `chain:${clean(inReplyTo)}`;
   if (messageId && clean(messageId)) return `chain:${clean(messageId)}`;
   const raw = `${normalizedSubject}:${fromEmail}`;
   let hash = 0;
@@ -85,16 +72,168 @@ function safeErr(err) {
     .substring(0, 300);
 }
 
+async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, imapUser, startTime) {
+  const MAX_EXECUTION_TIME = 20000; // 20s inner limit
+  const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
+
+  await client.connect();
+  const lock = await client.getMailboxLock('INBOX');
+
+  try {
+    const total = client.mailbox.exists || 0;
+
+    if (total === 0) {
+      results.messages.push({ info: 'Inbox is empty' });
+    } else {
+      const start = Math.max(1, total - batchSize + 1);
+      const range = `${start}:${total}`;
+
+      // PASS 1: Fetch envelopes + bodyStructure only (no body content)
+      const msgInfos = [];
+      for await (const msg of client.fetch(range, {
+        envelope: true,
+        bodyStructure: true,
+        uid: true,
+      })) {
+        results.fetched++;
+        const messageId = msg.envelope?.messageId || null;
+        if (messageId && existingMsgIds.has(messageId)) {
+          results.duplicates++;
+          continue;
+        }
+        msgInfos.push({
+          uid: msg.uid,
+          envelope: msg.envelope,
+          bodyStructure: msg.bodyStructure,
+          partInfo: findTextPartInfo(msg.bodyStructure),
+        });
+      }
+
+      // PASS 2: Download text part per new message
+      for (const info of msgInfos) {
+        if (Date.now() - startTime > MAX_EXECUTION_TIME) {
+          results.messages.push({ status: 'timeout', info: `Stopped after ${results.stored} messages` });
+          break;
+        }
+
+        try {
+          let bodyText = '';
+
+          if (info.partInfo) {
+            const { content } = await client.download(info.uid, info.partInfo.num, { uid: true });
+            const chunks = [];
+            for await (const chunk of content) chunks.push(chunk);
+            const rawText = Buffer.concat(chunks).toString('utf-8');
+            bodyText = info.partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
+            bodyText = bodyText.substring(0, 10000);
+          }
+
+          const env = info.envelope;
+          const messageId = env?.messageId || null;
+          const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
+          const fromName = env?.from?.[0]?.name || fromEmail;
+          const toEmails = (env?.to || []).map(a => a.address).filter(Boolean);
+          const ccEmails = (env?.cc || []).map(a => a.address).filter(Boolean);
+          const subject = env?.subject || '(no subject)';
+          const normalizedSubj = normalizeSubject(subject);
+          const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
+          const conversationKey = buildConversationKey(messageId, fromEmail, normalizedSubj);
+          const hasAttachments = !!(info.bodyStructure?.childNodes?.some(n => n.disposition === 'attachment'));
+          const attachmentCount = info.bodyStructure?.childNodes?.filter(n => n.disposition === 'attachment').length || 0;
+
+          await base44.asServiceRole.entities.EmailMessageSandbox.create({
+            mailbox_name: imapUser,
+            direction: 'inbound',
+            message_id: messageId,
+            conversation_key: conversationKey,
+            linked_conversation_key: conversationKey,
+            in_reply_to: null,
+            references_header: [],
+            from_name: fromName,
+            from_email: fromEmail,
+            to_email: toEmails,
+            cc_emails: ccEmails,
+            bcc_emails: [],
+            subject,
+            normalized_subject: normalizedSubj,
+            received_at: receivedAt,
+            body_text: bodyText,
+            body_html_sanitized: '',
+            body_preview: bodyText.substring(0, 300),
+            has_attachments: hasAttachments,
+            attachment_count: attachmentCount,
+            attachments_meta_json: [],
+            raw_headers_json: {},
+            duplicate_status: 'original',
+            processing_status: 'stored',
+            security_flag: 'normal',
+            reviewed_manually: false,
+            future_agent_access_allowed: false,
+            future_agent_processing_status: 'disabled',
+          });
+
+          if (messageId) existingMsgIds.add(messageId);
+
+          const allParticipants = Array.from(new Set([fromEmail, ...toEmails, ...ccEmails]));
+          const existingConv = convMap.get(conversationKey);
+
+          if (existingConv) {
+            await base44.asServiceRole.entities.EmailConversationSandbox.update(existingConv.id, {
+              last_message_at: receivedAt,
+              message_count: (existingConv.message_count || 0) + 1,
+              latest_direction: 'inbound',
+              latest_from_email: fromEmail,
+              latest_to_email: toEmails,
+              latest_preview: bodyText.substring(0, 200),
+              participant_summary: Array.from(new Set([...(existingConv.participant_summary || []), ...allParticipants])),
+            });
+            existingConv.message_count = (existingConv.message_count || 0) + 1;
+          } else {
+            const newConv = await base44.asServiceRole.entities.EmailConversationSandbox.create({
+              conversation_key: conversationKey,
+              primary_subject: subject,
+              normalized_subject: normalizedSubj,
+              participant_summary: allParticipants,
+              first_message_at: receivedAt,
+              last_message_at: receivedAt,
+              message_count: 1,
+              latest_direction: 'inbound',
+              latest_from_email: fromEmail,
+              latest_to_email: toEmails,
+              latest_preview: bodyText.substring(0, 200),
+              status_internal: 'open',
+              reviewed_manually: false,
+              future_agent_access_allowed: false,
+            });
+            convMap.set(conversationKey, newConv);
+          }
+
+          results.stored++;
+          results.messages.push({ status: 'stored', message_id: messageId, from: fromEmail, subject });
+
+        } catch (msgErr) {
+          results.errors++;
+          results.messages.push({ status: 'error', error: safeErr(msgErr) });
+        }
+      }
+    }
+  } finally {
+    lock.release();
+    await client.logout().catch(() => {});
+  }
+
+  return results;
+}
+
 Deno.serve(async (req) => {
   const startTime = Date.now();
-  const MAX_EXECUTION_TIME = 45000; // 45 seconds safe limit
-  
+
   try {
     const base44 = createClientFromRequest(req);
-    // This runs as a scheduled automation — no user context available, use service role directly
+    // Scheduled automation — no user context needed, uses service role
 
     const body = await req.json().catch(() => ({}));
-    const batchSize = Math.min(parseInt(body.batch_size) || 5, 5);
+    const batchSize = Math.min(parseInt(body.batch_size) || 5, 10);
 
     const host = Deno.env.get('EMAIL_ENGINE_IMAP_HOST');
     const port = parseInt(Deno.env.get('EMAIL_ENGINE_IMAP_PORT') || '993');
@@ -116,179 +255,18 @@ Deno.serve(async (req) => {
       secure: true,
       auth: { user: imapUser, pass: imapPass },
       logger: false,
-      connectionTimeout: 10000,
+      connectionTimeout: 8000,
       greetingTimeout: 5000,
-      socketTimeout: 15000,
+      socketTimeout: 10000,
+      disableAutoIdle: true,
     });
 
-    await Promise.race([
-      client.connect(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP connection timeout')), 20000))
+    // Hard 25s timeout wrapping the entire IMAP operation
+    const results = await Promise.race([
+      runImapFetch(client, batchSize, existingMsgIds, convMap, base44, imapUser, startTime),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP hard timeout after 25s')), 25000)),
     ]);
 
-    const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
-
-    const lock = await client.getMailboxLock('INBOX');
-    try {
-      const total = client.mailbox.exists || 0;
-
-      if (total === 0) {
-        results.messages.push({ info: 'Inbox is empty' });
-      } else {
-        const start = Math.max(1, total - batchSize + 1);
-        const range = `${start}:${total}`;
-
-        // PASS 1: Fetch only envelopes + bodyStructure (no body content = fast)
-        const msgInfos = [];
-        for await (const msg of client.fetch(range, {
-          envelope: true,
-          bodyStructure: true,
-          uid: true,
-        })) {
-          results.fetched++;
-          const messageId = msg.envelope?.messageId || null;
-
-          if (messageId && existingMsgIds.has(messageId)) {
-            results.duplicates++;
-            results.messages.push({ status: 'duplicate', message_id: messageId });
-            continue;
-          }
-
-          msgInfos.push({
-            uid: msg.uid,
-            envelope: msg.envelope,
-            bodyStructure: msg.bodyStructure,
-            partInfo: findTextPartInfo(msg.bodyStructure),
-          });
-        }
-
-        // PASS 2: Download only the specific text part per message
-        for (const info of msgInfos) {
-          // Check timeout before processing each message
-          if (Date.now() - startTime > MAX_EXECUTION_TIME) {
-            results.messages.push({ 
-              status: 'timeout', 
-              info: `Stopped processing after ${results.stored} messages due to time limit` 
-            });
-            break;
-          }
-          
-          try {
-            let bodyText = '';
-            const debugInfo = {
-              structRaw: JSON.stringify(info.bodyStructure).substring(0, 500),
-              partInfo: info.partInfo,
-            };
-
-            if (info.partInfo) {
-              const { content } = await client.download(info.uid, info.partInfo.num, { uid: true });
-              const chunks = [];
-              for await (const chunk of content) chunks.push(chunk);
-              const rawText = Buffer.concat(chunks).toString('utf-8');
-              debugInfo.downloadedLength = rawText.length;
-              bodyText = info.partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
-              bodyText = bodyText.substring(0, 10000);
-              debugInfo.extractedFirst200 = bodyText.substring(0, 200);
-            } else {
-              debugInfo.partNotFound = true;
-            }
-
-            const env = info.envelope;
-            const messageId = env?.messageId || null;
-            const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
-            const fromName = env?.from?.[0]?.name || fromEmail;
-            const toEmails = (env?.to || []).map(a => a.address).filter(Boolean);
-            const ccEmails = (env?.cc || []).map(a => a.address).filter(Boolean);
-            const subject = env?.subject || '(no subject)';
-            const normalizedSubj = normalizeSubject(subject);
-            const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
-            const conversationKey = buildConversationKey(messageId, null, fromEmail, normalizedSubj);
-            const hasAttachments = !!(info.bodyStructure?.childNodes?.some(n => n.disposition === 'attachment'));
-            const attachmentCount = info.bodyStructure?.childNodes?.filter(n => n.disposition === 'attachment').length || 0;
-
-            await base44.asServiceRole.entities.EmailMessageSandbox.create({
-              mailbox_name: imapUser,
-              direction: 'inbound',
-              message_id: messageId,
-              conversation_key: conversationKey,
-              linked_conversation_key: conversationKey,
-              in_reply_to: null,
-              references_header: [],
-              from_name: fromName,
-              from_email: fromEmail,
-              to_email: toEmails,
-              cc_emails: ccEmails,
-              bcc_emails: [],
-              subject,
-              normalized_subject: normalizedSubj,
-              received_at: receivedAt,
-              body_text: bodyText,
-              body_html_sanitized: '',
-              body_preview: bodyText.substring(0, 300),
-              has_attachments: hasAttachments,
-              attachment_count: attachmentCount,
-              attachments_meta_json: [],
-              raw_headers_json: {},
-              duplicate_status: 'original',
-              processing_status: 'stored',
-              security_flag: 'normal',
-              reviewed_manually: false,
-              future_agent_access_allowed: false,
-              future_agent_processing_status: 'disabled',
-            });
-
-            if (messageId) existingMsgIds.add(messageId);
-
-            const allParticipants = Array.from(new Set([fromEmail, ...toEmails, ...ccEmails]));
-            const existingConv = convMap.get(conversationKey);
-
-            if (existingConv) {
-              await base44.asServiceRole.entities.EmailConversationSandbox.update(existingConv.id, {
-                last_message_at: receivedAt,
-                message_count: (existingConv.message_count || 0) + 1,
-                latest_direction: 'inbound',
-                latest_from_email: fromEmail,
-                latest_to_email: toEmails,
-                latest_preview: bodyText.substring(0, 200),
-                participant_summary: Array.from(new Set([...(existingConv.participant_summary || []), ...allParticipants])),
-              });
-              existingConv.message_count = (existingConv.message_count || 0) + 1;
-            } else {
-              const newConv = await base44.asServiceRole.entities.EmailConversationSandbox.create({
-                conversation_key: conversationKey,
-                primary_subject: subject,
-                normalized_subject: normalizedSubj,
-                participant_summary: allParticipants,
-                first_message_at: receivedAt,
-                last_message_at: receivedAt,
-                message_count: 1,
-                latest_direction: 'inbound',
-                latest_from_email: fromEmail,
-                latest_to_email: toEmails,
-                latest_preview: bodyText.substring(0, 200),
-                status_internal: 'open',
-                reviewed_manually: false,
-                future_agent_access_allowed: false,
-              });
-              convMap.set(conversationKey, newConv);
-            }
-
-            results.stored++;
-            results.messages.push({ status: 'stored', message_id: messageId, from: fromEmail, subject, debug: debugInfo });
-
-          } catch (msgErr) {
-            results.errors++;
-            results.messages.push({ status: 'error', error: safeErr(msgErr) });
-          }
-        }
-      }
-    } finally {
-      lock.release();
-    }
-
-    await client.logout();
-
-    const executionTime = Date.now() - startTime;
     return Response.json({
       success: true,
       summary: {
@@ -296,17 +274,16 @@ Deno.serve(async (req) => {
         stored: results.stored,
         duplicates: results.duplicates,
         errors: results.errors,
-        execution_time_ms: executionTime,
+        execution_time_ms: Date.now() - startTime,
       },
       message_log: results.messages,
     });
 
   } catch (error) {
-    const executionTime = Date.now() - startTime;
-    return Response.json({ 
-      success: false, 
+    return Response.json({
+      success: false,
       error: safeErr(error),
-      execution_time_ms: executionTime 
+      execution_time_ms: Date.now() - startTime,
     }, { status: 500 });
   }
 });
