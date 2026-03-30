@@ -87,15 +87,14 @@ function safeErr(err) {
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
-  const MAX_EXECUTION_TIME = 150000; // 2.5 minutes max execution
+  const MAX_EXECUTION_TIME = 45000; // 45 seconds safe limit
   
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    // This runs as a scheduled automation — no user context available, use service role directly
 
     const body = await req.json().catch(() => ({}));
-    const batchSize = Math.min(parseInt(body.batch_size) || 10, 10);
+    const batchSize = Math.min(parseInt(body.batch_size) || 5, 5);
 
     const host = Deno.env.get('EMAIL_ENGINE_IMAP_HOST');
     const port = parseInt(Deno.env.get('EMAIL_ENGINE_IMAP_PORT') || '993');
@@ -117,9 +116,9 @@ Deno.serve(async (req) => {
       secure: true,
       auth: { user: imapUser, pass: imapPass },
       logger: false,
-      connectionTimeout: 15000,
-      greetingTimeout: 8000,
-      socketTimeout: 45000,
+      connectionTimeout: 10000,
+      greetingTimeout: 5000,
+      socketTimeout: 15000,
     });
 
     await Promise.race([
