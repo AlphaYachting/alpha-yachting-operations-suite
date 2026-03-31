@@ -120,31 +120,35 @@ export default function MaterialImportDetail() {
       description: l.item_description || '',
     }));
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Translate the following invoice/delivery note line items to ${translationLanguage}. Return a JSON array with the same structure.
-Original items:
-${JSON.stringify(lineContent, null, 2)}
-
-Return exactly this format:
-[{"title": "translated title", "description": "translated description"}]`,
+      model: 'gemini_3_flash',
+      prompt: `Translate the following invoice line item titles and descriptions to ${translationLanguage}. Only translate item_title and item_description, not codes or numbers.
+Items: ${JSON.stringify(lineContent)}
+Return JSON: {"items": [{"title": "...", "description": "..."}]}`,
       response_json_schema: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            title: { type: 'string' },
-            description: { type: 'string' },
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                title: { type: 'string' },
+                description: { type: 'string' },
+              },
+            },
           },
         },
       },
     });
-    if (Array.isArray(result) && result.length > 0) {
+    const translatedItems = result?.items || [];
+    if (Array.isArray(translatedItems) && translatedItems.length > 0) {
       setLines(prev => {
         const nonEmptyLines = prev.filter(l => l.item_title);
         const emptyLines = prev.filter(l => !l.item_title);
         const updatedNonEmpty = nonEmptyLines.map((l, i) => ({
           ...l,
-          item_title: result[i]?.title || l.item_title,
-          item_description: result[i]?.description || l.item_description,
+          item_title: translatedItems[i]?.title || l.item_title,
+          item_description: translatedItems[i]?.description || l.item_description,
           is_manually_edited: true,
         }));
         return [...updatedNonEmpty, ...emptyLines];
@@ -187,6 +191,7 @@ Rules:
 - Extract all line items you can identify
 - Prices should be numbers without currency symbols${translateInstruction}`,
       file_urls: [header.original_file_url],
+      model: 'gemini_3_flash',
       response_json_schema: {
         type: 'object',
         properties: {
@@ -252,11 +257,11 @@ Rules:
     } else {
       await base44.entities.ImportDocument.update(docIdToUse, { ...header });
     }
-    // Save lines
-    for (const line of lines) {
+    // Save lines in parallel
+    await Promise.all(lines.map(async (line, idx) => {
       const lineData = {
         import_document_id: docIdToUse,
-        line_order: lines.indexOf(line),
+        line_order: idx,
         item_title: line.item_title,
         item_description: line.item_description,
         quantity: line.quantity !== '' ? Number(line.quantity) : null,
@@ -272,7 +277,7 @@ Rules:
         const saved = await base44.entities.ImportDocumentLine.create(lineData);
         line._savedId = saved.id;
       }
-    }
+    }));
     await base44.entities.ImportDocument.update(docIdToUse, { extraction_status: 'approved' });
     setHeader(h => ({ ...h, extraction_status: 'approved' }));
     setSaving(false);
@@ -284,9 +289,8 @@ Rules:
     if (!header.selected_customer_id) return toast.error('Please select a customer first');
     if (!savedDocId) await handleSave();
     setBooking(true);
-    for (const line of lines) {
-      if (!line.item_title) continue;
-      await base44.entities.CustomerMaterialEntry.create({
+    await Promise.all(lines.filter(l => l.item_title).map(line =>
+      base44.entities.CustomerMaterialEntry.create({
         customer_id: header.selected_customer_id,
         source_type: 'import',
         source_document_id: savedDocId,
@@ -300,8 +304,8 @@ Rules:
         unit: line.unit,
         unit_purchase_price: line.unit_purchase_price !== '' ? Number(line.unit_purchase_price) : null,
         total_purchase_price: line.total_purchase_price !== '' ? Number(line.total_purchase_price) : null,
-      });
-    }
+      })
+    ));
     if (savedDocId) {
       await base44.entities.ImportDocument.update(savedDocId, {
         extraction_status: 'booked',
