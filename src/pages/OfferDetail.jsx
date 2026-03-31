@@ -526,11 +526,9 @@ Requirements:
           discount_amount: totals.discount_amount_excl_tax
         });
 
-        // Delete existing tasks and recreate
+        // Delete existing tasks and recreate (parallel for speed)
         const existingTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
-        for (const task of existingTasks) {
-          await base44.entities.OfferTask.delete(task.id);
-        }
+        await Promise.all(existingTasks.map(task => base44.entities.OfferTask.delete(task.id)));
 
         if (tasks.length > 0) {
           await base44.entities.OfferTask.bulkCreate(

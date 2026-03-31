@@ -78,8 +78,25 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
     setTasks([...tasks, newHeading]);
   };
 
+  const normalizeUnitType = (value, options) => {
+    if (!value) return options[0]?.value || 'Hour';
+    // Exact match
+    const exact = options.find(u => u.value === value);
+    if (exact) return exact.value;
+    // Case-insensitive match on value or display or label
+    const lower = value.toLowerCase();
+    const loose = options.find(u =>
+      u.value?.toLowerCase() === lower ||
+      u.display?.toLowerCase() === lower ||
+      u.label?.toLowerCase() === lower
+    );
+    if (loose) return loose.value;
+    // Fallback: first option
+    return options[0]?.value || 'Hour';
+  };
+
   const openEditTask = (task, index) => {
-    setTaskForm(task);
+    setTaskForm({ ...task, unit_type: normalizeUnitType(task.unit_type, unitOptions) });
     setEditingTask(index);
     setShowDialog(true);
   };
