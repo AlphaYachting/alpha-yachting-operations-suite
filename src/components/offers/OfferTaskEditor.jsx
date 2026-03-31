@@ -168,7 +168,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
               {(provided) => (
                 <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
                   {tasks.map((task, index) => {
-                    const stableKey = task.id ? String(task.id) : `new-task-${index}-${task.title}`;
+                    const stableKey = task.id ? String(task.id) : `new-task-${index}`;
                     return (
                       <Draggable key={stableKey} draggableId={stableKey} index={index}>
                         {(provided, snapshot) => (
