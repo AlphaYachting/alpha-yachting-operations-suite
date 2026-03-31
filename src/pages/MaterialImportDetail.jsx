@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Check } from 'lucide-react';
 import { ArrowLeft, Upload, Loader2, Plus, Trash2, CheckCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +21,7 @@ const EMPTY_LINE = () => ({
   total_purchase_price: '',
   sku: '',
   is_manually_edited: false,
+  line_order: 0,
 });
 
 export default function MaterialImportDetail() {
@@ -31,6 +33,8 @@ export default function MaterialImportDetail() {
   const [extracting, setExtracting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [booking, setBooking] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translationLanguage, setTranslationLanguage] = useState('none');
 
   const [header, setHeader] = useState({
     document_type: 'Invoice',
@@ -106,10 +110,57 @@ export default function MaterialImportDetail() {
     toast.success('File uploaded');
   };
 
-  // AI Extraction
+  // AI Translation
+  const handleTranslate = async () => {
+    if (lines.length === 0) return toast.error('No lines to translate');
+    setTranslating(true);
+    const linesToTranslate = lines.filter(l => l.item_title);
+    const lineContent = linesToTranslate.map(l => ({
+      title: l.item_title,
+      description: l.item_description || '',
+    }));
+    const result = await base44.integrations.Core.InvokeLLM({
+      prompt: `Translate the following invoice/delivery note line items to ${translationLanguage}. Return a JSON array with the same structure.
+Original items:
+${JSON.stringify(lineContent, null, 2)}
+
+Return exactly this format:
+[{"title": "translated title", "description": "translated description"}]`,
+      response_json_schema: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+          },
+        },
+      },
+    });
+    if (Array.isArray(result) && result.length > 0) {
+      setLines(prev => {
+        const nonEmptyLines = prev.filter(l => l.item_title);
+        const emptyLines = prev.filter(l => !l.item_title);
+        const updatedNonEmpty = nonEmptyLines.map((l, i) => ({
+          ...l,
+          item_title: result[i]?.title || l.item_title,
+          item_description: result[i]?.description || l.item_description,
+          is_manually_edited: true,
+        }));
+        return [...updatedNonEmpty, ...emptyLines];
+      });
+      toast.success(`Translated to ${translationLanguage}`);
+    }
+    setTranslating(false);
+  };
+
+  // AI Extraction (with optional inline translation)
   const handleExtract = async () => {
     if (!header.original_file_url) return toast.error('Please upload a file first');
     setExtracting(true);
+    const translateInstruction = translationLanguage !== 'none'
+      ? `\n- Translate item_title and item_description fields to ${translationLanguage}. Do NOT translate supplier_name, document_number or any numeric fields.`
+      : '';
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are a document parser. Extract structured data from this supplier invoice or delivery note.
 Return a JSON object with these exact fields:
@@ -134,7 +185,7 @@ Rules:
 - Leave fields null if not clearly visible in the document
 - Do not invent or guess values
 - Extract all line items you can identify
-- Prices should be numbers without currency symbols`,
+- Prices should be numbers without currency symbols${translateInstruction}`,
       file_urls: [header.original_file_url],
       response_json_schema: {
         type: 'object',
@@ -186,7 +237,8 @@ Rules:
       })));
     }
     setExtracting(false);
-    toast.success('Extraction complete — please review');
+    const langLabel = translationLanguage !== 'none' ? ` (translated to ${translationLanguage})` : '';
+    toast.success(`Extraction complete${langLabel} — please review`);
   };
 
   // Save draft
@@ -285,7 +337,7 @@ Rules:
       {/* Step 1: Upload */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
         <h2 className="font-semibold text-slate-800">1. Upload Document</h2>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <label className="cursor-pointer">
             <input type="file" accept=".pdf,image/*" className="hidden" onChange={handleFileUpload} />
             <div className="flex items-center gap-2 px-4 py-2 border border-dashed border-slate-300 rounded-lg hover:border-blue-400 transition-colors text-slate-600 text-sm">
@@ -293,22 +345,49 @@ Rules:
               {uploading ? 'Uploading…' : 'Choose PDF or Image'}
             </div>
           </label>
+
           {header.original_file_url && (
             <a href={header.original_file_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline">
-              View uploaded file
+              View file
             </a>
           )}
-          {header.original_file_url && (
+        </div>
+
+        {/* Language + Extract — visible as soon as file is uploaded */}
+        {header.original_file_url && (
+          <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 whitespace-nowrap">Translate line items to:</span>
+              <Select value={translationLanguage} onValueChange={setTranslationLanguage}>
+                <SelectTrigger className="w-32 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No translation</SelectItem>
+                  <SelectItem value="German">Deutsch</SelectItem>
+                  <SelectItem value="English">English</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button
-              variant="outline"
               size="sm"
               onClick={handleExtract}
               disabled={extracting}
             >
               {extracting ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Extracting…</> : 'Extract with AI'}
             </Button>
-          )}
-        </div>
+            {lines.some(l => l.item_title) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTranslate}
+                disabled={translating || translationLanguage === 'none'}
+              >
+                {translating ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Translating…</> : 'Re-translate lines'}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Step 2: Header Data */}
