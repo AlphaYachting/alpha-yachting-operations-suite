@@ -1,0 +1,72 @@
+{
+  "name": "CustomerMaterialEntry",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Reference to Customer"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "import",
+        "manual"
+      ],
+      "default": "import",
+      "description": "How this entry was created"
+    },
+    "source_document_id": {
+      "type": "string",
+      "description": "Reference to ImportDocument (if import)"
+    },
+    "source_line_id": {
+      "type": "string",
+      "description": "Reference to ImportDocumentLine (if import)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Supplier name"
+    },
+    "document_number": {
+      "type": "string",
+      "description": "Original document number"
+    },
+    "document_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of original document"
+    },
+    "item_title": {
+      "type": "string",
+      "description": "Item name"
+    },
+    "item_description": {
+      "type": "string",
+      "description": "Item description"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Quantity"
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unit"
+    },
+    "unit_purchase_price": {
+      "type": "number",
+      "description": "Unit purchase price"
+    },
+    "total_purchase_price": {
+      "type": "number",
+      "description": "Total purchase price"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes"
+    }
+  },
+  "required": [
+    "customer_id",
+    "item_title"
+  ]
+}

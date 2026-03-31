@@ -27,6 +27,7 @@ import {
                     Upload,
                     FileText,
                     Receipt,
+                    Truck,
                     Bug,
                     Phone,
                     Camera,
@@ -85,6 +86,7 @@ const navItems = [
   { name: 'Suppliers', icon: Briefcase, page: 'Suppliers' },
   { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates' },
   { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates' },
+  { name: 'Material Import', icon: Truck, page: 'MaterialImport' },
   
   // INTELLIGENCE
   { header: 'INTELLIGENCE' },

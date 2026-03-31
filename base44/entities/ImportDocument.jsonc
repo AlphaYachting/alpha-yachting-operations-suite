@@ -1,0 +1,55 @@
+{
+  "name": "ImportDocument",
+  "type": "object",
+  "properties": {
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "Invoice",
+        "Delivery Note",
+        "Other"
+      ],
+      "default": "Invoice",
+      "description": "Type of supplier document"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Supplier name (extracted or manually entered)"
+    },
+    "document_number": {
+      "type": "string",
+      "description": "Supplier invoice or delivery note number"
+    },
+    "document_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date on the supplier document"
+    },
+    "original_file_url": {
+      "type": "string",
+      "description": "URL of uploaded original file"
+    },
+    "extraction_status": {
+      "type": "string",
+      "enum": [
+        "uploaded",
+        "extracted",
+        "needs_review",
+        "approved",
+        "booked",
+        "failed"
+      ],
+      "default": "uploaded",
+      "description": "Current processing status"
+    },
+    "selected_customer_id": {
+      "type": "string",
+      "description": "Customer this document is assigned to"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes"
+    }
+  },
+  "required": []
+}

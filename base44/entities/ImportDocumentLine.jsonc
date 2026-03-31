@@ -1,0 +1,51 @@
+{
+  "name": "ImportDocumentLine",
+  "type": "object",
+  "properties": {
+    "import_document_id": {
+      "type": "string",
+      "description": "Reference to ImportDocument"
+    },
+    "line_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order within document"
+    },
+    "item_title": {
+      "type": "string",
+      "description": "Item name / description"
+    },
+    "item_description": {
+      "type": "string",
+      "description": "Additional detail"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Quantity"
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unit (pcs, m, kg, etc.)"
+    },
+    "unit_purchase_price": {
+      "type": "number",
+      "description": "Unit purchase price"
+    },
+    "total_purchase_price": {
+      "type": "number",
+      "description": "Total purchase price for this line"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Article number / SKU from supplier"
+    },
+    "is_manually_edited": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether user manually edited this line"
+    }
+  },
+  "required": [
+    "import_document_id"
+  ]
+}

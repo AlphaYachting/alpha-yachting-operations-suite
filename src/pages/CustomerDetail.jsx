@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import CustomerForm from '@/components/customers/CustomerForm';
+import CustomerMaterialSection from '@/components/materialimport/CustomerMaterialSection';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import JobForm from '@/components/jobs/JobForm';
 import BoatForm from '@/components/boats/BoatForm';
@@ -774,6 +775,13 @@ export default function CustomerDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Booked Materials — isolated Material Import module section */}
+      <Card>
+        <CardContent className="pt-6">
+          <CustomerMaterialSection customerId={customerId} />
+        </CardContent>
+      </Card>
+
       {/* Create Work Order Dialog */}
       <Dialog open={showWorkOrderForm} onOpenChange={setShowWorkOrderForm}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -793,7 +801,6 @@ export default function CustomerDetail() {
                 work_order_number 
               });
 
-              // Handle template tasks
               if (templateId) {
                 const templateItems = await base44.entities.TaskTemplateItem.filter(
                   { template_list_id: templateId },
@@ -826,7 +833,6 @@ export default function CustomerDetail() {
                 }
               }
 
-              // Handle AI-suggested tasks
               if (suggestedTasks && suggestedTasks.length > 0) {
                 await Promise.all(
                   suggestedTasks.map((task, idx) =>

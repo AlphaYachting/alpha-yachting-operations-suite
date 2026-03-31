@@ -1,0 +1,100 @@
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { Package, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import ManualMaterialEntryModal from './ManualMaterialEntryModal';
+import moment from 'moment';
+
+export default function CustomerMaterialSection({ customerId }) {
+  const [showManual, setShowManual] = useState(false);
+
+  const { data: entries = [], refetch } = useQuery({
+    queryKey: ['customer_material', customerId],
+    queryFn: () => base44.entities.CustomerMaterialEntry.filter({ customer_id: customerId }, '-created_date', 100),
+    enabled: !!customerId,
+  });
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers_basic'],
+    queryFn: () => base44.entities.Customer.list('-created_date', 500),
+    staleTime: 60000,
+  });
+
+  if (!customerId) return null;
+
+  return (
+    <div className="border-t border-slate-200 pt-6 mt-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Package className="h-5 w-5 text-slate-500" />
+          <h3 className="font-semibold text-slate-800">Booked Materials</h3>
+          {entries.length > 0 && (
+            <span className="bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded-full">{entries.length}</span>
+          )}
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setShowManual(true)}>
+          <Plus className="h-4 w-4 mr-1" /> Add Manual Entry
+        </Button>
+      </div>
+
+      {entries.length === 0 ? (
+        <p className="text-sm text-slate-400 py-4 text-center">No material entries yet</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-slate-200">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium text-slate-500">Item</th>
+                <th className="text-left px-3 py-2 font-medium text-slate-500">Supplier</th>
+                <th className="text-left px-3 py-2 font-medium text-slate-500">Document</th>
+                <th className="text-left px-3 py-2 font-medium text-slate-500">Qty</th>
+                <th className="text-left px-3 py-2 font-medium text-slate-500">Unit</th>
+                <th className="text-right px-3 py-2 font-medium text-slate-500">Total</th>
+                <th className="text-left px-3 py-2 font-medium text-slate-500">Date</th>
+                <th className="text-left px-3 py-2 font-medium text-slate-500">Source</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {entries.map(entry => (
+                <tr key={entry.id} className="hover:bg-slate-50">
+                  <td className="px-3 py-2">
+                    <div className="font-medium text-slate-800">{entry.item_title}</div>
+                    {entry.item_description && <div className="text-slate-400 truncate max-w-[180px]">{entry.item_description}</div>}
+                  </td>
+                  <td className="px-3 py-2 text-slate-600">{entry.supplier_name || '—'}</td>
+                  <td className="px-3 py-2 text-slate-600">{entry.document_number || '—'}</td>
+                  <td className="px-3 py-2 text-slate-600">{entry.quantity ?? '—'}</td>
+                  <td className="px-3 py-2 text-slate-600">{entry.unit || '—'}</td>
+                  <td className="px-3 py-2 text-right text-slate-800 font-medium">
+                    {entry.total_purchase_price != null ? `€ ${Number(entry.total_purchase_price).toFixed(2)}` : '—'}
+                  </td>
+                  <td className="px-3 py-2 text-slate-500">
+                    {entry.document_date ? moment(entry.document_date).format('DD.MM.YYYY') : '—'}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-medium ${
+                      entry.source_type === 'manual'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {entry.source_type === 'manual' ? 'manual' : 'import'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showManual && (
+        <ManualMaterialEntryModal
+          customers={customers}
+          onClose={() => setShowManual(false)}
+          onSaved={() => { setShowManual(false); refetch(); }}
+        />
+      )}
+    </div>
+  );
+}
