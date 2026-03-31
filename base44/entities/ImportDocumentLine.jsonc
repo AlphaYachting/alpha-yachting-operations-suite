@@ -39,6 +39,10 @@
       "type": "string",
       "description": "Article number / SKU from supplier"
     },
+    "assigned_customer_id": {
+      "type": "string",
+      "description": "Customer assigned to this specific line (overrides document-level default)"
+    },
     "is_manually_edited": {
       "type": "boolean",
       "default": false,
