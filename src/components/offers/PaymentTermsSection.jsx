@@ -21,15 +21,15 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
   // Calculate downpayment amount when percentage or total changes
   useEffect(() => {
     if (formData.payment_terms_type === 'Downpayment' && formData.downpayment_percent) {
-      const grandTotal = totalAmount * (1 + (formData.vat_rate || 0) / 100);
-      const amount = (grandTotal * formData.downpayment_percent) / 100;
+      // totalAmount is already gross (incl. VAT) — no need to apply VAT again
+      const amount = Math.round((totalAmount * formData.downpayment_percent) / 100 * 100) / 100;
       setDownpaymentAmount(amount);
       updateField('downpayment_amount', amount);
     } else {
       setDownpaymentAmount(0);
       updateField('downpayment_amount', 0);
     }
-  }, [formData.downpayment_percent, totalAmount, formData.payment_terms_type, formData.vat_rate]);
+  }, [formData.downpayment_percent, totalAmount, formData.payment_terms_type]);
 
   return (
     <Card>
