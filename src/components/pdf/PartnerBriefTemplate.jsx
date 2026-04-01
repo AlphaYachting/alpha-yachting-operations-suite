@@ -366,6 +366,51 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     yPos += 3;
   }
   
+  // JOB DESCRIPTION (bilingual EN + DE)
+  if (document.job_description) {
+    checkPageBreak(30);
+    yPos = drawSectionHeader('JOB DESCRIPTION / PROJEKTBESCHREIBUNG', yPos);
+
+    // English label
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
+    doc.text('English:', margins.left + 2, yPos);
+    yPos += 4;
+
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    const enText = document.job_description_en || document.job_description;
+    const enLines = doc.splitTextToSize(enText, contentWidth - 4);
+    enLines.forEach(line => {
+      checkPageBreak(5);
+      doc.text(line, margins.left + 2, yPos);
+      yPos += 4.5;
+    });
+    yPos += 3;
+
+    // German label + AI translation placeholder (we pass job_description_de if available, else same text)
+    checkPageBreak(20);
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
+    doc.text('Deutsch:', margins.left + 2, yPos);
+    yPos += 4;
+
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    const deText = document.job_description_de || document.job_description;
+    const deLines = doc.splitTextToSize(deText, contentWidth - 4);
+    deLines.forEach(line => {
+      checkPageBreak(5);
+      doc.text(line, margins.left + 2, yPos);
+      yPos += 4.5;
+    });
+    yPos += 3;
+  }
+
   // Draw footer on last page
   drawFooter();
 

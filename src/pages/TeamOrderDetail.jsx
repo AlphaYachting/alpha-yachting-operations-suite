@@ -36,6 +36,7 @@ export default function TeamOrderDetail() {
   const [customer, setCustomer] = useState(null);
   const [boat, setBoat] = useState(null);
   const [location, setLocation] = useState(null);
+  const [jobDescriptionEn, setJobDescriptionEn] = useState('');
 
 
   useEffect(() => {
@@ -79,6 +80,13 @@ export default function TeamOrderDetail() {
             setCustomer(customers.find(c => c.id === jobData?.customer_id));
             setBoat(boats.find(b => b.id === jobData?.boat_id));
             setLocation(locations.find(l => l.id === jobData?.location_id));
+
+            // Translate job description to English for Partner Brief
+            if (jobData?.description) {
+              base44.integrations.Core.InvokeLLM({
+                prompt: `Translate the following German text to professional English. Return only the translated text, no additional explanation:\n\n${jobData.description}`
+              }).then(translated => setJobDescriptionEn(translated)).catch(() => setJobDescriptionEn(jobData.description));
+            }
           }
         }
       } else if (workOrderId) {
@@ -155,6 +163,9 @@ export default function TeamOrderDetail() {
       location_address: location?.address || '',
       location_access_notes: location?.access_notes || 'None',
       work_description: workOrder.description || '',
+      job_description: job?.description || '',
+      job_description_de: job?.description || '',
+      job_description_en: jobDescriptionEn || job?.description || '',
       approved_budget_total: teamOrder.approved_budget_total || 0,
       labor_budget: teamOrder.labor_budget || 0,
       travel_budget: teamOrder.travel_budget || 0,
