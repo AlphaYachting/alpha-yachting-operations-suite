@@ -28,6 +28,11 @@ const CATEGORIES = [
   'Paint/Gelcoat',
   'HVAC',
   'Tools',
+  'Tool Accessories',
+  'Van',
+  'Car',
+  'Truck',
+  'Trailer',
   'Other'
 ];
 
