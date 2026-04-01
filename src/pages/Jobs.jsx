@@ -100,7 +100,7 @@ export default function Projects() {
    const [statusFilter, setStatusFilter] = useState('all');
    const [priorityFilter, setPriorityFilter] = useState('all');
    const [boatFilter, setBoatFilter] = useState('all');
-   const [winterstorageOnly, setWinterstorageOnly] = useState(false);
+   const [winterstorageOnly, setWinterstorageOnly] = useState(true);
    const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
 
     // Apply filter from dashboard
@@ -498,11 +498,11 @@ export default function Projects() {
           onClick={() => setWinterstorageOnly(prev => !prev)}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors whitespace-nowrap ${
             winterstorageOnly
-              ? 'bg-cyan-600 text-white border-cyan-700'
-              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              ? 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              : 'bg-cyan-600 text-white border-cyan-700'
           }`}
         >
-          ❄️ Winter Storage ausblenden
+          ❄️ {winterstorageOnly ? 'Winter Storage einblenden' : 'Winter Storage ausblenden'}
         </button>
       </div>
 
