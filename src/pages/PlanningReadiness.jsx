@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { evaluateWorkOrder } from '@/components/planning/readinessEvaluator';
 import WOReadinessRow from '@/components/planning/WOReadinessRow';
@@ -39,6 +39,7 @@ function SectionHeader({ label, count, open, onToggle, color, description }) {
 }
 
 export default function PlanningReadiness() {
+  const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
   const [helpOpen, setHelpOpen] = useState(false);
@@ -282,7 +283,16 @@ export default function PlanningReadiness() {
       {/* RIGHT: detail panel */}
       {selectedId && (
         <div className="w-1/2 overflow-hidden flex flex-col bg-white">
-          <WODetailPanel item={selectedItem} onClose={() => setSelectedId(null)} />
+          <WODetailPanel
+            item={selectedItem}
+            onClose={() => setSelectedId(null)}
+            technicians={technicians}
+            locations={locations}
+            onRefresh={() => {
+              queryClient.invalidateQueries({ queryKey: ['planning-wos'] });
+              queryClient.invalidateQueries({ queryKey: ['planning-jobs'] });
+            }}
+          />
         </div>
       )}
     </div>

@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { BLOCKER_META, NEXT_ACTIONS } from './readinessEvaluator';
+import QuickActionEditor from './QuickActionEditor';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { X, CheckCircle2, XCircle, AlertCircle, Clock, MapPin, User, Wrench } from 'lucide-react';
@@ -24,9 +26,18 @@ const PRIORITY_PERIOD_COLOR = { Today: 'text-red-600 font-semibold', 'This week'
 const SEVERITY_LABEL = { hard: 'Must fix', soft: 'Should confirm', gap: 'Nice to have' };
 const SEVERITY_COLOR = { hard: 'bg-red-50 border-red-200 text-red-700', soft: 'bg-orange-50 border-orange-200 text-orange-700', gap: 'bg-blue-50 border-blue-200 text-blue-600' };
 
-export default function WODetailPanel({ item, onClose }) {
+const QUICK_ACTION_BLOCKERS = new Set(['MISSING_DURATION', 'NO_TECHNICIAN', 'MISSING_LOCATION', 'NO_SERVICE_AREA']);
+const QUICK_ACTION_LABEL = {
+  MISSING_DURATION: 'Set duration',
+  NO_TECHNICIAN:    'Assign technician',
+  MISSING_LOCATION: 'Set location',
+  NO_SERVICE_AREA:  'Set service area',
+};
+
+export default function WODetailPanel({ item, onClose, onRefresh, technicians = [], locations = [] }) {
   if (!item) return null;
   const { workOrder, job, customer, boat, location, evaluation, taskCount, taskEstimatedMinutesSum } = item;
+  const [activeEditor, setActiveEditor] = useState(null);
 
   const hardB = evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'hard');
   const softB = evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'soft');
@@ -71,12 +82,33 @@ export default function WODetailPanel({ item, onClose }) {
                 <div key={action.code} className="border border-slate-200 rounded-lg p-3">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm text-slate-700">{action.text}</p>
-                    <span className={cn('text-xs whitespace-nowrap', PRIORITY_PERIOD_COLOR[action.priority])}>{action.priority}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={cn('text-xs whitespace-nowrap', PRIORITY_PERIOD_COLOR[action.priority])}>{action.priority}</span>
+                      {QUICK_ACTION_BLOCKERS.has(action.code) && activeEditor !== action.code && (
+                        <button
+                          onClick={() => setActiveEditor(action.code)}
+                          className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 rounded px-2 py-0.5 hover:bg-blue-50 transition-colors whitespace-nowrap"
+                        >
+                          {QUICK_ACTION_LABEL[action.code]}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 mt-1.5">
                     <span className="text-xs text-slate-400 flex items-center gap-1"><User className="h-3 w-3" />{action.role}</span>
                     <span className="text-xs text-slate-400 flex items-center gap-1"><Wrench className="h-3 w-3" />{action.type}</span>
                   </div>
+                  {activeEditor === action.code && (
+                    <QuickActionEditor
+                      blockerId={action.code}
+                      workOrder={workOrder}
+                      job={job}
+                      technicians={technicians}
+                      locations={locations}
+                      onSaved={() => { setActiveEditor(null); onRefresh && onRefresh(); }}
+                      onCancel={() => setActiveEditor(null)}
+                    />
+                  )}
                 </div>
               ))}
             </div>
