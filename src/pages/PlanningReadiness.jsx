@@ -6,30 +6,50 @@ import WOReadinessRow from '@/components/planning/WOReadinessRow';
 import WODetailPanel from '@/components/planning/WODetailPanel';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, Search, ChevronDown, ChevronRight, HelpCircle, X, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const EXCLUDED_JOB_STATUSES = ['Completed', 'Cancelled', 'Invoiced'];
 const EXCLUDED_WO_STATUSES  = ['Completed', 'Cancelled'];
 
-function SectionHeader({ label, count, open, onToggle, color }) {
+const SECTION_DESCRIPTIONS = {
+  ready:               'These work orders have everything needed to be added to the schedule. Start here when planning the week.',
+  needs_clarification: "Something is missing but not critical. Can often be resolved quickly \u2014 check the detail panel for what's needed.", — check the detail panel for what's needed.',
+  not_plannable:       'These cannot be scheduled until a hard blocker is resolved. Review and delegate the required actions first.',
+};
+
+const READINESS_WHY = {
+  ready:               { color: 'bg-emerald-50 border-emerald-200 text-emerald-800', icon: '✅', text: 'This work order meets all planning criteria. It can be added to the schedule.' },
+  needs_clarification: { color: 'bg-yellow-50 border-yellow-200 text-yellow-800', icon: '⚠️', text: 'One or more soft blockers exist. Planning is possible but some details should be confirmed first.' },
+  not_plannable:       { color: 'bg-red-50 border-red-200 text-red-800', icon: '❌', text: 'A hard blocker is preventing this work order from being scheduled. See the blockers below.' },
+};
+
+export { READINESS_WHY };
+
+function SectionHeader({ label, count, open, onToggle, color, description }) {
   return (
-    <button
-      onClick={onToggle}
-      className={cn('w-full flex items-center justify-between px-4 py-2 text-sm font-semibold border-b', color)}
-    >
-      <span className="flex items-center gap-2">
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        {label}
-      </span>
-      <Badge className="bg-white/60">{count}</Badge>
-    </button>
+    <div className={cn('border-b', color)}>
+      <button
+        onClick={onToggle}
+        className={cn('w-full flex items-center justify-between px-4 py-2 text-sm font-semibold', color)}
+      >
+        <span className="flex items-center gap-2">
+          {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          {label}
+        </span>
+        <Badge className="bg-white/60">{count}</Badge>
+      </button>
+      {open && description && (
+        <p className="px-4 pb-2 text-xs opacity-70">{description}</p>
+      )}
+    </div>
   );
 }
 
 export default function PlanningReadiness() {
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
+  const [helpOpen, setHelpOpen] = useState(false);
   const [openSections, setOpenSections] = useState({ ready: true, needs_clarification: true, not_plannable: true });
 
   // ── DATA FETCHING (read-only) ──────────────────────────────────────────
@@ -154,6 +174,40 @@ export default function PlanningReadiness() {
 
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200">
+          {/* Intro banner */}
+          <div className="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              <span className="font-semibold text-slate-800">What is this page?</span>
+              {' '}This cockpit shows which work orders are ready to be scheduled, which need a quick clarification, and which are blocked. Use it every morning before dispatching to identify gaps before they become problems.
+            </p>
+            <button
+              onClick={() => setHelpOpen(v => !v)}
+              className="mt-2 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              {helpOpen ? 'Hide usage guide' : 'How to use this page'}
+            </button>
+            {helpOpen && (
+              <div className="mt-2 pt-2 border-t border-slate-200 space-y-1">
+                <p className="text-xs font-semibold text-slate-700 mb-1">Recommended daily workflow:</p>
+                {[
+                  ['1', '❌ Start with "Not Plannable"', 'Identify hard blockers — delegate resolution immediately.'],
+                  ['2', '⚠️ Review "Needs Clarification"', 'Small gaps that can often be resolved in minutes.'],
+                  ['3', '✅ Use "Planning Ready" for scheduling', 'These are safe to add to the dispatch board.'],
+                  ['4', '🚀 "Deployable" = dispatch-ready this week', 'Has duration + assigned technician + confirmed access.'],
+                ].map(([n, title, desc]) => (
+                  <div key={n} className="flex gap-2 text-xs">
+                    <span className="text-slate-400 w-3 flex-shrink-0">{n}.</span>
+                    <div>
+                      <span className="font-medium text-slate-700">{title}</span>
+                      <span className="text-slate-500"> — {desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <h1 className="text-lg font-bold text-slate-900">Planning Readiness Cockpit</h1>
           <p className="text-xs text-slate-500 mt-0.5">Read-only · No changes are made to any records</p>
 
@@ -171,9 +225,10 @@ export default function PlanningReadiness() {
               <p className="text-lg font-bold text-red-700">{groups.not_plannable.length}</p>
               <p className="text-xs text-red-600">Not Plannable</p>
             </div>
-            <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200" title="Has estimated duration + assigned technician + confirmed access">
               <p className="text-lg font-bold text-blue-700">{deployableCount}</p>
               <p className="text-xs text-blue-600">🚀 Deployable</p>
+              <p className="text-xs text-blue-400" style={{fontSize:'9px'}}>duration + crew + access</p>
             </div>
           </div>
 
@@ -194,46 +249,41 @@ export default function PlanningReadiness() {
           {/* Ready */}
           <SectionHeader
             label="✅ Planning Ready"
-            count={groups.ready.length}
-            open={openSections.ready}
-            onToggle={() => toggleSection('ready')}
-            color="bg-emerald-50 text-emerald-800 border-emerald-100"
-          />
+            description={SECTION_DESCRIPTIONS.ready}
           {openSections.ready && groups.ready.map(item => (
             <WOReadinessRow key={item.workOrder.id} item={item} selected={selectedId === item.workOrder.id} onClick={() => setSelectedId(item.workOrder.id)} />
           ))}
           {openSections.ready && groups.ready.length === 0 && (
-            <p className="px-4 py-3 text-sm text-slate-400 italic">No work orders in this category.</p>
+            <div className="px-4 py-5 text-center">
+              <p className="text-sm text-slate-400">No work orders are fully planning-ready yet.</p>
+              <p className="text-xs text-slate-300 mt-1">Resolve items in "Needs Clarification" or "Not Plannable" first.</p>
+            </div>
           )}
 
           {/* Needs Clarification */}
           <SectionHeader
             label="⚠️ Needs Clarification"
-            count={groups.needs_clarification.length}
-            open={openSections.needs_clarification}
-            onToggle={() => toggleSection('needs_clarification')}
-            color="bg-yellow-50 text-yellow-800 border-yellow-100"
-          />
+            description={SECTION_DESCRIPTIONS.needs_clarification}
           {openSections.needs_clarification && groups.needs_clarification.map(item => (
             <WOReadinessRow key={item.workOrder.id} item={item} selected={selectedId === item.workOrder.id} onClick={() => setSelectedId(item.workOrder.id)} />
           ))}
           {openSections.needs_clarification && groups.needs_clarification.length === 0 && (
-            <p className="px-4 py-3 text-sm text-slate-400 italic">No work orders in this category.</p>
+            <div className="px-4 py-5 text-center">
+              <p className="text-sm text-slate-400">👍 No clarification needed right now.</p>
+            </div>
           )}
 
           {/* Not Plannable */}
           <SectionHeader
             label="❌ Not Plannable"
-            count={groups.not_plannable.length}
-            open={openSections.not_plannable}
-            onToggle={() => toggleSection('not_plannable')}
-            color="bg-red-50 text-red-800 border-red-100"
-          />
+            description={SECTION_DESCRIPTIONS.not_plannable}
           {openSections.not_plannable && groups.not_plannable.map(item => (
             <WOReadinessRow key={item.workOrder.id} item={item} selected={selectedId === item.workOrder.id} onClick={() => setSelectedId(item.workOrder.id)} />
           ))}
           {openSections.not_plannable && groups.not_plannable.length === 0 && (
-            <p className="px-4 py-3 text-sm text-slate-400 italic">No work orders in this category.</p>
+            <div className="px-4 py-5 text-center">
+              <p className="text-sm text-slate-400">✅ No hard blockers found. Great shape!</p>
+            </div>
           )}
         </div>
       </div>
