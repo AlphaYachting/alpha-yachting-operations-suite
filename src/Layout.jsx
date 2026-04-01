@@ -88,6 +88,10 @@ const navItems = [
   { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates' },
   { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates' },
   
+  // PLANNING
+  { header: 'PLANNING' },
+  { name: 'Planning Readiness', icon: LayoutDashboard, page: 'PlanningReadiness', leadTechAllowed: true },
+
   // INTELLIGENCE
   { header: 'INTELLIGENCE' },
   { name: 'Reports', icon: BarChart3, page: 'Reports' },

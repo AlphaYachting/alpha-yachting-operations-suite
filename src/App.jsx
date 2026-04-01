@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 // Add page imports here
 import AIAssistantSettings from './pages/AIAssistantSettings';
+import PlanningReadiness from './pages/PlanningReadiness';
 import InviteAccept from './pages/InviteAccept';
 import MaterialImport from './pages/MaterialImport';
 import MaterialImportDetail from './pages/MaterialImportDetail';
@@ -75,6 +76,7 @@ const AuthenticatedApp = () => {
       <Route path="/AIAssistantSettings" element={<LayoutWrapper currentPageName="AIAssistantSettings"><AIAssistantSettings /></LayoutWrapper>} />
       <Route path="/MaterialImport" element={<LayoutWrapper currentPageName="MaterialImport"><MaterialImport /></LayoutWrapper>} />
       <Route path="/MaterialImportDetail" element={<LayoutWrapper currentPageName="MaterialImportDetail"><MaterialImportDetail /></LayoutWrapper>} />
+      <Route path="/PlanningReadiness" element={<LayoutWrapper currentPageName="PlanningReadiness"><PlanningReadiness /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
