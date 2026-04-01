@@ -19,7 +19,9 @@ const CHECK_ROW = ({ ok, label }) => (
 );
 
 const PRIORITY_COLOR = { high: 'bg-red-100 text-red-700', medium: 'bg-yellow-100 text-yellow-700', low: 'bg-slate-100 text-slate-600' };
+const PRIORITY_COLOR_TEXT = { high: 'text-red-600', medium: 'text-orange-500', low: 'text-slate-400' };
 const PRIORITY_PERIOD_COLOR = { Today: 'text-red-600 font-semibold', 'This week': 'text-orange-600 font-medium', Later: 'text-slate-400' };
+const SEVERITY_LABEL = { hard: 'Must fix', soft: 'Should confirm', gap: 'Nice to have' };
 const SEVERITY_COLOR = { hard: 'bg-red-50 border-red-200 text-red-700', soft: 'bg-orange-50 border-orange-200 text-orange-700', gap: 'bg-blue-50 border-blue-200 text-blue-600' };
 
 export default function WODetailPanel({ item, onClose }) {
@@ -50,75 +52,20 @@ export default function WODetailPanel({ item, onClose }) {
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
 
         {/* Why is this WO here? */}
-      {(() => {
-        const why = READINESS_WHY[evaluation.planningReadiness];
-        return (
-          <div className={`p-3 rounded-lg border text-sm ${why.color}`}>
-            <span className="font-semibold">{why.icon} Why is this here?</span>{' '}{why.text}
-          </div>
-        );
-      })()}
-
-      {/* Planning Readiness */}
-        <section>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Planning Readiness</h4>
-          <div className="space-y-1.5">
-            <CHECK_ROW ok={!!job?.location_id} label={location ? `Location: ${location.name}` : 'Location not set'} />
-            <CHECK_ROW ok={customer?.status !== 'Blocked'} label={customer ? `Customer: ${customer.status}` : 'Customer unknown'} />
-            <CHECK_ROW ok={!job?.requires_parts || job?.parts_ordered === true} label={job?.requires_parts ? (job?.parts_ordered ? 'Parts ordered' : 'Parts not ordered') : 'No parts required'} />
-            <CHECK_ROW ok={!!workOrder.service_area} label={workOrder.service_area ? `Service area: ${workOrder.service_area}` : 'Service area not set'} />
-          </div>
-        </section>
-
-        {/* Dispatch Readiness */}
-        <section>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Ready to Dispatch?</h4>
-          <p className="text-xs text-slate-400 mb-2">These are needed before a technician can be sent out: known duration, assigned crew, and confirmed access to the boat.</p>
-          <div className="space-y-1.5">
-            <CHECK_ROW ok={evaluation.durationKnown} label={evaluation.durationKnown ? `Duration estimable (${workOrder.estimated_duration_hours ? workOrder.estimated_duration_hours + ' hrs' : Math.round(taskEstimatedMinutesSum/60) + ' hrs from tasks'})` : 'Duration not estimated'} />
-            <CHECK_ROW ok={evaluation.hasAssigned} label={evaluation.hasAssigned ? `${workOrder.assigned_technicians.length} technician(s) assigned` : 'No technician assigned'} />
-            <CHECK_ROW ok={workOrder.access_confirmed || !!boat?.access_details} label={workOrder.access_confirmed ? 'Access confirmed' : boat?.access_details ? 'Boat access details on file' : 'Access not confirmed'} />
-          </div>
-          <div className="mt-2">
-            <Badge className={evaluation.dispatchReady ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700'}>
-              {evaluation.dispatchReady ? '✅ Ready to Dispatch' : '⚠️ Needs Dispatch Preparation'}
-            </Badge>
-          </div>
-        </section>
-
-        {/* Operational Priority */}
-        <section>
-          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Operational Priority</h4>
-          <div className="flex items-center gap-3">
-            <Badge className={cn('capitalize', PRIORITY_COLOR[evaluation.priority])}>{evaluation.priority}</Badge>
-            {job?.requested_date && <span className="text-sm text-slate-500">Requested: {new Date(job.requested_date).toLocaleDateString('de-AT')}</span>}
-            {job?.priority && <span className="text-sm text-slate-500">Priority: {job.priority}</span>}
-          </div>
-          <div className="mt-1.5 text-xs text-slate-400">
-            Tasks: {taskCount} defined · Est. {taskEstimatedMinutesSum > 0 ? Math.round(taskEstimatedMinutesSum / 60) + ' hrs from tasks' : 'unknown'}
-          </div>
-        </section>
-
-        {/* Blockers */}
-        {evaluation.blockers.length > 0 && (
-          <section>
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Blockers & Gaps</h4>
-            <div className="space-y-1.5">
-              {[...hardB, ...softB, ...gapB].map(code => (
-                <div key={code} className={cn('flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border', SEVERITY_COLOR[BLOCKER_META[code]?.severity])}>
-                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="font-medium">{BLOCKER_META[code]?.label}</span>
-                  <span className="text-xs opacity-60 ml-auto uppercase">{BLOCKER_META[code]?.severity}</span>
-                </div>
-              ))}
+        {(() => {
+          const why = READINESS_WHY[evaluation.planningReadiness];
+          return (
+            <div className={`p-3 rounded-lg border text-sm ${why.color}`}>
+              <span className="font-semibold">{why.icon} Why is this here?</span>{' '}{why.text}
             </div>
-          </section>
-        )}
+          );
+        })()}
 
-        {/* Next Actions */}
+        {/* NEXT ACTIONS — shown first so user knows what to do immediately */}
         {evaluation.nextActions.length > 0 && (
           <section>
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Next Actions</h4>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">What to do next</h4>
+            <p className="text-xs text-slate-400 mb-2">Resolve these actions to move this work order forward. Sorted by urgency.</p>
             <div className="space-y-2">
               {evaluation.nextActions.map(action => (
                 <div key={action.code} className="border border-slate-200 rounded-lg p-3">
@@ -143,6 +90,72 @@ export default function WODetailPanel({ item, onClose }) {
             <p className="text-xs text-slate-400 mt-1">This work order is well-prepared for planning.</p>
           </div>
         )}
+
+        {/* BLOCKERS — shown after actions, with human-readable severity labels */}
+        {evaluation.blockers.length > 0 && (
+          <section>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">What is blocking this</h4>
+            <div className="space-y-1.5">
+              {[...evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'hard'),
+                ...evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'soft'),
+                ...evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'gap')
+              ].map(code => (
+                <div key={code} className={cn('flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border', SEVERITY_COLOR[BLOCKER_META[code]?.severity])}>
+                  <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="font-medium">{BLOCKER_META[code]?.label}</span>
+                  <span className="text-xs opacity-60 ml-auto">{SEVERITY_LABEL[BLOCKER_META[code]?.severity]}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Planning Gate Checks */}
+        <section>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Planning gate checks</h4>
+          <div className="space-y-1.5">
+            <CHECK_ROW ok={!!job?.location_id} label={location ? `Location assigned: ${location.name}` : 'No location assigned to this job'} />
+            {customer?.status === 'Blocked' && (
+              <CHECK_ROW ok={false} label="Customer account is blocked" />
+            )}
+            <CHECK_ROW ok={!job?.requires_parts || job?.parts_ordered === true} label={job?.requires_parts ? (job?.parts_ordered ? 'Parts ordered' : 'Parts not yet ordered') : 'No parts required'} />
+            <CHECK_ROW ok={!!workOrder.service_area} label={workOrder.service_area ? `Service area: ${workOrder.service_area}` : 'Service area not classified'} />
+          </div>
+        </section>
+
+        {/* Ready to Dispatch? */}
+        <section>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Ready to dispatch?</h4>
+          <p className="text-xs text-slate-400 mb-2">Required before sending a technician: known duration, assigned crew, confirmed boat access.</p>
+          <div className="space-y-1.5">
+            <CHECK_ROW ok={evaluation.durationKnown} label={evaluation.durationKnown ? `Duration known (${workOrder.estimated_duration_hours ? workOrder.estimated_duration_hours + ' hrs' : Math.round(taskEstimatedMinutesSum / 60) + ' hrs from tasks'})` : 'Duration not estimated'} />
+            <CHECK_ROW ok={evaluation.hasAssigned} label={evaluation.hasAssigned ? `${workOrder.assigned_technicians.length} technician(s) assigned` : 'No technician assigned'} />
+            <CHECK_ROW ok={workOrder.access_confirmed || !!boat?.access_details} label={workOrder.access_confirmed ? 'Access confirmed' : boat?.access_details ? 'Boat access details on file' : 'Access not confirmed'} />
+          </div>
+          <div className="mt-2">
+            <Badge className={evaluation.dispatchReady ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700'}>
+              {evaluation.dispatchReady ? 'Ready to dispatch' : 'Not yet dispatch-ready'}
+            </Badge>
+          </div>
+        </section>
+
+        {/* Operational Priority — only shown if meaningful */}
+        {(job?.requested_date || job?.priority) && (
+          <section>
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Scheduling priority</h4>
+            <div className="flex items-center gap-3">
+              <Badge className={cn('capitalize', PRIORITY_COLOR[evaluation.priority])}>{evaluation.priority} priority</Badge>
+              {job?.requested_date && <span className="text-sm text-slate-500">Requested by: {new Date(job.requested_date).toLocaleDateString('de-AT')}</span>}
+            </div>
+            {job?.priority && (
+              <p className="text-xs text-slate-400 mt-1">Job priority level: {job.priority}</p>
+            )}
+            <p className="text-xs text-slate-400 mt-1">
+              Tasks defined: {taskCount} · Estimated: {taskEstimatedMinutesSum > 0 ? Math.round(taskEstimatedMinutesSum / 60) + ' hrs' : 'unknown'}
+            </p>
+          </section>
+        )}
+
       </div>
     </div>
   );
