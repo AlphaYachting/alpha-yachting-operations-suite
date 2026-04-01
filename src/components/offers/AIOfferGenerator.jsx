@@ -119,8 +119,12 @@ Labor task titles describe the work action — use a verb or action phrase.
 - "Material": physical products, parts, consumables, oil, filters, paint, antifouling, anodes, belts, hoses, sealants, adhesives, spare parts
 - "Labor": any work performed by a technician — service, inspection, installation, repair, diagnostics, travel, commissioning
 
-## CHAPTER HEADINGS (OPTIONAL)
-If the work involves multiple clearly separate areas (e.g. engine + electrical + rigging), you MAY insert Chapter headings to group them. A Chapter entry has ONLY a title — no quantity, no unit_price, no description.
+## CHAPTER HEADINGS (MANDATORY)
+You MUST insert Chapter headings to group tasks into logical sections whenever the work involves more than one area.
+Even if the input text does not explicitly mention chapters — derive them from the work content.
+Examples: "1. Motorservice", "2. Elektrik", "3. Unterwasserschiff", "4. Rigging", "5. Diverses"
+A Chapter entry has ONLY a title — no quantity, no unit_price, no description.
+ALWAYS start with a Chapter before the first group of tasks. Do NOT output all tasks without any Chapter.
 
 ## DESCRIPTIONS
 ${detailedExplanations
@@ -168,7 +172,7 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
                   unit_price: { type: 'number', description: 'Per-unit price. If total price is given for qty>1, divide total by quantity. Only if price is stated in input.' },
                   total_price: { type: 'number', description: 'Total price for this position as stated in the input text' }
                 },
-                required: ['title', 'quantity']
+                required: ['title', 'item_type']
               }
             }
           },
