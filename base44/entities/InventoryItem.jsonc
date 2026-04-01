@@ -1,0 +1,204 @@
+{
+  "name": "InventoryItem",
+  "type": "object",
+  "properties": {
+    "item_type": {
+      "type": "string",
+      "enum": [
+        "TOOL",
+        "VEHICLE"
+      ],
+      "default": "TOOL",
+      "description": "Discriminator: TOOL = stock-managed, VEHICLE = asset-managed"
+    },
+    "ownership_origin": {
+      "type": "string",
+      "enum": [
+        "inherited",
+        "purchased"
+      ],
+      "default": "purchased",
+      "description": "inherited = vom Vorbesitzer \u00fcbernommen (vor 01.04.2026), purchased = eigener Bestand"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Internal SKU/part number"
+    },
+    "name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Engine Parts",
+        "Electrical",
+        "Electronics",
+        "Plumbing",
+        "Rigging",
+        "Deck Hardware",
+        "Safety Equipment",
+        "Consumables",
+        "Sealants/Adhesives",
+        "Filters",
+        "Belts/Hoses",
+        "Fasteners",
+        "Paint/Gelcoat",
+        "HVAC",
+        "Tools",
+        "Van",
+        "Car",
+        "Truck",
+        "Trailer",
+        "Other"
+      ],
+      "default": "Other"
+    },
+    "quantity_mode": {
+      "type": "string",
+      "enum": [
+        "unique",
+        "pooled"
+      ],
+      "default": "pooled"
+    },
+    "manufacturer": {
+      "type": "string"
+    },
+    "manufacturer_part_number": {
+      "type": "string"
+    },
+    "supplier": {
+      "type": "string"
+    },
+    "supplier_part_number": {
+      "type": "string"
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "Piece",
+        "Meter",
+        "Liter",
+        "Kg",
+        "Set",
+        "Box",
+        "Roll"
+      ],
+      "default": "Piece"
+    },
+    "unit_cost": {
+      "type": "number"
+    },
+    "markup_percent": {
+      "type": "number",
+      "default": 30
+    },
+    "sales_price": {
+      "type": "number"
+    },
+    "stock_novigrad": {
+      "type": "number",
+      "default": 0
+    },
+    "stock_van_1": {
+      "type": "number",
+      "default": 0
+    },
+    "stock_van_2": {
+      "type": "number",
+      "default": 0
+    },
+    "stock_reserved": {
+      "type": "number",
+      "default": 0
+    },
+    "min_stock_level": {
+      "type": "number",
+      "default": 1
+    },
+    "reorder_quantity": {
+      "type": "number"
+    },
+    "lead_time_days": {
+      "type": "number"
+    },
+    "serial_number_required": {
+      "type": "boolean",
+      "default": false
+    },
+    "location_in_warehouse": {
+      "type": "string"
+    },
+    "location_base": {
+      "type": "string"
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Maintenance",
+        "Discontinued",
+        "Out of Stock",
+        "Retired"
+      ],
+      "default": "Active"
+    },
+    "license_plate": {
+      "type": "string"
+    },
+    "vin": {
+      "type": "string"
+    },
+    "make": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "year": {
+      "type": "number"
+    },
+    "vehicle_type": {
+      "type": "string",
+      "enum": [
+        "Van",
+        "Car",
+        "Truck",
+        "Trailer",
+        "Other"
+      ]
+    },
+    "fuel_type": {
+      "type": "string",
+      "enum": [
+        "Diesel",
+        "Petrol",
+        "Electric",
+        "Hybrid"
+      ]
+    },
+    "capacity_notes": {
+      "type": "string"
+    },
+    "insurance_expiry": {
+      "type": "string",
+      "format": "date"
+    },
+    "maintenance_due_date": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -70,6 +70,7 @@ export default function Inventory() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [ownershipFilter, setOwnershipFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
   const [manufacturerFilter, setManufacturerFilter] = useState('all');
@@ -138,6 +139,7 @@ export default function Inventory() {
       item.manufacturer?.toLowerCase().includes(searchLower);
     
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+    const matchesOwnership = ownershipFilter === 'all' || (item.ownership_origin || 'inherited') === ownershipFilter;
     
     // Stock filter
     const totalStock = getTotalStock(item);
@@ -149,7 +151,7 @@ export default function Inventory() {
     // Manufacturer filter
     const matchesManufacturer = manufacturerFilter === 'all' || item.manufacturer === manufacturerFilter;
     
-    return matchesSearch && matchesCategory && matchesStock && matchesManufacturer;
+    return matchesSearch && matchesCategory && matchesStock && matchesManufacturer && matchesOwnership;
   }).sort((a, b) => {
     // Sorting logic
     if (sortBy === 'stock-high') {
@@ -193,8 +195,29 @@ export default function Inventory() {
         </div>
       </div>
 
+      {/* Ownership Filter Tabs */}
+      <div className="flex gap-2 border-b border-slate-200 pb-0">
+        {[
+          { value: 'all', label: 'Alle', count: items.filter(i => i.item_type !== 'VEHICLE').length },
+          { value: 'inherited', label: '🔴 Altbestand (Vorbesitzer)', count: items.filter(i => (i.ownership_origin || 'inherited') === 'inherited').length },
+          { value: 'purchased', label: '🟢 Eigener Bestand', count: items.filter(i => i.ownership_origin === 'purchased').length },
+        ].map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => setOwnershipFilter(tab.value)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              ownershipFilter === tab.value
+                ? 'border-blue-600 text-blue-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {tab.label} <span className="ml-1 text-xs text-slate-400">({tab.count})</span>
+          </button>
+        ))}
+      </div>
+
       {/* Low Stock Alert */}
-      {lowStockItems.length > 0 && (
+        {lowStockItems.length > 0 && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
