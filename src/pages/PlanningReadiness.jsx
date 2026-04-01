@@ -6,7 +6,7 @@ import WOReadinessRow from '@/components/planning/WOReadinessRow';
 import WODetailPanel from '@/components/planning/WODetailPanel';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, ChevronDown, ChevronRight, HelpCircle, X, Info } from 'lucide-react';
+import { Loader2, Search, ChevronDown, ChevronRight, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const EXCLUDED_JOB_STATUSES = ['Completed', 'Cancelled', 'Invoiced'];
@@ -14,17 +14,9 @@ const EXCLUDED_WO_STATUSES  = ['Completed', 'Cancelled'];
 
 const SECTION_DESCRIPTIONS = {
   ready:               'These work orders have everything needed to be added to the schedule. Start here when planning the week.',
-  needs_clarification: "Something is missing but not critical. Can often be resolved quickly \u2014 check the detail panel for what's needed.", — check the detail panel for what's needed.',
+  needs_clarification: "Something is missing but not critical. Can often be resolved quickly - check the detail panel for what's needed.",
   not_plannable:       'These cannot be scheduled until a hard blocker is resolved. Review and delegate the required actions first.',
 };
-
-const READINESS_WHY = {
-  ready:               { color: 'bg-emerald-50 border-emerald-200 text-emerald-800', icon: '✅', text: 'This work order meets all planning criteria. It can be added to the schedule.' },
-  needs_clarification: { color: 'bg-yellow-50 border-yellow-200 text-yellow-800', icon: '⚠️', text: 'One or more soft blockers exist. Planning is possible but some details should be confirmed first.' },
-  not_plannable:       { color: 'bg-red-50 border-red-200 text-red-800', icon: '❌', text: 'A hard blocker is preventing this work order from being scheduled. See the blockers below.' },
-};
-
-export { READINESS_WHY };
 
 function SectionHeader({ label, count, open, onToggle, color, description }) {
   return (
@@ -52,28 +44,22 @@ export default function PlanningReadiness() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [openSections, setOpenSections] = useState({ ready: true, needs_clarification: true, not_plannable: true });
 
-  // ── DATA FETCHING (read-only) ──────────────────────────────────────────
-
-  const { data: jobs = [],        isLoading: l1 } = useQuery({ queryKey: ['planning-jobs'],         queryFn: () => base44.entities.Job.list() });
-  const { data: workOrders = [],  isLoading: l2 } = useQuery({ queryKey: ['planning-wos'],          queryFn: () => base44.entities.WorkOrder.list() });
-  const { data: tasks = [],       isLoading: l3 } = useQuery({ queryKey: ['planning-tasks'],        queryFn: () => base44.entities.Task.list() });
-  const { data: customers = [],   isLoading: l4 } = useQuery({ queryKey: ['planning-customers'],    queryFn: () => base44.entities.Customer.list() });
-  const { data: boats = [],       isLoading: l5 } = useQuery({ queryKey: ['planning-boats'],        queryFn: () => base44.entities.Boat.list() });
-  const { data: locations = [],   isLoading: l6 } = useQuery({ queryKey: ['planning-locations'],   queryFn: () => base44.entities.Location.list() });
-  const { data: technicians = [], isLoading: l7 } = useQuery({ queryKey: ['planning-technicians'], queryFn: () => base44.entities.Technician.list() });
+  const { data: jobs = [],        isLoading: l1 } = useQuery({ queryKey: ['planning-jobs'],        queryFn: () => base44.entities.Job.list() });
+  const { data: workOrders = [],  isLoading: l2 } = useQuery({ queryKey: ['planning-wos'],         queryFn: () => base44.entities.WorkOrder.list() });
+  const { data: tasks = [],       isLoading: l3 } = useQuery({ queryKey: ['planning-tasks'],       queryFn: () => base44.entities.Task.list() });
+  const { data: customers = [],   isLoading: l4 } = useQuery({ queryKey: ['planning-customers'],   queryFn: () => base44.entities.Customer.list() });
+  const { data: boats = [],       isLoading: l5 } = useQuery({ queryKey: ['planning-boats'],       queryFn: () => base44.entities.Boat.list() });
+  const { data: locations = [],   isLoading: l6 } = useQuery({ queryKey: ['planning-locations'],  queryFn: () => base44.entities.Location.list() });
+  const { data: technicians = [], isLoading: l7 } = useQuery({ queryKey: ['planning-technicians'],queryFn: () => base44.entities.Technician.list() });
 
   const isLoading = l1 || l2 || l3 || l4 || l5 || l6 || l7;
 
-  // ── LOOKUP MAPS ────────────────────────────────────────────────────────
-
   const maps = useMemo(() => ({
-    jobs:       Object.fromEntries(jobs.map(j => [j.id, j])),
-    customers:  Object.fromEntries(customers.map(c => [c.id, c])),
-    boats:      Object.fromEntries(boats.map(b => [b.id, b])),
-    locations:  Object.fromEntries(locations.map(l => [l.id, l])),
+    jobs:      Object.fromEntries(jobs.map(j => [j.id, j])),
+    customers: Object.fromEntries(customers.map(c => [c.id, c])),
+    boats:     Object.fromEntries(boats.map(b => [b.id, b])),
+    locations: Object.fromEntries(locations.map(l => [l.id, l])),
   }), [jobs, customers, boats, locations]);
-
-  // ── TASK AGGREGATION ───────────────────────────────────────────────────
 
   const tasksByWO = useMemo(() => {
     const m = {};
@@ -85,13 +71,9 @@ export default function PlanningReadiness() {
     return m;
   }, [tasks]);
 
-  // ── ACTIVE JOB IDs ─────────────────────────────────────────────────────
-
   const activeJobIds = useMemo(() =>
     new Set(jobs.filter(j => !EXCLUDED_JOB_STATUSES.includes(j.status)).map(j => j.id)),
   [jobs]);
-
-  // ── BUILD ENRICHED ITEMS ───────────────────────────────────────────────
 
   const allItems = useMemo(() => {
     const relevantWOs = workOrders.filter(wo => {
@@ -99,29 +81,16 @@ export default function PlanningReadiness() {
       if (wo.job_id && !activeJobIds.has(wo.job_id)) return false;
       return true;
     });
-
     return relevantWOs.map(wo => {
       const job      = wo.job_id ? maps.jobs[wo.job_id] : null;
       const customer = job?.customer_id ? maps.customers[job.customer_id] : null;
       const boat     = job?.boat_id ? maps.boats[job.boat_id] : null;
       const location = job?.location_id ? maps.locations[job.location_id] : null;
       const tData    = tasksByWO[wo.id] || { count: 0, minutesSum: 0 };
-
-      const evaluation = evaluateWorkOrder({
-        workOrder: wo,
-        job,
-        customer,
-        boat,
-        location,
-        taskCount: tData.count,
-        taskEstimatedMinutesSum: tData.minutesSum,
-      });
-
+      const evaluation = evaluateWorkOrder({ workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum });
       return { workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum, evaluation };
     });
   }, [workOrders, activeJobIds, maps, tasksByWO]);
-
-  // ── SEARCH FILTER ──────────────────────────────────────────────────────
 
   const filteredItems = useMemo(() => {
     if (!search.trim()) return allItems;
@@ -132,8 +101,6 @@ export default function PlanningReadiness() {
       i.location?.name?.toLowerCase().includes(q)
     );
   }, [allItems, search]);
-
-  // ── GROUPS ─────────────────────────────────────────────────────────────
 
   const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
   const sortByPriority = (a, b) => {
@@ -152,10 +119,7 @@ export default function PlanningReadiness() {
 
   const deployableCount = useMemo(() => allItems.filter(i => i.evaluation.deployable).length, [allItems]);
   const selectedItem = useMemo(() => allItems.find(i => i.workOrder.id === selectedId), [allItems, selectedId]);
-
   const toggleSection = (key) => setOpenSections(s => ({ ...s, [key]: !s[key] }));
-
-  // ── RENDER ─────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -174,6 +138,7 @@ export default function PlanningReadiness() {
 
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200">
+
           {/* Intro banner */}
           <div className="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -191,16 +156,16 @@ export default function PlanningReadiness() {
               <div className="mt-2 pt-2 border-t border-slate-200 space-y-1">
                 <p className="text-xs font-semibold text-slate-700 mb-1">Recommended daily workflow:</p>
                 {[
-                  ['1', '❌ Start with "Not Plannable"', 'Identify hard blockers — delegate resolution immediately.'],
-                  ['2', '⚠️ Review "Needs Clarification"', 'Small gaps that can often be resolved in minutes.'],
-                  ['3', '✅ Use "Planning Ready" for scheduling', 'These are safe to add to the dispatch board.'],
-                  ['4', '🚀 "Deployable" = dispatch-ready this week', 'Has duration + assigned technician + confirmed access.'],
+                  ['1', 'Start with "Not Plannable"', 'Identify hard blockers - delegate resolution immediately.'],
+                  ['2', 'Review "Needs Clarification"', 'Small gaps that can often be resolved in minutes.'],
+                  ['3', 'Use "Planning Ready" for scheduling', 'These are safe to add to the dispatch board.'],
+                  ['4', '"Deployable" = dispatch-ready this week', 'Has duration + assigned technician + confirmed access.'],
                 ].map(([n, title, desc]) => (
                   <div key={n} className="flex gap-2 text-xs">
                     <span className="text-slate-400 w-3 flex-shrink-0">{n}.</span>
                     <div>
                       <span className="font-medium text-slate-700">{title}</span>
-                      <span className="text-slate-500"> — {desc}</span>
+                      <span className="text-slate-500"> - {desc}</span>
                     </div>
                   </div>
                 ))}
@@ -227,7 +192,7 @@ export default function PlanningReadiness() {
             </div>
             <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200" title="Has estimated duration + assigned technician + confirmed access">
               <p className="text-lg font-bold text-blue-700">{deployableCount}</p>
-              <p className="text-xs text-blue-600">🚀 Deployable</p>
+              <p className="text-xs text-blue-600">Deployable</p>
               <p className="text-xs text-blue-400" style={{fontSize:'9px'}}>duration + crew + access</p>
             </div>
           </div>
@@ -246,10 +211,16 @@ export default function PlanningReadiness() {
 
         {/* List body */}
         <div className="flex-1 overflow-y-auto">
+
           {/* Ready */}
           <SectionHeader
-            label="✅ Planning Ready"
+            label="Planning Ready"
+            count={groups.ready.length}
+            open={openSections.ready}
+            onToggle={() => toggleSection('ready')}
+            color="bg-emerald-50 text-emerald-800 border-emerald-100"
             description={SECTION_DESCRIPTIONS.ready}
+          />
           {openSections.ready && groups.ready.map(item => (
             <WOReadinessRow key={item.workOrder.id} item={item} selected={selectedId === item.workOrder.id} onClick={() => setSelectedId(item.workOrder.id)} />
           ))}
@@ -262,27 +233,37 @@ export default function PlanningReadiness() {
 
           {/* Needs Clarification */}
           <SectionHeader
-            label="⚠️ Needs Clarification"
+            label="Needs Clarification"
+            count={groups.needs_clarification.length}
+            open={openSections.needs_clarification}
+            onToggle={() => toggleSection('needs_clarification')}
+            color="bg-yellow-50 text-yellow-800 border-yellow-100"
             description={SECTION_DESCRIPTIONS.needs_clarification}
+          />
           {openSections.needs_clarification && groups.needs_clarification.map(item => (
             <WOReadinessRow key={item.workOrder.id} item={item} selected={selectedId === item.workOrder.id} onClick={() => setSelectedId(item.workOrder.id)} />
           ))}
           {openSections.needs_clarification && groups.needs_clarification.length === 0 && (
             <div className="px-4 py-5 text-center">
-              <p className="text-sm text-slate-400">👍 No clarification needed right now.</p>
+              <p className="text-sm text-slate-400">No clarification needed right now.</p>
             </div>
           )}
 
           {/* Not Plannable */}
           <SectionHeader
-            label="❌ Not Plannable"
+            label="Not Plannable"
+            count={groups.not_plannable.length}
+            open={openSections.not_plannable}
+            onToggle={() => toggleSection('not_plannable')}
+            color="bg-red-50 text-red-800 border-red-100"
             description={SECTION_DESCRIPTIONS.not_plannable}
+          />
           {openSections.not_plannable && groups.not_plannable.map(item => (
             <WOReadinessRow key={item.workOrder.id} item={item} selected={selectedId === item.workOrder.id} onClick={() => setSelectedId(item.workOrder.id)} />
           ))}
           {openSections.not_plannable && groups.not_plannable.length === 0 && (
             <div className="px-4 py-5 text-center">
-              <p className="text-sm text-slate-400">✅ No hard blockers found. Great shape!</p>
+              <p className="text-sm text-slate-400">No hard blockers found. Great shape!</p>
             </div>
           )}
         </div>
