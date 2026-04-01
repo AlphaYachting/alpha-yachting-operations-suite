@@ -139,11 +139,15 @@ export default function PlanningReadiness() {
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200">
 
+          {/* Title first */}
+          <h1 className="text-lg font-bold text-slate-900">Planning Readiness Cockpit</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Read-only · No changes are made to any records</p>
+
           {/* Intro banner */}
-          <div className="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="mt-3 mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
             <p className="text-xs text-slate-600 leading-relaxed">
               <span className="font-semibold text-slate-800">What is this page?</span>
-              {' '}This cockpit shows which work orders are ready to be scheduled, which need a quick clarification, and which are blocked. Use it every morning before dispatching to identify gaps before they become problems.
+              {' '}This cockpit shows which work orders are ready to schedule, which need a quick clarification, and which are hard-blocked. Use it every morning before dispatching to identify gaps before they become problems.
             </p>
             <button
               onClick={() => setHelpOpen(v => !v)}
@@ -156,25 +160,22 @@ export default function PlanningReadiness() {
               <div className="mt-2 pt-2 border-t border-slate-200 space-y-1">
                 <p className="text-xs font-semibold text-slate-700 mb-1">Recommended daily workflow:</p>
                 {[
-                  ['1', 'Start with "Not Plannable"', 'Identify hard blockers - delegate resolution immediately.'],
+                  ['1', 'Start with "Not Plannable"', 'Identify hard blockers — delegate resolution immediately.'],
                   ['2', 'Review "Needs Clarification"', 'Small gaps that can often be resolved in minutes.'],
                   ['3', 'Use "Planning Ready" for scheduling', 'These are safe to add to the dispatch board.'],
-                  ['4', '"Deployable" = dispatch-ready this week', 'Has duration + assigned technician + confirmed access.'],
+                  ['4', '"Deployable This Week" = your shortlist', 'Has duration + assigned technician + confirmed access. These can go out this week.'],
                 ].map(([n, title, desc]) => (
                   <div key={n} className="flex gap-2 text-xs">
                     <span className="text-slate-400 w-3 flex-shrink-0">{n}.</span>
                     <div>
                       <span className="font-medium text-slate-700">{title}</span>
-                      <span className="text-slate-500"> - {desc}</span>
+                      <span className="text-slate-500"> — {desc}</span>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
-
-          <h1 className="text-lg font-bold text-slate-900">Planning Readiness Cockpit</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Read-only · No changes are made to any records</p>
 
           {/* Summary counters */}
           <div className="grid grid-cols-4 gap-2 mt-4">
@@ -190,10 +191,10 @@ export default function PlanningReadiness() {
               <p className="text-lg font-bold text-red-700">{groups.not_plannable.length}</p>
               <p className="text-xs text-red-600">Not Plannable</p>
             </div>
-            <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200" title="Has estimated duration + assigned technician + confirmed access">
+            <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-lg font-bold text-blue-700">{deployableCount}</p>
-              <p className="text-xs text-blue-600">Deployable</p>
-              <p className="text-xs text-blue-400" style={{fontSize:'9px'}}>duration + crew + access</p>
+              <p className="text-xs text-blue-600 font-medium">Deployable This Week</p>
+              <p className="text-xs text-blue-400 mt-0.5">duration + crew + access ✓</p>
             </div>
           </div>
 
@@ -211,6 +212,15 @@ export default function PlanningReadiness() {
 
         {/* List body */}
         <div className="flex-1 overflow-y-auto">
+
+          {/* Global empty state when search returns nothing */}
+          {search.trim() && filteredItems.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center px-6">
+              <Search className="h-8 w-8 text-slate-300 mb-3" />
+              <p className="text-sm font-medium text-slate-500">No work orders match "{search}"</p>
+              <p className="text-xs text-slate-400 mt-1">Try searching by work order title, project name, or location.</p>
+            </div>
+          )}
 
           {/* Ready */}
           <SectionHeader
