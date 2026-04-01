@@ -95,6 +95,8 @@ export default function OfferDetail() {
   const [showFollowUpDraft, setShowFollowUpDraft] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [projectStartDate, setProjectStartDate] = useState('');
+  const [convertMode, setConvertMode] = useState('new'); // 'new' | 'existing'
+  const [selectedExistingJobId, setSelectedExistingJobId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [template, setTemplate] = useState(null);
@@ -625,8 +627,30 @@ Requirements:
       if (tasks.length === 0) {
         throw new Error('No tasks to convert');
       }
+      if (convertMode === 'existing' && !selectedExistingJobId) {
+        throw new Error('Bitte ein bestehendes Projekt auswählen');
+      }
 
       const today = projectStartDate || new Date().toISOString().split('T')[0];
+
+      // --- Resolve Job ID ---
+      let jobId;
+      if (convertMode === 'existing') {
+        jobId = selectedExistingJobId;
+      } else {
+        // Create new Job
+        const newJob = await base44.entities.Job.create({
+          customer_id: formData.customer_id,
+          boat_id: formData.boat_id || undefined,
+          location_id: formData.location_id || undefined,
+          title: formData.title,
+          description: formData.description || '',
+          job_type: 'Mobile Service',
+          status: 'Approved',
+          intake_date: new Date().toISOString(),
+        });
+        jobId = newJob.id;
+      }
 
       // --- Split tasks into chapters ---
       // Group non-chapter tasks by their preceding chapter
@@ -657,7 +681,7 @@ Requirements:
       const allMaterialTasks = tasks.filter(t => t.item_type === 'Material' && !t.is_optional);
 
       const orgaWOResponse = await base44.functions.invoke('createWorkOrderWithNumber', {
-        job_id: job.id,
+        job_id: jobId,
         offer_id: offerId,
         title: `Organisation – ${formData.title}`,
         description: 'Organisationsaufgaben: Materialbestellung, Terminkoordination, Lagerprüfung.',
@@ -709,7 +733,7 @@ Requirements:
 
           const woTitle = chapter.title || formData.title;
           const execWOResponse = await base44.functions.invoke('createWorkOrderWithNumber', {
-            job_id: job.id,
+            job_id: jobId,
             offer_id: offerId,
             title: woTitle,
             description: '',
@@ -742,7 +766,7 @@ Requirements:
         const allLaborTasks = tasks.filter(t => t.item_type !== 'Material' && t.item_type !== 'Chapter' && !t.is_optional);
         if (allLaborTasks.length > 0) {
           const execWOResponse = await base44.functions.invoke('createWorkOrderWithNumber', {
-            job_id: job.id,
+            job_id: jobId,
             offer_id: offerId,
             title: formData.title,
             description: formData.description || '',
@@ -771,13 +795,19 @@ Requirements:
         }
       }
 
+      // Update offer: link to job and mark converted
+      await base44.entities.Offer.update(offerId, {
+        converted_job_id: jobId,
+        status: 'Converted',
+      });
+
       queryClient.invalidateQueries(['offer', offerId]);
       queryClient.invalidateQueries(['offers']);
       queryClient.invalidateQueries(['jobs']);
       
       setShowCreateProjectDialog(false);
-      toast.success('Project created successfully');
-      navigate(createPageUrl('JobDetail') + `?id=${job.id}`);
+      toast.success(convertMode === 'new' ? 'Projekt erstellt' : 'Work Orders zum Projekt hinzugefügt');
+      navigate(createPageUrl('JobDetail') + `?id=${jobId}`);
     } catch (err) {
       console.error('Create project error:', err);
       setError(err.message);
@@ -1739,15 +1769,56 @@ Requirements:
       </Dialog>
 
       {/* Create Project Confirmation Dialog */}
-      <Dialog open={showCreateProjectDialog} onOpenChange={(open) => { setShowCreateProjectDialog(open); if (open && !projectStartDate) setProjectStartDate(new Date().toISOString().split('T')[0]); }}>
+      <Dialog open={showCreateProjectDialog} onOpenChange={(open) => { setShowCreateProjectDialog(open); if (open) { if (!projectStartDate) setProjectStartDate(new Date().toISOString().split('T')[0]); setConvertMode('new'); setSelectedExistingJobId(''); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Project from Offer?</DialogTitle>
+            <DialogTitle>Angebot in Projekt umwandeln</DialogTitle>
             <DialogDescription>
-              This will create a new project with work orders from this offer.
-              The offer status will be updated to "Converted".
+              Work Orders aus diesem Angebot werden erstellt und einem Projekt zugeordnet.
             </DialogDescription>
           </DialogHeader>
+
+          {/* Mode selection */}
+          <div className="flex gap-2 my-3">
+            <button
+              onClick={() => setConvertMode('new')}
+              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                convertMode === 'new' ? 'bg-green-600 text-white border-green-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              Neues Projekt erstellen
+            </button>
+            <button
+              onClick={() => setConvertMode('existing')}
+              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                convertMode === 'existing' ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              Zu bestehendem Projekt
+            </button>
+          </div>
+
+          {convertMode === 'existing' && (
+            <div className="space-y-2 mb-3">
+              <Label>Bestehendes Projekt auswählen</Label>
+              <Select value={selectedExistingJobId} onValueChange={setSelectedExistingJobId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Projekt auswählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredJobs.map(j => (
+                    <SelectItem key={j.id} value={j.id}>
+                      {j.title} {j.job_number ? `(${j.job_number})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {filteredJobs.length === 0 && (
+                <p className="text-xs text-amber-600">Keine bestehenden Projekte für diesen Kunden gefunden.</p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2 my-2">
             <Label>Projektstart-Datum</Label>
             <Input
