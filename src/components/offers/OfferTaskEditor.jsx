@@ -180,6 +180,16 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
         </div>
       ) : (
         <>
+          <div className="flex gap-2 mb-2">
+            <Button onClick={openNewTask} variant="outline" className="flex-1">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Task
+            </Button>
+            <Button onClick={addChapterHeading} variant="outline" className="border-slate-700 text-slate-700 hover:bg-slate-800 hover:text-white">
+              <Heading className="h-4 w-4 mr-2" />
+              Kapitel hinzufügen
+            </Button>
+          </div>
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="tasks">
               {(provided) => (
