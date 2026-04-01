@@ -1,13 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useState } from 'react';
-import { Package, Plus } from 'lucide-react';
+import { Package, Plus, Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import ManualMaterialEntryModal from './ManualMaterialEntryModal';
 import moment from 'moment';
 
 export default function CustomerMaterialSection({ customerId }) {
   const [showManual, setShowManual] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+
+  const handleDelete = async (entry) => {
+    if (!confirm(`"${entry.item_title}" wirklich löschen?`)) return;
+    await base44.entities.CustomerMaterialEntry.delete(entry.id);
+    toast.success('Eintrag gelöscht');
+    refetch();
+  };
 
   const { data: entries = [], refetch } = useQuery({
     queryKey: ['customer_material', customerId],
@@ -53,7 +62,8 @@ export default function CustomerMaterialSection({ customerId }) {
                 <th className="text-right px-3 py-2 font-medium text-slate-500">Total</th>
                 <th className="text-left px-3 py-2 font-medium text-slate-500">Date</th>
                 <th className="text-left px-3 py-2 font-medium text-slate-500">Source</th>
-              </tr>
+                <th className="px-3 py-2"></th>
+                </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {entries.map(entry => (
@@ -80,9 +90,19 @@ export default function CustomerMaterialSection({ customerId }) {
                     }`}>
                       {entry.source_type === 'manual' ? 'manual' : 'import'}
                     </span>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-3 py-2">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setEditingEntry(entry)} className="p-1 text-slate-400 hover:text-blue-600 rounded" title="Bearbeiten">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button onClick={() => handleDelete(entry)} className="p-1 text-slate-400 hover:text-red-600 rounded" title="Löschen">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    </td>
+                    </tr>
+                    ))}
             </tbody>
           </table>
         </div>
@@ -93,6 +113,15 @@ export default function CustomerMaterialSection({ customerId }) {
           customers={customers}
           onClose={() => setShowManual(false)}
           onSaved={() => { setShowManual(false); refetch(); }}
+        />
+      )}
+
+      {editingEntry && (
+        <ManualMaterialEntryModal
+          customers={customers}
+          entry={editingEntry}
+          onClose={() => setEditingEntry(null)}
+          onSaved={() => { setEditingEntry(null); refetch(); }}
         />
       )}
     </div>

@@ -7,22 +7,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { X, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function ManualMaterialEntryModal({ customers = [], onClose, onSaved }) {
+export default function ManualMaterialEntryModal({ customers = [], entry = null, onClose, onSaved }) {
+  const isEdit = !!entry;
   const [saving, setSaving] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(
+    entry ? (customers.find(c => c.id === entry.customer_id) || { id: entry.customer_id, last_name: entry.customer_id }) : null
+  );
   const [form, setForm] = useState({
-    supplier_name: '',
-    document_number: '',
-    document_date: '',
-    item_title: '',
-    item_description: '',
-    quantity: '',
-    unit: '',
-    unit_purchase_price: '',
-    total_purchase_price: '',
-    notes: '',
+    supplier_name: entry?.supplier_name || '',
+    document_number: entry?.document_number || '',
+    document_date: entry?.document_date || '',
+    item_title: entry?.item_title || '',
+    item_description: entry?.item_description || '',
+    quantity: entry?.quantity != null ? String(entry.quantity) : '',
+    unit: entry?.unit || '',
+    unit_purchase_price: entry?.unit_purchase_price != null ? String(entry.unit_purchase_price) : '',
+    total_purchase_price: entry?.total_purchase_price != null ? String(entry.total_purchase_price) : '',
+    notes: entry?.notes || '',
   });
+
 
   const filteredCustomers = customers.filter(c => {
     const q = customerSearch.toLowerCase();
@@ -36,9 +40,9 @@ export default function ManualMaterialEntryModal({ customers = [], onClose, onSa
     if (!selectedCustomer) return toast.error('Please select a customer');
     if (!form.item_title) return toast.error('Item title is required');
     setSaving(true);
-    await base44.entities.CustomerMaterialEntry.create({
+    const payload = {
       customer_id: selectedCustomer.id,
-      source_type: 'manual',
+      source_type: isEdit ? entry.source_type : 'manual',
       supplier_name: form.supplier_name,
       document_number: form.document_number,
       document_date: form.document_date || null,
@@ -49,9 +53,19 @@ export default function ManualMaterialEntryModal({ customers = [], onClose, onSa
       unit_purchase_price: form.unit_purchase_price !== '' ? Number(form.unit_purchase_price) : null,
       total_purchase_price: form.total_purchase_price !== '' ? Number(form.total_purchase_price) : null,
       notes: form.notes,
-    });
+    };
+    if (isEdit) {
+      await base44.entities.CustomerMaterialEntry.update(entry.id, payload);
+    } else {
+      await base44.entities.CustomerMaterialEntry.create({
+      customer_id: selectedCustomer.id,
+      source_type: 'manual',
+      customer_id: selectedCustomer.id,
+      source_type: 'manual',
+      });
+    }
     setSaving(false);
-    toast.success('Manual entry saved');
+    toast.success(isEdit ? 'Eintrag aktualisiert' : 'Eintrag gespeichert');
     onSaved();
   };
 
@@ -59,7 +73,7 @@ export default function ManualMaterialEntryModal({ customers = [], onClose, onSa
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-          <h2 className="font-semibold text-slate-900">Manual Material Entry</h2>
+          <h2 className="font-semibold text-slate-900">{isEdit ? 'Eintrag bearbeiten' : 'Manual Material Entry'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
         </div>
         <div className="p-5 space-y-4">
@@ -149,8 +163,8 @@ export default function ManualMaterialEntryModal({ customers = [], onClose, onSa
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-slate-200">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-            Save Entry
+           {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+           {isEdit ? 'Speichern' : 'Save Entry'}
           </Button>
         </div>
       </div>
