@@ -79,6 +79,7 @@ const navItems = [
   
   // RESOURCES
   { header: 'RESOURCES' },
+  { name: 'Material Import', icon: Truck, page: 'MaterialImport' },
   { name: 'Technicians', icon: Wrench, page: 'Technicians' },
   { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
   { name: 'Tools & Inventory', icon: Package, page: 'Inventory' },
@@ -86,7 +87,6 @@ const navItems = [
   { name: 'Suppliers', icon: Briefcase, page: 'Suppliers' },
   { name: 'Task Templates', icon: ClipboardList, page: 'TaskTemplates' },
   { name: 'Offer Templates', icon: FileText, page: 'OfferTemplates' },
-  { name: 'Material Import', icon: Truck, page: 'MaterialImport' },
   
   // INTELLIGENCE
   { header: 'INTELLIGENCE' },
