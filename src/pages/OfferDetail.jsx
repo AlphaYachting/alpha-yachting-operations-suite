@@ -1860,7 +1860,7 @@ Requirements:
             </Button>
             <Button
               onClick={handleCreateProject}
-              disabled={saving}
+              disabled={saving || (convertMode === 'existing' && !selectedExistingJobId)}
               className="bg-green-600 hover:bg-green-700"
             >
               {saving ? (
