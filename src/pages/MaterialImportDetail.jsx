@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Upload, Loader2, Plus, Trash2, CheckCircle, Search, User, X } from 'lucide-react';
+import { ArrowLeft, Upload, Loader2, Plus, Trash2, CheckCircle, Search, User, X, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
 const EMPTY_LINE = () => ({
@@ -94,6 +94,7 @@ export default function MaterialImportDetail() {
   const [booking, setBooking] = useState(false);
   const [translating, setTranslating] = useState(false);
   const [translationLanguage, setTranslationLanguage] = useState('none');
+  const [bookingMode, setBookingMode] = useState('customer'); // 'customer' | 'inventory'
   const [defaultCustomerId, setDefaultCustomerId] = useState('');
   const [defaultCustomerSearch, setDefaultCustomerSearch] = useState('');
 
@@ -314,6 +315,34 @@ Rules:
     toast.success('Saved');
   };
 
+  // Book to Inventory — creates InventoryItem records (ownership_origin: purchased)
+  const handleBookToInventory = async () => {
+    const linesWithTitle = lines.filter(l => l.item_title);
+    if (linesWithTitle.length === 0) return toast.error('Keine Positionen zum Buchen');
+    if (!savedDocId) await handleSave();
+    setBooking(true);
+    await Promise.all(linesWithTitle.map(line => {
+      return base44.entities.InventoryItem.create({
+        item_type: 'TOOL',
+        ownership_origin: 'purchased',
+        name: line.item_title,
+        description: line.item_description || '',
+        sku: line.sku || '',
+        supplier: header.supplier_name || '',
+        unit_cost: line.unit_purchase_price !== '' ? Number(line.unit_purchase_price) : null,
+        stock_novigrad: line.quantity !== '' ? Number(line.quantity) : 0,
+        unit: 'Piece',
+        status: 'Active',
+      });
+    }));
+    if (savedDocId) {
+      await base44.entities.ImportDocument.update(savedDocId, { extraction_status: 'booked' });
+    }
+    setHeader(h => ({ ...h, extraction_status: 'booked' }));
+    setBooking(false);
+    toast.success(`${linesWithTitle.length} Artikel ins Lager gebucht (Eigener Bestand)`);
+  };
+
   // Book — each line uses its own customer, fallback to defaultCustomerId
   const handleBook = async () => {
     const linesWithCustomer = lines.filter(l => l.item_title && (l.assigned_customer_id || defaultCustomerId));
@@ -450,19 +479,48 @@ Rules:
         </div>
       </div>
 
-      {/* Step 3: Default Customer + Line Items */}
+      {/* Step 3: Booking Mode + Line Items */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+        {/* Mode Toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-slate-600 mr-1">Buchen als:</span>
+          <button
+            onClick={() => setBookingMode('customer')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+              bookingMode === 'customer'
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-slate-600 border-slate-300 hover:border-blue-400'
+            }`}
+          >
+            <User className="h-4 w-4" /> Kunden-Material
+          </button>
+          <button
+            onClick={() => setBookingMode('inventory')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+              bookingMode === 'inventory'
+                ? 'bg-emerald-600 text-white border-emerald-600'
+                : 'bg-white text-slate-600 border-slate-300 hover:border-emerald-400'
+            }`}
+          >
+            <Package className="h-4 w-4" /> Auf Lager (eigener Bestand)
+          </button>
+        </div>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="font-semibold text-slate-800">3. Positionen & Kundenzuweisung</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Jede Position kann einem anderen Kunden zugewiesen werden. Standardkunde wird auf alle Zeilen ohne Zuweisung angewendet.</p>
+            <h2 className="font-semibold text-slate-800">3. Positionen {bookingMode === 'inventory' ? '& Lagerbuchung' : '& Kundenzuweisung'}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {bookingMode === 'inventory'
+                ? 'Artikel werden als neuer eigener Bestand in Tools & Inventory gebucht (ownership: purchased).'
+                : 'Jede Position kann einem anderen Kunden zugewiesen werden. Standardkunde wird auf alle Zeilen ohne Zuweisung angewendet.'}
+            </p>
           </div>
           <Button variant="outline" size="sm" onClick={addLine} className="flex-shrink-0">
             <Plus className="h-4 w-4 mr-1" /> Add Line
           </Button>
         </div>
 
-        {/* Default customer selector */}
+        {/* Default customer selector — only in customer mode */}
+        {bookingMode === 'customer' && (
         <div className="flex flex-wrap items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
           <User className="h-4 w-4 text-slate-400 flex-shrink-0" />
           <span className="text-sm font-medium text-slate-700 whitespace-nowrap">Standardkunde:</span>
@@ -508,6 +566,7 @@ Rules:
             </span>
           )}
         </div>
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -520,7 +579,7 @@ Rules:
                 <th className="text-left pb-2 pr-2 font-medium w-[80px]">Unit Price</th>
                 <th className="text-left pb-2 pr-2 font-medium w-[80px]">Total</th>
                 <th className="text-left pb-2 pr-2 font-medium w-[70px]">SKU</th>
-                <th className="text-left pb-2 pr-2 font-medium w-[155px]">Kunde</th>
+                {bookingMode === 'customer' && <th className="text-left pb-2 pr-2 font-medium w-[155px]">Kunde</th>}
                 <th className="pb-2 w-[28px]" />
               </tr>
             </thead>
@@ -537,6 +596,7 @@ Rules:
                     <td className="py-1 pr-2"><Input type="number" value={line.unit_purchase_price} onChange={e => updateLine(line._key, 'unit_purchase_price', e.target.value)} className="h-7 text-xs" /></td>
                     <td className="py-1 pr-2"><Input type="number" value={line.total_purchase_price} onChange={e => updateLine(line._key, 'total_purchase_price', e.target.value)} className="h-7 text-xs" /></td>
                     <td className="py-1 pr-2"><Input value={line.sku} onChange={e => updateLine(line._key, 'sku', e.target.value)} className="h-7 text-xs" /></td>
+                    {bookingMode === 'customer' && (
                     <td className="py-1 pr-2">
                       <LineCustomerPicker
                         value={line.assigned_customer_id}
@@ -544,6 +604,7 @@ Rules:
                         onChange={v => updateLine(line._key, 'assigned_customer_id', v)}
                       />
                     </td>
+                    )}
                     <td className="py-1">
                       <button onClick={() => removeLine(line._key)} className="text-slate-300 hover:text-red-500 transition-colors">
                         <Trash2 className="h-3.5 w-3.5" />
@@ -565,14 +626,25 @@ Rules:
             {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
             Save Draft
           </Button>
-          <Button
-            onClick={handleBook}
-            disabled={booking || totalWithTitle === 0}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            {booking ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
-            Confirm & Book ({assignedCount}/{totalWithTitle})
-          </Button>
+          {bookingMode === 'customer' ? (
+            <Button
+              onClick={handleBook}
+              disabled={booking || totalWithTitle === 0}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {booking ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+              An Kunden buchen ({assignedCount}/{totalWithTitle})
+            </Button>
+          ) : (
+            <Button
+              onClick={handleBookToInventory}
+              disabled={booking || totalWithTitle === 0}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {booking ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Package className="h-4 w-4 mr-1" />}
+              Auf Lager buchen ({totalWithTitle} Artikel)
+            </Button>
+          )}
         </div>
       </div>
     </div>
