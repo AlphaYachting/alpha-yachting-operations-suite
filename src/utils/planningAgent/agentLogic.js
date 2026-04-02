@@ -1,5 +1,6 @@
-// Planning Agent V1 — Heuristic Decision Logic
+// Planning Agent V2 — Heuristic Decision Logic
 // READ-ONLY. No writes. No side effects.
+import { buildResourcePools, getZone } from './resourceMatcher.js';
 
 // ─── Service Area Inference ───────────────────────────────────────────────────
 const AREA_KEYWORDS = {
@@ -8,14 +9,14 @@ const AREA_KEYWORDS = {
   Electronics:      ['chart', 'plotter', 'vhf', 'ais', 'radar', 'nmea', 'autopilot', 'gps', 'display', 'elektronik'],
   'GRP/Bodywork':   ['osmose', 'rumpf', 'gelcoat', 'grp', 'laminat', 'antifouling', 'polish', 'reparatur', 'scratch', 'dent'],
   Sealing:          ['dicht', 'seal', 'leak', 'leck', 'silicon', 'sealant', 'teak', 'window', 'fenster', 'hatch'],
-  HVAC:             ['klima', 'hvac', 'heiz', 'heat', 'ventilation', 'aircon', 'cooling', 'kühlung'],
+  HVAC:             ['klima', 'hvac', 'heiz', 'heat', 'ventilation', 'aircon', 'cooling'],
   Rigging:          ['rigg', 'mast', 'segel', 'sail', 'shroud', 'stay', 'halyard', 'fall', 'winch'],
   Plumbing:         ['wasser', 'water', 'toilet', 'head', 'bilge', 'seacock', 'hahn', 'schlauch', 'hose', 'tank'],
   Diagnostics:      ['diagnos', 'check', 'inspection', 'inspektion', 'service', 'survey', 'test'],
 };
 
-export function inferServiceArea(text = '') {
-  const lower = text.toLowerCase();
+export function inferServiceArea(text) {
+  const lower = (text || '').toLowerCase();
   for (const [area, keywords] of Object.entries(AREA_KEYWORDS)) {
     if (keywords.some(k => lower.includes(k))) return { area, inferred: true };
   }
@@ -39,16 +40,10 @@ const SERVICE_AREA_EFFORT = {
 };
 
 export function estimateEffort(workOrder, tasks, serviceArea) {
-  // 1. Explicit
   if (workOrder.estimated_duration_hours) {
-    return {
-      min: workOrder.estimated_duration_hours,
-      max: workOrder.estimated_duration_hours,
-      source: 'explicit',
-    };
+    return { min: workOrder.estimated_duration_hours, max: workOrder.estimated_duration_hours, source: 'explicit' };
   }
-  // 2. Task-based
-  const tasksWithEstimate = tasks.filter(t => t.estimated_minutes > 0);
+  const tasksWithEstimate = (tasks || []).filter(t => t.estimated_minutes > 0);
   if (tasksWithEstimate.length > 0) {
     const raw = tasksWithEstimate.reduce((s, t) => s + t.estimated_minutes, 0) / 60;
     return {
@@ -57,11 +52,9 @@ export function estimateEffort(workOrder, tasks, serviceArea) {
       source: 'task_based',
     };
   }
-  // 3. Service area default
   if (serviceArea && SERVICE_AREA_EFFORT[serviceArea]) {
     return { ...SERVICE_AREA_EFFORT[serviceArea], source: 'service_area_default' };
   }
-  // 4. Global fallback
   return { min: 2, max: 8, source: 'global_fallback' };
 }
 
@@ -69,93 +62,76 @@ export function estimateEffort(workOrder, tasks, serviceArea) {
 export function estimateTeamSize(effortMin, effortMax, serviceArea) {
   const grp = serviceArea === 'GRP/Bodywork';
   let min = 1, max = 1;
-  if (effortMax <= 2)       { min = 1; max = 1; }
-  else if (effortMax <= 5)  { min = 1; max = 1; }
-  else if (effortMax <= 8)  { min = 1; max = 2; }
-  else                      { min = 2; max = 3; }
+  if (effortMax <= 2)      { min = 1; max = 1; }
+  else if (effortMax <= 5) { min = 1; max = 1; }
+  else if (effortMax <= 8) { min = 1; max = 2; }
+  else                     { min = 2; max = 3; }
   if (grp) { min = Math.max(min, 1); max = Math.max(max, 2); }
   return { min, max };
 }
 
 // ─── Blocker Detection ────────────────────────────────────────────────────────
 export function detectBlocker(workOrder, job, customer) {
-  // HARD blockers
   if (customer?.status === 'Blocked') return { type: 'HARD', reason: 'Customer account is blocked' };
   if (workOrder.status === 'Cancelled') return { type: 'HARD', reason: 'Work order is cancelled' };
   if (job && !job.location_id) return { type: 'HARD', reason: 'No location assigned to job' };
-  if (!workOrder.job_id && !job) {
-    // orphan handled separately
-  }
   if (job && job.requires_parts && !job.parts_ordered) return { type: 'HARD', reason: 'Parts required but not ordered' };
-
-  // EXTERNAL blockers
   if (workOrder.status === 'Waiting for Parts') return { type: 'EXTERNAL', reason: 'Waiting for parts delivery' };
   if (workOrder.status === 'Waiting for Approval') return { type: 'EXTERNAL', reason: 'Waiting for customer approval' };
-
   return { type: 'NONE', reason: null };
 }
 
 // ─── Confidence ───────────────────────────────────────────────────────────────
 export function computeConfidence(workOrder, job, effortSource, serviceArea) {
-  const hasLocation = !!(job?.location_id);
+  const hasLocation = !!(job && job.location_id);
   const durationExplicit = effortSource === 'explicit';
   const durationTaskBased = effortSource === 'task_based';
   const hasServiceArea = !!serviceArea;
 
-  // Count soft blockers
   let softCount = 0;
   if (!workOrder.assigned_technicians?.length) softCount++;
-  if (!workOrder.access_confirmed && !workOrder.boat?.access_details) softCount++;
+  if (!workOrder.access_confirmed) softCount++;
   if (!hasServiceArea) softCount++;
 
-  if (
-    (durationExplicit || durationTaskBased) &&
-    hasLocation &&
-    hasServiceArea &&
-    softCount === 0
-  ) return 'HIGH';
-
-  if (
-    (durationExplicit || durationTaskBased || effortSource === 'service_area_default') &&
-    hasLocation &&
-    softCount <= 1
-  ) return 'MEDIUM';
-
+  if ((durationExplicit || durationTaskBased) && hasLocation && hasServiceArea && softCount === 0) return 'HIGH';
+  if ((durationExplicit || durationTaskBased || effortSource === 'service_area_default') && hasLocation && softCount <= 1) return 'MEDIUM';
   return 'LOW';
 }
 
 // ─── Planning Bucket ──────────────────────────────────────────────────────────
 const URGENT_PRIORITIES = ['Urgent', 'Express'];
-const HIGH_PRIORITIES = ['Urgent', 'Express', 'High'];
+const HIGH_PRIORITIES   = ['Urgent', 'Express', 'High'];
 
-export function classifyBucket(workOrder, job, blocker, confidence, today = new Date()) {
+export function classifyBucket(workOrder, job, blocker, confidence, today, resourceGate) {
+  if (!today) today = new Date();
   if (blocker.type === 'HARD' || blocker.type === 'EXTERNAL') return 'BLOCKED';
 
-  const hasLocation = !!(job?.location_id);
   const isOrphan = !workOrder.job_id || !job;
-
   if (isOrphan) return 'NEEDS_CLARIFICATION';
-  if (!hasLocation) return 'BLOCKED'; // should be caught by HARD already, safety net
+  if (!job.location_id) return 'BLOCKED';
 
-  const requestedDate = job?.requested_date ? new Date(job.requested_date) : null;
+  const requestedDate = job.requested_date ? new Date(job.requested_date) : null;
   const scheduledDate = workOrder.scheduled_date ? new Date(workOrder.scheduled_date) : null;
-  const priority = job?.priority || 'Normal';
+  const priority = job.priority || 'Normal';
 
-  const weekEnd = new Date(today); weekEnd.setDate(today.getDate() + 7);
-  const twoWeekEnd = new Date(today); twoWeekEnd.setDate(today.getDate() + 14);
+  const weekEnd     = new Date(today); weekEnd.setDate(today.getDate() + 7);
+  const twoWeekEnd  = new Date(today); twoWeekEnd.setDate(today.getDate() + 14);
 
   const isUrgent = URGENT_PRIORITIES.includes(priority);
-  const isHigh = HIGH_PRIORITIES.includes(priority);
+  const isHigh   = HIGH_PRIORITIES.includes(priority);
+
   const requestedThisWeek = requestedDate && requestedDate <= weekEnd;
   const requestedNextWeek = requestedDate && requestedDate <= twoWeekEnd;
   const scheduledThisWeek = scheduledDate && scheduledDate >= today && scheduledDate <= weekEnd;
   const scheduledNextWeek = scheduledDate && scheduledDate > weekEnd && scheduledDate <= twoWeekEnd;
+  const isOverdue         = requestedDate && requestedDate < today;
 
-  const thisWeekSignal = requestedThisWeek || scheduledThisWeek || isUrgent ||
-    (requestedDate && requestedDate < today); // overdue
+  const thisWeekSignal = requestedThisWeek || scheduledThisWeek || isUrgent || isOverdue;
 
   if (thisWeekSignal) {
     if (confidence === 'LOW' && !isUrgent) return 'NEEDS_CLARIFICATION';
+    // V2: day-of-week resource gate — Thu/Fri shifts non-urgent WOs with no quick-response candidate
+    if (resourceGate === 'shift_next_week' && !isUrgent) return 'NEXT_WEEK_CANDIDATE';
     return 'THIS_WEEK_CANDIDATE';
   }
 
@@ -169,41 +145,35 @@ export function classifyBucket(workOrder, job, blocker, confidence, today = new 
 }
 
 // ─── Ranking Score ────────────────────────────────────────────────────────────
-export function computeRankingScore(workOrder, job, confidence, effortMax, serviceArea, blocker, today = new Date()) {
-  const requestedDate = job?.requested_date ? new Date(job.requested_date) : null;
-  const priority = job?.priority || 'Normal';
+export function computeRankingScore(workOrder, job, confidence, effortMax, serviceArea, blocker, today) {
+  if (!today) today = new Date();
+  const requestedDate = job && job.requested_date ? new Date(job.requested_date) : null;
+  const priority = (job && job.priority) || 'Normal';
   const diffDays = requestedDate ? Math.floor((requestedDate - today) / 86400000) : null;
 
-  // Date urgency (0–35)
   let dateScore = 0;
   if (diffDays !== null) {
-    if (diffDays < 0)     dateScore = 35;
+    if (diffDays < 0)        dateScore = 35;
     else if (diffDays === 0) dateScore = 33;
     else if (diffDays <= 3)  dateScore = 28;
     else if (diffDays <= 7)  dateScore = 20;
     else if (diffDays <= 14) dateScore = 12;
   }
 
-  // Priority (0–25)
-  const priorityScore = { Express: 25, Urgent: 22, High: 14, Normal: 6, Low: 0 }[priority] ?? 6;
+  const priorityScore = { Express: 25, Urgent: 22, High: 14, Normal: 6, Low: 0 }[priority] || 6;
+  const confScore     = { HIGH: 20, MEDIUM: 12, LOW: 4 }[confidence] || 4;
 
-  // Confidence (0–20)
-  const confScore = { HIGH: 20, MEDIUM: 12, LOW: 4 }[confidence];
-
-  // Quick win bonus (0–10)
   let quickWinBonus = 0;
   if (effortMax <= 2) quickWinBonus = confidence !== 'LOW' ? 10 : 4;
 
-  // Bad weather bonus (0–5)
-  const badWeatherAreas = ['Electronics', 'Electrical', 'HVAC'];
-  const badWeatherBonus = badWeatherAreas.includes(serviceArea) ? 5 : (serviceArea === 'GRP/Bodywork' ? 3 : 0);
+  const badWeatherBonus = ['Electronics', 'Electrical', 'HVAC'].includes(serviceArea) ? 5
+    : serviceArea === 'GRP/Bodywork' ? 3 : 0;
 
-  // Blocker penalty (0–15)
   let penalty = 0;
   if (!workOrder.assigned_technicians?.length) penalty += 4;
-  if (!workOrder.access_confirmed) penalty += 3;
+  if (!workOrder.access_confirmed)             penalty += 3;
   if (!workOrder.service_area && !serviceArea) penalty += 3;
-  if (blocker.type !== 'NONE') penalty += 5;
+  if (blocker.type !== 'NONE')                 penalty += 5;
   penalty = Math.min(penalty, 15);
 
   const total = Math.min(100, Math.max(0, dateScore + priorityScore + confScore + quickWinBonus + badWeatherBonus - penalty));
@@ -215,23 +185,38 @@ export function computeRankingScore(workOrder, job, confidence, effortMax, servi
 }
 
 // ─── Suggested Action ────────────────────────────────────────────────────────
-export function suggestNextAction(blocker, workOrder, job, confidence) {
+export function suggestNextAction(blocker, workOrder, job, confidence, resourcePools) {
   if (blocker.type === 'HARD') {
-    if (blocker.reason.includes('Parts')) return 'Order parts before scheduling';
+    if (blocker.reason.includes('Parts'))    return 'Order parts before scheduling';
     if (blocker.reason.includes('location')) return 'Assign a location to the job';
     if (blocker.reason.includes('Customer')) return 'Resolve customer account issue';
     return 'Resolve hard blocker before planning';
   }
   if (blocker.type === 'EXTERNAL') return 'Wait for external resolution, then re-evaluate';
-  if (!workOrder.assigned_technicians?.length) return 'Assign a technician and schedule';
+
+  // V2: use resource pool to make action more specific
+  if (!workOrder.assigned_technicians?.length) {
+    const top = resourcePools && resourcePools.preferred && resourcePools.preferred[0];
+    if (top) {
+      return 'Consider ' + top.name + ' as lead candidate - confirm availability and schedule';
+    }
+    const fallback = resourcePools && resourcePools.fallback && resourcePools.fallback[0];
+    if (fallback) {
+      return 'No core match - check ' + fallback.name + ' (' + fallback.availability_class + ') availability';
+    }
+    return 'Assign a technician and schedule';
+  }
   if (!workOrder.estimated_duration_hours) return 'Confirm duration estimate';
   if (!workOrder.access_confirmed) return 'Confirm boat/site access';
-  if (confidence === 'HIGH') return 'Ready to schedule — confirm date';
+  if (confidence === 'HIGH') return 'Ready to schedule - confirm date';
   return 'Review details and schedule when ready';
 }
 
 // ─── Main Evaluator ───────────────────────────────────────────────────────────
-export function evaluateWorkOrder({ workOrder, job, customer, boat, location, tasks, today = new Date() }) {
+export function evaluateWorkOrder({ workOrder, job, customer, boat, location, tasks, technicians, today }) {
+  if (!today) today = new Date();
+  if (!technicians) technicians = [];
+
   const orphanedWo = !workOrder.job_id || !job;
 
   // Service area
@@ -250,14 +235,20 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   // Blocker
   const blocker = detectBlocker(workOrder, job, customer);
 
-  // Parts ETA unknown
-  const partsEtaUnknown = !!(job?.requires_parts && job?.parts_ordered && !job?.parts_eta);
+  // Parts ETA
+  const partsEtaUnknown = !!(job && job.requires_parts && job.parts_ordered && !job.parts_eta);
 
   // Confidence
   const confidence = blocker.type !== 'NONE' ? 'LOW' : computeConfidence(workOrder, job, effort.source, serviceArea);
 
-  // Bucket
-  const bucket = classifyBucket(workOrder, job, blocker, confidence, today);
+  // V2: Job zone + resource pools
+  const locationText = [(location && location.name) || '', (location && location.city) || '', (location && location.address) || ''].join(' ');
+  const jobZone = getZone(locationText);
+  const dayOfWeek = today.getDay();
+  const resourcePools = buildResourcePools(technicians, serviceArea, jobZone, effort.max, dayOfWeek);
+
+  // Bucket (resource-gate aware)
+  const bucket = classifyBucket(workOrder, job, blocker, confidence, today, resourcePools.weekResourceGate);
 
   // Ranking
   const { score, breakdown } = computeRankingScore(workOrder, job, confidence, effort.max, serviceArea, blocker, today);
@@ -266,17 +257,15 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   const isQuickWin = effort.max <= 2 && confidence !== 'LOW' && blocker.type === 'NONE';
   const isBadWeatherCandidate = ['Electronics', 'Electrical', 'HVAC', 'GRP/Bodywork'].includes(serviceArea) && blocker.type === 'NONE';
 
-  // Main blocker / uncertainty
+  // Uncertainty
   const mainBlocker = blocker.type !== 'NONE' ? blocker.reason : null;
   let mainUncertainty = null;
   if (durationUnknown) mainUncertainty = 'Duration unknown (global fallback used)';
   else if (effort.source === 'service_area_default') mainUncertainty = 'Duration estimated from service area average';
   else if (!workOrder.assigned_technicians?.length) mainUncertainty = 'No technician assigned';
 
-  // Reasoning summary
   const reasoningSummary = buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job);
-
-  const suggestedNextAction = suggestNextAction(blocker, workOrder, job, confidence);
+  const suggestedNextAction = suggestNextAction(blocker, workOrder, job, confidence, resourcePools);
 
   return {
     workOrder,
@@ -309,26 +298,40 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
       mainUncertainty,
       suggestedNextAction,
       reasoningSummary,
+      // V2 resource fields
+      jobZone,
+      preferredResourcePool: resourcePools.preferred,
+      fallbackResourcePool: resourcePools.fallback,
+      resourceReasoning: resourcePools.reasoning,
     },
   };
 }
 
 function buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job) {
   const parts = [];
-  parts.push(`Classified as ${bucket.replace(/_/g, ' ')}.`);
-  if (blocker.type !== 'NONE') parts.push(`${blocker.type} blocker: ${blocker.reason}.`);
-  parts.push(`Effort: ${effort.min}–${effort.max}h (${effort.source.replace(/_/g, ' ')}).`);
-  if (areaInferred) parts.push(`Service area inferred from title.`);
-  if (!serviceArea) parts.push(`Service area unknown.`);
-  parts.push(`Confidence: ${confidence}.`);
-  if (!workOrder.assigned_technicians?.length) parts.push(`No technician assigned.`);
-  if (job?.requested_date) parts.push(`Requested by: ${new Date(job.requested_date).toLocaleDateString('de-AT')}.`);
+  parts.push('Classified as ' + bucket.replace(/_/g, ' ') + '.');
+  if (blocker.type !== 'NONE') parts.push(blocker.type + ' blocker: ' + blocker.reason + '.');
+  parts.push('Effort: ' + effort.min + '-' + effort.max + 'h (' + effort.source.replace(/_/g, ' ') + ').');
+  if (areaInferred) parts.push('Service area inferred from title.');
+  if (!serviceArea) parts.push('Service area unknown.');
+  parts.push('Confidence: ' + confidence + '.');
+  if (!workOrder.assigned_technicians?.length) parts.push('No technician assigned.');
+  if (job && job.requested_date) parts.push('Requested by: ' + new Date(job.requested_date).toLocaleDateString('de-AT') + '.');
   return parts.join(' ');
 }
 
 // ─── Capacity ─────────────────────────────────────────────────────────────────
 export function computeCapacity(technicians, thisWeekItems, nextWeekItems) {
-  const activeTechs = technicians.filter(t => t.status === 'Active').length || technicians.length;
+  // V2: only count CORE team as base capacity
+  const active = (technicians || []).filter(t => t.status !== 'Inactive');
+  const coreTechs = active.filter(t =>
+    t.team_type === 'Core' || ['CORE_PREFERRED', 'CORE_LIMITED'].includes(t.availability_class)
+  );
+  const activeTechs = coreTechs.length || active.length;
+  const externalSupportCount = active.filter(t =>
+    t.team_type === 'External' || ['EXTERNAL_REGULAR', 'EXTERNAL_SPECIALIST', 'EXTERNAL_ON_REQUEST'].includes(t.availability_class)
+  ).length;
+
   const weeklyCapacity = activeTechs * 8 * 5;
 
   const thisMin = thisWeekItems.reduce((s, i) => s + i.derived.estimatedEffortMin, 0);
@@ -337,14 +340,14 @@ export function computeCapacity(technicians, thisWeekItems, nextWeekItems) {
   const nextMax = nextWeekItems.reduce((s, i) => s + i.derived.estimatedEffortMax, 0);
 
   const utilPct = weeklyCapacity > 0 ? Math.round((thisMax / weeklyCapacity) * 100) : 0;
-
   let utilizationStatus = 'ok';
-  if (utilPct > 120) utilizationStatus = 'critical';
-  else if (utilPct > 90) utilizationStatus = 'overloaded';
-  else if (utilPct > 70) utilizationStatus = 'near_full';
+  if (utilPct > 120)      utilizationStatus = 'critical';
+  else if (utilPct > 90)  utilizationStatus = 'overloaded';
+  else if (utilPct > 70)  utilizationStatus = 'near_full';
 
   return {
     activeTechs,
+    externalSupportCount,
     weeklyCapacity,
     thisWeekEffortMin: Math.round(thisMin * 10) / 10,
     thisWeekEffortMax: Math.round(thisMax * 10) / 10,

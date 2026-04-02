@@ -56,7 +56,7 @@ export default function PlanningAgent() {
 
         if (job && !ACTIVE_JOB_STATUSES.includes(job.status)) return null;
 
-        return evaluateWorkOrder({ workOrder: wo, job, customer, location, tasks: woTasks, today });
+        return evaluateWorkOrder({ workOrder: wo, job, customer, location, tasks: woTasks, technicians, today });
       })
       .filter(Boolean);
   }, [workOrders, maps, tasksByWO, isLoading]);
@@ -112,7 +112,7 @@ export default function PlanningAgent() {
           <div className="flex items-center gap-2 mb-1">
             <Brain className="h-6 w-6 text-blue-600" />
             <h1 className="text-2xl font-bold text-slate-900">Planning Agent</h1>
-            <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">V1</span>
+            <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">V2</span>
           </div>
           <p className="text-sm text-slate-500 max-w-2xl">
             This page automatically reviews active work and suggests what should be planned this week, prepared for next week, clarified first, or treated as blocked. Data may be incomplete — uncertainty is shown explicitly.
@@ -249,7 +249,7 @@ export default function PlanningAgent() {
       )}
 
       <p className="text-xs text-slate-400 pb-8 text-center">
-        Planning Agent V1 · Read-only · {evaluatedItems.length} work orders analysed · Suggestions only — no changes made to any data
+        Planning Agent V2 · Read-only · {evaluatedItems.length} work orders analysed · Suggestions only — no changes made to any data
       </p>
     </div>
   );

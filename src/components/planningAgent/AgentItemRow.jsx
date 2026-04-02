@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronRight, MapPin, Clock, Users, AlertCircle, Zap, Cloud } from 'lucide-react';
+import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const CONF_STYLE = {
@@ -63,14 +63,28 @@ export default function AgentItemRow({ item, rank }) {
         </div>
       </button>
 
-      {/* Suggested action — always visible */}
-      {d.suggestedNextAction && (
-        <div className="px-4 pb-2 flex items-start gap-2 text-xs">
-          <span className="text-slate-400">→</span>
-          <span className="text-slate-600 font-medium">{d.suggestedNextAction}</span>
-          {d.mainUncertainty && <span className="text-slate-400 italic">· {d.mainUncertainty}</span>}
-        </div>
-      )}
+      {/* Suggested action + top resource — always visible */}
+      <div className="px-4 pb-2 space-y-0.5">
+        {d.suggestedNextAction && (
+          <div className="flex items-start gap-2 text-xs">
+            <span className="text-slate-400">→</span>
+            <span className="text-slate-600 font-medium">{d.suggestedNextAction}</span>
+            {d.mainUncertainty && <span className="text-slate-400 italic">· {d.mainUncertainty}</span>}
+          </div>
+        )}
+        {d.preferredResourcePool?.length > 0 && (
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <UserCheck className="h-3 w-3 flex-shrink-0" />
+            {d.preferredResourcePool.slice(0, 2).map((r, i) => (
+              <span key={r.name}>
+                {i > 0 && <span className="text-slate-300"> · </span>}
+                <span className={cn('font-medium', r.team_type === 'Core' ? 'text-blue-700' : 'text-slate-600')}>{r.name}</span>
+                <span className="text-slate-400"> ({r.skill_match_level}/{r.zone_compatibility})</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Expanded detail */}
       {expanded && (
@@ -82,10 +96,41 @@ export default function AgentItemRow({ item, rank }) {
             <Detail label="Effort range" value={`${d.estimatedEffortMin}–${d.estimatedEffortMax}h`} />
             <Detail label="Team" value={`${d.estimatedTeamSizeMin}–${d.estimatedTeamSizeMax} person(s)`} />
             <Detail label="Tasks" value={`${d.taskCount} defined`} />
+            <Detail label="Zone" value={d.jobZone?.replace(/_/g, ' ') || '—'} />
             {d.areaInferred && <Detail label="Service area" value={`${d.inferredServiceArea} (inferred)`} />}
             {d.durationUnknown && <Detail label="Duration" value="Unknown — fallback used" warn />}
             {d.partsEtaUnknown && <Detail label="Parts ETA" value="Unknown" warn />}
           </div>
+
+          {/* Resource Pools */}
+          {(d.preferredResourcePool?.length > 0 || d.fallbackResourcePool?.length > 0) && (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Resource Proposal</p>
+              {d.resourceReasoning && (
+                <p className="text-xs text-slate-600 mb-2 leading-relaxed">{d.resourceReasoning}</p>
+              )}
+              {d.preferredResourcePool?.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs text-slate-400 mb-1">Preferred candidates</p>
+                  <div className="flex flex-col gap-1">
+                    {d.preferredResourcePool.map(r => (
+                      <ResourceCandidate key={r.name} r={r} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {d.fallbackResourcePool?.length > 0 && (
+                <div>
+                  <p className="text-xs text-slate-400 mb-1">Fallback candidates</p>
+                  <div className="flex flex-col gap-1">
+                    {d.fallbackResourcePool.map(r => (
+                      <ResourceCandidate key={r.name} r={r} fallback />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Score breakdown</p>
@@ -114,6 +159,32 @@ function Detail({ label, value, warn }) {
     <div>
       <p className="text-xs text-slate-400">{label}</p>
       <p className={cn('text-sm font-medium', warn ? 'text-orange-600' : 'text-slate-700')}>{value}</p>
+    </div>
+  );
+}
+
+const ZONE_STYLE = {
+  near:       'text-emerald-600',
+  reasonable: 'text-blue-600',
+  inefficient:'text-orange-500',
+  unknown:    'text-slate-400',
+};
+
+const SKILL_STYLE = {
+  strong:  'text-emerald-600',
+  partial: 'text-blue-600',
+  weak:    'text-slate-400',
+};
+
+function ResourceCandidate({ r, fallback }) {
+  return (
+    <div className={cn('flex items-center gap-2 text-xs px-2 py-1 rounded', fallback ? 'bg-slate-100' : 'bg-white border border-slate-200')}>
+      <span className={cn('font-medium', r.team_type === 'Core' ? 'text-blue-700' : 'text-slate-600')}>{r.name}</span>
+      <span className="text-slate-400">{r.availability_class}</span>
+      <span className={SKILL_STYLE[r.skill_match_level] || 'text-slate-400'}>{r.skill_match_level}</span>
+      <span className={ZONE_STYLE[r.zone_compatibility] || 'text-slate-400'}>{r.zone_compatibility}</span>
+      <span className="text-slate-400">{r.quick_response_mode?.replace(/_/g, ' ')}</span>
+      {r.short_note && <span className="text-slate-400 truncate max-w-xs">· {r.short_note}</span>}
     </div>
   );
 }
