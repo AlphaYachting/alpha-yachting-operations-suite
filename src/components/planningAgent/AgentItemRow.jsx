@@ -170,20 +170,28 @@ const ZONE_STYLE = {
   unknown:    'text-slate-400',
 };
 
-const SKILL_STYLE = {
-  strong:  'text-emerald-600',
-  partial: 'text-blue-600',
-  weak:    'text-slate-400',
+const OWNERSHIP_STYLE = {
+  DOMAIN_OWNER:     'text-emerald-700 font-semibold',
+  STRONG_MATCH:     'text-blue-600',
+  CAPABLE_MATCH:    'text-slate-500',
+  ADJACENT_CAPABLE: 'text-orange-400',
+};
+
+const OWNERSHIP_LABEL = {
+  DOMAIN_OWNER:     'domain owner',
+  STRONG_MATCH:     'strong match',
+  CAPABLE_MATCH:    'capable',
+  ADJACENT_CAPABLE: 'adjacent only',
 };
 
 function ResourceCandidate({ r, fallback }) {
   return (
-    <div className={cn('flex items-center gap-2 text-xs px-2 py-1 rounded', fallback ? 'bg-slate-100' : 'bg-white border border-slate-200')}>
+    <div className={cn('flex items-center gap-2 text-xs px-2 py-1 rounded flex-wrap', fallback ? 'bg-slate-100' : 'bg-white border border-slate-200')}>
       <span className={cn('font-medium', r.team_type === 'Core' ? 'text-blue-700' : 'text-slate-600')}>{r.name}</span>
-      <span className="text-slate-400">{r.availability_class}</span>
-      <span className={SKILL_STYLE[r.skill_match_level] || 'text-slate-400'}>{r.skill_match_level}</span>
+      <span className={OWNERSHIP_STYLE[r.ownership_level] || 'text-slate-400'}>{OWNERSHIP_LABEL[r.ownership_level] || r.ownership_level}</span>
       <span className={ZONE_STYLE[r.zone_compatibility] || 'text-slate-400'}>{r.zone_compatibility}</span>
       <span className="text-slate-400">{r.quick_response_mode?.replace(/_/g, ' ')}</span>
+      {r.has_metadata_gap && <span className="text-orange-500 font-medium">⚠ metadata gap</span>}
       {r.short_note && <span className="text-slate-400 truncate max-w-xs">· {r.short_note}</span>}
     </div>
   );
