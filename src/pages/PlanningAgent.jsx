@@ -257,5 +257,4 @@ export default function PlanningAgent() {
 
 function AgentSectionItem({ item, rank }) {
   return <AgentItemRow item={item} rank={rank} />;
-} rank={rank} />;
 }
