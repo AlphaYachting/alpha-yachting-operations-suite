@@ -91,7 +91,7 @@ const navItems = [
   // PLANNING
   { header: 'PLANNING' },
   { name: 'Planning Agent', icon: Brain, page: 'PlanningAgent', leadTechAllowed: true },
-  { name: 'Planning Readiness', icon: LayoutDashboard, page: 'PlanningReadiness', leadTechAllowed: true },, icon: LayoutDashboard, page: 'PlanningReadiness', leadTechAllowed: true },
+  { name: 'Planning Readiness', icon: LayoutDashboard, page: 'PlanningReadiness', leadTechAllowed: true },
 
   // INTELLIGENCE
   { header: 'INTELLIGENCE' },
