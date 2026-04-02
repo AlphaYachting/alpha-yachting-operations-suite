@@ -33,6 +33,16 @@ const SKILLS = [
   'Polish'
 ];
 
+const ROLE_TENDENCIES = ['LEAD', 'EXECUTION', 'SUPPORT', 'SPECIALIST', 'FINISHING_QC'];
+
+const ROLE_TENDENCY_LABELS = {
+  LEAD: 'Lead',
+  EXECUTION: 'Execution',
+  SUPPORT: 'Support',
+  SPECIALIST: 'Specialist',
+  FINISHING_QC: 'Finishing / QC'
+};
+
 const LANGUAGES = ['German', 'English', 'Italian', 'Slovenian', 'Croatian'];
 
 const COLORS = [
@@ -68,7 +78,14 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
     hourly_rate_billable: technician?.hourly_rate_billable || '',
     availability_status: technician?.availability_status || 'Available',
     notes: technician?.notes || '',
-    status: technician?.status || 'Active'
+    status: technician?.status || 'Active',
+    team_type: technician?.team_type || '',
+    availability_class: technician?.availability_class || '',
+    primary_role_tendency: technician?.primary_role_tendency || '',
+    secondary_role_tendencies: technician?.secondary_role_tendencies || [],
+    quick_response_mode: technician?.quick_response_mode || '',
+    extended_skill_notes: technician?.extended_skill_notes || '',
+    planning_notes: technician?.planning_notes || ''
   });
   const [saving, setSaving] = useState(false);
 
@@ -104,6 +121,17 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
         return { ...prev, languages: current.filter(l => l !== lang) };
       } else {
         return { ...prev, languages: [...current, lang] };
+      }
+    });
+  };
+
+  const toggleSecondaryRole = (role) => {
+    setFormData(prev => {
+      const current = prev.secondary_role_tendencies || [];
+      if (current.includes(role)) {
+        return { ...prev, secondary_role_tendencies: current.filter(r => r !== role) };
+      } else {
+        return { ...prev, secondary_role_tendencies: [...current, role] };
       }
     });
   };
@@ -331,9 +359,111 @@ export default function TechnicianForm({ technician, onSave, onCancel }) {
         </div>
       </div>
 
+      {/* Planning Profile */}
+      <div className="space-y-4 pt-4 border-t border-slate-200">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Planning Profile</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Used by the Planning Agent for resource proposals</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Team Type</Label>
+            <Select value={formData.team_type} onValueChange={(v) => updateField('team_type', v)}>
+              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Core">Core</SelectItem>
+                <SelectItem value="External">External</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Availability Class</Label>
+            <Select value={formData.availability_class} onValueChange={(v) => updateField('availability_class', v)}>
+              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CORE_PREFERRED">Core — Preferred</SelectItem>
+                <SelectItem value="CORE_LIMITED">Core — Limited</SelectItem>
+                <SelectItem value="EXTERNAL_REGULAR">External — Regular</SelectItem>
+                <SelectItem value="EXTERNAL_SPECIALIST">External — Specialist only</SelectItem>
+                <SelectItem value="EXTERNAL_ON_REQUEST">External — On request</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Primary Role Tendency</Label>
+            <Select value={formData.primary_role_tendency} onValueChange={(v) => updateField('primary_role_tendency', v)}>
+              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent>
+                {ROLE_TENDENCIES.map(r => (
+                  <SelectItem key={r} value={r}>{ROLE_TENDENCY_LABELS[r]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Quick Response Mode</Label>
+            <Select value={formData.quick_response_mode} onValueChange={(v) => updateField('quick_response_mode', v)}>
+              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="same_day">Same day</SelectItem>
+                <SelectItem value="next_day">Next day</SelectItem>
+                <SelectItem value="2_3_days">2–3 days</SelectItem>
+                <SelectItem value="by_arrangement">By arrangement</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Secondary Role Tendencies</Label>
+          <div className="flex flex-wrap gap-2">
+            {ROLE_TENDENCIES.map(role => (
+              <label
+                key={role}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${
+                  formData.secondary_role_tendencies?.includes(role)
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <Checkbox
+                  checked={formData.secondary_role_tendencies?.includes(role)}
+                  onCheckedChange={() => toggleSecondaryRole(role)}
+                />
+                <span className="text-sm">{ROLE_TENDENCY_LABELS[role]}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Extended Skill Notes</Label>
+          <Textarea
+            value={formData.extended_skill_notes}
+            onChange={(e) => updateField('extended_skill_notes', e.target.value)}
+            placeholder="Qualitative description: strengths, working style, special capabilities..."
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Planning Notes <span className="text-slate-400 font-normal">(internal)</span></Label>
+          <Textarea
+            value={formData.planning_notes}
+            onChange={(e) => updateField('planning_notes', e.target.value)}
+            placeholder="Internal planning notes for operations..."
+            rows={2}
+          />
+        </div>
+      </div>
+
       {/* Notes */}
       <div className="space-y-2">
-        <Label>Notes</Label>
+        <Label>General Notes</Label>
         <Textarea
           value={formData.notes}
           onChange={(e) => updateField('notes', e.target.value)}

@@ -1,0 +1,209 @@
+{
+  "name": "Technician",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "Reference to User entity"
+    },
+    "first_name": {
+      "type": "string"
+    },
+    "last_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "Lead Technician",
+        "Technician",
+        "Assistant",
+        "Apprentice"
+      ],
+      "default": "Technician"
+    },
+    "is_external": {
+      "type": "boolean",
+      "default": false,
+      "description": "Mark as external technician (not part of main team)"
+    },
+    "color": {
+      "type": "string",
+      "enum": [
+        "#3b82f6",
+        "#8b5cf6",
+        "#ec4899",
+        "#f59e0b",
+        "#10b981",
+        "#06b6d4",
+        "#ef4444",
+        "#14b8a6",
+        "#f97316",
+        "#6366f1",
+        "#475569",
+        "#84cc16"
+      ],
+      "default": "#3b82f6",
+      "description": "Color for schedule visualization"
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Mechanics",
+          "Electronics",
+          "GRP/Gelcoat",
+          "Rigging",
+          "Plumbing",
+          "HVAC",
+          "Sealing",
+          "Diagnostics",
+          "Installations",
+          "General Service",
+          "Sail Making",
+          "Tent Making",
+          "Cushion Making",
+          "Carpentry",
+          "Woodworking",
+          "Steel Work",
+          "Antifouling",
+          "Polish"
+        ]
+      },
+      "description": "Skill tags for assignment"
+    },
+    "certifications": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "German",
+          "English",
+          "Italian",
+          "Slovenian",
+          "Croatian"
+        ]
+      }
+    },
+    "home_base": {
+      "type": "string",
+      "description": "Primary work location"
+    },
+    "assigned_vehicle": {
+      "type": "string"
+    },
+    "hourly_rate_internal": {
+      "type": "number",
+      "description": "Internal cost rate"
+    },
+    "hourly_rate_billable": {
+      "type": "number",
+      "description": "Customer billing rate"
+    },
+    "availability_status": {
+      "type": "string",
+      "enum": [
+        "Available",
+        "On Job",
+        "Off Duty",
+        "Vacation",
+        "Sick"
+      ],
+      "default": "Available"
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Inactive"
+      ],
+      "default": "Active"
+    },
+    "team_type": {
+      "type": "string",
+      "enum": [
+        "Core",
+        "External"
+      ],
+      "description": "Whether this person is part of the core team or an external cooperator"
+    },
+    "availability_class": {
+      "type": "string",
+      "enum": [
+        "CORE_PREFERRED",
+        "CORE_LIMITED",
+        "EXTERNAL_REGULAR",
+        "EXTERNAL_SPECIALIST",
+        "EXTERNAL_ON_REQUEST"
+      ],
+      "description": "Planning availability classification for resource proposals"
+    },
+    "primary_role_tendency": {
+      "type": "string",
+      "enum": [
+        "LEAD",
+        "EXECUTION",
+        "SUPPORT",
+        "SPECIALIST",
+        "FINISHING_QC"
+      ],
+      "description": "Primary operational role tendency for planning"
+    },
+    "secondary_role_tendencies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "LEAD",
+          "EXECUTION",
+          "SUPPORT",
+          "SPECIALIST",
+          "FINISHING_QC"
+        ]
+      },
+      "description": "Additional role tendencies this person can cover"
+    },
+    "quick_response_mode": {
+      "type": "string",
+      "enum": [
+        "same_day",
+        "next_day",
+        "2_3_days",
+        "by_arrangement"
+      ],
+      "description": "How quickly this person can typically be deployed"
+    },
+    "extended_skill_notes": {
+      "type": "string",
+      "description": "Qualitative planning-relevant description: strengths, working style, special capabilities"
+    },
+    "planning_notes": {
+      "type": "string",
+      "description": "Internal planning notes for the agent / operations team"
+    }
+  },
+  "required": [
+    "first_name",
+    "last_name"
+  ]
+}
