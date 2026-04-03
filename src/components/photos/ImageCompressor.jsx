@@ -193,10 +193,10 @@ function drawWithOrientation(img, orientation, maxDimension) {
  * Compress an image file to meet size and dimension constraints.
  */
 async function compressImage(file, maxSize, maxDimension, quality = 0.85) {
-  const [img, orientation] = await Promise.all([
-    loadImage(file),
-    getExifOrientation(file),
-  ]);
+  // Modern browsers (iOS Safari 12+, Chrome 81+) auto-apply EXIF orientation
+  // when decoding images. We always use orientation=1 so we never double-rotate.
+  const img = await loadImage(file);
+  const orientation = 1;
 
   let canvas = drawWithOrientation(img, orientation, maxDimension);
 

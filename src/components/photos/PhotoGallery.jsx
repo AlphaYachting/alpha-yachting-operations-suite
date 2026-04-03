@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Image as ImageIcon, 
@@ -145,103 +144,90 @@ export default function PhotoGallery({ photos, tasks, onPhotoDeleted, onPhotoUpd
         </div>
       </div>
 
-      {/* Lightbox Viewer */}
-      <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
-        <DialogContent className="max-w-6xl max-h-[95vh] p-0 bg-black">
-          <div className="relative h-[95vh] flex flex-col">
-            {/* Header */}
-            <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 text-white">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge className={categoryColors[currentPhoto?.category]}>
-                      {currentPhoto?.category}
-                    </Badge>
-                    {currentPhoto?.task_id && (
-                      <Badge variant="outline" className="text-white border-white/30">
-                        {getTaskTitle(currentPhoto.task_id)}
-                      </Badge>
-                    )}
-                  </div>
-                  {currentPhoto?.caption && (
-                    <p className="text-sm">{currentPhoto.caption}</p>
-                  )}
-                  <p className="text-xs text-white/70 mt-1">
-                    {format(parseISO(currentPhoto?.created_date), 'MMM d, yyyy h:mm a')} • 
-                    {(currentPhoto?.file_size_bytes / 1024).toFixed(0)} KB • 
-                    {currentPhoto?.width} × {currentPhoto?.height}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setViewerOpen(false)}
-                  className="text-white hover:bg-white/20"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
+      {/* Lightbox Viewer — custom fixed overlay so close button is always accessible on mobile */}
+      {viewerOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black flex flex-col"
+          onClick={(e) => { if (e.target === e.currentTarget) setViewerOpen(false); }}
+        >
+          {/* Close button — always fixed top-right, large touch target */}
+          <button
+            onClick={() => setViewerOpen(false)}
+            className="absolute top-4 right-4 z-50 flex items-center justify-center w-11 h-11 rounded-full bg-black/60 text-white"
+            aria-label="Close"
+          >
+            <X className="h-6 w-6" />
+          </button>
 
-            {/* Image */}
-            <div className="flex-1 flex items-center justify-center p-16">
-              {currentPhoto && (
-                <img
-                  src={currentPhoto.file_url}
-                  alt={currentPhoto.caption || 'Work order photo'}
-                  className="max-w-full max-h-full object-contain"
-                  loading="eager"
-                />
+          {/* Top info */}
+          <div className="absolute top-4 left-4 z-40 flex flex-col gap-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge className={categoryColors[currentPhoto?.category]}>
+                {currentPhoto?.category}
+              </Badge>
+              {currentPhoto?.task_id && (
+                <Badge variant="outline" className="text-white border-white/40 text-xs">
+                  {getTaskTitle(currentPhoto.task_id)}
+                </Badge>
               )}
             </div>
-
-            {/* Navigation */}
-            {filteredPhotos.length > 1 && (
-              <>
-                <button
-                  onClick={prevPhoto}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-                <button
-                  onClick={nextPhoto}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </button>
-              </>
+            {currentPhoto?.caption && (
+              <p className="text-white text-xs mt-1 max-w-[60vw]">{currentPhoto.caption}</p>
             )}
+          </div>
 
-            {/* Footer */}
-            <div className="absolute bottom-0 left-0 right-0 z-10 p-4 bg-gradient-to-t from-black/80 to-transparent">
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-white text-sm">
-                  {currentIndex + 1} / {filteredPhotos.length}
-                </span>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => window.open(currentPhoto?.file_url, '_blank')}
-                    className="text-white hover:bg-white/20"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeletingPhoto(currentPhoto)}
-                    className="text-white hover:bg-red-500/20"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+          {/* Image — fills screen, never clips close button */}
+          <div className="flex-1 flex items-center justify-center px-4 pt-20 pb-20 overflow-hidden">
+            {currentPhoto && (
+              <img
+                src={currentPhoto.file_url}
+                alt={currentPhoto.caption || 'Work order photo'}
+                className="max-w-full max-h-full object-contain"
+                loading="eager"
+              />
+            )}
+          </div>
+
+          {/* Prev / Next */}
+          {filteredPhotos.length > 1 && (
+            <>
+              <button
+                onClick={prevPhoto}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-40 w-11 h-11 flex items-center justify-center rounded-full bg-black/50 text-white"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                onClick={nextPhoto}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-40 w-11 h-11 flex items-center justify-center rounded-full bg-black/50 text-white"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+
+          {/* Footer */}
+          <div className="absolute bottom-0 left-0 right-0 z-40 px-4 py-4 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent">
+            <span className="text-white text-sm">
+              {currentIndex + 1} / {filteredPhotos.length}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => window.open(currentPhoto?.file_url, '_blank')}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setDeletingPhoto(currentPhoto)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deletingPhoto} onOpenChange={(open) => !open && setDeletingPhoto(null)}>
