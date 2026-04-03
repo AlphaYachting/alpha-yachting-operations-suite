@@ -32,7 +32,12 @@ const AuthenticatedApp = () => {
   // Loading
   if (isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white">
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-6">
+        <img
+          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
+          alt="Alpha Yachting"
+          className="h-16 object-contain"
+        />
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
       </div>
     );
