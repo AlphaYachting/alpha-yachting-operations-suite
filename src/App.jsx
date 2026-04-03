@@ -128,6 +128,15 @@ const AuthenticatedApp = () => {
         <Route path="/MaterialImportDetail" element={<LayoutWrapper currentPageName="MaterialImportDetail"><MaterialImportDetail /></LayoutWrapper>} />
         <Route path="/PlanningAgent" element={<LayoutWrapper currentPageName="PlanningAgent"><PlanningAgent /></LayoutWrapper>} />
         <Route path="/PlanningReadiness" element={<LayoutWrapper currentPageName="PlanningReadiness"><PlanningReadiness /></LayoutWrapper>} />
+        {/* Mobile / Technician routes */}
+        <Route path="/TeamMobileHome" element={<LayoutWrapper currentPageName="TeamMobileHome"><Pages.TeamMobileHome /></LayoutWrapper>} />
+        <Route path="/TeamWorkOrderDetail" element={<LayoutWrapper currentPageName="TeamWorkOrderDetail"><Pages.TeamWorkOrderDetail /></LayoutWrapper>} />
+        <Route path="/TeamCalendar" element={<LayoutWrapper currentPageName="TeamCalendar"><Pages.TeamCalendar /></LayoutWrapper>} />
+        <Route path="/TeamTaskDetail" element={<LayoutWrapper currentPageName="TeamTaskDetail"><Pages.TeamTaskDetail /></LayoutWrapper>} />
+        <Route path="/TeamPreviewMode" element={<LayoutWrapper currentPageName="TeamPreviewMode"><Pages.TeamPreviewMode /></LayoutWrapper>} />
+        <Route path="/MyTasks" element={<LayoutWrapper currentPageName="MyTasks"><Pages.MyTasks /></LayoutWrapper>} />
+        {/* Customer routes */}
+        <Route path="/CustomerPortal" element={<LayoutWrapper currentPageName="CustomerPortal"><Pages.CustomerPortal /></LayoutWrapper>} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </>
