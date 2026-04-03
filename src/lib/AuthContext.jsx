@@ -10,20 +10,18 @@ export const AuthProvider = ({ children }) => {
   const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
-    checkAuth();
+    checkAuth(true); // initial load
 
-    // iOS PWA: visibilitychange fires when switching back from Safari
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        checkAuth();
+        checkAuth(false); // re-check, but keep state on timeout
       }
     };
     // iOS PWA: pageshow fires after BFCache restore (back/forward navigation)
     // This is critical for iOS PWA — fires even when visibilitychange doesn't
     const handlePageShow = (e) => {
       if (e.persisted) {
-        // Page was restored from BFCache — re-check auth
-        checkAuth();
+        checkAuth(false);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -34,13 +32,13 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = async (isInitial = false) => {
     setIsLoadingAuth(true);
     setAuthError(null);
     try {
-      // Timeout after 8s — prevents infinite spinner on iOS PWA network issues
+      const timeoutMs = isInitial ? 10000 : 5000;
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('auth_timeout')), 8000)
+        setTimeout(() => reject(new Error('auth_timeout')), timeoutMs)
       );
       const currentUser = await Promise.race([base44.auth.me(), timeoutPromise]);
       if (currentUser?.email) {
@@ -54,8 +52,12 @@ export const AuthProvider = ({ children }) => {
       console.error('[AuthContext] checkAuth error:', error?.message || error);
       if (error?.data?.extra_data?.reason === 'user_not_registered') {
         setAuthError({ type: 'user_not_registered' });
+      } else if (error?.message === 'auth_timeout') {
+        // Timeout: keep existing auth state (don't log out user unnecessarily)
+        // Only redirect to login if we have no user at all (initial load)
+        setIsLoadingAuth(false);
+        return; // preserve existing state
       } else {
-        // All errors (401, timeout, network) → treat as not authenticated → redirect to login
         setUser(null);
         setIsAuthenticated(false);
       }
