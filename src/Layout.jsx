@@ -165,20 +165,32 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-  // CRITICAL: If not authenticated, do NOT render layout at all
+  // CRITICAL: If not authenticated, show spinner instead of blank (prevents iOS white screen)
   if (!isAuthenticated || !authUser) {
-    return null;
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   // Mobile-only roles: redirect away from desktop (use navigate to avoid full reload)
   const TECHNICIAN_ALLOWED_PATHS = ['/TeamMobileHome', '/TeamWorkOrderDetail', '/TeamCalendar', '/TeamTaskDetail', '/TeamPreviewMode', '/MyTasks'];
   if (authUser.role === 'customer' && location.pathname !== '/CustomerPortal') {
     navigate('/CustomerPortal', { replace: true });
-    return null;
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
   }
   if (authUser.role === 'technician' && !TECHNICIAN_ALLOWED_PATHS.includes(location.pathname)) {
     navigate('/TeamMobileHome', { replace: true });
-    return null;
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   if (isMobilePage) {
