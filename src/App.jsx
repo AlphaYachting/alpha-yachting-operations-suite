@@ -107,13 +107,13 @@ const AuthenticatedApp = () => {
   
   const getRoleLandingPage = () => {
     const role = user.role;
-    if (role === 'technician') return 'MyTasks';
+    if (role === 'technician') return 'TeamMobileHome';
     if (role === 'customer') return 'CustomerPortal';
     return 'Dashboard';
   };
 
-  const LandingPage = Pages[getRoleLandingPage()] || MainPage;
   const landingPageName = getRoleLandingPage();
+  const LandingPage = Pages[landingPageName] || MainPage;
 
   return (
     <>
@@ -124,18 +124,6 @@ const AuthenticatedApp = () => {
             <LandingPage />
           </LayoutWrapper>
         } />
-        {Object.entries(Pages).map(([path, Page]) => (
-          <Route
-            key={path}
-            path={`/${path}`}
-            element={
-              <LayoutWrapper currentPageName={path}>
-                <Page />
-              </LayoutWrapper>
-            }
-          />
-        ))}
-        <Route path="/AIAssistantSettings" element={<LayoutWrapper currentPageName="AIAssistantSettings"><AIAssistantSettings /></LayoutWrapper>} />
         <Route path="/MaterialImport" element={<LayoutWrapper currentPageName="MaterialImport"><MaterialImport /></LayoutWrapper>} />
         <Route path="/MaterialImportDetail" element={<LayoutWrapper currentPageName="MaterialImportDetail"><MaterialImportDetail /></LayoutWrapper>} />
         <Route path="/PlanningAgent" element={<LayoutWrapper currentPageName="PlanningAgent"><PlanningAgent /></LayoutWrapper>} />
