@@ -466,12 +466,10 @@ export default function Offers() {
                           {offer.total_amount !== undefined && offer.total_amount !== null && (
                             <span>Total: <span className="font-semibold text-slate-900">€{offer.total_amount.toFixed(2)}</span></span>
                           )}
-                          {offer.created_by && (
-                            <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1">
                               <Users className="h-3 w-3" />
-                              Erstellt von: <span className="font-medium text-slate-700">{offer.created_by}</span>
+                              Erstellt von: <span className="font-medium text-slate-700">{offer.created_by || '—'}</span>
                             </span>
-                          )}
                         </div>
                       </div>
                     </div>

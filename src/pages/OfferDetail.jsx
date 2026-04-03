@@ -1115,9 +1115,7 @@ Requirements:
             {formData.offer_number && (
               <span className="font-medium text-slate-600">#{formData.offer_number}</span>
             )}
-            {offer?.created_by && (
-              <span>Erstellt von: <span className="font-semibold text-slate-700">{offer.created_by}</span></span>
-            )}
+            <span>Erstellt von: <span className="font-semibold text-slate-700">{offer?.created_by || '—'}</span></span>
           </div>
         )}
       </div>
