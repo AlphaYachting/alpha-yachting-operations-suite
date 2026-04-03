@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import ErrorBoundary from '@/components/ErrorBoundary';
 // Add page imports here
 import PlanningAgent from './pages/PlanningAgent';
 import AIAssistantSettings from './pages/AIAssistantSettings';
@@ -20,8 +21,10 @@ const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
-  <Layout currentPageName={currentPageName}>{children}</Layout>
-  : <>{children}</>;
+  <ErrorBoundary key={currentPageName}>
+    <Layout currentPageName={currentPageName}>{children}</Layout>
+  </ErrorBoundary>
+  : <ErrorBoundary key={currentPageName}>{children}</ErrorBoundary>;
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, authError, navigateToLogin, user, isAuthenticated } = useAuth();

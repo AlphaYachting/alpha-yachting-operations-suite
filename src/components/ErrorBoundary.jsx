@@ -14,32 +14,43 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Error boundary caught:', error, errorInfo);
+    console.error('ErrorBoundary caught:', error?.message, error?.stack?.split('\n').slice(0, 5).join('\n'));
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-6">
-          <Card className="border-red-200 bg-red-50">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                <CardTitle className="text-red-900">Something went wrong</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-red-800">
-                {this.state.error?.message || 'An unexpected error occurred'}
-              </p>
-              <Button 
-                onClick={() => window.location.reload()}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                Reload Page
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="min-h-[60vh] flex items-center justify-center p-6">
+          <div className="max-w-md w-full">
+            <Card className="border-red-200 bg-red-50">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <CardTitle className="text-red-900 text-base">Seite konnte nicht geladen werden</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-red-800">
+                  {this.state.error?.message || 'Ein unerwarteter Fehler ist aufgetreten.'}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => this.setState({ hasError: false, error: null })}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Nochmal versuchen
+                  </Button>
+                  <Button 
+                    onClick={() => window.location.reload()}
+                    className="flex-1 bg-red-600 hover:bg-red-700"
+                  >
+                    Neu laden
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       );
     }
