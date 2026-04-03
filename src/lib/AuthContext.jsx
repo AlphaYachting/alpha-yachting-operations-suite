@@ -12,15 +12,26 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     checkAuth();
 
-    // iOS PWA: When user switches back from Safari (where they logged in),
-    // re-check auth so the session is picked up automatically.
+    // iOS PWA: visibilitychange fires when switching back from Safari
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         checkAuth();
       }
     };
+    // iOS PWA: pageshow fires after BFCache restore (back/forward navigation)
+    // This is critical for iOS PWA — fires even when visibilitychange doesn't
+    const handlePageShow = (e) => {
+      if (e.persisted) {
+        // Page was restored from BFCache — re-check auth
+        checkAuth();
+      }
+    };
     document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pageshow', handlePageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
   }, []);
 
   const checkAuth = async () => {
@@ -42,11 +53,11 @@ export const AuthProvider = ({ children }) => {
       } else if (error?.data?.extra_data?.reason === 'user_not_registered') {
         setAuthError({ type: 'user_not_registered' });
       } else {
-        // Unknown error (network, rate limit, unexpected auth state).
-        // Do NOT silently redirect to login — that causes an infinite redirect loop
-        // when the platform session is valid but the app-level auth call fails.
-        console.error('[AuthContext] checkAuth unexpected error:', error);
-        setAuthError({ type: 'auth_error', message: error?.message || 'Authentication check failed' });
+        // Network errors or unexpected failures — treat as not authenticated
+        // so navigateToLogin() can handle it instead of a dead error screen
+        console.error('[AuthContext] checkAuth error:', error);
+        setUser(null);
+        setIsAuthenticated(false);
       }
     } finally {
       setIsLoadingAuth(false);
