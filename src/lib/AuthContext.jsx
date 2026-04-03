@@ -32,9 +32,11 @@ export const AuthProvider = ({ children }) => {
       } else if (error?.data?.extra_data?.reason === 'user_not_registered') {
         setAuthError({ type: 'user_not_registered' });
       } else {
-        // Network error, rate limit, etc. — don't redirect, just mark not authenticated
-        setUser(null);
-        setIsAuthenticated(false);
+        // Unknown error (network, rate limit, unexpected auth state).
+        // Do NOT silently redirect to login — that causes an infinite redirect loop
+        // when the platform session is valid but the app-level auth call fails.
+        console.error('[AuthContext] checkAuth unexpected error:', error);
+        setAuthError({ type: 'auth_error', message: error?.message || 'Authentication check failed' });
       }
     } finally {
       setIsLoadingAuth(false);

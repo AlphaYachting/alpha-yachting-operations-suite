@@ -40,6 +40,22 @@ const AuthenticatedApp = () => {
     return <UserNotRegisteredError />;
   }
 
+  if (authError?.type === 'auth_error') {
+    // An unexpected error occurred during auth check — show a recoverable error screen
+    // rather than redirecting to login (which would cause an infinite loop).
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-4">
+        <p className="text-slate-600 text-sm">Authentifizierung fehlgeschlagen. Bitte Seite neu laden.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-slate-800 text-white rounded-md text-sm"
+        >
+          Neu laden
+        </button>
+      </div>
+    );
+  }
+
   // Not authenticated → redirect to login
   if (!isAuthenticated || !user) {
     navigateToLogin();
