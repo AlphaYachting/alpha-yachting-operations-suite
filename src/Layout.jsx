@@ -170,11 +170,12 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Mobile-only roles: redirect away from desktop (use navigate to avoid full reload)
+  const TECHNICIAN_ALLOWED_PATHS = ['/TeamMobileHome', '/TeamWorkOrderDetail', '/TeamCalendar', '/TeamTaskDetail', '/TeamPreviewMode'];
   if (authUser.role === 'customer' && location.pathname !== '/CustomerPortal') {
     navigate('/CustomerPortal', { replace: true });
     return null;
   }
-  if (authUser.role === 'technician' && location.pathname !== '/TeamMobileHome') {
+  if (authUser.role === 'technician' && !TECHNICIAN_ALLOWED_PATHS.includes(location.pathname)) {
     navigate('/TeamMobileHome', { replace: true });
     return null;
   }
