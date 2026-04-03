@@ -1110,8 +1110,15 @@ Requirements:
         </h1>
         
         {/* Row 3: Meta Info */}
-        {!isNewOffer && formData.offer_number && (
-          <p className="text-slate-600">#{formData.offer_number}</p>
+        {!isNewOffer && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+            {formData.offer_number && (
+              <span className="font-medium text-slate-600">#{formData.offer_number}</span>
+            )}
+            {offer?.created_by && (
+              <span>Erstellt von: <span className="font-semibold text-slate-700">{offer.created_by}</span></span>
+            )}
+          </div>
         )}
       </div>
 

@@ -461,12 +461,18 @@ export default function Offers() {
                           )}
                         </div>
 
-                        {/* Row 3: Total Amount (if present) */}
-                        {offer.total_amount !== undefined && offer.total_amount !== null && (
-                          <div className="mt-1 text-sm text-slate-500">
-                            Total: <span className="font-semibold text-slate-900">€{offer.total_amount.toFixed(2)}</span>
-                          </div>
-                        )}
+                        {/* Row 3: Total Amount + Created By */}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+                          {offer.total_amount !== undefined && offer.total_amount !== null && (
+                            <span>Total: <span className="font-semibold text-slate-900">€{offer.total_amount.toFixed(2)}</span></span>
+                          )}
+                          {offer.created_by && (
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              Erstellt von: <span className="font-medium text-slate-700">{offer.created_by}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
