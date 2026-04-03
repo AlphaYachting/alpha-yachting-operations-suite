@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { createPageUrl } from './utils';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
@@ -113,6 +113,7 @@ const navItems = [
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user: authUser, isAuthenticated, isLoadingAuth, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileAppOpen, setMobileAppOpen] = useState(false);
@@ -168,13 +169,13 @@ export default function Layout({ children, currentPageName }) {
     return null;
   }
 
-  // Mobile-only roles: redirect away from desktop
-  if (authUser.role === 'customer') {
-    window.location.replace('/CustomerPortal');
+  // Mobile-only roles: redirect away from desktop (use navigate to avoid full reload)
+  if (authUser.role === 'customer' && location.pathname !== '/CustomerPortal') {
+    navigate('/CustomerPortal', { replace: true });
     return null;
   }
-  if (authUser.role === 'technician') {
-    window.location.replace('/TeamMobileHome');
+  if (authUser.role === 'technician' && location.pathname !== '/TeamMobileHome') {
+    navigate('/TeamMobileHome', { replace: true });
     return null;
   }
 
