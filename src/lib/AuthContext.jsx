@@ -11,6 +11,16 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkAuth();
+
+    // iOS PWA: When user switches back from Safari (where they logged in),
+    // re-check auth so the session is picked up automatically.
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        checkAuth();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
   const checkAuth = async () => {
