@@ -178,17 +178,19 @@ export default function MobileSearchBar({ onNavigate, workOrders = [], jobs = []
                   <ClipboardList className="h-4 w-4 text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  {/* Line 1: Customer · Marina · Boat */}
-                  {buildLine1(item) && (
-                    <p className="font-semibold text-slate-900 text-sm truncate">{buildLine1(item)}</p>
+                  {/* Line 1: Customer name only */}
+                  {item.customerName && (
+                    <p className="font-semibold text-slate-900 text-sm truncate">{item.customerName}</p>
                   )}
-                  {/* Line 2: WO Number · Title */}
+                  {/* Line 2: WO number · WO title */}
                   <p className="text-xs text-blue-600 truncate mt-0.5">
                     {item.woNumber ? `${item.woNumber} · ${item.title}` : item.title}
                   </p>
-                  {/* Line 3: Project (Job title) */}
-                  {item.jobTitle && (
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{item.jobTitle}</p>
+                  {/* Line 3: Boat name · Marina */}
+                  {(item.boatName || item.locationName) && (
+                    <p className="text-xs text-slate-400 truncate mt-0.5">
+                      {[item.boatName, item.locationName].filter(Boolean).join(' · ')}
+                    </p>
                   )}
                 </div>
               </button>
