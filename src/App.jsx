@@ -62,6 +62,10 @@ const AuthenticatedApp = () => {
           className="h-16 object-contain"
         />
         <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+        <p className="text-xs text-slate-400">Authentifizierung... (max. 8s)</p>
+        <div className="fixed bottom-2 left-2 right-2 bg-black/80 text-green-400 text-xs font-mono p-2 rounded z-[9999]">
+          🔍 DEBUG: isLoadingAuth=true | auth={String(isAuthenticated)} | error={authError?.type || 'none'} | user={user?.email || 'none'}
+        </div>
       </div>
     );
   }

@@ -38,7 +38,11 @@ export const AuthProvider = ({ children }) => {
     setIsLoadingAuth(true);
     setAuthError(null);
     try {
-      const currentUser = await base44.auth.me();
+      // Timeout after 8s — prevents infinite spinner on iOS PWA network issues
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('auth_timeout')), 8000)
+      );
+      const currentUser = await Promise.race([base44.auth.me(), timeoutPromise]);
       if (currentUser?.email) {
         setUser(currentUser);
         setIsAuthenticated(true);
@@ -47,15 +51,11 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
       }
     } catch (error) {
-      if (error?.status === 401 || error?.status === 403) {
-        setUser(null);
-        setIsAuthenticated(false);
-      } else if (error?.data?.extra_data?.reason === 'user_not_registered') {
+      console.error('[AuthContext] checkAuth error:', error?.message || error);
+      if (error?.data?.extra_data?.reason === 'user_not_registered') {
         setAuthError({ type: 'user_not_registered' });
       } else {
-        // Network errors or unexpected failures — treat as not authenticated
-        // so navigateToLogin() can handle it instead of a dead error screen
-        console.error('[AuthContext] checkAuth error:', error);
+        // All errors (401, timeout, network) → treat as not authenticated → redirect to login
         setUser(null);
         setIsAuthenticated(false);
       }
