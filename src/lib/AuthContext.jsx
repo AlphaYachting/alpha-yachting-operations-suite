@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 
 const AuthContext = createContext();
@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const isCheckingRef = useRef(false);
 
   useEffect(() => {
     checkAuth(true); // initial load
@@ -33,6 +34,8 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const checkAuth = async (isInitial = false) => {
+    if (isCheckingRef.current) return; // prevent parallel calls
+    isCheckingRef.current = true;
     setIsLoadingAuth(true);
     setAuthError(null);
     try {
@@ -53,15 +56,15 @@ export const AuthProvider = ({ children }) => {
       if (error?.data?.extra_data?.reason === 'user_not_registered') {
         setAuthError({ type: 'user_not_registered' });
       } else if (error?.message === 'auth_timeout') {
-        // Timeout: keep existing auth state (don't log out user unnecessarily)
-        // Only redirect to login if we have no user at all (initial load)
         setIsLoadingAuth(false);
-        return; // preserve existing state
+        isCheckingRef.current = false;
+        return;
       } else {
         setUser(null);
         setIsAuthenticated(false);
       }
     } finally {
+      isCheckingRef.current = false;
       setIsLoadingAuth(false);
     }
   };
