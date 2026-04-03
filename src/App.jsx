@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -27,10 +28,10 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   : <ErrorBoundary key={currentPageName}>{children}</ErrorBoundary>;
 
 const DebugOverlay = ({ isLoadingAuth, isAuthenticated, authError, user }) => {
-  const [log, setLog] = React.useState([]);
-  const [visible, setVisible] = React.useState(true);
+  const [log, setLog] = useState([]);
+  const [visible, setVisible] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const entry = `[${new Date().toISOString().substring(11,19)}] loading=${isLoadingAuth} auth=${isAuthenticated} error=${authError?.type || 'none'} user=${user?.email || 'none'}`;
     setLog(prev => [...prev.slice(-20), entry]);
   }, [isLoadingAuth, isAuthenticated, authError, user]);
