@@ -41,8 +41,6 @@ const AuthenticatedApp = () => {
   }
 
   if (authError?.type === 'auth_error') {
-    // An unexpected error occurred during auth check — show a recoverable error screen
-    // rather than redirecting to login (which would cause an infinite loop).
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-4">
         <p className="text-slate-600 text-sm">Authentifizierung fehlgeschlagen. Bitte Seite neu laden.</p>
@@ -52,6 +50,37 @@ const AuthenticatedApp = () => {
         >
           Neu laden
         </button>
+      </div>
+    );
+  }
+
+  if (authError?.type === 'standalone_login_required') {
+    // iOS PWA standalone mode: cannot do OAuth redirect within the app shell.
+    // Instruct the user to open the app in Safari first to log in.
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-white px-8 gap-6 text-center">
+        <img
+          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
+          alt="Alpha Yachting"
+          className="h-12 object-contain"
+        />
+        <div className="space-y-2">
+          <p className="text-slate-900 font-semibold text-base">Bitte zuerst im Browser anmelden</p>
+          <p className="text-slate-500 text-sm leading-relaxed">
+            Öffne <strong>alpha-yachting.hr</strong> im Safari-Browser, melde dich dort an, und füge die Seite danach zum Home-Bildschirm hinzu.
+          </p>
+          <p className="text-slate-400 text-xs mt-2">
+            (iOS Apps können den Login-Prozess nicht direkt öffnen)
+          </p>
+        </div>
+        <a
+          href={window.location.href}
+          className="px-4 py-2 bg-slate-800 text-white rounded-md text-sm"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Im Browser öffnen
+        </a>
       </div>
     );
   }
