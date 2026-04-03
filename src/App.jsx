@@ -64,6 +64,38 @@ const AuthenticatedApp = () => {
 
 
   if (!isAuthenticated || !user) {
+    // iOS PWA: Login-Redirect öffnet Safari und leitet nach dem Login zurück zu Safari,
+    // nicht zur PWA. Die PWA bleibt ohne Session → weißer Bildschirm.
+    // Lösung: Im Standalone-Modus einen Screen zeigen, der den User anweist,
+    // den Link in Safari zu öffnen (korrekte Domain aus window.location.origin).
+    const isStandalone = window.navigator.standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+
+    if (isStandalone) {
+      const appUrl = window.location.origin;
+      return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-white px-8 gap-6 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-slate-900 flex items-center justify-center">
+            <span className="text-white text-4xl font-bold">A</span>
+          </div>
+          <div className="space-y-3">
+            <p className="text-slate-900 font-semibold text-lg">Anmeldung erforderlich</p>
+            <p className="text-slate-500 text-sm leading-relaxed">
+              Öffne die App einmalig im Safari-Browser, melde dich dort an – danach funktioniert die Home-Bildschirm-App normal.
+            </p>
+          </div>
+          <a
+            href={appUrl}
+            className="px-6 py-3 bg-slate-900 text-white rounded-xl text-sm font-medium"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Im Safari öffnen
+          </a>
+        </div>
+      );
+    }
+
     navigateToLogin();
     return null;
   }
