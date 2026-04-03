@@ -50,18 +50,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
-    // Detect iOS PWA standalone mode.
-    // In standalone mode, the OAuth redirect flow breaks because the login page
-    // opens in Safari browser (different session) and cannot redirect back into the PWA.
-    // Instead of a broken redirect, we surface an error that App.jsx can display.
-    const isStandalone = window.navigator.standalone === true ||
-      window.matchMedia('(display-mode: standalone)').matches;
-
-    if (isStandalone) {
-      setAuthError({ type: 'standalone_login_required' });
-      return;
-    }
-
     const returnUrl = window.location.pathname + window.location.search;
     base44.auth.redirectToLogin(returnUrl);
   };
