@@ -26,6 +26,28 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   </ErrorBoundary>
   : <ErrorBoundary key={currentPageName}>{children}</ErrorBoundary>;
 
+const DebugOverlay = ({ isLoadingAuth, isAuthenticated, authError, user }) => {
+  const [log, setLog] = React.useState([]);
+  const [visible, setVisible] = React.useState(true);
+
+  React.useEffect(() => {
+    const entry = `[${new Date().toISOString().substring(11,19)}] loading=${isLoadingAuth} auth=${isAuthenticated} error=${authError?.type || 'none'} user=${user?.email || 'none'}`;
+    setLog(prev => [...prev.slice(-20), entry]);
+  }, [isLoadingAuth, isAuthenticated, authError, user]);
+
+  if (!visible) return <button onClick={() => setVisible(true)} className="fixed bottom-2 right-2 z-[9999] bg-black text-white text-xs px-2 py-1 rounded opacity-50">DEBUG</button>;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-black/90 text-green-400 text-xs font-mono p-2 max-h-48 overflow-y-auto">
+      <div className="flex justify-between mb-1">
+        <span className="text-yellow-400 font-bold">🔍 AUTH DEBUG (temp)</span>
+        <button onClick={() => setVisible(false)} className="text-white">✕</button>
+      </div>
+      {log.map((l, i) => <div key={i}>{l}</div>)}
+    </div>
+  );
+};
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, authError, navigateToLogin, user, isAuthenticated } = useAuth();
 
@@ -89,30 +111,33 @@ const AuthenticatedApp = () => {
   const landingPageName = getRoleLandingPage();
 
   return (
-    <Routes>
-      <Route path="/" element={
-        <LayoutWrapper currentPageName={landingPageName}>
-          <LandingPage />
-        </LayoutWrapper>
-      } />
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
-          }
-        />
-      ))}
-      <Route path="/AIAssistantSettings" element={<LayoutWrapper currentPageName="AIAssistantSettings"><AIAssistantSettings /></LayoutWrapper>} />
-      <Route path="/MaterialImport" element={<LayoutWrapper currentPageName="MaterialImport"><MaterialImport /></LayoutWrapper>} />
-      <Route path="/MaterialImportDetail" element={<LayoutWrapper currentPageName="MaterialImportDetail"><MaterialImportDetail /></LayoutWrapper>} />
-      <Route path="/PlanningAgent" element={<LayoutWrapper currentPageName="PlanningAgent"><PlanningAgent /></LayoutWrapper>} />
-      <Route path="/PlanningReadiness" element={<LayoutWrapper currentPageName="PlanningReadiness"><PlanningReadiness /></LayoutWrapper>} />
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <>
+      <DebugOverlay isLoadingAuth={isLoadingAuth} isAuthenticated={isAuthenticated} authError={authError} user={user} />
+      <Routes>
+        <Route path="/" element={
+          <LayoutWrapper currentPageName={landingPageName}>
+            <LandingPage />
+          </LayoutWrapper>
+        } />
+        {Object.entries(Pages).map(([path, Page]) => (
+          <Route
+            key={path}
+            path={`/${path}`}
+            element={
+              <LayoutWrapper currentPageName={path}>
+                <Page />
+              </LayoutWrapper>
+            }
+          />
+        ))}
+        <Route path="/AIAssistantSettings" element={<LayoutWrapper currentPageName="AIAssistantSettings"><AIAssistantSettings /></LayoutWrapper>} />
+        <Route path="/MaterialImport" element={<LayoutWrapper currentPageName="MaterialImport"><MaterialImport /></LayoutWrapper>} />
+        <Route path="/MaterialImportDetail" element={<LayoutWrapper currentPageName="MaterialImportDetail"><MaterialImportDetail /></LayoutWrapper>} />
+        <Route path="/PlanningAgent" element={<LayoutWrapper currentPageName="PlanningAgent"><PlanningAgent /></LayoutWrapper>} />
+        <Route path="/PlanningReadiness" element={<LayoutWrapper currentPageName="PlanningReadiness"><PlanningReadiness /></LayoutWrapper>} />
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </>
   );
 };
 
