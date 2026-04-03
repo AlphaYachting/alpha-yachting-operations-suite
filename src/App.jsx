@@ -51,6 +51,15 @@ const DebugOverlay = ({ isLoadingAuth, isAuthenticated, authError, user }) => {
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, authError, navigateToLogin, user, isAuthenticated } = useAuth();
+  const isIosStandalone = window.navigator.standalone === true;
+  const [showStandaloneRecovery, setShowStandaloneRecovery] = useState(false);
+
+  // iOS Standalone: after 5s stuck unauthenticated, show recovery screen instead of infinite spinner
+  useEffect(() => {
+    if (!isIosStandalone || isAuthenticated || isLoadingAuth) return;
+    const timer = setTimeout(() => setShowStandaloneRecovery(true), 5000);
+    return () => clearTimeout(timer);
+  }, [isIosStandalone, isAuthenticated, isLoadingAuth]);
 
   // Loading
   if (isLoadingAuth) {
@@ -91,8 +100,36 @@ const AuthenticatedApp = () => {
 
 
   if (!isAuthenticated || !user) {
+    // iOS Standalone: show recovery screen if stuck after login redirect
+    if (isIosStandalone && showStandaloneRecovery) {
+      return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-6 p-8">
+          <img
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
+            alt="Alpha Yachting"
+            className="h-16 object-contain"
+          />
+          <div className="text-center space-y-2">
+            <p className="text-slate-700 font-medium">Login erforderlich</p>
+            <p className="text-slate-500 text-sm">Bitte im Browser anmelden, dann die App neu öffnen.</p>
+          </div>
+          <button
+            onClick={() => { setShowStandaloneRecovery(false); navigateToLogin(); }}
+            className="px-6 py-3 bg-slate-800 text-white rounded-lg text-sm font-medium"
+          >
+            Jetzt anmelden
+          </button>
+          <button
+            onClick={() => { setShowStandaloneRecovery(false); window.location.reload(); }}
+            className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg text-sm"
+          >
+            App neu laden
+          </button>
+        </div>
+      );
+    }
+
     navigateToLogin();
-    // Show loading screen instead of null/white during redirect
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-6">
         <img
