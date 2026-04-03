@@ -64,37 +64,6 @@ const AuthenticatedApp = () => {
 
 
   if (!isAuthenticated || !user) {
-    const isStandalone =
-      window.navigator.standalone === true ||
-      window.matchMedia('(display-mode: standalone)').matches;
-
-    if (isStandalone) {
-      // iOS PWA: Login-Redirect verlässt die PWA und landet in Safari.
-      // Stattdessen: Nutzer anweisen, sich zuerst in Safari anzumelden.
-      return (
-        <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'white', padding: '2rem', gap: '1.5rem', textAlign: 'center' }}>
-          <img
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
-            alt="Alpha Yachting"
-            style={{ height: '4rem', objectFit: 'contain' }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <p style={{ color: '#0f172a', fontWeight: 600, fontSize: '1rem' }}>Anmeldung erforderlich</p>
-            <p style={{ color: '#64748b', fontSize: '0.875rem', lineHeight: '1.6' }}>
-              Bitte öffne die App einmalig im Safari-Browser, melde dich dort an und komme dann hierher zurück.
-            </p>
-          </div>
-          <a
-            href={window.location.origin}
-            style={{ padding: '0.75rem 1.5rem', background: '#1e293b', color: 'white', borderRadius: '0.75rem', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', display: 'inline-block' }}
-            rel="noreferrer"
-          >
-            In Safari öffnen
-          </a>
-        </div>
-      );
-    }
-
     navigateToLogin();
     return null;
   }
