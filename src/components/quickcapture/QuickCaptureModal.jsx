@@ -330,6 +330,7 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
           rows={5}
           className="resize-none text-base min-h-[120px]"
           autoFocus
+        />
         {interim && (
           <div className="absolute bottom-2 right-2 text-xs text-slate-400 bg-white/80 px-1 rounded">
             …
