@@ -31,8 +31,9 @@ const STATUS_CONFIG = {
 function getRoutedLink(recordType, recordId) {
   if (!recordType || !recordId) return null;
   const map = {
-    Lead: 'LeadDetail',
-    CustomerMaterialEntry: null, // no dedicated detail page
+    Lead:  'LeadDetail',
+    Offer: 'OfferDetail',
+    CustomerMaterialEntry: null,
     Note: null,
   };
   const page = map[recordType];
@@ -42,8 +43,9 @@ function getRoutedLink(recordType, recordId) {
 
 const CONVERSION_LABEL = {
   CustomerMaterialEntry: 'Material Entry',
-  Lead: 'Lead',
-  Note: 'Note',
+  Lead:  'Lead',
+  Note:  'Customer Note',
+  Offer: 'Offer Draft',
 };
 
 export default function QuickCaptureReview() {
@@ -55,6 +57,12 @@ export default function QuickCaptureReview() {
   const [showCaptureModal, setShowCaptureModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
   const [convertingEntry, setConvertingEntry] = useState(null);
+  const [forcedTarget, setForcedTarget] = useState(null);
+
+  const openConvert = (entry, target = null) => {
+    setConvertingEntry(entry);
+    setForcedTarget(target);
+  };
 
   useEffect(() => { loadData(); }, []);
 
@@ -107,6 +115,7 @@ export default function QuickCaptureReview() {
         : e
     ));
     setConvertingEntry(null);
+    setForcedTarget(null);
   };
 
   const filteredEntries = filterStatus === 'all'
@@ -298,60 +307,56 @@ export default function QuickCaptureReview() {
                     </div>
                   )}
 
-                  {/* Conversion actions — new entries */}
-                  {entry.review_status === 'new' && (
-                    <div className="flex items-center gap-2 pt-2 flex-wrap border-t">
-                      <Button
-                        size="sm"
-                        onClick={() => setConvertingEntry(entry)}
-                        className="bg-amber-500 hover:bg-amber-600 text-white"
-                      >
-                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
-                        Convert →
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateStatus(entry, 'reviewed')}
-                        disabled={isActing}
-                        className="text-blue-700 border-blue-200"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                        Mark Reviewed
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateStatus(entry, 'dismissed')}
-                        disabled={isActing}
-                        className="text-slate-500"
-                      >
-                        <XCircle className="h-3.5 w-3.5 mr-1" />
-                        Dismiss
-                      </Button>
-                    </div>
-                  )}
+                  {/* Type-specific conversion actions */}
+                  {(entry.review_status === 'new' || entry.review_status === 'reviewed') && (
+                    <div className="pt-2 border-t space-y-2">
+                      <div className="flex items-center flex-wrap gap-1.5">
 
-                  {/* Conversion actions — reviewed entries */}
-                  {entry.review_status === 'reviewed' && (
-                    <div className="flex items-center gap-2 pt-2 border-t">
-                      <Button
-                        size="sm"
-                        onClick={() => setConvertingEntry(entry)}
-                        className="bg-amber-500 hover:bg-amber-600 text-white"
-                      >
-                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
-                        Convert →
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => updateStatus(entry, 'dismissed')}
-                        disabled={isActing}
-                        className="text-slate-500"
-                      >
-                        Dismiss
-                      </Button>
+                        {/* Material Entry */}
+                        {entry.suggested_type === 'material_entry' && (
+                          <Button size="sm" onClick={() => openConvert(entry, 'CustomerMaterialEntry')}
+                            className="bg-amber-500 hover:bg-amber-600 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Material Entry
+                          </Button>
+                        )}
+
+                        {/* Customer Note — tool_tracking, internal_note, task_candidate */}
+                        {['tool_tracking', 'internal_note', 'task_candidate'].includes(entry.suggested_type) && (
+                          <Button size="sm" onClick={() => openConvert(entry, 'Note')}
+                            className="bg-slate-700 hover:bg-slate-800 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Customer Note
+                          </Button>
+                        )}
+
+                        {/* Lead — project_intake, customer_request */}
+                        {['project_intake', 'customer_request'].includes(entry.suggested_type) && (
+                          <Button size="sm" onClick={() => openConvert(entry, 'Lead')}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Lead
+                          </Button>
+                        )}
+
+                        {/* Offer Draft — customer_request or any type */}
+                        {['customer_request', 'project_intake'].includes(entry.suggested_type) && (
+                          <Button size="sm" onClick={() => openConvert(entry, 'Offer')}
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Offer Draft
+                          </Button>
+                        )}
+
+                        {/* Mark Reviewed (secondary action) */}
+                        {entry.review_status === 'new' && (
+                          <Button size="sm" variant="outline" onClick={() => updateStatus(entry, 'reviewed')}
+                            disabled={isActing} className="text-blue-700 border-blue-200 text-xs">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />Reviewed
+                          </Button>
+                        )}
+
+                        <Button size="sm" variant="ghost" onClick={() => updateStatus(entry, 'dismissed')}
+                          disabled={isActing} className="text-slate-400 text-xs">
+                          <XCircle className="h-3 w-3 mr-1" />Dismiss
+                        </Button>
+                      </div>
                     </div>
                   )}
 
@@ -379,8 +384,9 @@ export default function QuickCaptureReview() {
           entry={convertingEntry}
           customers={customers}
           boats={boats}
+          forcedTarget={forcedTarget}
           onSuccess={handleConversionSuccess}
-          onCancel={() => setConvertingEntry(null)}
+          onCancel={() => { setConvertingEntry(null); setForcedTarget(null); }}
         />
       )}
     </div>

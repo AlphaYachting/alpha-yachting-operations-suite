@@ -19,7 +19,9 @@ import {
   Calendar,
   Plus,
   Camera,
-  MessageSquare
+  MessageSquare,
+  StickyNote,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -76,6 +78,7 @@ export default function CustomerDetail() {
   const [workOrders, setWorkOrders] = useState([]);
   const [workOrderPhotoCounts, setWorkOrderPhotoCounts] = useState({});
   const [offers, setOffers] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showWorkOrderForm, setShowWorkOrderForm] = useState(false);
@@ -97,13 +100,14 @@ export default function CustomerDetail() {
     try {
       setLoading(true);
       
-      const [customerData, boatsData, jobsData, offersData, techData, locationsData] = await Promise.all([
+      const [customerData, boatsData, jobsData, offersData, techData, locationsData, notesData] = await Promise.all([
         base44.entities.Customer.filter({ id: customerId }),
         base44.entities.Boat.filter({ customer_id: customerId }),
         base44.entities.Job.filter({ customer_id: customerId }),
         base44.entities.Offer.filter({ customer_id: customerId }),
         base44.entities.Technician.list(),
-        base44.entities.Location.list()
+        base44.entities.Location.list(),
+        base44.entities.Note.filter({ reference_type: 'Customer', reference_id: customerId }, '-created_date', 50),
       ]);
 
       if (customerData.length === 0) {
@@ -118,6 +122,7 @@ export default function CustomerDetail() {
       setOffers(offersData);
       setTechnicians(techData);
       setLocations(locationsData);
+      setNotes(notesData);
 
       // Load work orders for all jobs
       const jobIds = jobsData.map(j => j.id);
@@ -781,6 +786,51 @@ export default function CustomerDetail() {
           <CustomerMaterialSection customerId={customerId} />
         </CardContent>
       </Card>
+
+      {/* Customer Notes */}
+      {notes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StickyNote className="h-5 w-5" />
+              Notes ({notes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {notes.map(note => {
+                const isFromQC = note.text?.startsWith('[');
+                const lines = note.text?.split('\n\n') || [];
+                const headline = lines[0] || note.text;
+                const body = lines.slice(1).join('\n\n');
+                return (
+                  <div key={note.id} className="p-3 border border-slate-200 rounded-lg">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="text-sm font-medium text-slate-900 leading-snug">{headline}</p>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {isFromQC && (
+                          <span className="flex items-center gap-0.5 text-xs bg-amber-100 text-amber-700 rounded px-1.5 py-0.5">
+                            <Zap className="h-2.5 w-2.5" />QC
+                          </span>
+                        )}
+                        {note.created_date && (
+                          <span className="text-xs text-slate-400">
+                            {new Date(note.created_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {body && <p className="text-sm text-slate-600 whitespace-pre-wrap">{body}</p>}
+                    {note.created_by && (
+                      <p className="text-xs text-slate-400 mt-1">by {note.created_by}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Create Work Order Dialog */}
       <Dialog open={showWorkOrderForm} onOpenChange={setShowWorkOrderForm}>
