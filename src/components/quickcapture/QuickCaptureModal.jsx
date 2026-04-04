@@ -586,7 +586,8 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
 }
 
 // ── MAIN MODAL ─────────────────────────────────────────────────────────────
-export default function QuickCaptureModal({ open, onClose, customers = [], boats = [] }) {
+export default function QuickCaptureModal({ open, onClose, onOpenChange, customers = [], boats = [] }) {
+  const handleClose = onOpenChange || onClose;
   const [step, setStep] = useState('input');
   const [parsed, setParsed] = useState(null);
 
@@ -595,7 +596,7 @@ export default function QuickCaptureModal({ open, onClose, customers = [], boats
   }, [open]);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -611,7 +612,7 @@ export default function QuickCaptureModal({ open, onClose, customers = [], boats
         )}
         {step === 'result' && parsed && (
           <ResultStep parsed={parsed} customers={customers} boats={boats}
-            onConfirm={onClose} onEdit={() => setStep('input')} />
+            onConfirm={() => handleClose(false)} onEdit={() => setStep('input')} />
         )}
       </DialogContent>
     </Dialog>
