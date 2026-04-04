@@ -3,10 +3,13 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Zap, CheckCircle2, RotateCcw, XCircle, Filter, Clock, User, MapPin, Ship } from 'lucide-react';
+import { Zap, CheckCircle2, XCircle, Clock, User, MapPin, Ship, ArrowRight, ExternalLink } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
+import ConversionDialog from '@/components/quickcapture/ConversionDialog';
 
 const TYPE_CONFIG = {
   material_entry:   { label: 'Material / Parts',   color: 'bg-amber-100 text-amber-800',   border: 'border-amber-200' },
@@ -24,6 +27,25 @@ const STATUS_CONFIG = {
   dismissed:{ label: 'Dismissed',color: 'bg-slate-100 text-slate-500' },
 };
 
+// Map routed_record_type to a navigable page
+function getRoutedLink(recordType, recordId) {
+  if (!recordType || !recordId) return null;
+  const map = {
+    Lead: 'LeadDetail',
+    CustomerMaterialEntry: null, // no dedicated detail page
+    Note: null,
+  };
+  const page = map[recordType];
+  if (!page) return null;
+  return createPageUrl(page) + `?id=${recordId}`;
+}
+
+const CONVERSION_LABEL = {
+  CustomerMaterialEntry: 'Material Entry',
+  Lead: 'Lead',
+  Note: 'Note',
+};
+
 export default function QuickCaptureReview() {
   const [entries, setEntries] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -32,6 +54,7 @@ export default function QuickCaptureReview() {
   const [filterStatus, setFilterStatus] = useState('new');
   const [showCaptureModal, setShowCaptureModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
+  const [convertingEntry, setConvertingEntry] = useState(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -75,6 +98,15 @@ export default function QuickCaptureReview() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const handleConversionSuccess = ({ recordType, recordId }) => {
+    setEntries(prev => prev.map(e =>
+      e.id === convertingEntry.id
+        ? { ...e, review_status: 'routed', routed_record_type: recordType, routed_record_id: recordId, routed_at: new Date().toISOString() }
+        : e
+    ));
+    setConvertingEntry(null);
   };
 
   const filteredEntries = filterStatus === 'all'
@@ -244,9 +276,39 @@ export default function QuickCaptureReview() {
                     <p className="text-xs text-slate-500 italic border-t pt-2">{entry.review_notes}</p>
                   )}
 
-                  {/* Review routing actions */}
+                  {/* Routed destination */}
+                  {entry.review_status === 'routed' && entry.routed_record_type && (
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <span className="text-xs text-green-700 font-medium">
+                        → Routed to: {CONVERSION_LABEL[entry.routed_record_type] || entry.routed_record_type}
+                      </span>
+                      {getRoutedLink(entry.routed_record_type, entry.routed_record_id) && (
+                        <Link
+                          to={getRoutedLink(entry.routed_record_type, entry.routed_record_id)}
+                          className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" /> Open
+                        </Link>
+                      )}
+                      {entry.routed_at && (
+                        <span className="text-xs text-slate-400">
+                          · {format(parseISO(entry.routed_at), 'MMM d, HH:mm')}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Conversion actions — new entries */}
                   {entry.review_status === 'new' && (
-                    <div className="flex items-center gap-2 pt-1 flex-wrap border-t">
+                    <div className="flex items-center gap-2 pt-2 flex-wrap border-t">
+                      <Button
+                        size="sm"
+                        onClick={() => setConvertingEntry(entry)}
+                        className="bg-amber-500 hover:bg-amber-600 text-white"
+                      >
+                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                        Convert →
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -256,16 +318,6 @@ export default function QuickCaptureReview() {
                       >
                         <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                         Mark Reviewed
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateStatus(entry, 'routed')}
-                        disabled={isActing}
-                        className="text-green-700 border-green-200"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                        Mark Routed
                       </Button>
                       <Button
                         size="sm"
@@ -280,17 +332,16 @@ export default function QuickCaptureReview() {
                     </div>
                   )}
 
+                  {/* Conversion actions — reviewed entries */}
                   {entry.review_status === 'reviewed' && (
-                    <div className="flex items-center gap-2 pt-1 border-t">
+                    <div className="flex items-center gap-2 pt-2 border-t">
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => updateStatus(entry, 'routed')}
-                        disabled={isActing}
-                        className="text-green-700 border-green-200"
+                        onClick={() => setConvertingEntry(entry)}
+                        className="bg-amber-500 hover:bg-amber-600 text-white"
                       >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                        Mark Routed
+                        <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                        Convert →
                       </Button>
                       <Button
                         size="sm"
@@ -322,6 +373,16 @@ export default function QuickCaptureReview() {
         customers={customers}
         boats={boats}
       />
+
+      {convertingEntry && (
+        <ConversionDialog
+          entry={convertingEntry}
+          customers={customers}
+          boats={boats}
+          onSuccess={handleConversionSuccess}
+          onCancel={() => setConvertingEntry(null)}
+        />
+      )}
     </div>
   );
 }

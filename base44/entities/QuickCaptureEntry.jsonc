@@ -83,11 +83,20 @@
     },
     "routed_record_type": {
       "type": "string",
-      "description": "Entity type of the routed record (e.g. CustomerMaterialEntry, Task)"
+      "description": "Entity type of the routed record (e.g. CustomerMaterialEntry, Lead, Note)"
     },
     "routed_record_id": {
       "type": "string",
       "description": "ID of the created/linked record after routing"
+    },
+    "routed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when entry was converted to a real record"
+    },
+    "routed_by": {
+      "type": "string",
+      "description": "Email of user who performed the conversion"
     },
     "reviewed_by": {
       "type": "string",
