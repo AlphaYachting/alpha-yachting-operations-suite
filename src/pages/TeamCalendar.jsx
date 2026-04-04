@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { ChevronLeft, ChevronRight, ArrowLeft, X, Clock, Anchor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, startOfWeek, endOfWeek, subMonths, addMonths } from 'date-fns';
 import { offlineStorage } from '@/components/offline/offlineStorage';
 
 const STATUS_COLORS = {
@@ -145,11 +145,15 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
           return;
         }
 
+        // Limit to ±2 months around current date to avoid loading full history
+        const rangeStart = format(startOfMonth(subMonths(new Date(), 2)), 'yyyy-MM-dd');
+        const rangeEnd = format(endOfMonth(addMonths(new Date(), 2)), 'yyyy-MM-dd');
         workOrdersData = await base44.entities.WorkOrder.filter({
           $or: [
             { assigned_technicians: { $in: [technicianId] } },
             { lead_technician_id: technicianId }
-          ]
+          ],
+          scheduled_date: { $gte: rangeStart, $lte: rangeEnd }
         });
 
         const jobIds = [...new Set(workOrdersData.map(wo => wo.job_id).filter(Boolean))];
