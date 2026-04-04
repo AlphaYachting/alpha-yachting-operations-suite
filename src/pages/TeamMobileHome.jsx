@@ -270,27 +270,49 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
   const sections = groupWorkOrdersBySection();
 
-  if (loading) {
+  // Guard: don't render header until user is available
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-slate-50">
-        <MobileHeaderWithWelcome
-          user={displayUser || user}
-          taskCount={0}
-          onSettingsClick={() => {}}
-          showSettings={false}
-          onNavigate={onNavigate}
-          workOrders={workOrders}
-          jobs={jobs}
-          boats={boats}
-          locations={locations}
-          customers={customers}
-          tasks={tasks} />
-
+        {user && (
+          <MobileHeaderWithWelcome
+            user={displayUser || user}
+            taskCount={0}
+            onSettingsClick={() => {}}
+            showSettings={false}
+            onNavigate={onNavigate}
+            workOrders={workOrders}
+            jobs={jobs}
+            boats={boats}
+            locations={locations}
+            customers={customers}
+            tasks={tasks} />
+        )}
         <div className="p-4 space-y-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
         </div>
       </div>);
+  }
 
+  // Fallback: user has technician role but no linked Technician record
+  if (!resolvedTechnicianId && !previewUserId) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+          <AlertCircle className="h-8 w-8 text-amber-500" />
+        </div>
+        <div>
+          <p className="text-lg font-semibold text-slate-800">Kein Techniker-Profil verknüpft</p>
+          <p className="text-sm text-slate-500 mt-2 max-w-xs">Diesem Konto ist noch kein Techniker-Profil zugeordnet. Bitte einen Administrator kontaktieren.</p>
+        </div>
+        <button
+          onClick={() => loadData(false)}
+          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
+        >
+          Erneut versuchen
+        </button>
+      </div>
+    );
   }
 
   const WorkOrderCard = React.memo(({ workOrder, taskCount, showDateHeader }) => {
