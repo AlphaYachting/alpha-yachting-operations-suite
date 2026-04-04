@@ -1,0 +1,108 @@
+{
+  "name": "QuickCaptureEntry",
+  "type": "object",
+  "properties": {
+    "raw_input": {
+      "type": "string",
+      "description": "Original free-text or voice-transcribed input"
+    },
+    "input_method": {
+      "type": "string",
+      "enum": [
+        "text",
+        "voice"
+      ],
+      "default": "text"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Optional: linked customer"
+    },
+    "boat_id": {
+      "type": "string",
+      "description": "Optional: linked boat"
+    },
+    "location_text": {
+      "type": "string",
+      "description": "Free-text location or marina"
+    },
+    "photo_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Attached photo URLs"
+    },
+    "suggested_type": {
+      "type": "string",
+      "enum": [
+        "material_entry",
+        "tool_tracking",
+        "task_candidate",
+        "customer_request",
+        "project_intake",
+        "internal_note"
+      ],
+      "description": "AI or manually selected classification"
+    },
+    "suggested_summary": {
+      "type": "string",
+      "description": "AI-generated or manual short summary"
+    },
+    "suggested_target": {
+      "type": "string",
+      "description": "Suggested operational destination description"
+    },
+    "ai_extracted_customer_name": {
+      "type": "string"
+    },
+    "ai_extracted_boat_name": {
+      "type": "string"
+    },
+    "ai_urgency_hint": {
+      "type": "string",
+      "enum": [
+        "low",
+        "normal",
+        "high",
+        "urgent"
+      ]
+    },
+    "ai_billable_hint": {
+      "type": "boolean"
+    },
+    "review_status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "reviewed",
+        "routed",
+        "dismissed"
+      ],
+      "default": "new"
+    },
+    "routed_record_type": {
+      "type": "string",
+      "description": "Entity type of the routed record (e.g. CustomerMaterialEntry, Task)"
+    },
+    "routed_record_id": {
+      "type": "string",
+      "description": "ID of the created/linked record after routing"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Email of reviewer"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "review_notes": {
+      "type": "string",
+      "description": "Internal notes added during review"
+    }
+  },
+  "required": [
+    "raw_input"
+  ]
+}
