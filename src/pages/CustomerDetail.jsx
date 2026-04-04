@@ -89,6 +89,8 @@ export default function CustomerDetail() {
   const [editingBoat, setEditingBoat] = useState(null);
   const [editingJob, setEditingJob] = useState(null);
   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
+  const [showCompletedJobs, setShowCompletedJobs] = useState(false);
+  const [showCompletedWOs, setShowCompletedWOs] = useState(false);
 
   useEffect(() => {
     if (customerId) {
@@ -395,6 +397,11 @@ export default function CustomerDetail() {
               <div>
                 <p className="text-sm text-slate-600">Projects</p>
                 <p className="text-2xl font-bold text-slate-900">{jobs.length}</p>
+                {jobs.filter(j => j.status === 'Completed' || j.status === 'Invoiced').length > 0 && (
+                  <p className="text-xs text-emerald-600 mt-0.5">
+                    {jobs.filter(j => j.status === 'Completed' || j.status === 'Invoiced').length} abgeschlossen
+                  </p>
+                )}
               </div>
               <Briefcase className="h-8 w-8 text-purple-500" />
             </div>
@@ -407,6 +414,11 @@ export default function CustomerDetail() {
               <div>
                 <p className="text-sm text-slate-600">Work Orders</p>
                 <p className="text-2xl font-bold text-slate-900">{workOrders.length}</p>
+                {workOrders.filter(wo => wo.status === 'Completed').length > 0 && (
+                  <p className="text-xs text-emerald-600 mt-0.5">
+                    {workOrders.filter(wo => wo.status === 'Completed').length} abgeschlossen
+                  </p>
+                )}
               </div>
               <ClipboardList className="h-8 w-8 text-amber-500" />
             </div>
@@ -558,6 +570,49 @@ export default function CustomerDetail() {
         </CardContent>
       </Card>
 
+      {/* Completed Projects — collapsible */}
+      {jobs.filter(j => j.status === 'Completed' || j.status === 'Invoiced').length > 0 && (
+        <Card>
+          <CardHeader>
+            <button
+              className="flex items-center justify-between w-full text-left"
+              onClick={() => setShowCompletedJobs(v => !v)}
+            >
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                Abgeschlossene Projekte ({jobs.filter(j => j.status === 'Completed' || j.status === 'Invoiced').length})
+              </CardTitle>
+              <span className="text-sm text-slate-400">{showCompletedJobs ? '▲ Ausblenden' : '▼ Anzeigen'}</span>
+            </button>
+          </CardHeader>
+          {showCompletedJobs && (
+            <CardContent>
+              <div className="space-y-3">
+                {jobs.filter(j => j.status === 'Completed' || j.status === 'Invoiced').map(job => (
+                  <Link key={job.id} to={createPageUrl('JobDetail') + `?id=${job.id}`}>
+                    <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold text-slate-900">{job.title}</h4>
+                        <Badge className={jobStatusColors[job.status]}>{job.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-slate-500">
+                        {job.job_number && <span>#{job.job_number}</span>}
+                        {job.completion_date && (
+                          <span className="flex items-center gap-1 text-emerald-600">
+                            <CheckCircle2 className="h-3 w-3" />
+                            {format(new Date(job.completion_date), 'dd.MM.yyyy')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       {/* Open Work Orders */}
       <Card>
         <CardHeader>
@@ -624,6 +679,49 @@ export default function CustomerDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Completed Work Orders — collapsible */}
+      {workOrders.filter(wo => wo.status === 'Completed').length > 0 && (
+        <Card>
+          <CardHeader>
+            <button
+              className="flex items-center justify-between w-full text-left"
+              onClick={() => setShowCompletedWOs(v => !v)}
+            >
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                Abgeschlossene Work Orders ({workOrders.filter(wo => wo.status === 'Completed').length})
+              </CardTitle>
+              <span className="text-sm text-slate-400">{showCompletedWOs ? '▲ Ausblenden' : '▼ Anzeigen'}</span>
+            </button>
+          </CardHeader>
+          {showCompletedWOs && (
+            <CardContent>
+              <div className="space-y-3">
+                {workOrders.filter(wo => wo.status === 'Completed').map(wo => (
+                  <Link key={wo.id} to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}>
+                    <div className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold text-slate-900">{wo.title}</h4>
+                        <Badge className={woStatusColors[wo.status]}>{wo.status}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-slate-500">
+                        {wo.work_order_number && <span>#{wo.work_order_number}</span>}
+                        {wo.scheduled_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(wo.scheduled_date), 'dd.MM.yyyy')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* Recent Offers */}
       <Card>

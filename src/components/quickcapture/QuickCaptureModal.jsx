@@ -94,7 +94,7 @@ function CustomerPicker({ customers, value, onChange, label = 'Customer', confid
                 className="h-8 text-sm"
               />
             </div>
-            <div className="max-h-48 overflow-y-auto">
+            <div className="max-h-56 overflow-y-auto">
               <button
                 type="button"
                 onClick={() => handleSelect(null)}
@@ -110,7 +110,7 @@ function CustomerPicker({ customers, value, onChange, label = 'Customer', confid
                   key={c.id}
                   type="button"
                   onClick={() => handleSelect(c)}
-                  className={`w-full px-3 py-2 text-sm text-left hover:bg-amber-50 ${value === c.id ? 'bg-amber-50 font-medium' : ''}`}
+                  className={`w-full px-3 py-3 text-sm text-left hover:bg-amber-50 ${value === c.id ? 'bg-amber-50 font-medium' : ''}`}
                 >
                   {displayName(c)}
                 </button>
@@ -320,18 +320,16 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
     <div className="space-y-4">
       <div className="relative">
         <Textarea
-          placeholder='What happened? e.g. "Blümel, pressure washer left in Vrsar" or "Customer wants polishing next week"...'
+          placeholder='Was ist passiert? z.B. "Blümel, Hochdruckreiniger in Vrsar gelassen" oder "Kunde möchte nächste Woche Politur"...'
           value={text + (interim ? ' ' + interim : '')}
           onChange={(e) => {
-            // If user edits, commit what's there
             committedTextRef.current = e.target.value;
             setText(e.target.value);
             setInterim('');
           }}
           rows={5}
-          className="resize-none text-base"
+          className="resize-none text-base min-h-[120px]"
           autoFocus
-        />
         {interim && (
           <div className="absolute bottom-2 right-2 text-xs text-slate-400 bg-white/80 px-1 rounded">
             …
@@ -351,23 +349,33 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
         </div>
       )}
 
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-3">
         {voiceSupported && (
-          <Button variant="outline" size="sm" type="button"
+          <button
+            type="button"
             onClick={voiceState === 'listening' ? stopRecording : startRecording}
-            className={voiceState === 'listening' ? 'border-red-400 text-red-600' : ''}>
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-4 rounded-xl border-2 text-sm font-medium transition-colors ${
+              voiceState === 'listening'
+                ? 'border-red-400 bg-red-50 text-red-600 animate-pulse'
+                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
             {voiceState === 'listening'
-              ? <><MicOff className="h-4 w-4 mr-1" />Stop</>
-              : <><Mic className="h-4 w-4 mr-1" />{voiceState === 'ended' || voiceState === 'error' ? 'Retry Voice' : 'Voice'}</>
+              ? <><MicOff className="h-6 w-6" /><span>Stop</span></>
+              : <><Mic className="h-6 w-6" /><span>{voiceState === 'ended' || voiceState === 'error' ? 'Nochmal' : 'Sprache'}</span></>
             }
-          </Button>
+          </button>
         )}
-        <Button variant="outline" size="sm" type="button"
-          onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-          {uploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Camera className="h-4 w-4 mr-1" />}
-          Photo
-        </Button>
-        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-4 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 text-sm font-medium"
+        >
+          {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
+          <span>Foto{photoUrls.length > 0 ? ` (${photoUrls.length})` : ''}</span>
+        </button>
+        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
         {photoUrls.length > 0 && (
           <span className="text-xs text-slate-500">{photoUrls.length} photo(s) attached</span>
         )}
@@ -388,10 +396,10 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
       )}
 
       <Button onClick={handleProcess} disabled={processing || !text.trim()}
-        className="bg-amber-500 hover:bg-amber-600 text-white w-full">
+        className="bg-amber-500 hover:bg-amber-600 text-white w-full h-12 text-base">
         {processing
-          ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Parsing...</>
-          : <><Zap className="h-4 w-4 mr-2" />Parse & Review</>}
+          ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Analysieren...</>
+          : <><Zap className="h-5 w-5 mr-2" />Analysieren &amp; Prüfen</>}
       </Button>
     </div>
   );
@@ -571,14 +579,14 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
       )}
 
       <div className="flex gap-2 pt-1">
-        <Button variant="outline" onClick={onEdit} className="flex-1">
-          <Edit2 className="h-4 w-4 mr-1" /> Edit Text
+        <Button variant="outline" onClick={onEdit} className="flex-1 h-12">
+          <Edit2 className="h-4 w-4 mr-1" /> Text bearbeiten
         </Button>
-        <Button onClick={handleConfirm} disabled={saving} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white">
+        <Button onClick={handleConfirm} disabled={saving} className="flex-1 h-12 bg-amber-500 hover:bg-amber-600 text-white text-base">
           {saving
             ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
             : <CheckCircle2 className="h-4 w-4 mr-1" />}
-          Confirm & Queue
+          Speichern
         </Button>
       </div>
     </div>
@@ -597,7 +605,11 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="
+        sm:max-w-lg sm:w-full sm:mx-4 sm:max-h-[90vh] sm:rounded-lg
+        max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:w-full max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:translate-y-0 max-sm:max-h-[92vh]
+        overflow-y-auto
+      ">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-500" />
