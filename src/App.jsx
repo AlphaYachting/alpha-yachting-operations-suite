@@ -55,12 +55,12 @@ const AuthenticatedApp = () => {
   const [showStandaloneRecovery, setShowStandaloneRecovery] = useState(false);
   const loginRedirectFiredRef = useRef(false);
 
-  // iOS Standalone: after 5s stuck unauthenticated, show recovery screen
+  // After 5s stuck unauthenticated (any mode: standalone, bookmark, browser), show recovery screen
   useEffect(() => {
-    if (!isIosStandalone || isAuthenticated || isLoadingAuth) return;
+    if (isAuthenticated || isLoadingAuth) return;
     const timer = setTimeout(() => setShowStandaloneRecovery(true), 5000);
     return () => clearTimeout(timer);
-  }, [isIosStandalone, isAuthenticated, isLoadingAuth]);
+  }, [isAuthenticated, isLoadingAuth]);
 
   // Reset redirect guard when user becomes authenticated
   useEffect(() => {
@@ -109,8 +109,8 @@ const AuthenticatedApp = () => {
 
 
   if (!isAuthenticated || !user) {
-    // iOS Standalone: show recovery screen if stuck after login redirect
-    if (isIosStandalone && showStandaloneRecovery) {
+    // Show recovery screen if stuck after login redirect (any mode)
+    if (showStandaloneRecovery) {
       return (
         <div className="fixed inset-0 flex flex-col items-center justify-center bg-white gap-6 p-8">
           <img
