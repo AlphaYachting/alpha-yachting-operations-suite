@@ -175,7 +175,7 @@ export default function Layout({ children, currentPageName }) {
   }
 
   // Mobile-only roles: redirect away from desktop (use navigate to avoid full reload)
-  const TECHNICIAN_ALLOWED_PATHS = ['/TeamMobileHome', '/TeamWorkOrderDetail', '/TeamCalendar', '/TeamTaskDetail', '/TeamPreviewMode', '/MyTasks'];
+  const TECHNICIAN_ALLOWED_PATHS = ['/', '/TeamMobileHome', '/TeamWorkOrderDetail', '/TeamCalendar', '/TeamTaskDetail', '/TeamPreviewMode', '/MyTasks'];
   if (authUser.role === 'customer' && location.pathname !== '/CustomerPortal') {
     navigate('/CustomerPortal', { replace: true });
     return (
