@@ -34,6 +34,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const [allSearchBoats, setAllSearchBoats] = useState([]);
   const [allSearchLocations, setAllSearchLocations] = useState([]);
   const [allSearchCustomers, setAllSearchCustomers] = useState([]);
+  const [technicianLookupDone, setTechnicianLookupDone] = useState(false);
 
   useEffect(() => {
     // Monitor connection status
@@ -96,6 +97,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         }
 
         setResolvedTechnicianId(technicianId);
+        setTechnicianLookupDone(true);
 
         // Set display user: in preview mode, fetch the technician's name for welcome message
         if (previewUserId && technicianId) {
@@ -295,7 +297,8 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   }
 
   // Fallback: user has technician role but no linked Technician record
-  if (!resolvedTechnicianId && !previewUserId) {
+  // Only show AFTER lookup has fully completed — prevents false flash during async lookup
+  if (technicianLookupDone && !resolvedTechnicianId && !previewUserId) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-8 text-center gap-4">
         <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
