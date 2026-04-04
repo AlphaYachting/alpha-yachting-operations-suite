@@ -20,9 +20,7 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2,
-  Zap,
-  Mail
+  BarChart2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,7 +51,6 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
-import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -79,7 +76,6 @@ export default function Dashboard() {
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [showQuickCapture, setShowQuickCapture] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -412,7 +408,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
@@ -434,7 +430,7 @@ export default function Dashboard() {
             asChild
             className="bg-teal-600 hover:bg-teal-700 text-white"
           >
-            <Link to={createPageUrl('EmailEngineSandbox')}>
+            <Link to={createPageUrl('LeadsV2') + '?emailParser=true'}>
               <Mail className="h-4 w-4 mr-1" />
               Email to Lead
             </Link>
@@ -1126,14 +1122,6 @@ export default function Dashboard() {
       <DispatchFullscreenModal 
         open={showDispatchModal} 
         onClose={() => setShowDispatchModal(false)} 
-      />
-
-      {/* Quick Capture Modal */}
-      <QuickCaptureModal
-        open={showQuickCapture}
-        onClose={() => setShowQuickCapture(false)}
-        customers={customers}
-        boats={boats}
       />
 
       {/* Note Dialog */}

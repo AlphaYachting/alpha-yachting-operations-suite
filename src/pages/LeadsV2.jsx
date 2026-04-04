@@ -19,11 +19,12 @@ import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
 export default function LeadsV2() {
   const { leads, customers, locations, users, boats, isLoading, updateLeadStatus, saveLead, deleteLead, refetchAll } = useLeadData();
 
+  const urlParams = new URLSearchParams(window.location.search);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
-  const [showEmailParser, setShowEmailParser] = useState(false);
+  const [showEmailParser, setShowEmailParser] = useState(urlParams.get('emailParser') === 'true');
 
   const handleEditLead = (lead) => {
     setEditingLead(lead);
