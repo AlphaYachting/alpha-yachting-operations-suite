@@ -20,7 +20,9 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2
+  BarChart2,
+  Zap,
+  Mail
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,6 +53,7 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
+import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -420,27 +423,21 @@ export default function Dashboard() {
           </Button>
           <Button 
             size="sm" 
-            onClick={() => setShowProjectDialog(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => setShowQuickCapture(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-white"
           >
-            <Plus className="h-4 w-4 mr-1" />
-            Project
+            <Zap className="h-4 w-4 mr-1" />
+            Quick Capture
           </Button>
           <Button 
             size="sm" 
-            onClick={() => setShowWorkOrderDialog(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            asChild
+            className="bg-teal-600 hover:bg-teal-700 text-white"
           >
-            <Plus className="h-4 w-4 mr-1" />
-            Work Order
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowLeadDialog(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Lead
+            <Link to={createPageUrl('LeadsV2') + '?emailParser=true'}>
+              <Mail className="h-4 w-4 mr-1" />
+              Email to Lead
+            </Link>
           </Button>
           <Button 
             size="sm" 
@@ -1129,6 +1126,12 @@ export default function Dashboard() {
       <DispatchFullscreenModal 
         open={showDispatchModal} 
         onClose={() => setShowDispatchModal(false)} 
+      />
+
+      {/* Quick Capture Modal */}
+      <QuickCaptureModal
+        open={showQuickCapture}
+        onOpenChange={setShowQuickCapture}
       />
 
       {/* Note Dialog */}
