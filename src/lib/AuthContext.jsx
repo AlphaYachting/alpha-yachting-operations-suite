@@ -36,7 +36,10 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async (isInitial = false) => {
     if (isCheckingRef.current) return; // prevent parallel calls
     isCheckingRef.current = true;
-    setIsLoadingAuth(true);
+    // Only show global loading spinner on initial check OR if not yet authenticated
+    if (isInitial || !isAuthenticated) {
+      setIsLoadingAuth(true);
+    }
     setAuthError(null);
     try {
       const timeoutMs = isInitial ? 10000 : 5000;
