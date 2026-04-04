@@ -20,7 +20,8 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2
+  BarChart2,
+  Zap
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,6 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays, startOfWeek } from 'date-fns';
 import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
-import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
@@ -77,7 +77,6 @@ export default function Dashboard() {
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [showQuickCapture, setShowQuickCapture] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -410,15 +409,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            size="sm"
-            onClick={() => setShowQuickCapture(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-white font-semibold"
-          >
-            <Zap className="h-4 w-4 mr-1" />
-            Quick Capture
-          </Button>
+        <div className="flex items-center gap-2">
           <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
@@ -1053,14 +1044,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Quick Capture Modal */}
-      <QuickCaptureModal
-        open={showQuickCapture}
-        onClose={() => setShowQuickCapture(false)}
-        customers={customers}
-        boats={boats}
-      />
 
       {/* Project Dialog */}
       <Dialog open={showProjectDialog} onOpenChange={setShowProjectDialog}>
