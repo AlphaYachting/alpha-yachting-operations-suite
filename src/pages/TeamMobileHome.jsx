@@ -55,6 +55,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   };
 
   const loadData = async (showCachedFirst = false) => {
+    setTechnicianLookupDone(false);
     try {
       const currentUser = await base44.auth.me();
       setUser(currentUser);
@@ -97,7 +98,6 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         }
 
         setResolvedTechnicianId(technicianId);
-        setTechnicianLookupDone(true);
 
         // Set display user: in preview mode, fetch the technician's name for welcome message
         if (previewUserId && technicianId) {
@@ -203,6 +203,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     } catch (error) {
       console.error('Error loading team data:', error);
     } finally {
+      setTechnicianLookupDone(true);
       setLoading(false);
     }
   };
