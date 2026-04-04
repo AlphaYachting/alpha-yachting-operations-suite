@@ -3,7 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Zap, CheckCircle2, XCircle, Clock, User, MapPin, Ship, ArrowRight, ExternalLink } from 'lucide-react';
+import { Zap, CheckCircle2, XCircle, Clock, User, MapPin, Ship, ArrowRight, ExternalLink, Pencil, Save, X } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -58,6 +59,18 @@ export default function QuickCaptureReview() {
   const [actionLoading, setActionLoading] = useState(null);
   const [convertingEntry, setConvertingEntry] = useState(null);
   const [forcedTarget, setForcedTarget] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState('');
+
+  const startEdit = (entry) => { setEditingId(entry.id); setEditText(entry.raw_input); };
+  const cancelEdit = () => { setEditingId(null); setEditText(''); };
+  const saveEdit = async (entry) => {
+    if (!editText.trim()) return;
+    await base44.entities.QuickCaptureEntry.update(entry.id, { raw_input: editText.trim() });
+    setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, raw_input: editText.trim() } : e));
+    setEditingId(null);
+    toast.success('Text updated');
+  };
 
   const openConvert = (entry, target = null) => {
     setConvertingEntry(entry);
@@ -228,9 +241,39 @@ export default function QuickCaptureReview() {
                   </div>
 
                   {/* Raw input */}
-                  <p className="text-sm text-slate-900 font-medium leading-relaxed">
-                    "{entry.raw_input}"
-                  </p>
+                  {editingId === entry.id ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editText}
+                        onChange={e => setEditText(e.target.value)}
+                        className="text-sm min-h-[80px]"
+                        autoFocus
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => saveEdit(entry)} className="text-xs">
+                          <Save className="h-3 w-3 mr-1" />Speichern
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={cancelEdit} className="text-xs">
+                          <X className="h-3 w-3 mr-1" />Abbrechen
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2 group">
+                      <p className="text-sm text-slate-900 font-medium leading-relaxed flex-1">
+                        "{entry.raw_input}"
+                      </p>
+                      {entry.review_status !== 'routed' && entry.review_status !== 'dismissed' && (
+                        <button
+                          onClick={() => startEdit(entry)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex-shrink-0"
+                          title="Text bearbeiten"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* AI Summary */}
                   {entry.suggested_summary && (
