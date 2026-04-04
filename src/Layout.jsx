@@ -148,7 +148,7 @@ export default function Layout({ children, currentPageName }) {
                        currentPageName === 'TeamWorkOrderDetail' || 
                        currentPageName === 'TeamTaskDetail' || 
                        currentPageName === 'TeamPreviewMode' ||
-                       currentPageName === 'MyTasks' ||
+                       (currentPageName === 'MyTasks' && authUser?.role === 'technician') ||
                        currentPageName === 'CustomerPortalSimulate' ||
                        currentPageName === 'CustomerBoatDetailSimulate' ||
                        currentPageName === 'CustomerProjectDetailSimulate';
