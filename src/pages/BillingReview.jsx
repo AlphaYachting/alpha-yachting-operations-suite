@@ -154,7 +154,11 @@ export default function BillingReview() {
       const result = response.data;
       if (!result?.success) throw new Error(result?.error || 'Failed to create billing offer');
       setCreatedOffers(prev => ({ ...prev, [customerId]: result }));
-      toast.success(`Billing Offer ${result.offer_number} created`);
+      if (result.line_items_created === 0) {
+        toast.warning(`Offer ${result.offer_number} created — but no billable line items were transferred. Check that TimeEntries and MaterialUsage exist and are not already billed.`);
+      } else {
+        toast.success(`Billing Offer ${result.offer_number} created — ${result.line_items_created} line item${result.line_items_created !== 1 ? 's' : ''} transferred.`);
+      }
       await loadAll(true);
     } catch (e) {
       toast.error(e.message);

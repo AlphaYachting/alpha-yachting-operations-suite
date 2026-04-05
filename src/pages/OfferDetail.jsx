@@ -90,6 +90,7 @@ export default function OfferDetail() {
    show_marina_fees_notice: false,
   });
   const [tasks, setTasks] = useState([]);
+  const [tasksLoaded, setTasksLoaded] = useState(false); // guard: backend tasks confirmed loaded
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showFollowUpDraft, setShowFollowUpDraft] = useState(false);
@@ -188,8 +189,10 @@ export default function OfferDetail() {
   }, [offer]);
 
   useEffect(() => {
-    if (offerTasks.length > 0) {
+    // Mark loaded once the query has settled (even if empty = no tasks exist)
+    if (offerId) {
       setTasks(offerTasks);
+      setTasksLoaded(true);
     }
   }, [offerTasks]);
 
@@ -527,6 +530,12 @@ Requirements:
           total_amount: totals.taxable_base_excl_tax,
           discount_amount: totals.discount_amount_excl_tax
         });
+
+        // SAFETY: only delete/recreate once backend tasks have loaded into local state.
+        // If tasksLoaded is false, the page is still initializing — do NOT destroy backend records.
+        if (!tasksLoaded) {
+          throw new Error('Offer positions are still loading — please wait a moment and save again.');
+        }
 
         // Delete existing tasks and recreate (parallel for speed)
         const existingTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });

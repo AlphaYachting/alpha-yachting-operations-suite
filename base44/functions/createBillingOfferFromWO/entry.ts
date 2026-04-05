@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
       allTimeEntries.push(...entries);
     }
     const unbilledTimeEntries = allTimeEntries.filter(te =>
-      te.is_billable === true &&
+      te.is_billable !== false &&   // include default-true records (not explicitly false)
       !te.billed_offer_id &&
       !te.staged_offer_id
     );
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       allMaterialUsage.push(...items);
     }
     const unbilledMaterial = allMaterialUsage.filter(m =>
-      m.billable === true &&
+      m.billable !== false &&   // include default-true records (not explicitly false)
       !m.billed_offer_id &&
       !m.staged_offer_id
     );
@@ -244,6 +244,25 @@ Deno.serve(async (req) => {
       console.error(`[createBillingOfferFromWO] Reservation partial failure for offer ${offerId}:`, reservationErr.message);
     }
 
+    // ── Unit type normalizer ─────────────────────────────────────────────────
+    // OfferTask.unit_type enum: Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, Lump Sum, km, day, month, season, flat
+    const UNIT_MAP = {
+      'Piece': 'Piece', 'pcs': 'Piece', 'Stk': 'Piece', 'Stk.': 'Piece', 'stk': 'Piece', 'pc': 'Piece',
+      'Meter': 'Linear Meter', 'm': 'Linear Meter', 'meter': 'Linear Meter',
+      'Kg': 'Kilogram', 'kg': 'Kilogram', 'KG': 'Kilogram', 'kilogram': 'Kilogram',
+      'Liter': 'Liter', 'l': 'Liter', 'L': 'Liter', 'liter': 'Liter',
+      'Set': 'Set', 'set': 'Set',
+      'Box': 'Piece', 'Roll': 'Piece', 'box': 'Piece', 'roll': 'Piece',
+      'Hour': 'Hour', 'hr': 'Hour', 'hrs': 'Hour', 'h': 'Hour',
+      'km': 'km', 'day': 'day', 'month': 'month',
+    };
+    const VALID_UNIT_TYPES = new Set(['Hour','Piece','Square Meter','Linear Meter','Liter','Kilogram','Set','Lump Sum','km','day','month','season','flat']);
+    const normalizeUnit = (raw) => {
+      if (!raw) return 'Piece';
+      if (VALID_UNIT_TYPES.has(raw)) return raw;
+      return UNIT_MAP[raw] || 'Piece';  // unknown → safest fallback
+    };
+
     // ── 10. Create OfferTask rows — LABOR ─────────────────────────────────────
     let lineOrder = 0;
     let lineItemsCreated = 0;
@@ -291,7 +310,7 @@ Deno.serve(async (req) => {
         title: `Material: ${itemName}`,
         description: item?.description || '',
         item_type: 'Material',
-        unit_type: unit === 'Piece' ? 'Piece' : unit,
+        unit_type: normalizeUnit(unit),
         quantity: m.quantity || 1,
         unit_price: salesPrice,
         total_amount: parseFloat((salesPrice * (m.quantity || 1)).toFixed(2)),
@@ -312,7 +331,7 @@ Deno.serve(async (req) => {
         title: `Customer Material: ${cme.item_title}`,
         description: `${cme.supplier_name ? `Supplier: ${cme.supplier_name}. ` : ''}${cme.document_number ? `Doc: ${cme.document_number}.` : ''}`,
         item_type: 'Material',
-        unit_type: cme.unit || 'Piece',
+        unit_type: normalizeUnit(cme.unit),  // free-text unit → normalized enum value
         quantity: cme.quantity || 1,
         unit_price: purchasePrice,
         total_amount: parseFloat((purchasePrice * (cme.quantity || 1)).toFixed(2)),
