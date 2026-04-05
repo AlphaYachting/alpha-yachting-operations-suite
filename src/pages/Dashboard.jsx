@@ -3,14 +3,14 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { 
-  AlertTriangle, 
+  AlertTriangle,
+  AlertCircle,
   Calendar, 
   Clock,
   Ship,
   MapPin,
   Users,
   ChevronRight,
-  AlertCircle,
   CheckCircle2,
   Phone,
   FileText,
@@ -20,9 +20,7 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2,
-  Zap,
-  Mail
+  BarChart2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,7 +51,6 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
-import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -79,7 +76,6 @@ export default function Dashboard() {
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [showQuickCapture, setShowQuickCapture] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -266,53 +262,7 @@ export default function Dashboard() {
 
   // PROJECT HEALTH
   const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
-  
-  const getProjectHealth = (job) => {
-    const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
-    const activeWOs = jobWorkOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status));
-    
-    // Red: overdue WO OR no active WO OR missing planning
-    const hasOverdueWO = activeWOs.some(wo => {
-      if (!wo.scheduled_date) return false;
-      const schedDate = parseISO(wo.scheduled_date);
-      return isPast(schedDate) && !isToday(schedDate);
-    });
-    
-    if (hasOverdueWO || activeWOs.length === 0) {
-      return { status: 'red', label: 'Critical', step: hasOverdueWO ? 'Overdue work order' : 'No active work orders' };
-    }
-    
-    const hasUnplannedWO = activeWOs.some(wo => !wo.scheduled_date || !wo.assigned_technicians || wo.assigned_technicians.length === 0);
-    if (hasUnplannedWO) {
-      return { status: 'red', label: 'Critical', step: 'Missing planning' };
-    }
-    
-    // Yellow: WO due soon
-    const hasDueSoonWO = activeWOs.some(wo => {
-      if (!wo.scheduled_date) return false;
-      const schedDate = parseISO(wo.scheduled_date);
-      const daysAway = differenceInDays(schedDate, today);
-      return daysAway > 0 && daysAway <= 7;
-    });
-    
-    if (hasDueSoonWO) {
-      return { status: 'yellow', label: 'Attention', step: 'Work order due soon' };
-    }
-    
-    // Green: all good
-    return { status: 'green', label: 'Healthy', step: 'On track' };
-  };
-  
-  const getProjectProgress = (job) => {
-    const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
-    if (jobWorkOrders.length === 0) return 0;
-    const completedWOs = jobWorkOrders.filter(wo => wo.status === 'Completed').length;
-    return Math.round((completedWOs / jobWorkOrders.length) * 100);
-  };
-
-  // SALES & ORGANISATION
-  const allOpenLeads = leads.filter(l => !['Converted', 'Rejected', 'Lost'].includes(l.status));
-  const allOpenOffers = offers.filter(o => !['Approved', 'Rejected', 'Expired', 'Converted'].includes(o.status));
+  const criticalProjects = activeJobs.filter(job => getProjectHealth(job).status === 'red');
 
   const getAge = (dateStr) => {
     if (!dateStr) return 'Unknown';
@@ -407,40 +357,46 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header with Quick Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            size="sm" 
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
             onClick={() => setShowDispatchModal(true)}
             className="bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Calendar className="h-4 w-4 mr-1" />
             Dispatch
           </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowQuickCapture(true)}
-            className="bg-amber-500 hover:bg-amber-600 text-white"
+          <Button
+            size="sm"
+            onClick={() => setShowProjectDialog(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            <Zap className="h-4 w-4 mr-1" />
-            Quick Capture
+            <Plus className="h-4 w-4 mr-1" />
+            Project
           </Button>
-          <Button 
-            size="sm" 
-            asChild
-            className="bg-teal-600 hover:bg-teal-700 text-white"
+          <Button
+            size="sm"
+            onClick={() => setShowWorkOrderDialog(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
           >
-            <Link to={createPageUrl('LeadsV2') + '?emailParser=true'}>
-              <Mail className="h-4 w-4 mr-1" />
-              Email to Lead
-            </Link>
+            <Plus className="h-4 w-4 mr-1" />
+            Work Order
           </Button>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
+            onClick={() => setShowLeadDialog(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Lead
+          </Button>
+          <Button
+            size="sm"
             asChild
             className="bg-cyan-600 hover:bg-cyan-700 text-white"
           >
@@ -449,8 +405,8 @@ export default function Dashboard() {
               Offer
             </Link>
           </Button>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             onClick={() => setShowNoteDialog(true)}
             className="bg-yellow-600 hover:bg-yellow-700 text-white"
           >
@@ -460,7 +416,272 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* KPI Block */}
+      {/* 1) ACTION REQUIRED */}
+      <Card className={hasActionItems ? 'border-red-200 bg-red-50/30' : 'border-emerald-200 bg-emerald-50/30'}>
+        <CardHeader>
+          <CardTitle className={`flex items-center gap-2 ${hasActionItems ? 'text-red-900' : 'text-emerald-800'}`}>
+            {hasActionItems ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+            {hasActionItems ? 'Action Required' : 'All Clear'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!hasActionItems && (
+            <p className="text-sm text-emerald-700">No critical action items. Everything is on track.</p>
+          )}
+
+          {overdueWorkOrders.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-red-900">Overdue Work Orders ({overdueWorkOrders.length})</h3>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={createPageUrl('WorkOrders') + '?filter=overdue'}>View All</Link>
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {overdueWorkOrders.slice(0, 3).map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  return (
+                    <Link
+                      key={wo.id}
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-white rounded-lg border border-red-200 hover:border-red-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{wo.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">{jobInfo?.boat} • {jobInfo?.customer}</p>
+                          <div className="flex items-center gap-2 mt-2 text-xs text-red-700">
+                            <Calendar className="h-3 w-3" />
+                            Due: {format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-400" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {unplannedWorkOrders.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-red-900">Unplanned Work Orders ({unplannedWorkOrders.length})</h3>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={createPageUrl('WorkOrders') + '?filter=pending'}>View All</Link>
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {unplannedWorkOrders.slice(0, 3).map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  return (
+                    <Link
+                      key={wo.id}
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-white rounded-lg border border-amber-200 hover:border-amber-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{wo.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">{jobInfo?.boat} • {jobInfo?.customer}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            {!wo.scheduled_date && (
+                              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">No date</Badge>
+                            )}
+                            {(!wo.assigned_technicians || wo.assigned_technicians.length === 0) && (
+                              <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">No technician</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-400" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {openOffers.length > 0 && (
+            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-blue-500" />
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{openOffers.length} offer{openOffers.length !== 1 ? 's' : ''} awaiting response</p>
+                  <p className="text-xs text-slate-500">Follow up with customers</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link to={createPageUrl('Offers')}>View Offers</Link>
+              </Button>
+            </div>
+          )}
+
+          {staleLeads.length > 0 && (
+            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-200">
+              <div className="flex items-center gap-3">
+                <Phone className="h-5 w-5 text-orange-500" />
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{staleLeads.length} lead{staleLeads.length !== 1 ? 's' : ''} without recent contact</p>
+                  <p className="text-xs text-slate-500">No activity in over 7 days</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <Link to={createPageUrl('LeadsV2')}>View Leads</Link>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 2) TODAY */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Today
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowDispatchModal(true)}>
+              <Calendar className="h-4 w-4 mr-1" />
+              Schedule
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {todayWorkOrders.length === 0 ? (
+            <p className="text-sm text-slate-500">No work orders scheduled for today</p>
+          ) : (
+            <div className="space-y-2">
+              {todayWorkOrders.slice(0, 4).map(wo => {
+                const jobInfo = getJobInfo(wo.job_id);
+                return (
+                  <Link
+                    key={wo.id}
+                    to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                    className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-slate-900">{wo.title}</p>
+                        <p className="text-sm text-slate-600 mt-1">{jobInfo?.boat} • {jobInfo?.location}</p>
+                        {wo.scheduled_start_time && (
+                          <p className="text-xs text-slate-500 mt-1">{wo.scheduled_start_time}</p>
+                        )}
+                      </div>
+                      <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>{wo.status}</Badge>
+                    </div>
+                  </Link>
+                );
+              })}
+              {todayWorkOrders.length > 4 && (
+                <Button variant="outline" size="sm" onClick={() => setShowDispatchModal(true)} className="w-full">
+                  +{todayWorkOrders.length - 4} more — Open Schedule
+                </Button>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 3) NOTES & REMINDERS */}
+      {activeNotes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StickyNote className="h-5 w-5 text-yellow-600" />
+              Notes & Reminders ({activeNotes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {activeNotes.slice(0, 5).map(note => (
+                <div key={note.id} className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-900">{note.text}</p>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {getReferenceName(note) && (
+                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">
+                            {note.reference_type}: {getReferenceName(note)}
+                          </Badge>
+                        )}
+                        {note.due_date && (
+                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {format(parseISO(note.due_date), 'MMM d')}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-slate-500">{getAge(note.created_date)} ago</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleNoteComplete(note)}>
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteNote(note.id)}>
+                        <X className="h-4 w-4 text-slate-400" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 4) PROJECT ALERTS — only when critical/red projects exist */}
+      {criticalProjects.length > 0 && (
+        <Card className="border-red-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-900">
+              <AlertCircle className="h-5 w-5" />
+              Critical Projects ({criticalProjects.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {criticalProjects.map(job => {
+                const health = getProjectHealth(job);
+                const boat = boats.find(b => b.id === job.boat_id);
+                const location = locations.find(l => l.id === job.location_id);
+                return (
+                  <Link
+                    key={job.id}
+                    to={createPageUrl('JobDetail') + `?id=${job.id}`}
+                    className="block p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="h-3 w-3 rounded-full bg-red-500" />
+                          <p className="font-medium text-slate-900">{job.title}</p>
+                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">{health.label}</Badge>
+                        </div>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
+                          {boat && <div className="flex items-center gap-1"><Ship className="h-3.5 w-3.5" />{boat.vessel_name}</div>}
+                          {location && <div className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{location.name}</div>}
+                        </div>
+                        <p className="text-xs text-red-700 mt-1 italic">{health.step}</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                    </div>
+                  </Link>
+                );
+              })}
+              {activeJobs.length > criticalProjects.length && (
+                <p className="text-xs text-slate-500 pt-1">
+                  {activeJobs.length - criticalProjects.length} other active project{activeJobs.length - criticalProjects.length !== 1 ? 's' : ''} are on track. <Link to={createPageUrl('Jobs')} className="text-blue-600 underline">View all projects</Link>
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 5) KPI OVERVIEW — secondary, management reference */}
       {kpis && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Link to={createPageUrl('Jobs')} className="block">
@@ -476,7 +697,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </Link>
-
           <Link to={createPageUrl('WorkOrders')} className="block">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4">
@@ -490,7 +710,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </Link>
-
           <Link to={createPageUrl('Offers')} className="block">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4">
@@ -504,8 +723,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </Link>
-
-          <Link to={createPageUrl('Leads')} className="block">
+          <Link to={createPageUrl('LeadsV2')} className="block">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -518,7 +736,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </Link>
-
           <div onClick={() => setShowCapacityModal(true)} className="cursor-pointer">
             <Card className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
@@ -535,513 +752,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 1) ACTION REQUIRED */}
-      {hasActionItems && (
-        <Card className="border-red-200 bg-red-50/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-900">
-              <AlertTriangle className="h-5 w-5" />
-              Action Required
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {overdueWorkOrders.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-900">Overdue Work Orders ({overdueWorkOrders.length})</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('WorkOrders') + '?filter=overdue'}>View All</Link>
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {overdueWorkOrders.slice(0, 3).map(wo => {
-                    const jobInfo = getJobInfo(wo.job_id);
-                    return (
-                      <Link 
-                        key={wo.id} 
-                        to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                        className="block p-3 bg-white rounded-lg border border-red-200 hover:border-red-300 transition-colors"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-900">{wo.title}</p>
-                            <p className="text-sm text-slate-600 mt-1">
-                              {jobInfo?.boat} • {jobInfo?.customer}
-                            </p>
-                            <div className="flex items-center gap-2 mt-2 text-xs text-red-700">
-                              <Calendar className="h-3 w-3" />
-                              Due: {format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
-                            </div>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-slate-400" />
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {unplannedWorkOrders.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-900">Unplanned Work Orders ({unplannedWorkOrders.length})</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('WorkOrders') + '?filter=pending'}>View All</Link>
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {unplannedWorkOrders.slice(0, 3).map(wo => {
-                    const jobInfo = getJobInfo(wo.job_id);
-                    return (
-                      <Link 
-                        key={wo.id} 
-                        to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                        className="block p-3 bg-white rounded-lg border border-amber-200 hover:border-amber-300 transition-colors"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-900">{wo.title}</p>
-                            <p className="text-sm text-slate-600 mt-1">
-                              {jobInfo?.boat} • {jobInfo?.customer}
-                            </p>
-                            <div className="flex items-center gap-2 mt-2">
-                              {!wo.scheduled_date && (
-                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                  No date
-                                </Badge>
-                              )}
-                              {(!wo.assigned_technicians || wo.assigned_technicians.length === 0) && (
-                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                  No technician
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-slate-400" />
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {openOffers.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-900">Open Offers ({openOffers.length})</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('Offers')}>View All</Link>
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {openOffers.slice(0, 3).map(offer => (
-                    <Link 
-                      key={offer.id} 
-                      to={createPageUrl('OfferDetail') + `?id=${offer.id}`}
-                      className="block p-3 bg-white rounded-lg border border-blue-200 hover:border-blue-300 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900">{offer.title}</p>
-                          <p className="text-sm text-slate-600 mt-1">
-                            {getCustomerName(offer.customer_id)}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              {offer.status}
-                            </Badge>
-                            <span className="text-xs text-slate-500">
-                              {getAge(offer.created_date)} old
-                            </span>
-                          </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-slate-400" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {staleLeads.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-900">Stale Leads ({staleLeads.length})</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('Leads')}>View All</Link>
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {staleLeads.slice(0, 3).map(lead => (
-                    <Link 
-                      key={lead.id} 
-                      to={createPageUrl('LeadDetail') + `?id=${lead.id}`}
-                      className="block p-3 bg-white rounded-lg border border-orange-200 hover:border-orange-300 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900">{lead.name}</p>
-                          <p className="text-sm text-slate-600 mt-1">
-                            {lead.boat_name || 'No boat specified'}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                              {lead.status}
-                            </Badge>
-                            <span className="text-xs text-slate-500">
-                              No contact for {lead.last_contacted_at ? getAge(lead.last_contacted_at) : 'unknown time'}
-                            </span>
-                          </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-slate-400" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Notes Section */}
-      {activeNotes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <StickyNote className="h-5 w-5 text-yellow-600" />
-              Notes & Reminders ({activeNotes.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {activeNotes.slice(0, 5).map(note => (
-                <div 
-                  key={note.id}
-                  className="p-3 bg-yellow-50 rounded-lg border border-yellow-200"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <p className="text-sm text-slate-900">{note.text}</p>
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        {getReferenceName(note) && (
-                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">
-                            {note.reference_type}: {getReferenceName(note)}
-                          </Badge>
-                        )}
-                        {note.due_date && (
-                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {format(parseISO(note.due_date), 'MMM d')}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-slate-500">
-                          {getAge(note.created_date)} ago
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleToggleNoteComplete(note)}
-                      >
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleDeleteNote(note.id)}
-                      >
-                        <X className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 2) TODAY / THIS WEEK */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600" />
-              Today
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todayWorkOrders.length === 0 ? (
-              <p className="text-sm text-slate-500">No work orders scheduled for today</p>
-            ) : (
-              <div className="space-y-2">
-                {todayWorkOrders.map(wo => {
-                  const jobInfo = getJobInfo(wo.job_id);
-                  return (
-                    <Link 
-                      key={wo.id} 
-                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900">{wo.title}</p>
-                          <p className="text-sm text-slate-600 mt-1">
-                            {jobInfo?.boat} • {jobInfo?.location}
-                          </p>
-                          {wo.scheduled_start_time && (
-                            <p className="text-xs text-slate-500 mt-1">
-                              {wo.scheduled_start_time}
-                            </p>
-                          )}
-                        </div>
-                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
-                          {wo.status}
-                        </Badge>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              This Week
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {thisWeekWorkOrders.length === 0 ? (
-              <p className="text-sm text-slate-500">No work orders scheduled this week</p>
-            ) : (
-              <div className="space-y-2">
-                {thisWeekWorkOrders.slice(0, 5).map(wo => {
-                  const jobInfo = getJobInfo(wo.job_id);
-                  return (
-                    <Link 
-                      key={wo.id} 
-                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900">{wo.title}</p>
-                          <p className="text-sm text-slate-600 mt-1">
-                            {jobInfo?.boat} • {jobInfo?.location}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {format(parseISO(wo.scheduled_date), 'EEE, MMM d')}
-                          </p>
-                        </div>
-                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
-                          {wo.status}
-                        </Badge>
-                      </div>
-                    </Link>
-                  );
-                })}
-                {thisWeekWorkOrders.length > 5 && (
-                  <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link to={createPageUrl('WorkOrders')}>View All ({thisWeekWorkOrders.length})</Link>
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 3) PROJECT HEALTH */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-emerald-600" />
-            Project Health
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {activeJobs.length === 0 ? (
-            <p className="text-sm text-slate-500">No active projects</p>
-          ) : (
-            <div className="space-y-3">
-              {activeJobs.map(job => {
-                const health = getProjectHealth(job);
-                const progress = getProjectProgress(job);
-                const boat = boats.find(b => b.id === job.boat_id);
-                const location = locations.find(l => l.id === job.location_id);
-                
-                return (
-                  <Link 
-                    key={job.id} 
-                    to={createPageUrl('JobDetail') + `?id=${job.id}`}
-                    className="block p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className={`h-3 w-3 rounded-full ${
-                            health.status === 'red' ? 'bg-red-500' : 
-                            health.status === 'yellow' ? 'bg-yellow-500' : 
-                            'bg-green-500'
-                          }`} />
-                          <p className="font-medium text-slate-900">{job.title}</p>
-                          <Badge variant="outline" className={
-                            health.status === 'red' ? 'bg-red-50 text-red-700 border-red-200' :
-                            health.status === 'yellow' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                            'bg-green-50 text-green-700 border-green-200'
-                          }>
-                            {health.label}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Ship className="h-3.5 w-3.5" />
-                            {boat?.vessel_name || 'Unknown'}
-                          </div>
-                          {location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5" />
-                              {location.name}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mt-3 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-600">Progress: {progress}%</span>
-                            <span className="text-slate-500 italic">{health.step}</span>
-                          </div>
-                          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all rounded-full ${
-                                health.status === 'red' ? 'bg-red-500' :
-                                health.status === 'yellow' ? 'bg-yellow-500' :
-                                'bg-green-500'
-                              }`}
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 4) SALES & ORGANISATION */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-purple-600" />
-              Open Leads ({allOpenLeads.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {allOpenLeads.length === 0 ? (
-              <p className="text-sm text-slate-500">No open leads</p>
-            ) : (
-              <div className="space-y-2">
-                {allOpenLeads.slice(0, 5).map(lead => (
-                  <Link 
-                    key={lead.id} 
-                    to={createPageUrl('LeadDetail') + `?id=${lead.id}`}
-                    className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900">{lead.name}</p>
-                        <p className="text-sm text-slate-600 mt-1">
-                          {lead.boat_name || 'No boat specified'}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                            {lead.status}
-                          </Badge>
-                          <span className="text-xs text-slate-500">
-                            {getAge(lead.created_date)} old
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-slate-400" />
-                    </div>
-                  </Link>
-                ))}
-                {allOpenLeads.length > 5 && (
-                  <Button variant="outline" size="sm" asChild className="w-full mt-2">
-                    <Link to={createPageUrl('Leads')}>View All ({allOpenLeads.length})</Link>
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-cyan-600" />
-              Open Offers ({allOpenOffers.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {allOpenOffers.length === 0 ? (
-              <p className="text-sm text-slate-500">No open offers</p>
-            ) : (
-              <div className="space-y-2">
-                {allOpenOffers.slice(0, 5).map(offer => (
-                  <Link 
-                    key={offer.id} 
-                    to={createPageUrl('OfferDetail') + `?id=${offer.id}`}
-                    className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <p className="font-medium text-slate-900">{offer.title}</p>
-                        <p className="text-sm text-slate-600 mt-1">
-                          {getCustomerName(offer.customer_id)}
-                        </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200">
-                            {offer.status}
-                          </Badge>
-                          <span className="text-xs text-slate-500">
-                            {getAge(offer.created_date)} old
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-slate-400" />
-                    </div>
-                  </Link>
-                ))}
-                {allOpenOffers.length > 5 && (
-                  <Button variant="outline" size="sm" asChild className="w-full mt-2">
-                    <Link to={createPageUrl('Offers')}>View All ({allOpenOffers.length})</Link>
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Project Dialog */}
       <Dialog open={showProjectDialog} onOpenChange={setShowProjectDialog}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -1054,10 +764,10 @@ export default function Dashboard() {
             locations={locations}
             onSave={async (projectData) => {
               const woNumber = `P${Date.now().toString().slice(-6)}`;
-              const newJob = await base44.entities.Job.create({ 
-                ...projectData, 
-                job_number: woNumber, 
-                intake_date: new Date().toISOString() 
+              const newJob = await base44.entities.Job.create({
+                ...projectData,
+                job_number: woNumber,
+                intake_date: new Date().toISOString()
               });
               setJobs([newJob, ...jobs]);
               setShowProjectDialog(false);
@@ -1082,9 +792,9 @@ export default function Dashboard() {
             boats={boats}
             onSave={async (workOrderData) => {
               const woNumber = `WO${Date.now().toString().slice(-6)}`;
-              const newWo = await base44.entities.WorkOrder.create({ 
-                ...workOrderData, 
-                work_order_number: woNumber 
+              const newWo = await base44.entities.WorkOrder.create({
+                ...workOrderData,
+                work_order_number: woNumber
               });
               setWorkOrders([newWo, ...workOrders]);
               setShowWorkOrderDialog(false);
@@ -1117,22 +827,10 @@ export default function Dashboard() {
       </Dialog>
 
       {/* Capacity Modal */}
-      <CapacityModal 
-        open={showCapacityModal} 
-        onOpenChange={setShowCapacityModal} 
-      />
+      <CapacityModal open={showCapacityModal} onOpenChange={setShowCapacityModal} />
 
       {/* Dispatch Fullscreen Modal */}
-      <DispatchFullscreenModal 
-        open={showDispatchModal} 
-        onClose={() => setShowDispatchModal(false)} 
-      />
-
-      {/* Quick Capture Modal */}
-      <QuickCaptureModal
-        open={showQuickCapture}
-        onOpenChange={setShowQuickCapture}
-      />
+      <DispatchFullscreenModal open={showDispatchModal} onClose={() => setShowDispatchModal(false)} />
 
       {/* Note Dialog */}
       <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
@@ -1152,11 +850,8 @@ export default function Dashboard() {
                 rows={4}
                 className="mt-1"
               />
-              <p className="text-xs text-slate-500 mt-1">
-                {noteForm.text.length}/300 characters
-              </p>
+              <p className="text-xs text-slate-500 mt-1">{noteForm.text.length}/300 characters</p>
             </div>
-
             <div>
               <Label htmlFor="reference-type">Link to (Optional)</Label>
               <Select
@@ -1174,7 +869,6 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
             </div>
-
             {noteForm.reference_type !== 'None' && (
               <div>
                 <Label htmlFor="reference-id">Select {noteForm.reference_type}</Label>
@@ -1193,15 +887,12 @@ export default function Dashboard() {
                       <SelectItem key={wo.id} value={wo.id}>{wo.title}</SelectItem>
                     ))}
                     {noteForm.reference_type === 'Customer' && customers.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.company_name || `${c.first_name} ${c.last_name}`}
-                      </SelectItem>
+                      <SelectItem key={c.id} value={c.id}>{c.company_name || `${c.first_name} ${c.last_name}`}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
-
             <div>
               <Label>Due Date (Optional)</Label>
               <Popover>
@@ -1221,14 +912,9 @@ export default function Dashboard() {
                 </PopoverContent>
               </Popover>
             </div>
-
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowNoteDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveNote}>
-                Save Note
-              </Button>
+              <Button variant="outline" onClick={() => setShowNoteDialog(false)}>Cancel</Button>
+              <Button onClick={handleSaveNote}>Save Note</Button>
             </div>
           </div>
         </DialogContent>
