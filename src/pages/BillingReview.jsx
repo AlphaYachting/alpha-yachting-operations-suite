@@ -45,8 +45,8 @@ export default function BillingReview() {
     loadAll();
   }, []);
 
-  const loadAll = async () => {
-    setLoading(true);
+  const loadAll = async (background = false) => {
+    if (!background) setLoading(true);
     setError(null);
     try {
       // Load Ready-to-Invoice WOs (exclude ORGANIZATION type — they are never billable)
@@ -169,7 +169,7 @@ export default function BillingReview() {
       const result = response.data;
       setReconcileResult({ ...result, dry_run: dryRun });
       if (!dryRun && result?.success) {
-        await loadAll();
+        await loadAll(true); // background refresh — no full-page spinner
       }
     } catch (e) {
       setReconcileResult({ error: e.message });
@@ -442,6 +442,7 @@ export default function BillingReview() {
           <CardContent className="space-y-4">
             <div className="flex gap-3 flex-wrap">
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => handleReconcile(true)}
@@ -453,6 +454,7 @@ export default function BillingReview() {
               </Button>
               {!showApplyConfirm ? (
                 <Button
+                  type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setShowApplyConfirm(true)}
@@ -465,6 +467,7 @@ export default function BillingReview() {
                 <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
                   <span className="text-xs text-amber-800 font-medium">This will update historical WorkOrder statuses. Confirm?</span>
                   <Button
+                    type="button"
                     size="sm"
                     onClick={() => handleReconcile(false)}
                     disabled={reconciling}
@@ -474,6 +477,7 @@ export default function BillingReview() {
                     Yes, Apply
                   </Button>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowApplyConfirm(false)}
