@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
@@ -31,7 +32,12 @@ export default function BillingReview() {
   const [technicians, setTechnicians] = useState([]);
   const [unlinkedCME, setUnlinkedCME] = useState([]);
   const [selectedWOIds, setSelectedWOIds] = useState(new Set());
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [creating, setCreating] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState(null);
+  const [showApplyConfirm, setShowApplyConfirm] = useState(false);
   const [createdOffer, setCreatedOffer] = useState(null);
   const [error, setError] = useState(null);
 
@@ -151,6 +157,25 @@ export default function BillingReview() {
       setSelectedWOIds(new Set());
     } else {
       setSelectedWOIds(new Set(workOrders.map(wo => wo.id)));
+    }
+  };
+
+  const handleReconcile = async (dryRun) => {
+    setReconciling(true);
+    setReconcileResult(null);
+    setShowApplyConfirm(false);
+    try {
+      const response = await base44.functions.invoke('reconcileReadyToInvoiceWorkOrders', { dry_run: dryRun });
+      const result = response.data;
+      setReconcileResult({ ...result, dry_run: dryRun });
+      if (!dryRun && result?.success) {
+        await loadAll();
+      }
+    } catch (e) {
+      setReconcileResult({ error: e.message });
+      toast.error('Reconciliation failed: ' + e.message);
+    } finally {
+      setReconciling(false);
     }
   };
 
@@ -399,6 +424,113 @@ export default function BillingReview() {
         customers={customers}
         customerMap={customerMap}
       />
+
+      {/* Admin-only Reconciliation Block */}
+      {isAdmin && (
+        <Card className="border-slate-300 bg-slate-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-600 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-slate-400" />
+              Ready-to-Invoice Reconciliation
+              <Badge variant="outline" className="text-xs text-slate-500 border-slate-300">Admin only</Badge>
+            </CardTitle>
+            <p className="text-xs text-slate-500">
+              Scans historical WorkOrders and sets them to the correct terminal status if all tasks already meet completion criteria.
+              Dry Run is always safe — no changes are written.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-3 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleReconcile(true)}
+                disabled={reconciling}
+                className="border-slate-300 text-slate-700 hover:bg-slate-100"
+              >
+                {reconciling ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Dry Run (report only)
+              </Button>
+              {!showApplyConfirm ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowApplyConfirm(true)}
+                  disabled={reconciling}
+                  className="border-amber-400 text-amber-700 hover:bg-amber-50"
+                >
+                  Apply Reconciliation
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
+                  <span className="text-xs text-amber-800 font-medium">This will update historical WorkOrder statuses. Confirm?</span>
+                  <Button
+                    size="sm"
+                    onClick={() => handleReconcile(false)}
+                    disabled={reconciling}
+                    className="bg-amber-600 hover:bg-amber-700 h-7 text-xs"
+                  >
+                    {reconciling ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                    Yes, Apply
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowApplyConfirm(false)}
+                    className="h-7 text-xs text-slate-500"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {reconcileResult && (
+              <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+                {reconcileResult.error ? (
+                  <p className="text-sm text-red-600">Error: {reconcileResult.error}</p>
+                ) : (
+                  <>
+                    <p className="text-xs font-semibold text-slate-700">
+                      {reconcileResult.dry_run ? '📋 Dry Run Report' : '✅ Reconciliation Applied'}
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {[['Scanned', reconcileResult.summary?.scanned], ['Updated', reconcileResult.summary?.updated], ['Unchanged', reconcileResult.summary?.unchanged], ['Skipped', reconcileResult.summary?.skipped], ['Errors', reconcileResult.summary?.errors]].map(([label, val]) => (
+                        <div key={label} className="text-center">
+                          <p className="text-lg font-bold text-slate-800">{val ?? '—'}</p>
+                          <p className="text-xs text-slate-500">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {reconcileResult.summary?.updated_to_ready_to_invoice?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-slate-600 mb-1">→ Ready to Invoice:</p>
+                        <p className="text-xs text-slate-500">{reconcileResult.summary.updated_to_ready_to_invoice.map(w => w.number || w.id).join(', ')}</p>
+                      </div>
+                    )}
+                    {reconcileResult.summary?.updated_to_completed?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-slate-600 mb-1">→ Completed (ORG):</p>
+                        <p className="text-xs text-slate-500">{reconcileResult.summary.updated_to_completed.map(w => w.number || w.id).join(', ')}</p>
+                      </div>
+                    )}
+                    {reconcileResult.summary?.skip_reasons && Object.keys(reconcileResult.summary.skip_reasons).length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-slate-600 mb-1">Skip reasons:</p>
+                        <ul className="space-y-0.5">
+                          {Object.entries(reconcileResult.summary.skip_reasons).map(([reason, count]) => (
+                            <li key={reason} className="text-xs text-slate-400">{count}× {reason}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
