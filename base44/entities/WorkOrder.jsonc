@@ -1,0 +1,202 @@
+{
+  "name": "WorkOrder",
+  "type": "object",
+  "properties": {
+    "work_order_number": {
+      "type": "string",
+      "description": "Auto-generated WO reference"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Reference to parent Job"
+    },
+    "offer_id": {
+      "type": "string",
+      "description": "Reference to source Offer (optional)"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "service_area": {
+      "type": "string",
+      "enum": [
+        "General Service",
+        "Mechanical",
+        "Electrical",
+        "Electronics",
+        "GRP/Bodywork",
+        "Sealing",
+        "HVAC",
+        "Rigging",
+        "Plumbing",
+        "Installation",
+        "Diagnostics",
+        "Other"
+      ],
+      "description": "Service area classification for this work order"
+    },
+    "workorder_type": {
+      "type": "string",
+      "enum": [
+        "STANDARD",
+        "ORGANIZATION",
+        "EXECUTION"
+      ],
+      "default": "STANDARD",
+      "description": "Type of work order: standard (single WO) or split into org/exec"
+    },
+    "workorder_group_id": {
+      "type": "string",
+      "description": "Shared group ID for linked ORG+EXEC WorkOrders"
+    },
+    "linked_workorder_id": {
+      "type": "string",
+      "description": "Reference to counterpart WorkOrder (ORG \u2194 EXEC)"
+    },
+    "sort_index": {
+      "type": "number",
+      "default": 0,
+      "description": "Execution order within project (lower = earlier)"
+    },
+    "scheduled_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "scheduled_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "End date for multi-day work orders"
+    },
+    "scheduled_start_time": {
+      "type": "string",
+      "description": "HH:MM format"
+    },
+    "scheduled_end_time": {
+      "type": "string",
+      "description": "HH:MM format"
+    },
+    "estimated_duration_hours": {
+      "type": "number"
+    },
+    "assigned_technicians": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of Technician IDs"
+    },
+    "lead_technician_id": {
+      "type": "string",
+      "description": "Primary responsible technician"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Scheduled",
+        "Dispatched",
+        "In Transit",
+        "In Progress",
+        "Paused",
+        "Waiting for Parts",
+        "Waiting for Approval",
+        "Ready to Invoice",
+        "Completed",
+        "Cancelled"
+      ],
+      "default": "Draft"
+    },
+    "actual_start_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actual_end_time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "travel_time_minutes": {
+      "type": "number"
+    },
+    "work_time_minutes": {
+      "type": "number"
+    },
+    "break_time_minutes": {
+      "type": "number"
+    },
+    "mileage_km": {
+      "type": "number"
+    },
+    "vehicle_used": {
+      "type": "string"
+    },
+    "customer_present": {
+      "type": "boolean"
+    },
+    "customer_signature_url": {
+      "type": "string"
+    },
+    "customer_signature_name": {
+      "type": "string"
+    },
+    "customer_signature_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "work_summary": {
+      "type": "string",
+      "description": "Summary of work performed"
+    },
+    "issues_found": {
+      "type": "string",
+      "description": "Additional issues discovered"
+    },
+    "recommendations": {
+      "type": "string",
+      "description": "Follow-up recommendations"
+    },
+    "photos_before": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "photos_after": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "photos_detail": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "safety_notes": {
+      "type": "string"
+    },
+    "access_confirmed": {
+      "type": "boolean",
+      "default": false
+    },
+    "documentation_complete": {
+      "type": "boolean",
+      "default": false
+    },
+    "billable": {
+      "type": "boolean",
+      "default": true
+    },
+    "internal_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "title",
+    "scheduled_date"
+  ]
+}

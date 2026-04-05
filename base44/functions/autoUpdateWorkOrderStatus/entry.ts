@@ -12,11 +12,8 @@ Deno.serve(async (req) => {
 
         const task = data;
 
-        // Check if task is now active (not "Not Started")
-        const isTaskActive = task.status && task.status !== 'Not Started';
-        
-        if (!isTaskActive || !task.work_order_id) {
-            return Response.json({ success: true, message: 'Task not active or no work order' });
+        if (!task.work_order_id) {
+            return Response.json({ success: true, message: 'Task has no work_order_id' });
         }
 
         // Get the parent work order
@@ -27,20 +24,34 @@ Deno.serve(async (req) => {
             return Response.json({ success: true, message: 'Work order not found' });
         }
 
-        // Only update if work order is in a "pre-work" state
-        const preWorkStatuses = ['Draft', 'Scheduled', 'Dispatched'];
-        if (preWorkStatuses.includes(workOrder.status)) {
+        const terminalTaskStatuses = ['Completed', 'Skipped', 'Not Possible'];
+        const isTaskActive = task.status && task.status !== 'Not Started';
+        const isTaskReopened = task.status && !terminalTaskStatuses.includes(task.status);
+
+        // REVERSAL: If a task is non-terminal and the WO is 'Ready to Invoice', revert to In Progress
+        if (isTaskReopened && workOrder.status === 'Ready to Invoice') {
             await base44.asServiceRole.entities.WorkOrder.update(workOrder.id, {
                 status: 'In Progress'
             });
-            
+            return Response.json({ 
+                success: true, 
+                message: `Work Order ${workOrder.work_order_number} reverted from Ready to Invoice to In Progress` 
+            });
+        }
+
+        // FORWARD: Move WO to In Progress when a task becomes active from a pre-work state
+        const preWorkStatuses = ['Draft', 'Scheduled', 'Dispatched'];
+        if (isTaskActive && preWorkStatuses.includes(workOrder.status)) {
+            await base44.asServiceRole.entities.WorkOrder.update(workOrder.id, {
+                status: 'In Progress'
+            });
             return Response.json({ 
                 success: true, 
                 message: `Work Order ${workOrder.work_order_number} auto-updated to In Progress` 
             });
         }
 
-        return Response.json({ success: true, message: 'Work order already in active state' });
+        return Response.json({ success: true, message: 'No status change needed' });
 
     } catch (error) {
         console.error('Error in autoUpdateWorkOrderStatus:', error);

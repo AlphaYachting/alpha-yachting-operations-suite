@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: true, reason: 'WorkOrder not found' });
     }
 
-    if (['Completed', 'Cancelled'].includes(wo.status)) {
+    if (['Ready to Invoice', 'Completed', 'Cancelled'].includes(wo.status)) {
       return Response.json({ skipped: true, reason: `WorkOrder already ${wo.status}` });
     }
 
@@ -67,11 +67,16 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: true, reason: 'No tasks actually completed (all skipped/not possible)' });
     }
 
-    // All tasks done — set WorkOrder to Completed
-    console.log(`[autoCompleteWorkOrder] All ${allTasks.length} tasks done for WO ${workOrderId}. Setting to Completed.`);
+    // Determine target status:
+    // ORGANIZATION WOs → Completed (non-billable internal prep)
+    // EXECUTION and STANDARD WOs → Ready to Invoice (billable work done, needs billing review)
+    const isOrgWO = wo.workorder_type === 'ORGANIZATION';
+    const targetStatus = isOrgWO ? 'Completed' : 'Ready to Invoice';
+
+    console.log(`[autoCompleteWorkOrder] All ${allTasks.length} tasks done for WO ${workOrderId} (type=${wo.workorder_type}). Setting to ${targetStatus}.`);
 
     await base44.asServiceRole.entities.WorkOrder.update(workOrderId, {
-      status: 'Completed',
+      status: targetStatus,
       actual_end_time: new Date().toISOString(),
       documentation_complete: true
     });
@@ -80,7 +85,7 @@ Deno.serve(async (req) => {
       success: true, 
       workOrderId,
       tasksChecked: allTasks.length,
-      message: 'WorkOrder set to Completed'
+      message: `WorkOrder set to ${targetStatus}`
     });
 
   } catch (error) {

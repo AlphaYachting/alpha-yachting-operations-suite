@@ -73,6 +73,7 @@ const statusColors = {
   Paused: 'bg-orange-100 text-orange-700',
   'Waiting for Parts': 'bg-red-100 text-red-700',
   'Waiting for Approval': 'bg-pink-100 text-pink-700',
+  'Ready to Invoice': 'bg-emerald-100 text-emerald-800',
   Completed: 'bg-emerald-100 text-emerald-700',
   Cancelled: 'bg-slate-100 text-slate-700'
 };
@@ -697,6 +698,7 @@ export default function WorkOrders() {
             <SelectItem value="Scheduled">Scheduled</SelectItem>
             <SelectItem value="Dispatched">Dispatched</SelectItem>
             <SelectItem value="In Progress">In Progress</SelectItem>
+            <SelectItem value="Ready to Invoice">Ready to Invoice</SelectItem>
             <SelectItem value="Completed">Completed</SelectItem>
           </SelectContent>
         </Select>
@@ -814,15 +816,16 @@ export default function WorkOrders() {
                              </SelectTrigger>
                              <SelectContent>
                                <SelectItem value="Draft">Draft</SelectItem>
-                               <SelectItem value="Scheduled">Scheduled</SelectItem>
-                               <SelectItem value="Dispatched">Dispatched</SelectItem>
-                               <SelectItem value="In Transit">In Transit</SelectItem>
-                               <SelectItem value="In Progress">In Progress</SelectItem>
-                               <SelectItem value="Paused">Paused</SelectItem>
-                               <SelectItem value="Waiting for Parts">Waiting for Parts</SelectItem>
-                               <SelectItem value="Waiting for Approval">Waiting for Approval</SelectItem>
-                               <SelectItem value="Completed">Completed</SelectItem>
-                               <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                <SelectItem value="Scheduled">Scheduled</SelectItem>
+                                <SelectItem value="Dispatched">Dispatched</SelectItem>
+                                <SelectItem value="In Transit">In Transit</SelectItem>
+                                <SelectItem value="In Progress">In Progress</SelectItem>
+                                <SelectItem value="Paused">Paused</SelectItem>
+                                <SelectItem value="Waiting for Parts">Waiting for Parts</SelectItem>
+                                <SelectItem value="Waiting for Approval">Waiting for Approval</SelectItem>
+                                <SelectItem value="Ready to Invoice">Ready to Invoice</SelectItem>
+                                <SelectItem value="Completed">Completed</SelectItem>
+                                <SelectItem value="Cancelled">Cancelled</SelectItem>
                              </SelectContent>
                            </Select>
                          </div>
