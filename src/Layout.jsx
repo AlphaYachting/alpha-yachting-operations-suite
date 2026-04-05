@@ -76,6 +76,7 @@ const navItems = [
   { name: 'Customers', icon: Users, page: 'Customers', leadTechAllowed: true },
   { name: 'Boats', icon: Ship, page: 'Boats', leadTechAllowed: true },
   { name: 'Locations', icon: MapPin, page: 'Locations', leadTechAllowed: true },
+  { name: 'Billing Review', icon: Receipt, page: 'BillingReview', leadTechAllowed: true },
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   
   // RESOURCES

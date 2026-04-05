@@ -16,6 +16,7 @@ import AIAssistantSettings from './pages/AIAssistantSettings';
 import PlanningReadiness from './pages/PlanningReadiness';
 import InviteAccept from './pages/InviteAccept';
 import MaterialImport from './pages/MaterialImport';
+import BillingReview from './pages/BillingReview';
 import MaterialImportDetail from './pages/MaterialImportDetail';
 
 const { Pages, Layout, mainPage } = pagesConfig;
@@ -165,6 +166,7 @@ const AuthenticatedApp = () => {
         ))}
         {/* Extra pages not in pagesConfig */}
         <Route path="/MaterialImport" element={<LayoutWrapper currentPageName="MaterialImport"><MaterialImport /></LayoutWrapper>} />
+        <Route path="/BillingReview" element={<LayoutWrapper currentPageName="BillingReview"><BillingReview /></LayoutWrapper>} />
         <Route path="/MaterialImportDetail" element={<LayoutWrapper currentPageName="MaterialImportDetail"><MaterialImportDetail /></LayoutWrapper>} />
         <Route path="/PlanningAgent" element={<LayoutWrapper currentPageName="PlanningAgent"><PlanningAgent /></LayoutWrapper>} />
         <Route path="/PlanningReadiness" element={<LayoutWrapper currentPageName="PlanningReadiness"><PlanningReadiness /></LayoutWrapper>} />
