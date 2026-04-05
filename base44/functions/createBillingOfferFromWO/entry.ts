@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
     const {
       work_order_ids = [],
       unlinked_cme_ids = [],  // explicitly selected unlinked CustomerMaterialEntry IDs
+      work_order_meta = {},   // optional: { [wo_id]: { number, title, job_id, status, workorder_type } }
       title,
       language = 'German',
       vat_rate = 0,
@@ -42,11 +43,20 @@ Deno.serve(async (req) => {
 
     const warnings = [];
 
-    // ── 1. Fetch and validate WorkOrders ──────────────────────────────────────
+    // ── 1. Resolve WorkOrders (use frontend-provided meta when available) ───────
     let targetWOs = [];
     if (work_order_ids.length > 0) {
-      const allWOs = await base44.asServiceRole.entities.WorkOrder.list('-scheduled_date', 1000);
-      targetWOs = allWOs.filter(wo => work_order_ids.includes(wo.id));
+      const metaKeys = Object.keys(work_order_meta);
+      const metaComplete = metaKeys.length === work_order_ids.length && work_order_ids.every(id => work_order_meta[id]);
+
+      if (metaComplete) {
+        // Fast path: frontend already has WOs in memory — no DB fetch needed
+        targetWOs = work_order_ids.map(id => ({ id, ...work_order_meta[id] }));
+      } else {
+        // Fallback: fetch from DB (e.g. direct API call without meta)
+        const allWOs = await base44.asServiceRole.entities.WorkOrder.list('-scheduled_date', 1000);
+        targetWOs = allWOs.filter(wo => work_order_ids.includes(wo.id));
+      }
 
       if (targetWOs.length === 0) {
         return Response.json({ error: 'No matching WorkOrders found' }, { status: 404 });
@@ -59,7 +69,7 @@ Deno.serve(async (req) => {
 
       if (invalidWOs.length > 0) {
         return Response.json({
-          error: `Some WorkOrders are not eligible: ${invalidWOs.map(w => `${w.work_order_number} (${w.status}, ${w.workorder_type})`).join(', ')}. Only EXECUTION/STANDARD WorkOrders with status "Ready to Invoice" are allowed.`
+          error: `Some WorkOrders are not eligible: ${invalidWOs.map(w => `${w.number || w.work_order_number} (${w.status}, ${w.workorder_type})`).join(', ')}. Only EXECUTION/STANDARD WorkOrders with status "Ready to Invoice" are allowed.`
         }, { status: 400 });
       }
     }
@@ -161,17 +171,20 @@ Deno.serve(async (req) => {
     const techMap = Object.fromEntries(allTechs.map(t => [t.id, t]));
     const inventoryMap = Object.fromEntries(allInventory.map(i => [i.id, i]));
 
-    // Build WO map for title prefixing (already loaded, zero extra fetch)
-    const woMap = Object.fromEntries(targetWOs.map(wo => [wo.id, wo]));
+    // WO map for title prefixing — use 'number' (from meta) or 'work_order_number' (from DB)
+    const woMap = Object.fromEntries(targetWOs.map(wo => [wo.id, {
+      ...wo,
+      work_order_number: wo.work_order_number || wo.number,
+    }]));
 
-    // Load Tasks for TimeEntry + MaterialUsage lines that carry task_id
-    const sourceTaskIds = [
-      ...unbilledTimeEntries.map(te => te.task_id),
-      ...unbilledMaterial.map(m => m.task_id),
-    ].filter(Boolean);
-    const allSourceTasks = sourceTaskIds.length > 0
-      ? await base44.asServiceRole.entities.Task.list()
-      : [];
+    // Load Tasks — targeted per WO (much cheaper than Task.list() all)
+    const allSourceTasks = [];
+    if (targetWOs.length > 0) {
+      for (const wo of targetWOs) {
+        const tasks = await base44.asServiceRole.entities.Task.filter({ work_order_id: wo.id });
+        allSourceTasks.push(...tasks);
+      }
+    }
     const taskMap = Object.fromEntries(allSourceTasks.map(t => [t.id, t]));
 
     // ── 7. Calculate totals (snapshot at creation time) ───────────────────────

@@ -148,7 +148,19 @@ export default function BillingReview() {
 
   const handleCreateOffer = async (customerId, woIds, unlinkedCMEIds = []) => {
     try {
-      const payload = { work_order_ids: woIds };
+      // Pass WO metadata already in memory → backend skips WorkOrder.list(1000)
+      const work_order_meta = Object.fromEntries(
+        workOrders
+          .filter(wo => woIds.includes(wo.id))
+          .map(wo => [wo.id, {
+            number: wo.work_order_number,
+            title: wo.title,
+            job_id: wo.job_id,
+            status: wo.status,
+            workorder_type: wo.workorder_type || 'STANDARD',
+          }])
+      );
+      const payload = { work_order_ids: woIds, work_order_meta };
       if (unlinkedCMEIds.length > 0) payload.unlinked_cme_ids = unlinkedCMEIds;
       const response = await base44.functions.invoke('createBillingOfferFromWO', payload);
       const result = response.data;
