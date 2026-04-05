@@ -462,7 +462,87 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 1) ACTION REQUIRED — above KPI */}
+      {/* KPI Block — morning priority: operational first, commercial second */}
+      {kpis && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* 1: Capacity Today — do we have people? */}
+          <div onClick={() => setShowCapacityModal(true)} className="cursor-pointer">
+            <Card className="hover:shadow-md transition-shadow border-emerald-200">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Capacity Today</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.capacity_today}%</p>
+                  </div>
+                  <Users className="h-8 w-8 text-emerald-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 2: Open Work Orders — how much is in flight? */}
+          <Link to={createPageUrl('WorkOrders')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer border-indigo-200">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Open Work Orders</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.open_work_orders}</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-indigo-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* 3: Active Projects — management secondary */}
+          <Link to={createPageUrl('Jobs')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Active Projects</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.active_projects}</p>
+                  </div>
+                  <Briefcase className="h-8 w-8 text-blue-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* 4: Open Offers — commercial secondary */}
+          <Link to={createPageUrl('Offers')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Open Offers</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.open_offers}</p>
+                  </div>
+                  <FileText className="h-8 w-8 text-cyan-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* 5: Active Leads — commercial secondary */}
+          <Link to={createPageUrl('Leads')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Active Leads</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.active_leads}</p>
+                  </div>
+                  <Phone className="h-8 w-8 text-purple-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      )}
+
+      {/* 1) ACTION REQUIRED */}
       {hasActionItems && (
         <Card className="border-red-200 bg-red-50/30">
           <CardHeader>
@@ -631,81 +711,6 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
-      )}
-
-      {/* 2) KPI Block */}
-      {kpis && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <Link to={createPageUrl('Jobs')} className="block">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Active Projects</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.active_projects}</p>
-                  </div>
-                  <Briefcase className="h-8 w-8 text-blue-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl('WorkOrders')} className="block">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Open Work Orders</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.open_work_orders}</p>
-                  </div>
-                  <Clock className="h-8 w-8 text-indigo-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl('Offers')} className="block">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Open Offers</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.open_offers}</p>
-                  </div>
-                  <FileText className="h-8 w-8 text-cyan-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link to={createPageUrl('Leads')} className="block">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Active Leads</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.active_leads}</p>
-                  </div>
-                  <Phone className="h-8 w-8 text-purple-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <div onClick={() => setShowCapacityModal(true)} className="cursor-pointer">
-            <Card className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Capacity Today</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.capacity_today}%</p>
-                  </div>
-                  <Users className="h-8 w-8 text-emerald-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
       )}
 
       {/* Notes Section */}
