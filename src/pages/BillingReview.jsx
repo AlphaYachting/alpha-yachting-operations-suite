@@ -194,7 +194,6 @@ export default function BillingReview() {
 
   const handleCreateOffer = async (customerId, woIds, unlinkedCMEIds = []) => {
     try {
-      // Pass WO metadata already in memory → backend skips WorkOrder.list(1000)
       const work_order_meta = Object.fromEntries(
         workOrders
           .filter(wo => woIds.includes(wo.id))
@@ -210,16 +209,24 @@ export default function BillingReview() {
       if (unlinkedCMEIds.length > 0) payload.unlinked_cme_ids = unlinkedCMEIds;
       const response = await base44.functions.invoke('createBillingOfferFromWO', payload);
       const result = response.data;
-      if (!result?.success) throw new Error(result?.error || 'Failed to create billing offer');
-      setCreatedOffers(prev => ({ ...prev, [customerId]: result }));
-      if (result.line_items_created === 0) {
-        toast.warning(`Offer ${result.offer_number} created — but no billable line items were transferred. Check that TimeEntries and MaterialUsage exist and are not already billed.`);
-      } else {
-        toast.success(`Billing Offer ${result.offer_number} created — ${result.line_items_created} line item${result.line_items_created !== 1 ? 's' : ''} transferred.`);
+      
+      // Handle both explicit error AND empty-offer case
+      if (!result?.success) {
+        const errorMsg = result?.error || 'Failed to create billing offer';
+        toast.error(`Offer creation failed: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
+      
+      if (result.line_items_created === 0) {
+        toast.error(`Offer ${result.offer_number} was not created (0 billable line items found). Staged records have been cleared. Check that TimeEntries and MaterialUsage exist and are not already billed.`);
+        return;
+      }
+      
+      setCreatedOffers(prev => ({ ...prev, [customerId]: result }));
+      toast.success(`Billing Offer ${result.offer_number} created — ${result.line_items_created} line item${result.line_items_created !== 1 ? 's' : ''} transferred.`);
       await loadAll(true);
     } catch (e) {
-      toast.error(e.message);
+      toast.error(`Error: ${e.message}`);
       throw e;
     }
   };

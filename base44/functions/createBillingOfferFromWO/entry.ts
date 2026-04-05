@@ -14,23 +14,48 @@
  * - Material pricing uses MaterialUsage.unit_price first (historical snapshot),
  *   falls back to InventoryItem.sales_price only if usage-time price is missing
  * - Post-export locking (billed_offer_id + is_locked) is handled by firaExportOffer
+ * - FAILURE SAFETY: All staged reservations are rolled back if any step fails
+ * - EMPTY OFFER SAFETY: Returns error if zero line items created (no orphaned empty offers)
  *
  * Input: { work_order_ids: string[], title?: string, language?: string, vat_rate?: number, valid_until_days?: number }
- * Output: { success, offer_id, offer_number, line_items_created, warnings[] }
+ * Output: { success, offer_id, offer_number, line_items_created, warnings[] } or { success: false, error, ... }
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
+  // Track which records we stage in this run — for rollback on failure
+  const stagedRecordIds = { timeEntries: [], materialUsages: [], cme: [] };
+  let base44 = null;
+  
+  // Rollback staged reservations on failure
+  const rollbackStagedRecords = async () => {
+    if (!base44) return;
+    if (stagedRecordIds.timeEntries.length === 0 && stagedRecordIds.materialUsages.length === 0 && stagedRecordIds.cme.length === 0) return;
+    
+    console.log(`[createBillingOfferFromWO] ROLLBACK: clearing staged_offer_id from ${stagedRecordIds.timeEntries.length} TimeEntries, ${stagedRecordIds.materialUsages.length} MaterialUsages, ${stagedRecordIds.cme.length} CME`);
+    
+    try {
+      await Promise.all([
+        ...stagedRecordIds.timeEntries.map(id => base44.asServiceRole.entities.TimeEntry.update(id, { staged_offer_id: null }).catch(() => {})),
+        ...stagedRecordIds.materialUsages.map(id => base44.asServiceRole.entities.MaterialUsage.update(id, { staged_offer_id: null }).catch(() => {})),
+        ...stagedRecordIds.cme.map(id => base44.asServiceRole.entities.CustomerMaterialEntry.update(id, { staged_offer_id: null }).catch(() => {})),
+      ]);
+      console.log(`[createBillingOfferFromWO] Rollback completed.`);
+    } catch (rollbackErr) {
+      console.error(`[createBillingOfferFromWO] Rollback partial failure:`, rollbackErr.message);
+    }
+  };
+  
   try {
-    const base44 = createClientFromRequest(req);
+    base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
     const {
       work_order_ids = [],
-      unlinked_cme_ids = [],  // explicitly selected unlinked CustomerMaterialEntry IDs
-      work_order_meta = {},   // optional: { [wo_id]: { number, title, job_id, status, workorder_type } }
+      unlinked_cme_ids = [],
+      work_order_meta = {},
       title,
       language = 'German',
       vat_rate = 0,
@@ -50,10 +75,8 @@ Deno.serve(async (req) => {
       const metaComplete = metaKeys.length === work_order_ids.length && work_order_ids.every(id => work_order_meta[id]);
 
       if (metaComplete) {
-        // Fast path: frontend already has WOs in memory — no DB fetch needed
         targetWOs = work_order_ids.map(id => ({ id, ...work_order_meta[id] }));
       } else {
-        // Fallback: fetch from DB (e.g. direct API call without meta)
         const allWOs = await base44.asServiceRole.entities.WorkOrder.list('-scheduled_date', 1000);
         targetWOs = allWOs.filter(wo => work_order_ids.includes(wo.id));
       }
@@ -75,7 +98,6 @@ Deno.serve(async (req) => {
     }
 
     // ── 2. Resolve Job, Customer, Boat, Location ──────────────────────────────
-    // If WOs present, resolve from first WO's job. If only unlinked CME, resolve from first CME.
     let job = null;
     let sourceCustomerId = null;
     const sourceJobIds = [...new Set(targetWOs.map(wo => wo.job_id).filter(Boolean))];
@@ -87,7 +109,6 @@ Deno.serve(async (req) => {
       if (!job) return Response.json({ error: `Job not found for WorkOrder ${primaryWO.work_order_number}` }, { status: 404 });
       sourceCustomerId = job.customer_id;
     } else {
-      // Material-only path: resolve customer from first unlinked CME
       const firstCMEList = await base44.asServiceRole.entities.CustomerMaterialEntry.filter({ id: unlinked_cme_ids[0] });
       if (!firstCMEList[0]?.customer_id) {
         return Response.json({ error: 'Could not resolve customer from provided CME IDs' }, { status: 400 });
@@ -96,14 +117,13 @@ Deno.serve(async (req) => {
     }
 
     // ── 3. Gather unbilled + unreserved TimeEntries ───────────────────────────
-    // SAFETY: exclude both billed_offer_id (final) and staged_offer_id (reserved)
     const allTimeEntries = [];
     for (const wo of targetWOs) {
       const entries = await base44.asServiceRole.entities.TimeEntry.filter({ work_order_id: wo.id });
       allTimeEntries.push(...entries);
     }
     const unbilledTimeEntries = allTimeEntries.filter(te =>
-      te.is_billable !== false &&   // include default-true records (not explicitly false)
+      te.is_billable !== false &&
       !te.billed_offer_id &&
       !te.staged_offer_id
     );
@@ -116,7 +136,7 @@ Deno.serve(async (req) => {
       allMaterialUsage.push(...items);
     }
     const unbilledMaterial = allMaterialUsage.filter(m =>
-      m.billable !== false &&   // include default-true records (not explicitly false)
+      m.billable !== false &&
       !m.billed_offer_id &&
       !m.staged_offer_id
     );
@@ -124,14 +144,11 @@ Deno.serve(async (req) => {
     console.log(`[createBillingOfferFromWO] Target WO IDs: ${JSON.stringify(work_order_ids)}`);
 
     // ── 5. Gather unbilled + unreserved CustomerMaterialEntry ────────────────
-    // Linked CME (auto-included): linked to selected WOs or jobs
-    // Unlinked CME (explicit only): only if user passed unlinked_cme_ids
     const allCME = await base44.asServiceRole.entities.CustomerMaterialEntry.filter({ customer_id: sourceCustomerId });
     const woIdSet = new Set(work_order_ids);
     const jobIdSet = new Set(sourceJobIds);
     const unlinkedCMEIdSet = new Set(unlinked_cme_ids);
 
-    // Validate all unlinked CME belong to the same customer
     if (unlinked_cme_ids.length > 0) {
       const unlinkedCMEFound = allCME.filter(c => unlinkedCMEIdSet.has(c.id));
       const wrongCustomer = unlinkedCMEFound.filter(c => c.customer_id !== sourceCustomerId);
@@ -149,7 +166,6 @@ Deno.serve(async (req) => {
       )
     );
 
-    // Explicitly selected unlinked CME
     const selectedUnlinkedCME = allCME.filter(cme =>
       unlinkedCMEIdSet.has(cme.id) &&
       !cme.billed_offer_id &&
@@ -159,7 +175,10 @@ Deno.serve(async (req) => {
     const unbilledCME = [...linkedUnbilledCME, ...selectedUnlinkedCME];
 
     if (unbilledTimeEntries.length === 0 && unbilledMaterial.length === 0 && unbilledCME.length === 0) {
-      warnings.push('No unbilled/unreserved items found for the selected WorkOrders. Offer created but will be empty.');
+      return Response.json({
+        success: false,
+        error: 'No billable items found for selected WorkOrders. Check that TimeEntries and MaterialUsage exist and are not already billed.',
+      }, { status: 400 });
     }
 
     // ── 6. Resolve Technicians and InventoryItems for price snapshots ─────────
@@ -174,13 +193,11 @@ Deno.serve(async (req) => {
     const techMap = Object.fromEntries(allTechs.map(t => [t.id, t]));
     const inventoryMap = Object.fromEntries(allInventory.map(i => [i.id, i]));
 
-    // WO map for title prefixing — use 'number' (from meta) or 'work_order_number' (from DB)
     const woMap = Object.fromEntries(targetWOs.map(wo => [wo.id, {
       ...wo,
       work_order_number: wo.work_order_number || wo.number,
     }]));
 
-    // Load Tasks — targeted per WO (much cheaper than Task.list() all)
     const allSourceTasks = [];
     if (targetWOs.length > 0) {
       for (const wo of targetWOs) {
@@ -201,8 +218,6 @@ Deno.serve(async (req) => {
 
     unbilledMaterial.forEach(m => {
       const item = inventoryMap[m.inventory_item_id];
-      // FIX: MaterialUsage.unit_price is primary (historical snapshot at time of use).
-      // InventoryItem.sales_price is fallback only — avoids live price overriding historical.
       const salesPrice = m.unit_price || item?.sales_price || 0;
       totalAmount += salesPrice * (m.quantity || 1);
     });
@@ -251,10 +266,11 @@ Deno.serve(async (req) => {
     const offerId = newOffer.id;
 
     // ── 9. RESERVATION: Set staged_offer_id on all included items ────────────
-    // This prevents these exact items from being included in any other Offer
-    // before this one is either exported (→ billed_offer_id) or cancelled (→ clear staged_offer_id).
-    // Non-fatal: if a reservation fails, we log a warning but continue — the partial
-    // reservation still reduces duplicate risk and the UI can detect inconsistencies.
+    // Track all IDs for rollback on failure
+    stagedRecordIds.timeEntries = unbilledTimeEntries.map(te => te.id);
+    stagedRecordIds.materialUsages = unbilledMaterial.map(m => m.id);
+    stagedRecordIds.cme = unbilledCME.map(cme => cme.id);
+
     try {
       await Promise.all([
         ...unbilledTimeEntries.map(te =>
@@ -269,12 +285,11 @@ Deno.serve(async (req) => {
       ]);
       console.log(`[createBillingOfferFromWO] Reserved ${unbilledTimeEntries.length} time entries, ${unbilledMaterial.length} material usages, ${unbilledCME.length} CME records for offer ${offerId}`);
     } catch (reservationErr) {
-      warnings.push(`Reservation warning: could not set staged_offer_id on all source items: ${reservationErr.message}. Some items may remain available for re-selection until export completes.`);
-      console.error(`[createBillingOfferFromWO] Reservation partial failure for offer ${offerId}:`, reservationErr.message);
+      warnings.push(`Reservation warning: could not set staged_offer_id on all source items: ${reservationErr.message}.`);
+      console.error(`[createBillingOfferFromWO] Reservation partial failure:`, reservationErr.message);
     }
 
     // ── Unit type normalizer ─────────────────────────────────────────────────
-    // OfferTask.unit_type enum: Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, Lump Sum, km, day, month, season, flat
     const UNIT_MAP = {
       'Piece': 'Piece', 'pcs': 'Piece', 'Stk': 'Piece', 'Stk.': 'Piece', 'stk': 'Piece', 'pc': 'Piece',
       'Meter': 'Linear Meter', 'm': 'Linear Meter', 'meter': 'Linear Meter',
@@ -289,112 +304,128 @@ Deno.serve(async (req) => {
     const normalizeUnit = (raw) => {
       if (!raw) return 'Piece';
       if (VALID_UNIT_TYPES.has(raw)) return raw;
-      return UNIT_MAP[raw] || 'Piece';  // unknown → safest fallback
+      return UNIT_MAP[raw] || 'Piece';
     };
 
     // ── 10. Create OfferTask rows — LABOR ─────────────────────────────────────
     let lineOrder = 0;
     let lineItemsCreated = 0;
 
-    for (const te of unbilledTimeEntries) {
-      const tech = techMap[te.technician_id];
-      const rate = tech?.hourly_rate_billable || 0;
-      const hours = parseFloat(((te.duration_minutes || 0) / 60).toFixed(2));
-      const techName = tech ? `${tech.first_name} ${tech.last_name}` : 'Technician';
-      const wo = woMap[te.work_order_id];
-      const woPrefix = wo?.work_order_number ? `${wo.work_order_number} — ` : '';
-      const task = te.task_id ? taskMap[te.task_id] : null;
+    try {
+      for (const te of unbilledTimeEntries) {
+        const tech = techMap[te.technician_id];
+        const rate = tech?.hourly_rate_billable || 0;
+        const hours = parseFloat(((te.duration_minutes || 0) / 60).toFixed(2));
+        const techName = tech ? `${tech.first_name} ${tech.last_name}` : 'Technician';
+        const wo = woMap[te.work_order_id];
+        const woPrefix = wo?.work_order_number ? `${wo.work_order_number} — ` : '';
+        const task = te.task_id ? taskMap[te.task_id] : null;
 
-      if (rate === 0) {
-        warnings.push(`TimeEntry ${te.id}: Technician ${techName} has no hourly_rate_billable set — line item created with €0 rate.`);
+        if (rate === 0) {
+          warnings.push(`TimeEntry ${te.id}: Technician ${techName} has no hourly_rate_billable set.`);
+        }
+
+        const descParts = [];
+        if (task?.title) descParts.push(`Task: ${task.title}`);
+        if (te.notes) descParts.push(`Notes: ${te.notes}`);
+
+        await base44.asServiceRole.entities.OfferTask.create({
+          offer_id: offerId,
+          sequence_order: lineOrder++,
+          title: `${woPrefix}Labor: ${techName}${te.entry_date ? ` — ${te.entry_date}` : ''}`,
+          description: descParts.join('\n'),
+          item_type: 'Labor',
+          unit_type: 'Hour',
+          quantity: hours,
+          unit_price: rate,
+          total_amount: parseFloat((rate * hours).toFixed(2)),
+          is_optional: false,
+        });
+        lineItemsCreated++;
       }
 
-      // Build description: Task first, then Notes (no duplication in title)
-      const descParts = [];
-      if (task?.title) descParts.push(`Task: ${task.title}`);
-      if (te.notes) descParts.push(`Notes: ${te.notes}`);
+      // ── 11. Create OfferTask rows — MATERIAL USAGE ────────────────────────────
+      for (const m of unbilledMaterial) {
+        const item = inventoryMap[m.inventory_item_id];
+        const salesPrice = m.unit_price || item?.sales_price || 0;
+        const itemName = item?.name || `Item ${m.inventory_item_id}`;
+        const unit = item?.unit || 'Piece';
+        const wo = woMap[m.work_order_id];
+        const woPrefix = wo?.work_order_number ? `${wo.work_order_number} — ` : '';
+        const task = m.task_id ? taskMap[m.task_id] : null;
 
-      await base44.asServiceRole.entities.OfferTask.create({
-        offer_id: offerId,
-        sequence_order: lineOrder++,
-        title: `${woPrefix}Labor: ${techName}${te.entry_date ? ` — ${te.entry_date}` : ''}`,
-        description: descParts.join('\n'),
-        item_type: 'Labor',
-        unit_type: 'Hour',
-        quantity: hours,
-        unit_price: rate,
-        total_amount: parseFloat((rate * hours).toFixed(2)),
-        is_optional: false,
-      });
-      lineItemsCreated++;
-    }
+        if (salesPrice === 0) {
+          warnings.push(`MaterialUsage ${m.id}: Item "${itemName}" has no recorded price.`);
+        }
 
-    // ── 11. Create OfferTask rows — MATERIAL USAGE ────────────────────────────
-    for (const m of unbilledMaterial) {
-      const item = inventoryMap[m.inventory_item_id];
-      // FIX: unit_price first (historical), sales_price as fallback only
-      const salesPrice = m.unit_price || item?.sales_price || 0;
-      const itemName = item?.name || `Item ${m.inventory_item_id}`;
-      const unit = item?.unit || 'Piece';
-      const wo = woMap[m.work_order_id];
-      const woPrefix = wo?.work_order_number ? `${wo.work_order_number} — ` : '';
-      const task = m.task_id ? taskMap[m.task_id] : null;
+        const descParts = [];
+        if (task?.title) descParts.push(`Task: ${task.title}`);
+        if (m.notes) descParts.push(`Notes: ${m.notes}`);
+        else if (item?.description) descParts.push(item.description);
 
-      if (salesPrice === 0) {
-        warnings.push(`MaterialUsage ${m.id}: Item "${itemName}" has no recorded price — line item created with €0.`);
+        await base44.asServiceRole.entities.OfferTask.create({
+          offer_id: offerId,
+          sequence_order: lineOrder++,
+          title: `${woPrefix}Material: ${itemName}`,
+          description: descParts.join('\n'),
+          item_type: 'Material',
+          unit_type: normalizeUnit(unit),
+          quantity: m.quantity || 1,
+          unit_price: salesPrice,
+          total_amount: parseFloat((salesPrice * (m.quantity || 1)).toFixed(2)),
+          is_optional: false,
+        });
+        lineItemsCreated++;
       }
 
-      // Build description: Task first, then usage notes, then item description as fallback
-      const descParts = [];
-      if (task?.title) descParts.push(`Task: ${task.title}`);
-      if (m.notes) descParts.push(`Notes: ${m.notes}`);
-      else if (item?.description) descParts.push(item.description);
+      // ── 12. Create OfferTask rows — CUSTOMER MATERIAL ENTRIES ─────────────────
+      for (const cme of unbilledCME) {
+        const purchasePrice = cme.unit_purchase_price || 0;
+        const cmeWO = cme.work_order_id ? woMap[cme.work_order_id] : null;
+        const cmeWOPrefix = cmeWO?.work_order_number ? `${cmeWO.work_order_number} — ` : '';
 
-      await base44.asServiceRole.entities.OfferTask.create({
-        offer_id: offerId,
-        sequence_order: lineOrder++,
-        title: `${woPrefix}Material: ${itemName}`,
-        description: descParts.join('\n'),
-        item_type: 'Material',
-        unit_type: normalizeUnit(unit),
-        quantity: m.quantity || 1,
-        unit_price: salesPrice,
-        total_amount: parseFloat((salesPrice * (m.quantity || 1)).toFixed(2)),
-        is_optional: false,
-      });
-      lineItemsCreated++;
+        warnings.push(`CustomerMaterialEntry ${cme.id} ("${cme.item_title}"): using purchase price €${purchasePrice}. Review and add margin before FIRA export.`);
+
+        const cmeDescParts = [];
+        if (cme.supplier_name) cmeDescParts.push(`Supplier: ${cme.supplier_name}`);
+        if (cme.document_number) cmeDescParts.push(`Doc: ${cme.document_number}`);
+        if (cme.notes) cmeDescParts.push(`Notes: ${cme.notes}`);
+
+        await base44.asServiceRole.entities.OfferTask.create({
+          offer_id: offerId,
+          sequence_order: lineOrder++,
+          title: `${cmeWOPrefix}Customer Material: ${cme.item_title}`,
+          description: cmeDescParts.join(' | '),
+          item_type: 'Material',
+          unit_type: normalizeUnit(cme.unit),
+          quantity: cme.quantity || 1,
+          unit_price: purchasePrice,
+          total_amount: parseFloat((purchasePrice * (cme.quantity || 1)).toFixed(2)),
+          is_optional: false,
+        });
+        lineItemsCreated++;
+      }
+    } catch (taskErr) {
+      console.error(`[createBillingOfferFromWO] OfferTask creation failed:`, taskErr.message);
+      console.log(`[createBillingOfferFromWO] Rolling back staged reservations due to OfferTask failure.`);
+      await rollbackStagedRecords();
+      throw new Error(`Failed to create billing offer line items: ${taskErr.message}`);
     }
 
-    // ── 12. Create OfferTask rows — CUSTOMER MATERIAL ENTRIES ─────────────────
-    for (const cme of unbilledCME) {
-      const purchasePrice = cme.unit_purchase_price || 0;
-      const cmeWO = cme.work_order_id ? woMap[cme.work_order_id] : null;
-      const cmeWOPrefix = cmeWO?.work_order_number ? `${cmeWO.work_order_number} — ` : '';
-
-      warnings.push(`CustomerMaterialEntry ${cme.id} ("${cme.item_title}"): using purchase price €${purchasePrice}. Review and add margin before FIRA export.`);
-
-      // Build description: supplier/doc context + notes
-      const cmeDescParts = [];
-      if (cme.supplier_name) cmeDescParts.push(`Supplier: ${cme.supplier_name}`);
-      if (cme.document_number) cmeDescParts.push(`Doc: ${cme.document_number}`);
-      if (cme.notes) cmeDescParts.push(`Notes: ${cme.notes}`);
-
-      await base44.asServiceRole.entities.OfferTask.create({
+    // ── 13. SAFETY: Validate result before success ───────────────────────────
+    if (lineItemsCreated === 0) {
+      console.warn(`[createBillingOfferFromWO] EMPTY OFFER: Created Offer ${offerId} but 0 line items. Rolling back staged reservations.`);
+      await rollbackStagedRecords();
+      return Response.json({
+        success: false,
+        error: 'No billable items could be created. Check that TimeEntries and MaterialUsage exist and are not already billed.',
         offer_id: offerId,
-        sequence_order: lineOrder++,
-        title: `${cmeWOPrefix}Customer Material: ${cme.item_title}`,
-        description: cmeDescParts.join(' | '),
-        item_type: 'Material',
-        unit_type: normalizeUnit(cme.unit),  // free-text unit → normalized enum value
-        quantity: cme.quantity || 1,
-        unit_price: purchasePrice,
-        total_amount: parseFloat((purchasePrice * (cme.quantity || 1)).toFixed(2)),
-        is_optional: false,
-      });
-      lineItemsCreated++;
+        offer_number: offerNumber,
+        line_items_created: 0,
+      }, { status: 400 });
     }
 
-    console.log(`[createBillingOfferFromWO] Created Offer ${offerId} with ${lineItemsCreated} line items from ${work_order_ids.length} WOs.`);
+    console.log(`[createBillingOfferFromWO] SUCCESS: Created Offer ${offerId} with ${lineItemsCreated} line items from ${work_order_ids.length} WOs.`);
 
     return Response.json({
       success: true,
@@ -408,7 +439,8 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('[createBillingOfferFromWO] Error:', error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('[createBillingOfferFromWO] EXCEPTION:', error.message);
+    await rollbackStagedRecords();
+    return Response.json({ success: false, error: error.message }, { status: 500 });
   }
 });
