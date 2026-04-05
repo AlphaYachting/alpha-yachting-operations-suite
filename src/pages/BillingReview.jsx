@@ -38,59 +38,60 @@ export default function BillingReview() {
 
   useEffect(() => { loadAll(); }, []);
 
+  // Batch sequential fetches to avoid rate limiting
+  const batchFetch = async (ids, fetchFn, chunkSize = 3) => {
+    const results = [];
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const chunkResults = await Promise.all(chunk.map(fetchFn));
+      results.push(...chunkResults.flat());
+      if (i + chunkSize < ids.length) await new Promise(r => setTimeout(r, 150));
+    }
+    return results;
+  };
+
   const loadAll = async (background = false) => {
     if (!background) setLoading(true);
     setError(null);
     try {
       const allWOs = await base44.entities.WorkOrder.filter({ status: 'Ready to Invoice' });
       const eligibleWOs = allWOs.filter(wo => wo.workorder_type !== 'ORGANIZATION');
-
       const woIds = eligibleWOs.map(wo => wo.id);
       const jobIds = [...new Set(eligibleWOs.map(wo => wo.job_id).filter(Boolean))];
-
-      const [jobList, techList, allCustomers, allBoats] = await Promise.all([
-        base44.entities.Job.list('-created_date', 500),
-        base44.entities.Technician.list('-created_date', 200),
-        base44.entities.Customer.list('-created_date', 500),
-        base44.entities.Boat.list('-created_date', 500),
-      ]);
-
-      setJobs(jobList);
-      setTechnicians(techList);
-      setCustomers(allCustomers);
-      setBoats(allBoats);
       setWorkOrders(eligibleWOs);
 
-      // Batch requests in chunks of 5 to avoid rate limiting
-      const chunkSize = 5;
-      const batchFetch = async (ids, fetchFn) => {
-        const results = [];
-        for (let i = 0; i < ids.length; i += chunkSize) {
-          const chunk = ids.slice(i, i + chunkSize);
-          const chunkResults = await Promise.all(chunk.map(fetchFn));
-          results.push(...chunkResults.flat());
-        }
-        return results;
-      };
+      // On first load: also fetch static reference data (jobs, customers, boats, technicians)
+      // On background refresh: skip these — they didn't change
+      let jobList = jobs;
+      if (!background || jobs.length === 0) {
+        const [fetchedJobs, techList, allCustomers, allBoats] = await Promise.all([
+          base44.entities.Job.list('-created_date', 500),
+          base44.entities.Technician.list('-created_date', 200),
+          base44.entities.Customer.list('-created_date', 500),
+          base44.entities.Boat.list('-created_date', 500),
+        ]);
+        jobList = fetchedJobs;
+        setJobs(fetchedJobs);
+        setTechnicians(techList);
+        setCustomers(allCustomers);
+        setBoats(allBoats);
+      }
 
-      const [teAll, muAll] = await Promise.all([
-        batchFetch(woIds, id => base44.entities.TimeEntry.filter({ work_order_id: id })),
-        batchFetch(woIds, id => base44.entities.MaterialUsage.filter({ work_order_id: id })),
-      ]);
+      // Dynamic data: fetch sequentially in small chunks
+      const teAll = await batchFetch(woIds, id => base44.entities.TimeEntry.filter({ work_order_id: id }));
+      const muAll = await batchFetch(woIds, id => base44.entities.MaterialUsage.filter({ work_order_id: id }));
       setTimeEntries(teAll);
       setMaterialUsages(muAll);
 
-      // Load CustomerMaterialEntry for all relevant customers
+      // CME per customer
       const relevantJobMap = Object.fromEntries(jobList.filter(j => jobIds.includes(j.id)).map(j => [j.id, j]));
       const customerIds = [...new Set(Object.values(relevantJobMap).map(j => j.customer_id).filter(Boolean))];
-      const cmeResults = await Promise.all(
-        customerIds.map(cid =>
-          base44.entities.CustomerMaterialEntry.filter({ customer_id: cid })
-            .then(r => r.filter(c => !c.billed_offer_id))
-            .catch(() => [])
-        )
+      const cmeAll = await batchFetch(customerIds, cid =>
+        base44.entities.CustomerMaterialEntry.filter({ customer_id: cid })
+          .then(r => r.filter(c => !c.billed_offer_id))
+          .catch(() => [])
       );
-      setAllCME(cmeResults.flat());
+      setAllCME(cmeAll);
     } catch (e) {
       setError(e.message);
       toast.error('Failed to load billing data');
