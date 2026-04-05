@@ -107,6 +107,7 @@ Deno.serve(async (req) => {
       !te.billed_offer_id &&
       !te.staged_offer_id
     );
+    console.log(`[createBillingOfferFromWO] TimeEntries: ${allTimeEntries.length} total, ${unbilledTimeEntries.length} unbilled. Staged: ${allTimeEntries.filter(t => t.staged_offer_id).length}, Billed: ${allTimeEntries.filter(t => t.billed_offer_id).length}`);
 
     // ── 4. Gather unbilled + unreserved MaterialUsage ─────────────────────────
     const allMaterialUsage = [];
@@ -119,6 +120,8 @@ Deno.serve(async (req) => {
       !m.billed_offer_id &&
       !m.staged_offer_id
     );
+    console.log(`[createBillingOfferFromWO] MaterialUsage: ${allMaterialUsage.length} total, ${unbilledMaterial.length} unbilled. Staged: ${allMaterialUsage.filter(m => m.staged_offer_id).length}, Billed: ${allMaterialUsage.filter(m => m.billed_offer_id).length}`);
+    console.log(`[createBillingOfferFromWO] Target WO IDs: ${JSON.stringify(work_order_ids)}`);
 
     // ── 5. Gather unbilled + unreserved CustomerMaterialEntry ────────────────
     // Linked CME (auto-included): linked to selected WOs or jobs

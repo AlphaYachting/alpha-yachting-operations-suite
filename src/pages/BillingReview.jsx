@@ -110,7 +110,23 @@ export default function BillingReview() {
         setBoats(boatList);
       }
 
-      // Save to module-level cache
+      // Dynamic data: fetch per WO in small sequential chunks
+      const teAll = await batchFetch(woIds, id => base44.entities.TimeEntry.filter({ work_order_id: id }));
+      const muAll = await batchFetch(woIds, id => base44.entities.MaterialUsage.filter({ work_order_id: id }));
+      setTimeEntries(teAll);
+      setMaterialUsages(muAll);
+
+      // CME per customer
+      const relevantJobMap = Object.fromEntries(jobList.filter(j => jobIds.includes(j.id)).map(j => [j.id, j]));
+      const customerIds = [...new Set(Object.values(relevantJobMap).map(j => j.customer_id).filter(Boolean))];
+      const cmeAll = await batchFetch(customerIds, cid =>
+        base44.entities.CustomerMaterialEntry.filter({ customer_id: cid })
+          .then(r => r.filter(c => !c.billed_offer_id))
+          .catch(() => [])
+      );
+      setAllCME(cmeAll);
+
+      // Save everything to module-level cache
       _cache.set({
         workOrders: eligibleWOs,
         jobs: jobList,
