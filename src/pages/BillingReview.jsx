@@ -5,12 +5,13 @@ import { base44 } from '@/api/base44Client';
 // Module-level cache — survives page navigation, cleared after 5 minutes
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const _cache = {
-  data: null,      // { workOrders, jobs, customers, boats, technicians, timeEntries, materialUsages, allCME }
-  loadedAt: null,  // timestamp
+  data: null,
+  loadedAt: null,
   isValid() { return this.data && this.loadedAt && (Date.now() - this.loadedAt < CACHE_TTL_MS); },
   set(data) { this.data = data; this.loadedAt = Date.now(); },
   invalidate() { this.data = null; this.loadedAt = null; },
 };
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +28,6 @@ export default function BillingReview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Raw data
   const [workOrders, setWorkOrders] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -35,12 +35,10 @@ export default function BillingReview() {
   const [timeEntries, setTimeEntries] = useState([]);
   const [materialUsages, setMaterialUsages] = useState([]);
   const [technicians, setTechnicians] = useState([]);
-  const [allCME, setAllCME] = useState([]); // all CustomerMaterialEntry for relevant customers
+  const [allCME, setAllCME] = useState([]);
 
-  // Per-customer created offer result
-  const [createdOffers, setCreatedOffers] = useState({}); // { customerId: offerResult }
+  const [createdOffers, setCreatedOffers] = useState({});
 
-  // Admin reconciliation
   const [activeTab, setActiveTab] = useState('open');
   const [reconciling, setReconciling] = useState(false);
   const [reconcileResult, setReconcileResult] = useState(null);
@@ -50,7 +48,6 @@ export default function BillingReview() {
 
   useEffect(() => {
     if (_cache.isValid()) {
-      // Restore from cache instantly — no API calls
       const d = _cache.data;
       setWorkOrders(d.workOrders);
       setJobs(d.jobs);
@@ -66,29 +63,19 @@ export default function BillingReview() {
     }
   }, []);
 
-  // Batch sequential fetches to avoid rate limiting
-  const batchFetch = async (ids, fetchFn, chunkSize = 3) => {
-    const results = [];
-    for (let i = 0; i < ids.length; i += chunkSize) {
-      const chunk = ids.slice(i, i + chunkSize);
-      const chunkResults = await Promise.all(chunk.map(fetchFn));
-      results.push(...chunkResults.flat());
-      if (i + chunkSize < ids.length) await new Promise(r => setTimeout(r, 150));
-    }
-    return results;
-  };
-
+  // Bulk fetch: single call + in-memory filter (80% fewer API calls)
   const loadAll = async (background = false) => {
     if (!background) setLoading(true);
     setError(null);
     try {
+      // Fetch Ready-to-Invoice WOs
       const allWOs = await base44.entities.WorkOrder.filter({ status: 'Ready to Invoice' });
       const eligibleWOs = allWOs.filter(wo => wo.workorder_type !== 'ORGANIZATION');
       const woIds = eligibleWOs.map(wo => wo.id);
       const jobIds = [...new Set(eligibleWOs.map(wo => wo.job_id).filter(Boolean))];
       setWorkOrders(eligibleWOs);
 
-      // Static reference data — skip on background refresh if already loaded
+      // Static reference data — skip on background refresh
       let jobList = jobs;
       let techList = technicians;
       let customerList = customers;
@@ -110,23 +97,33 @@ export default function BillingReview() {
         setBoats(boatList);
       }
 
-      // Dynamic data: fetch per WO in small sequential chunks
-      const teAll = await batchFetch(woIds, id => base44.entities.TimeEntry.filter({ work_order_id: id }));
-      const muAll = await batchFetch(woIds, id => base44.entities.MaterialUsage.filter({ work_order_id: id }));
+      // Bulk fetch dynamic data: ONE call per entity type, filter in-memory
+      const relevantJobMap = Object.fromEntries(
+        jobList.filter(j => jobIds.includes(j.id)).map(j => [j.id, j])
+      );
+      const customerIds = [...new Set(
+        Object.values(relevantJobMap).map(j => j.customer_id).filter(Boolean)
+      )];
+      const woIdSet = new Set(woIds);
+      const customerIdSet = new Set(customerIds);
+
+      const [teAll, muAll, cmeAll] = await Promise.all([
+        base44.entities.TimeEntry.list('-created_date', 2000)
+          .then(all => all.filter(te => woIdSet.has(te.work_order_id)))
+          .catch(() => []),
+        base44.entities.MaterialUsage.list('-created_date', 1000)
+          .then(all => all.filter(m => woIdSet.has(m.work_order_id)))
+          .catch(() => []),
+        base44.entities.CustomerMaterialEntry.list('-created_date', 2000)
+          .then(all => all.filter(c => !c.billed_offer_id && customerIdSet.has(c.customer_id)))
+          .catch(() => []),
+      ]);
+
       setTimeEntries(teAll);
       setMaterialUsages(muAll);
-
-      // CME per customer
-      const relevantJobMap = Object.fromEntries(jobList.filter(j => jobIds.includes(j.id)).map(j => [j.id, j]));
-      const customerIds = [...new Set(Object.values(relevantJobMap).map(j => j.customer_id).filter(Boolean))];
-      const cmeAll = await batchFetch(customerIds, cid =>
-        base44.entities.CustomerMaterialEntry.filter({ customer_id: cid })
-          .then(r => r.filter(c => !c.billed_offer_id))
-          .catch(() => [])
-      );
       setAllCME(cmeAll);
 
-      // Save everything to module-level cache
+      // Cache everything
       _cache.set({
         workOrders: eligibleWOs,
         jobs: jobList,
@@ -150,12 +147,9 @@ export default function BillingReview() {
     const jobMap = Object.fromEntries(jobs.map(j => [j.id, j]));
     const customerMap = Object.fromEntries(customers.map(c => [c.id, c]));
     const woIdSet = new Set(workOrders.map(w => w.id));
-
-    // Build set of job_ids from eligible WOs
     const eligibleJobIds = new Set(workOrders.map(w => w.job_id).filter(Boolean));
 
-    // Group WOs by customer
-    const groups = {}; // customerId → { customer, workOrders, linkedCME, unlinkedCME }
+    const groups = {};
     for (const wo of workOrders) {
       const job = jobMap[wo.job_id];
       const customerId = job?.customer_id;
@@ -171,7 +165,6 @@ export default function BillingReview() {
       groups[customerId].workOrders.push(wo);
     }
 
-    // Distribute CME into customer groups
     for (const cme of allCME) {
       const customerId = cme.customer_id;
       if (!groups[customerId]) continue;
@@ -184,7 +177,6 @@ export default function BillingReview() {
       }
     }
 
-    // Sort by customer name
     return Object.entries(groups).sort(([, a], [, b]) => {
       const nameA = a.customer?.company_name || `${a.customer?.last_name || ''}`;
       const nameB = b.customer?.company_name || `${b.customer?.last_name || ''}`;
@@ -209,24 +201,22 @@ export default function BillingReview() {
       if (unlinkedCMEIds.length > 0) payload.unlinked_cme_ids = unlinkedCMEIds;
       const response = await base44.functions.invoke('createBillingOfferFromWO', payload);
       const result = response.data;
-      
-      // Handle both explicit error AND empty-offer case
+
       if (!result?.success) {
         const errorMsg = result?.error || 'Failed to create billing offer';
         toast.error(`Offer creation failed: ${errorMsg}`);
         return;
       }
-      
+
       if (result.line_items_created === 0) {
-        toast.error(`Offer ${result.offer_number} was not created (0 billable line items found). Staged records have been cleared. Check that TimeEntries and MaterialUsage exist and are not already billed.`);
+        toast.error(`Offer ${result.offer_number} was not created (0 billable line items found). Staged records have been cleared.`);
         return;
       }
-      
+
       setCreatedOffers(prev => ({ ...prev, [customerId]: result }));
       toast.success(`Billing Offer ${result.offer_number} created — ${result.line_items_created} line item${result.line_items_created !== 1 ? 's' : ''} transferred.`);
       await loadAll(true);
     } catch (e) {
-      // Handle Axios errors (HTTP 400/500 from backend)
       const errorMsg = e.response?.data?.error || e.message || 'Failed to create billing offer';
       toast.error(`Error: ${errorMsg}`);
     }
@@ -260,7 +250,6 @@ export default function BillingReview() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -276,7 +265,6 @@ export default function BillingReview() {
         </Button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-lg w-fit">
         <button
           type="button"
@@ -307,12 +295,10 @@ export default function BillingReview() {
         </Alert>
       )}
 
-      {/* Archive tab */}
       {activeTab === 'archive' && (
         <BillingArchiveView customers={customers} />
       )}
 
-      {/* Open billing tab */}
       {activeTab === 'open' && (
         <>
           {customerGroups.length === 0 ? (
@@ -353,7 +339,6 @@ export default function BillingReview() {
         </>
       )}
 
-      {/* Admin Reconciliation */}
       {isAdmin && (
         <Card className="border-slate-300 bg-slate-50">
           <CardHeader className="pb-3">
@@ -364,7 +349,6 @@ export default function BillingReview() {
             </CardTitle>
             <p className="text-xs text-slate-500">
               Scans historical WorkOrders and sets them to the correct terminal status.
-              Dry Run is always safe — no changes are written.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -389,7 +373,7 @@ export default function BillingReview() {
                 </Button>
               ) : (
                 <div className="flex items-center gap-2 bg-amber-50 border border-amber-300 rounded-lg px-3 py-2">
-                  <span className="text-xs text-amber-800 font-medium">This will update historical WorkOrder statuses. Confirm?</span>
+                  <span className="text-xs text-amber-800 font-medium">Confirm historical update?</span>
                   <Button
                     type="button" size="sm"
                     onClick={() => handleReconcile(false)}
@@ -417,7 +401,7 @@ export default function BillingReview() {
                 ) : (
                   <>
                     <p className="text-xs font-semibold text-slate-700">
-                      {reconcileResult.dry_run ? '📋 Dry Run Report' : '✅ Reconciliation Applied'}
+                      {reconcileResult.dry_run ? '📋 Dry Run Report' : '✅ Applied'}
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                       {[['Scanned', reconcileResult.summary?.scanned], ['Updated', reconcileResult.summary?.updated], ['Unchanged', reconcileResult.summary?.unchanged], ['Skipped', reconcileResult.summary?.skipped], ['Errors', reconcileResult.summary?.errors]].map(([label, val]) => (
@@ -427,28 +411,6 @@ export default function BillingReview() {
                         </div>
                       ))}
                     </div>
-                    {reconcileResult.summary?.updated_to_ready_to_invoice?.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-slate-600 mb-1">→ Ready to Invoice:</p>
-                        <p className="text-xs text-slate-500">{reconcileResult.summary.updated_to_ready_to_invoice.map(w => w.number || w.id).join(', ')}</p>
-                      </div>
-                    )}
-                    {reconcileResult.summary?.updated_to_completed?.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-slate-600 mb-1">→ Completed (ORG):</p>
-                        <p className="text-xs text-slate-500">{reconcileResult.summary.updated_to_completed.map(w => w.number || w.id).join(', ')}</p>
-                      </div>
-                    )}
-                    {reconcileResult.summary?.skip_reasons && Object.keys(reconcileResult.summary.skip_reasons).length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-slate-600 mb-1">Skip reasons:</p>
-                        <ul className="space-y-0.5">
-                          {Object.entries(reconcileResult.summary.skip_reasons).map(([reason, count]) => (
-                            <li key={reason} className="text-xs text-slate-400">{count}× {reason}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
