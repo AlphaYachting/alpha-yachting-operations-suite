@@ -36,8 +36,8 @@ export const AuthProvider = ({ children }) => {
   const checkAuth = async (isInitial = false) => {
     if (isCheckingRef.current) return; // prevent parallel calls
     isCheckingRef.current = true;
-    // Only show global loading spinner on initial check OR if not yet authenticated
-    if (isInitial || !isAuthenticated) {
+    // Only show global loading spinner on the true initial cold boot
+    if (isInitial) {
       setIsLoadingAuth(true);
     }
     setAuthError(null);
