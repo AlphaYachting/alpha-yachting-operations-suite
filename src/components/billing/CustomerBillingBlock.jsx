@@ -19,18 +19,19 @@ const WO_TYPE_BADGE = {
 
 export default function CustomerBillingBlock({
   customer,
-  workOrders,      // eligible WOs for this customer
-  jobs,            // all jobs (for lookup)
-  boats,           // all boats
+  workOrders,
+  jobs,
+  boats,
   technicians,
-  timeEntries,     // all TEs (filtered to this customer's WOs)
-  materialUsages,  // all MUs (filtered to this customer's WOs)
-  linkedCME,       // CME linked to WO/job
-  unlinkedCME,     // CME with no WO/job link
-  onCreateOffer,   // fn(work_order_ids) => Promise
-  createdOffer,    // result after creation
+  timeEntries,
+  materialUsages,
+  linkedCME,
+  unlinkedCME,
+  onCreateOffer,   // fn(work_order_ids, unlinked_cme_ids) => Promise
+  createdOffer,
 }) {
   const [selectedWOIds, setSelectedWOIds] = useState(new Set());
+  const [selectedUnlinkedCMEIds, setSelectedUnlinkedCMEIds] = useState(new Set());
   const [creating, setCreating] = useState(false);
   const [expanded, setExpanded] = useState(true);
 
@@ -71,8 +72,11 @@ export default function CustomerBillingBlock({
     }
     const cmeTotal = linkedCME.filter(c => !c.billed_offer_id && !c.staged_offer_id)
       .reduce((sum, c) => sum + (c.total_purchase_price || 0), 0);
-    return { labor, material, cme: cmeTotal, total: labor + material + cmeTotal };
-  }, [workOrders, woTotals, linkedCME]);
+    const selectedUnlinkedTotal = unlinkedCME
+      .filter(c => selectedUnlinkedCMEIds.has(c.id))
+      .reduce((sum, c) => sum + (c.total_purchase_price || 0), 0);
+    return { labor, material, cme: cmeTotal, selectedUnlinked: selectedUnlinkedTotal, total: labor + material + cmeTotal };
+  }, [workOrders, woTotals, linkedCME, unlinkedCME, selectedUnlinkedCMEIds]);
 
   const selectedTotal = [...selectedWOIds].reduce((sum, id) => {
     const t = woTotals[id];
@@ -94,15 +98,26 @@ export default function CustomerBillingBlock({
   };
 
   const handleCreate = async () => {
-    if (selectedWOIds.size === 0) return;
+    if (selectedWOIds.size === 0 && selectedUnlinkedCMEIds.size === 0) return;
     setCreating(true);
     try {
-      await onCreateOffer([...selectedWOIds]);
+      await onCreateOffer([...selectedWOIds], [...selectedUnlinkedCMEIds]);
       setSelectedWOIds(new Set());
+      setSelectedUnlinkedCMEIds(new Set());
     } finally {
       setCreating(false);
     }
   };
+
+  const toggleUnlinkedCME = (id) => {
+    setSelectedUnlinkedCMEIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const canCreate = selectedWOIds.size > 0 || selectedUnlinkedCMEIds.size > 0;
 
   const activeLinkedCME = linkedCME.filter(c => !c.billed_offer_id && !c.staged_offer_id);
 
@@ -178,13 +193,17 @@ export default function CustomerBillingBlock({
               <Button
                 type="button"
                 onClick={handleCreate}
-                disabled={selectedWOIds.size === 0 || creating}
+                disabled={!canCreate || creating}
                 size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700"
               >
                 {creating
                   ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Creating…</>
-                  : <><Receipt className="h-3.5 w-3.5 mr-1.5" />Create Billing Offer ({selectedWOIds.size})</>
+                  : <><Receipt className="h-3.5 w-3.5 mr-1.5" />
+                      Create Billing Offer
+                      {selectedWOIds.size > 0 && ` (${selectedWOIds.size} WO${selectedWOIds.size !== 1 ? 's' : ''})`}
+                      {selectedUnlinkedCMEIds.size > 0 && ` + ${selectedUnlinkedCMEIds.size} Mat.`}
+                    </>
                 }
               </Button>
             </div>
@@ -276,28 +295,55 @@ export default function CustomerBillingBlock({
             </div>
           )}
 
-          {/* Unlinked Customer Material Warning */}
+          {/* Unlinked Customer Material — explicit selection */}
           {unlinkedCME.length > 0 && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
-              <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                Unlinked Customer Material ({unlinkedCME.length}) — needs manual review
-              </p>
-              <p className="text-xs text-amber-700">
-                These items are not linked to any WorkOrder or Project and will NOT be included in the Billing Offer automatically.
-                Assign to a WorkOrder or Project first.
-              </p>
-              {unlinkedCME.map(cme => (
-                <div key={cme.id} className="flex items-center justify-between gap-3 text-xs text-amber-900 bg-amber-100/60 rounded border border-amber-200 px-3 py-2">
-                  <div className="min-w-0">
-                    <span className="font-medium">{cme.item_title}</span>
-                    {cme.supplier_name && <span className="text-amber-700 ml-2">· {cme.supplier_name}</span>}
-                  </div>
-                  <span className="shrink-0">
-                    {cme.quantity || 1} {cme.unit || 'pcs'} · €{Number(cme.total_purchase_price || 0).toFixed(2)}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                  Unlinked Customer Material ({unlinkedCME.length})
+                </p>
+                {selectedUnlinkedCMEIds.size > 0 && (
+                  <span className="text-xs text-amber-800 font-medium">
+                    {selectedUnlinkedCMEIds.size} selected · €{
+                      unlinkedCME.filter(c => selectedUnlinkedCMEIds.has(c.id))
+                        .reduce((s, c) => s + (c.total_purchase_price || 0), 0).toFixed(2)
+                    }
                   </span>
-                </div>
-              ))}
+                )}
+              </div>
+              <p className="text-xs text-amber-700">
+                Not linked to any WorkOrder or Project. Select items to include them in the billing offer (<em>Material mit abrechnen</em>).
+              </p>
+              {unlinkedCME.map(cme => {
+                const isChecked = selectedUnlinkedCMEIds.has(cme.id);
+                return (
+                  <div
+                    key={cme.id}
+                    onClick={() => toggleUnlinkedCME(cme.id)}
+                    className={`flex items-center gap-3 text-xs rounded border px-3 py-2 cursor-pointer transition-colors ${
+                      isChecked
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                        : 'bg-amber-100/60 border-amber-200 text-amber-900'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      onCheckedChange={() => toggleUnlinkedCME(cme.id)}
+                      onClick={e => e.stopPropagation()}
+                      className="shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium">{cme.item_title}</span>
+                      {cme.supplier_name && <span className="ml-2 opacity-70">· {cme.supplier_name}</span>}
+                      {cme.document_number && <span className="ml-2 opacity-60">Doc: {cme.document_number}</span>}
+                    </div>
+                    <span className="shrink-0">
+                      {cme.quantity || 1} {cme.unit || 'pcs'} · €{Number(cme.total_purchase_price || 0).toFixed(2)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

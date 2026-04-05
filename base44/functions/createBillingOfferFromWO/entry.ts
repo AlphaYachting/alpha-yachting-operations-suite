@@ -28,45 +28,62 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      work_order_ids,
+      work_order_ids = [],
+      unlinked_cme_ids = [],  // explicitly selected unlinked CustomerMaterialEntry IDs
       title,
       language = 'German',
       vat_rate = 0,
       valid_until_days = 30,
     } = body;
 
-    if (!work_order_ids || !Array.isArray(work_order_ids) || work_order_ids.length === 0) {
-      return Response.json({ error: 'work_order_ids array is required' }, { status: 400 });
+    if ((!work_order_ids || work_order_ids.length === 0) && (!unlinked_cme_ids || unlinked_cme_ids.length === 0)) {
+      return Response.json({ error: 'At least one work_order_id or unlinked_cme_id is required' }, { status: 400 });
     }
 
     const warnings = [];
 
     // ── 1. Fetch and validate WorkOrders ──────────────────────────────────────
-    const allWOs = await base44.asServiceRole.entities.WorkOrder.list('-scheduled_date', 1000);
-    const targetWOs = allWOs.filter(wo => work_order_ids.includes(wo.id));
+    let targetWOs = [];
+    if (work_order_ids.length > 0) {
+      const allWOs = await base44.asServiceRole.entities.WorkOrder.list('-scheduled_date', 1000);
+      targetWOs = allWOs.filter(wo => work_order_ids.includes(wo.id));
 
-    if (targetWOs.length === 0) {
-      return Response.json({ error: 'No matching WorkOrders found' }, { status: 404 });
-    }
+      if (targetWOs.length === 0) {
+        return Response.json({ error: 'No matching WorkOrders found' }, { status: 404 });
+      }
 
-    const invalidWOs = targetWOs.filter(wo =>
-      wo.status !== 'Ready to Invoice' ||
-      wo.workorder_type === 'ORGANIZATION'
-    );
+      const invalidWOs = targetWOs.filter(wo =>
+        wo.status !== 'Ready to Invoice' ||
+        wo.workorder_type === 'ORGANIZATION'
+      );
 
-    if (invalidWOs.length > 0) {
-      return Response.json({
-        error: `Some WorkOrders are not eligible: ${invalidWOs.map(w => `${w.work_order_number} (${w.status}, ${w.workorder_type})`).join(', ')}. Only EXECUTION/STANDARD WorkOrders with status "Ready to Invoice" are allowed.`
-      }, { status: 400 });
+      if (invalidWOs.length > 0) {
+        return Response.json({
+          error: `Some WorkOrders are not eligible: ${invalidWOs.map(w => `${w.work_order_number} (${w.status}, ${w.workorder_type})`).join(', ')}. Only EXECUTION/STANDARD WorkOrders with status "Ready to Invoice" are allowed.`
+        }, { status: 400 });
+      }
     }
 
     // ── 2. Resolve Job, Customer, Boat, Location ──────────────────────────────
-    const primaryWO = targetWOs[0];
-    const jobs = await base44.asServiceRole.entities.Job.filter({ id: primaryWO.job_id });
-    const job = jobs[0];
-    if (!job) return Response.json({ error: `Job not found for WorkOrder ${primaryWO.work_order_number}` }, { status: 404 });
-
+    // If WOs present, resolve from first WO's job. If only unlinked CME, resolve from first CME.
+    let job = null;
+    let sourceCustomerId = null;
     const sourceJobIds = [...new Set(targetWOs.map(wo => wo.job_id).filter(Boolean))];
+
+    if (targetWOs.length > 0) {
+      const primaryWO = targetWOs[0];
+      const jobs = await base44.asServiceRole.entities.Job.filter({ id: primaryWO.job_id });
+      job = jobs[0];
+      if (!job) return Response.json({ error: `Job not found for WorkOrder ${primaryWO.work_order_number}` }, { status: 404 });
+      sourceCustomerId = job.customer_id;
+    } else {
+      // Material-only path: resolve customer from first unlinked CME
+      const firstCMEList = await base44.asServiceRole.entities.CustomerMaterialEntry.filter({ id: unlinked_cme_ids[0] });
+      if (!firstCMEList[0]?.customer_id) {
+        return Response.json({ error: 'Could not resolve customer from provided CME IDs' }, { status: 400 });
+      }
+      sourceCustomerId = firstCMEList[0].customer_id;
+    }
 
     // ── 3. Gather unbilled + unreserved TimeEntries ───────────────────────────
     // SAFETY: exclude both billed_offer_id (final) and staged_offer_id (reserved)
@@ -93,15 +110,24 @@ Deno.serve(async (req) => {
       !m.staged_offer_id
     );
 
-    // ── 5. Gather unbilled + unreserved CustomerMaterialEntry (linked only) ───
-    // Note: unlinked CME (no work_order_id / no job_id) are intentionally excluded here.
-    // They are surfaced separately via the getUnlinkedCustomerMaterial function
-    // for manual review and assignment in the Billing Review UI.
-    const allCME = await base44.asServiceRole.entities.CustomerMaterialEntry.filter({ customer_id: job.customer_id });
+    // ── 5. Gather unbilled + unreserved CustomerMaterialEntry ────────────────
+    // Linked CME (auto-included): linked to selected WOs or jobs
+    // Unlinked CME (explicit only): only if user passed unlinked_cme_ids
+    const allCME = await base44.asServiceRole.entities.CustomerMaterialEntry.filter({ customer_id: sourceCustomerId });
     const woIdSet = new Set(work_order_ids);
     const jobIdSet = new Set(sourceJobIds);
+    const unlinkedCMEIdSet = new Set(unlinked_cme_ids);
 
-    const unbilledCME = allCME.filter(cme =>
+    // Validate all unlinked CME belong to the same customer
+    if (unlinked_cme_ids.length > 0) {
+      const unlinkedCMEFound = allCME.filter(c => unlinkedCMEIdSet.has(c.id));
+      const wrongCustomer = unlinkedCMEFound.filter(c => c.customer_id !== sourceCustomerId);
+      if (wrongCustomer.length > 0) {
+        return Response.json({ error: 'All selected material must belong to the same customer' }, { status: 400 });
+      }
+    }
+
+    const linkedUnbilledCME = allCME.filter(cme =>
       !cme.billed_offer_id &&
       !cme.staged_offer_id &&
       (
@@ -109,6 +135,15 @@ Deno.serve(async (req) => {
         (cme.job_id && jobIdSet.has(cme.job_id))
       )
     );
+
+    // Explicitly selected unlinked CME
+    const selectedUnlinkedCME = allCME.filter(cme =>
+      unlinkedCMEIdSet.has(cme.id) &&
+      !cme.billed_offer_id &&
+      !cme.staged_offer_id
+    );
+
+    const unbilledCME = [...linkedUnbilledCME, ...selectedUnlinkedCME];
 
     if (unbilledTimeEntries.length === 0 && unbilledMaterial.length === 0 && unbilledCME.length === 0) {
       warnings.push('No unbilled/unreserved items found for the selected WorkOrders. Offer created but will be empty.');
@@ -149,7 +184,9 @@ Deno.serve(async (req) => {
 
     // ── 8. Create Offer ───────────────────────────────────────────────────────
     const validUntil = new Date(Date.now() + valid_until_days * 86400000).toISOString().split('T')[0];
-    const offerTitle = title || `Billing — ${targetWOs.map(w => w.work_order_number).join(', ')}`;
+    const offerTitle = title || (targetWOs.length > 0
+      ? `Billing — ${targetWOs.map(w => w.work_order_number).join(', ')}`
+      : `Billing Material — ${new Date().toISOString().split('T')[0]}`);
     const fallbackNumber = `BILL-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
 
     let offerNumber = fallbackNumber;
@@ -162,10 +199,10 @@ Deno.serve(async (req) => {
 
     const newOffer = await base44.asServiceRole.entities.Offer.create({
       offer_number: offerNumber,
-      customer_id: job.customer_id,
-      boat_id: job.boat_id,
-      location_id: job.location_id,
-      job_id: job.id,
+      customer_id: sourceCustomerId,
+      boat_id: job?.boat_id || null,
+      location_id: job?.location_id || null,
+      job_id: job?.id || null,
       title: offerTitle,
       language,
       vat_rate,

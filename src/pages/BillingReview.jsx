@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Loader2, Receipt, AlertTriangle } from 'lucide-react';
+import { AlertCircle, Loader2, Receipt, AlertTriangle, Archive, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 import CustomerBillingBlock from '@/components/billing/CustomerBillingBlock';
+import BillingArchiveView from '@/components/billing/BillingArchiveView';
 
 export default function BillingReview() {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ export default function BillingReview() {
   const [createdOffers, setCreatedOffers] = useState({}); // { customerId: offerResult }
 
   // Admin reconciliation
+  const [activeTab, setActiveTab] = useState('open');
   const [reconciling, setReconciling] = useState(false);
   const [reconcileResult, setReconcileResult] = useState(null);
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
@@ -132,11 +134,11 @@ export default function BillingReview() {
     });
   }, [workOrders, jobs, customers, allCME]);
 
-  const handleCreateOffer = async (customerId, woIds) => {
+  const handleCreateOffer = async (customerId, woIds, unlinkedCMEIds = []) => {
     try {
-      const response = await base44.functions.invoke('createBillingOfferFromWO', {
-        work_order_ids: woIds,
-      });
+      const payload = { work_order_ids: woIds };
+      if (unlinkedCMEIds.length > 0) payload.unlinked_cme_ids = unlinkedCMEIds;
+      const response = await base44.functions.invoke('createBillingOfferFromWO', payload);
       const result = response.data;
       if (!result?.success) throw new Error(result?.error || 'Failed to create billing offer');
       setCreatedOffers(prev => ({ ...prev, [customerId]: result }));
@@ -192,6 +194,30 @@ export default function BillingReview() {
         </Button>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-slate-100 rounded-lg w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveTab('open')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'open' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <ClipboardList className="h-4 w-4" />
+          Open Billing Review
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('archive')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'archive' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Archive className="h-4 w-4" />
+          Archive
+        </button>
+      </div>
+
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -199,40 +225,49 @@ export default function BillingReview() {
         </Alert>
       )}
 
-      {/* Empty state */}
-      {customerGroups.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-16 text-slate-400">
-            <Receipt className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">No WorkOrders with status "Ready to Invoice"</p>
-            <p className="text-sm mt-1">WorkOrders transition here automatically when all tasks are complete.</p>
-          </CardContent>
-        </Card>
-      ) : (
+      {/* Archive tab */}
+      {activeTab === 'archive' && (
+        <BillingArchiveView customers={customers} />
+      )}
+
+      {/* Open billing tab */}
+      {activeTab === 'open' && (
         <>
-          <p className="text-sm text-slate-500">
-            <strong>{customerGroups.length}</strong> customer{customerGroups.length !== 1 ? 's' : ''} with billable WorkOrders
-          </p>
-          {customerGroups.map(([customerId, group]) => (
-            <CustomerBillingBlock
-              key={customerId}
-              customer={group.customer}
-              workOrders={group.workOrders}
-              jobs={jobs}
-              boats={boats}
-              technicians={technicians}
-              timeEntries={timeEntries.filter(te =>
-                group.workOrders.some(wo => wo.id === te.work_order_id)
-              )}
-              materialUsages={materialUsages.filter(m =>
-                group.workOrders.some(wo => wo.id === m.work_order_id)
-              )}
-              linkedCME={group.linkedCME}
-              unlinkedCME={group.unlinkedCME}
-              onCreateOffer={(woIds) => handleCreateOffer(customerId, woIds)}
-              createdOffer={createdOffers[customerId] || null}
-            />
-          ))}
+          {customerGroups.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-16 text-slate-400">
+                <Receipt className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">No WorkOrders with status "Ready to Invoice"</p>
+                <p className="text-sm mt-1">WorkOrders transition here automatically when all tasks are complete.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <p className="text-sm text-slate-500">
+                <strong>{customerGroups.length}</strong> customer{customerGroups.length !== 1 ? 's' : ''} with billable WorkOrders
+              </p>
+              {customerGroups.map(([customerId, group]) => (
+                <CustomerBillingBlock
+                  key={customerId}
+                  customer={group.customer}
+                  workOrders={group.workOrders}
+                  jobs={jobs}
+                  boats={boats}
+                  technicians={technicians}
+                  timeEntries={timeEntries.filter(te =>
+                    group.workOrders.some(wo => wo.id === te.work_order_id)
+                  )}
+                  materialUsages={materialUsages.filter(m =>
+                    group.workOrders.some(wo => wo.id === m.work_order_id)
+                  )}
+                  linkedCME={group.linkedCME}
+                  unlinkedCME={group.unlinkedCME}
+                  onCreateOffer={(woIds, unlinkedCMEIds) => handleCreateOffer(customerId, woIds, unlinkedCMEIds)}
+                  createdOffer={createdOffers[customerId] || null}
+                />
+              ))}
+            </>
+          )}
         </>
       )}
 
