@@ -61,9 +61,21 @@ export default function BillingReview() {
       setBoats(allBoats);
       setWorkOrders(eligibleWOs);
 
+      // Batch requests in chunks of 5 to avoid rate limiting
+      const chunkSize = 5;
+      const batchFetch = async (ids, fetchFn) => {
+        const results = [];
+        for (let i = 0; i < ids.length; i += chunkSize) {
+          const chunk = ids.slice(i, i + chunkSize);
+          const chunkResults = await Promise.all(chunk.map(fetchFn));
+          results.push(...chunkResults.flat());
+        }
+        return results;
+      };
+
       const [teAll, muAll] = await Promise.all([
-        Promise.all(woIds.map(id => base44.entities.TimeEntry.filter({ work_order_id: id }))).then(r => r.flat()),
-        Promise.all(woIds.map(id => base44.entities.MaterialUsage.filter({ work_order_id: id }))).then(r => r.flat()),
+        batchFetch(woIds, id => base44.entities.TimeEntry.filter({ work_order_id: id })),
+        batchFetch(woIds, id => base44.entities.MaterialUsage.filter({ work_order_id: id })),
       ]);
       setTimeEntries(teAll);
       setMaterialUsages(muAll);
