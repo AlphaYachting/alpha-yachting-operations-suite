@@ -1,0 +1,303 @@
+{
+  "name": "Offer",
+  "type": "object",
+  "properties": {
+    "offer_number": {
+      "type": "string",
+      "description": "Auto-generated offer reference"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Reference to Job (optional)"
+    },
+    "lead_id": {
+      "type": "string",
+      "description": "Reference to Lead if created from lead (optional)"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Reference to Customer"
+    },
+    "boat_id": {
+      "type": "string",
+      "description": "Reference to Boat (optional)"
+    },
+    "location_id": {
+      "type": "string",
+      "description": "Reference to Location where work will be performed"
+    },
+    "title": {
+      "type": "string",
+      "description": "Offer title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Offer description"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "German",
+        "English",
+        "Italian",
+        "Slovenian",
+        "Croatian"
+      ],
+      "default": "German",
+      "description": "Offer language"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Sent",
+        "Approved",
+        "Rejected",
+        "Expired",
+        "Converted"
+      ],
+      "default": "Draft",
+      "description": "Offer status"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date",
+      "description": "Offer validity date"
+    },
+    "vat_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "VAT rate percentage (e.g., 20 for 20%)"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Total offer amount (calculated from tasks)"
+    },
+    "discount_mode": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "PERCENT",
+        "TARGET_TOTAL"
+      ],
+      "default": "NONE",
+      "description": "Discount calculation mode"
+    },
+    "discount_percent": {
+      "type": "number",
+      "description": "Discount percentage (0-100)"
+    },
+    "discount_amount": {
+      "type": "number",
+      "description": "Calculated discount amount in EUR"
+    },
+    "discount_target_total": {
+      "type": "number",
+      "description": "Target total after discount (for TARGET_TOTAL mode)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes"
+    },
+    "customer_notes": {
+      "type": "string",
+      "description": "Notes visible to customer"
+    },
+    "safety_compliance_clause": {
+      "type": "string",
+      "description": "AI-generated safety and environmental compliance text"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When offer was approved"
+    },
+    "converted_work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder if converted (single WO conversion)"
+    },
+    "converted_job_id": {
+      "type": "string",
+      "description": "Reference to Job if converted to project"
+    },
+    "ai_generated": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether tasks were AI-generated"
+    },
+    "payment_terms_type": {
+      "type": "string",
+      "enum": [
+        "Full",
+        "Downpayment",
+        "Installments"
+      ],
+      "default": "Full",
+      "description": "Payment method type"
+    },
+    "downpayment_percent": {
+      "type": "number",
+      "description": "Downpayment as percentage (0-100)"
+    },
+    "downpayment_amount": {
+      "type": "number",
+      "description": "Downpayment amount in EUR (calculated)"
+    },
+    "payment_schedule": {
+      "type": "string",
+      "description": "Payment schedule description"
+    },
+    "retention_of_title_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include retention of title clause in offer"
+    },
+    "retention_of_title_text": {
+      "type": "string",
+      "description": "Legal text for retention of title clause"
+    },
+    "show_marina_fees_notice": {
+      "type": "boolean",
+      "default": false,
+      "description": "Show marina working fees notice in PDF"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Gallery image URLs"
+    },
+    "gallery_meta": {
+      "type": "object",
+      "description": "Gallery metadata: {fileId: {caption, sort_index}}"
+    },
+    "wizard_config_id": {
+      "type": "string",
+      "description": "Reference to WizardConfig"
+    },
+    "rate_card_id": {
+      "type": "string",
+      "description": "Reference to RateCard"
+    },
+    "boat_length": {
+      "type": "number",
+      "description": "Boat length used for calculation"
+    },
+    "transport_distance_km": {
+      "type": "number",
+      "description": "Transport distance used for calculation"
+    },
+    "storage_period": {
+      "type": "string",
+      "description": "Storage period selected"
+    },
+    "roof_option": {
+      "type": "boolean",
+      "description": "Roof option selected"
+    },
+    "subtotal": {
+      "type": "number",
+      "description": "Subtotal before VAT"
+    },
+    "vat": {
+      "type": "number",
+      "description": "Calculated VAT amount"
+    },
+    "calculation_snapshot_json": {
+      "type": "object",
+      "description": "Snapshot of rate card items and params used"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "STANDARD",
+        "READY_TO_INVOICE_REVIEW"
+      ],
+      "default": "STANDARD",
+      "description": "How this offer was created \u2014 READY_TO_INVOICE_REVIEW means it was auto-generated from completed WorkOrders for billing export"
+    },
+    "source_work_order_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "WorkOrder IDs that were the source of this billing offer \u2014 used for traceability and post-export locking"
+    },
+    "source_job_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Job/Project IDs included in this billing offer"
+    },
+    "fira_export_status": {
+      "type": "string",
+      "enum": [
+        "not_exported",
+        "queued",
+        "exporting",
+        "exported",
+        "failed"
+      ],
+      "default": "not_exported",
+      "description": "FIRA Finance export status"
+    },
+    "fira_exported_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of successful FIRA export"
+    },
+    "fira_exported_by": {
+      "type": "string",
+      "description": "Email of user who exported to FIRA"
+    },
+    "fira_last_error_message": {
+      "type": "string",
+      "description": "Last FIRA export error message"
+    },
+    "fira_external_reference": {
+      "type": "string",
+      "description": "FIRA-returned external reference/ID"
+    },
+    "fira_request_payload_json": {
+      "type": "object",
+      "description": "Exact payload sent to FIRA API"
+    },
+    "fira_response_payload_json": {
+      "type": "object",
+      "description": "Exact response received from FIRA API"
+    },
+    "fira_export_attempt_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Total number of FIRA export attempts"
+    },
+    "fira_last_attempt_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of last FIRA export attempt"
+    },
+    "fira_invoice_type": {
+      "type": "string",
+      "default": "PONUDA",
+      "description": "FIRA invoice type \u2014 always PONUDA for offers"
+    },
+    "fira_webshop_order_id": {
+      "type": "number",
+      "description": "Numeric webshopOrderId sent to FIRA"
+    },
+    "fira_webshop_order_number": {
+      "type": "string",
+      "description": "webshopOrderNumber sent to FIRA"
+    },
+    "fira_export_hash": {
+      "type": "string",
+      "description": "Hash of stable offer data to detect duplicate exports"
+    }
+  },
+  "required": [
+    "customer_id",
+    "title"
+  ]
+}

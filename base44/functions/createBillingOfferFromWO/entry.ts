@@ -1,0 +1,304 @@
+/**
+ * createBillingOfferFromWO
+ *
+ * Converts one or more Ready-to-Invoice WorkOrders into a commercial Offer snapshot
+ * for FIRA billing export. This is the bridge between the operational layer
+ * (WorkOrder / TimeEntry / MaterialUsage / CustomerMaterialEntry) and the
+ * existing FIRA export pipeline (Offer / OfferTask / firaExportOffer).
+ *
+ * Safety guarantees:
+ * - Only EXECUTION/STANDARD WorkOrders with status "Ready to Invoice" are accepted
+ * - Only unbilled (no billed_offer_id) AND unreserved (no staged_offer_id) items included
+ * - staged_offer_id is set on all included items immediately after Offer creation
+ *   → prevents the same item from appearing in a second Offer before FIRA export
+ * - Material pricing uses MaterialUsage.unit_price first (historical snapshot),
+ *   falls back to InventoryItem.sales_price only if usage-time price is missing
+ * - Post-export locking (billed_offer_id + is_locked) is handled by firaExportOffer
+ *
+ * Input: { work_order_ids: string[], title?: string, language?: string, vat_rate?: number, valid_until_days?: number }
+ * Output: { success, offer_id, offer_number, line_items_created, warnings[] }
+ */
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+
+Deno.serve(async (req) => {
+  try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await req.json();
+    const {
+      work_order_ids,
+      title,
+      language = 'German',
+      vat_rate = 0,
+      valid_until_days = 30,
+    } = body;
+
+    if (!work_order_ids || !Array.isArray(work_order_ids) || work_order_ids.length === 0) {
+      return Response.json({ error: 'work_order_ids array is required' }, { status: 400 });
+    }
+
+    const warnings = [];
+
+    // ── 1. Fetch and validate WorkOrders ──────────────────────────────────────
+    const allWOs = await base44.asServiceRole.entities.WorkOrder.list('-scheduled_date', 1000);
+    const targetWOs = allWOs.filter(wo => work_order_ids.includes(wo.id));
+
+    if (targetWOs.length === 0) {
+      return Response.json({ error: 'No matching WorkOrders found' }, { status: 404 });
+    }
+
+    const invalidWOs = targetWOs.filter(wo =>
+      wo.status !== 'Ready to Invoice' ||
+      wo.workorder_type === 'ORGANIZATION'
+    );
+
+    if (invalidWOs.length > 0) {
+      return Response.json({
+        error: `Some WorkOrders are not eligible: ${invalidWOs.map(w => `${w.work_order_number} (${w.status}, ${w.workorder_type})`).join(', ')}. Only EXECUTION/STANDARD WorkOrders with status "Ready to Invoice" are allowed.`
+      }, { status: 400 });
+    }
+
+    // ── 2. Resolve Job, Customer, Boat, Location ──────────────────────────────
+    const primaryWO = targetWOs[0];
+    const jobs = await base44.asServiceRole.entities.Job.filter({ id: primaryWO.job_id });
+    const job = jobs[0];
+    if (!job) return Response.json({ error: `Job not found for WorkOrder ${primaryWO.work_order_number}` }, { status: 404 });
+
+    const sourceJobIds = [...new Set(targetWOs.map(wo => wo.job_id).filter(Boolean))];
+
+    // ── 3. Gather unbilled + unreserved TimeEntries ───────────────────────────
+    // SAFETY: exclude both billed_offer_id (final) and staged_offer_id (reserved)
+    const allTimeEntries = [];
+    for (const wo of targetWOs) {
+      const entries = await base44.asServiceRole.entities.TimeEntry.filter({ work_order_id: wo.id });
+      allTimeEntries.push(...entries);
+    }
+    const unbilledTimeEntries = allTimeEntries.filter(te =>
+      te.is_billable === true &&
+      !te.billed_offer_id &&
+      !te.staged_offer_id
+    );
+
+    // ── 4. Gather unbilled + unreserved MaterialUsage ─────────────────────────
+    const allMaterialUsage = [];
+    for (const wo of targetWOs) {
+      const items = await base44.asServiceRole.entities.MaterialUsage.filter({ work_order_id: wo.id });
+      allMaterialUsage.push(...items);
+    }
+    const unbilledMaterial = allMaterialUsage.filter(m =>
+      m.billable === true &&
+      !m.billed_offer_id &&
+      !m.staged_offer_id
+    );
+
+    // ── 5. Gather unbilled + unreserved CustomerMaterialEntry (linked only) ───
+    // Note: unlinked CME (no work_order_id / no job_id) are intentionally excluded here.
+    // They are surfaced separately via the getUnlinkedCustomerMaterial function
+    // for manual review and assignment in the Billing Review UI.
+    const allCME = await base44.asServiceRole.entities.CustomerMaterialEntry.filter({ customer_id: job.customer_id });
+    const woIdSet = new Set(work_order_ids);
+    const jobIdSet = new Set(sourceJobIds);
+
+    const unbilledCME = allCME.filter(cme =>
+      !cme.billed_offer_id &&
+      !cme.staged_offer_id &&
+      (
+        (cme.work_order_id && woIdSet.has(cme.work_order_id)) ||
+        (cme.job_id && jobIdSet.has(cme.job_id))
+      )
+    );
+
+    if (unbilledTimeEntries.length === 0 && unbilledMaterial.length === 0 && unbilledCME.length === 0) {
+      warnings.push('No unbilled/unreserved items found for the selected WorkOrders. Offer created but will be empty.');
+    }
+
+    // ── 6. Resolve Technicians and InventoryItems for price snapshots ─────────
+    const technicianIds = [...new Set(unbilledTimeEntries.map(te => te.technician_id).filter(Boolean))];
+    const inventoryIds = [...new Set(unbilledMaterial.map(m => m.inventory_item_id).filter(Boolean))];
+
+    const [allTechs, allInventory] = await Promise.all([
+      technicianIds.length > 0 ? base44.asServiceRole.entities.Technician.list() : Promise.resolve([]),
+      inventoryIds.length > 0 ? base44.asServiceRole.entities.InventoryItem.list() : Promise.resolve([]),
+    ]);
+
+    const techMap = Object.fromEntries(allTechs.map(t => [t.id, t]));
+    const inventoryMap = Object.fromEntries(allInventory.map(i => [i.id, i]));
+
+    // ── 7. Calculate totals (snapshot at creation time) ───────────────────────
+    let totalAmount = 0;
+
+    unbilledTimeEntries.forEach(te => {
+      const tech = techMap[te.technician_id];
+      const rate = tech?.hourly_rate_billable || 0;
+      totalAmount += rate * ((te.duration_minutes || 0) / 60);
+    });
+
+    unbilledMaterial.forEach(m => {
+      const item = inventoryMap[m.inventory_item_id];
+      // FIX: MaterialUsage.unit_price is primary (historical snapshot at time of use).
+      // InventoryItem.sales_price is fallback only — avoids live price overriding historical.
+      const salesPrice = m.unit_price || item?.sales_price || 0;
+      totalAmount += salesPrice * (m.quantity || 1);
+    });
+
+    unbilledCME.forEach(cme => {
+      totalAmount += cme.total_purchase_price || 0;
+    });
+
+    // ── 8. Create Offer ───────────────────────────────────────────────────────
+    const validUntil = new Date(Date.now() + valid_until_days * 86400000).toISOString().split('T')[0];
+    const offerTitle = title || `Billing — ${targetWOs.map(w => w.work_order_number).join(', ')}`;
+    const fallbackNumber = `BILL-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
+
+    let offerNumber = fallbackNumber;
+    try {
+      const offerNumberRes = await base44.functions.invoke('allocateWorkOrderNumber', {});
+      offerNumber = offerNumberRes?.data?.number || fallbackNumber;
+    } catch (e) {
+      warnings.push(`Could not allocate offer number via function, using fallback: ${fallbackNumber}`);
+    }
+
+    const newOffer = await base44.asServiceRole.entities.Offer.create({
+      offer_number: offerNumber,
+      customer_id: job.customer_id,
+      boat_id: job.boat_id,
+      location_id: job.location_id,
+      job_id: job.id,
+      title: offerTitle,
+      language,
+      vat_rate,
+      total_amount: parseFloat(totalAmount.toFixed(2)),
+      subtotal: parseFloat(totalAmount.toFixed(2)),
+      status: 'Draft',
+      valid_until: validUntil,
+      source_type: 'READY_TO_INVOICE_REVIEW',
+      source_work_order_ids: work_order_ids,
+      source_job_ids: sourceJobIds,
+      fira_export_status: 'not_exported',
+      fira_export_attempt_count: 0,
+      notes: `Auto-generated billing offer from Ready-to-Invoice WorkOrders: ${targetWOs.map(w => w.work_order_number).join(', ')}. Created by ${user.email}.`,
+      ai_generated: false,
+    });
+
+    const offerId = newOffer.id;
+
+    // ── 9. RESERVATION: Set staged_offer_id on all included items ────────────
+    // This prevents these exact items from being included in any other Offer
+    // before this one is either exported (→ billed_offer_id) or cancelled (→ clear staged_offer_id).
+    // Non-fatal: if a reservation fails, we log a warning but continue — the partial
+    // reservation still reduces duplicate risk and the UI can detect inconsistencies.
+    try {
+      await Promise.all([
+        ...unbilledTimeEntries.map(te =>
+          base44.asServiceRole.entities.TimeEntry.update(te.id, { staged_offer_id: offerId })
+        ),
+        ...unbilledMaterial.map(m =>
+          base44.asServiceRole.entities.MaterialUsage.update(m.id, { staged_offer_id: offerId })
+        ),
+        ...unbilledCME.map(cme =>
+          base44.asServiceRole.entities.CustomerMaterialEntry.update(cme.id, { staged_offer_id: offerId })
+        ),
+      ]);
+      console.log(`[createBillingOfferFromWO] Reserved ${unbilledTimeEntries.length} time entries, ${unbilledMaterial.length} material usages, ${unbilledCME.length} CME records for offer ${offerId}`);
+    } catch (reservationErr) {
+      warnings.push(`Reservation warning: could not set staged_offer_id on all source items: ${reservationErr.message}. Some items may remain available for re-selection until export completes.`);
+      console.error(`[createBillingOfferFromWO] Reservation partial failure for offer ${offerId}:`, reservationErr.message);
+    }
+
+    // ── 10. Create OfferTask rows — LABOR ─────────────────────────────────────
+    let lineOrder = 0;
+    let lineItemsCreated = 0;
+
+    for (const te of unbilledTimeEntries) {
+      const tech = techMap[te.technician_id];
+      const rate = tech?.hourly_rate_billable || 0;
+      const hours = parseFloat(((te.duration_minutes || 0) / 60).toFixed(2));
+      const techName = tech ? `${tech.first_name} ${tech.last_name}` : 'Technician';
+
+      if (rate === 0) {
+        warnings.push(`TimeEntry ${te.id}: Technician ${techName} has no hourly_rate_billable set — line item created with €0 rate.`);
+      }
+
+      await base44.asServiceRole.entities.OfferTask.create({
+        offer_id: offerId,
+        sequence_order: lineOrder++,
+        title: `Labor: ${techName}${te.entry_date ? ` — ${te.entry_date}` : ''}${te.notes ? ` (${te.notes})` : ''}`,
+        description: te.notes || '',
+        item_type: 'Labor',
+        unit_type: 'Hour',
+        quantity: hours,
+        unit_price: rate,
+        total_amount: parseFloat((rate * hours).toFixed(2)),
+        is_optional: false,
+      });
+      lineItemsCreated++;
+    }
+
+    // ── 11. Create OfferTask rows — MATERIAL USAGE ────────────────────────────
+    for (const m of unbilledMaterial) {
+      const item = inventoryMap[m.inventory_item_id];
+      // FIX: unit_price first (historical), sales_price as fallback only
+      const salesPrice = m.unit_price || item?.sales_price || 0;
+      const itemName = item?.name || `Item ${m.inventory_item_id}`;
+      const unit = item?.unit || 'Piece';
+
+      if (salesPrice === 0) {
+        warnings.push(`MaterialUsage ${m.id}: Item "${itemName}" has no recorded price — line item created with €0.`);
+      }
+
+      await base44.asServiceRole.entities.OfferTask.create({
+        offer_id: offerId,
+        sequence_order: lineOrder++,
+        title: `Material: ${itemName}`,
+        description: item?.description || '',
+        item_type: 'Material',
+        unit_type: unit === 'Piece' ? 'Piece' : unit,
+        quantity: m.quantity || 1,
+        unit_price: salesPrice,
+        total_amount: parseFloat((salesPrice * (m.quantity || 1)).toFixed(2)),
+        is_optional: false,
+      });
+      lineItemsCreated++;
+    }
+
+    // ── 12. Create OfferTask rows — CUSTOMER MATERIAL ENTRIES ─────────────────
+    for (const cme of unbilledCME) {
+      const purchasePrice = cme.unit_purchase_price || 0;
+
+      warnings.push(`CustomerMaterialEntry ${cme.id} ("${cme.item_title}"): using purchase price €${purchasePrice}. Review and add margin before FIRA export.`);
+
+      await base44.asServiceRole.entities.OfferTask.create({
+        offer_id: offerId,
+        sequence_order: lineOrder++,
+        title: `Customer Material: ${cme.item_title}`,
+        description: `${cme.supplier_name ? `Supplier: ${cme.supplier_name}. ` : ''}${cme.document_number ? `Doc: ${cme.document_number}.` : ''}`,
+        item_type: 'Material',
+        unit_type: cme.unit || 'Piece',
+        quantity: cme.quantity || 1,
+        unit_price: purchasePrice,
+        total_amount: parseFloat((purchasePrice * (cme.quantity || 1)).toFixed(2)),
+        is_optional: false,
+      });
+      lineItemsCreated++;
+    }
+
+    console.log(`[createBillingOfferFromWO] Created Offer ${offerId} with ${lineItemsCreated} line items from ${work_order_ids.length} WOs.`);
+
+    return Response.json({
+      success: true,
+      offer_id: offerId,
+      offer_number: offerNumber,
+      line_items_created: lineItemsCreated,
+      labor_lines: unbilledTimeEntries.length,
+      material_lines: unbilledMaterial.length,
+      customer_material_lines: unbilledCME.length,
+      warnings,
+    });
+
+  } catch (error) {
+    console.error('[createBillingOfferFromWO] Error:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+});

@@ -313,9 +313,11 @@ Deno.serve(async (req) => {
 
     if (firaResponse.ok) {
       const externalRef = firaBody?.id || firaBody?.orderId || firaBody?.webshopOrderId || null;
+      const exportedAt = new Date().toISOString();
+
       await base44.asServiceRole.entities.Offer.update(offer_id, {
         fira_export_status: 'exported',
-        fira_exported_at: new Date().toISOString(),
+        fira_exported_at: exportedAt,
         fira_exported_by: user.email,
         fira_last_error_message: null,
         fira_external_reference: externalRef != null ? String(externalRef) : '',
@@ -326,6 +328,79 @@ Deno.serve(async (req) => {
         fira_invoice_type: 'PONUDA',
         fira_export_hash: exportHash,
       });
+
+      // ── Post-export locking: only for billing bridge offers (source_type = READY_TO_INVOICE_REVIEW)
+      // Lock all staged/unbilled TimeEntry, MaterialUsage, and CustomerMaterialEntry records
+      // that belong to the WorkOrders included in this offer. Clears staged_offer_id.
+      if (offer.source_type === 'READY_TO_INVOICE_REVIEW' && Array.isArray(offer.source_work_order_ids) && offer.source_work_order_ids.length > 0) {
+        console.log(`[firaExportOffer] Locking billing items for offer ${offer_id} (${offer.source_work_order_ids.length} WOs)`);
+
+        try {
+          for (const woId of offer.source_work_order_ids) {
+            // Lock TimeEntries
+            const timeEntries = await base44.asServiceRole.entities.TimeEntry.filter({ work_order_id: woId });
+            const billableEntries = timeEntries.filter(te =>
+              te.is_billable &&
+              !te.billed_offer_id &&
+              (te.staged_offer_id === offer_id || !te.staged_offer_id)
+            );
+            for (const te of billableEntries) {
+              await base44.asServiceRole.entities.TimeEntry.update(te.id, {
+                billed_offer_id: offer_id,
+                billed_at: exportedAt,
+                is_locked: true,
+                staged_offer_id: null,
+              });
+            }
+
+            // Lock MaterialUsage
+            const materialUsages = await base44.asServiceRole.entities.MaterialUsage.filter({ work_order_id: woId });
+            const billableMaterial = materialUsages.filter(m =>
+              m.billable &&
+              !m.billed_offer_id &&
+              (m.staged_offer_id === offer_id || !m.staged_offer_id)
+            );
+            for (const m of billableMaterial) {
+              await base44.asServiceRole.entities.MaterialUsage.update(m.id, {
+                billed_offer_id: offer_id,
+                billed_at: exportedAt,
+                staged_offer_id: null,
+              });
+            }
+          }
+
+          // Lock CustomerMaterialEntry (linked by WO or job, or staged for this offer)
+          if (offer.customer_id) {
+            const allCME = await base44.asServiceRole.entities.CustomerMaterialEntry.filter({ customer_id: offer.customer_id });
+            const woIdSet = new Set(offer.source_work_order_ids);
+            const jobIdSet = new Set(Array.isArray(offer.source_job_ids) ? offer.source_job_ids : []);
+            const billableCME = allCME.filter(cme =>
+              !cme.billed_offer_id &&
+              (
+                cme.staged_offer_id === offer_id ||
+                (
+                  !cme.staged_offer_id &&
+                  ((cme.work_order_id && woIdSet.has(cme.work_order_id)) ||
+                   (cme.job_id && jobIdSet.has(cme.job_id)))
+                )
+              )
+            );
+            for (const cme of billableCME) {
+              await base44.asServiceRole.entities.CustomerMaterialEntry.update(cme.id, {
+                billed_offer_id: offer_id,
+                billed_at: exportedAt,
+                staged_offer_id: null,
+              });
+            }
+          }
+
+          console.log(`[firaExportOffer] Post-export locking complete for offer ${offer_id}`);
+        } catch (lockErr) {
+          // Locking failure is non-fatal — export already succeeded. Log for manual review.
+          console.error(`[firaExportOffer] WARNING: Post-export locking failed for offer ${offer_id}: ${lockErr.message}. Export was successful but items may need manual locking.`);
+        }
+      }
+
       return Response.json({
         success: true,
         fira_response: firaBody,

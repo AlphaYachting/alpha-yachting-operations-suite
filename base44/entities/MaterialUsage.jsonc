@@ -1,0 +1,74 @@
+{
+  "name": "MaterialUsage",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Optional reference to Task"
+    },
+    "inventory_item_id": {
+      "type": "string",
+      "description": "Reference to InventoryItem"
+    },
+    "quantity": {
+      "type": "number"
+    },
+    "unit_price": {
+      "type": "number"
+    },
+    "total_price": {
+      "type": "number"
+    },
+    "taken_from": {
+      "type": "string",
+      "enum": [
+        "Novigrad Base",
+        "Van 1",
+        "Van 2",
+        "Customer Supplied",
+        "Direct Purchase"
+      ],
+      "default": "Novigrad Base"
+    },
+    "serial_number": {
+      "type": "string"
+    },
+    "used_by": {
+      "type": "string",
+      "description": "Technician ID"
+    },
+    "used_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "billable": {
+      "type": "boolean",
+      "default": true
+    },
+    "staged_offer_id": {
+      "type": "string",
+      "description": "Reservation field \u2014 set when this material usage is included in a pending billing Offer, before FIRA export. Prevents double-inclusion. Cleared if offer is cancelled/deleted."
+    },
+    "billed_offer_id": {
+      "type": "string",
+      "description": "Reference to Offer this usage was billed in \u2014 set on successful FIRA export, permanently prevents re-billing"
+    },
+    "billed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this material usage was included in a successful billing export"
+    }
+  },
+  "required": [
+    "work_order_id",
+    "inventory_item_id",
+    "quantity"
+  ]
+}

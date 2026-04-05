@@ -6,6 +6,14 @@
       "type": "string",
       "description": "Reference to Customer"
     },
+    "job_id": {
+      "type": "string",
+      "description": "Reference to Job/Project \u2014 links this customer material to a specific project for billing review"
+    },
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder \u2014 directly links to the WO where this material was used, required for Ready-to-Invoice billing"
+    },
     "source_type": {
       "type": "string",
       "enum": [
@@ -63,6 +71,19 @@
     "notes": {
       "type": "string",
       "description": "Internal notes"
+    },
+    "staged_offer_id": {
+      "type": "string",
+      "description": "Reservation field \u2014 set when this entry is included in a pending billing Offer, before FIRA export. Prevents double-inclusion. Cleared if offer is cancelled/deleted."
+    },
+    "billed_offer_id": {
+      "type": "string",
+      "description": "Reference to Offer this entry was billed in \u2014 set on successful FIRA export, permanently prevents re-billing"
+    },
+    "billed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this entry was included in a successful billing export"
     }
   },
   "required": [

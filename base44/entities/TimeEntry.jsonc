@@ -1,0 +1,64 @@
+{
+  "name": "TimeEntry",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder (required)"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Optional reference to specific Task within the WorkOrder"
+    },
+    "technician_id": {
+      "type": "string",
+      "description": "Reference to Technician who performed the work"
+    },
+    "entry_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when work was performed"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Optional start time in HH:MM format"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Duration in minutes (must be > 0)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes about the work performed"
+    },
+    "is_billable": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this time entry should be billed to customer"
+    },
+    "is_locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Lock after invoicing to prevent changes"
+    },
+    "staged_offer_id": {
+      "type": "string",
+      "description": "Reservation field \u2014 set when this entry is included in a pending billing Offer, before FIRA export. Prevents double-inclusion. Cleared if offer is cancelled/deleted."
+    },
+    "billed_offer_id": {
+      "type": "string",
+      "description": "Reference to Offer this entry was billed in \u2014 set on successful FIRA export, permanently prevents re-billing"
+    },
+    "billed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this entry was included in a successful billing export"
+    }
+  },
+  "required": [
+    "work_order_id",
+    "technician_id",
+    "entry_date",
+    "duration_minutes"
+  ]
+}
