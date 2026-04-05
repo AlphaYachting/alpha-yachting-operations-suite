@@ -263,45 +263,41 @@ export default function Dashboard() {
     return daysAway > 0 && daysAway <= 7;
   });
 
-  // PROJECT HEALTH — execution-phase only (whitelist)
+  // PROJECT HEALTH — execution-phase whitelist only
   const activeJobs = jobs.filter(j => ['Scheduled', 'In Progress', 'Waiting for Parts', 'Approved'].includes(j.status));
 
-  // Readiness Health helper
   const getReadinessHealth = (job) => {
-    // Determine effective start date: earliest active WO scheduled_date
     const jobWOs = workOrders.filter(wo => wo.job_id === job.id && !['Completed', 'Cancelled'].includes(wo.status));
     const scheduledDates = jobWOs
       .filter(wo => wo.scheduled_date)
       .map(wo => parseISO(wo.scheduled_date))
       .sort((a, b) => a - b);
 
-    if (scheduledDates.length === 0) {
-      // No effective start date — skip readiness evaluation
-      return { status: 'green', label: null, step: null };
-    }
+    if (scheduledDates.length === 0) return { status: 'green', label: null, step: null };
 
-    const effectiveStart = scheduledDates[0];
-    const daysUntilStart = differenceInDays(effectiveStart, today);
+    const daysUntilStart = differenceInDays(scheduledDates[0], today);
+    if (daysUntilStart > 14) return { status: 'green', label: null, step: null };
 
-    // Only evaluate readiness if start is within 14 days
-    if (daysUntilStart > 14) {
-      return { status: 'green', label: null, step: null };
-    }
+    // Source 1: ORGANIZATION-type WorkOrders (existing orga checklist pattern)
+    const orgaWOs = jobWOs.filter(wo => wo.workorder_type === 'ORGANIZATION');
+    const orgaComplete = orgaWOs.length > 0 && orgaWOs.every(wo => wo.status === 'Completed');
 
-    const jobPrepTasks = preparationTasks.filter(t => t.job_id === job.id);
-    const requiredTasks = jobPrepTasks.filter(t => t.required !== false); // default true
-    const openRequired = requiredTasks.filter(t => !t.completed);
+    // Source 2: PreparationTask entity
+    const jobPrepTasks = preparationTasks.filter(t => t.job_id === job.id && t.required !== false);
+    const openPrepTasks = jobPrepTasks.filter(t => !t.completed);
 
-    if (openRequired.length > 0 && daysUntilStart <= 7) {
-      return { status: 'red', label: 'Prep Overdue', step: `${openRequired.length} required prep task${openRequired.length > 1 ? 's' : ''} overdue` };
-    }
-    if (openRequired.length > 0 && daysUntilStart <= 14) {
-      return { status: 'yellow', label: 'Prep Needed', step: `${openRequired.length} required prep task${openRequired.length > 1 ? 's' : ''} open` };
-    }
-    if (requiredTasks.length === 0 && ['Scheduled', 'In Progress'].includes(job.status)) {
+    const hasAnyChecklist = orgaWOs.length > 0 || jobPrepTasks.length > 0;
+    const hasOpenItems = (orgaWOs.length > 0 && !orgaComplete) || openPrepTasks.length > 0;
+
+    if (!hasAnyChecklist && ['Scheduled', 'In Progress'].includes(job.status)) {
       return { status: 'yellow', label: 'No Checklist', step: 'No preparation checklist defined' };
     }
-
+    if (hasOpenItems && daysUntilStart <= 7) {
+      return { status: 'red', label: 'Prep Overdue', step: 'Required preparation not complete' };
+    }
+    if (hasOpenItems && daysUntilStart <= 14) {
+      return { status: 'yellow', label: 'Prep Needed', step: 'Preparation tasks still open' };
+    }
     return { status: 'green', label: null, step: null };
   };
 
@@ -312,8 +308,7 @@ export default function Dashboard() {
     // Execution Health
     const hasOverdueWO = activeWOs.some(wo => {
       if (!wo.scheduled_date) return false;
-      const schedDate = parseISO(wo.scheduled_date);
-      return isPast(schedDate) && !isToday(schedDate);
+      return isPast(parseISO(wo.scheduled_date)) && !isToday(parseISO(wo.scheduled_date));
     });
 
     let executionHealth;
@@ -335,18 +330,14 @@ export default function Dashboard() {
       }
     }
 
-    // Readiness Health
+    // Readiness Health — checks ORGANIZATION WOs + PreparationTasks
     const readinessHealth = getReadinessHealth(job);
 
-    // Composite: worst of the two
-    const statusRank = { red: 2, yellow: 1, green: 0 };
-    if (statusRank[executionHealth.status] >= statusRank[readinessHealth.status]) {
-      return executionHealth;
-    }
-    // Readiness is worse — return readiness signal
-    return readinessHealth;
+    // Composite: worst wins
+    const rank = { red: 2, yellow: 1, green: 0 };
+    return rank[executionHealth.status] >= rank[readinessHealth.status] ? executionHealth : readinessHealth;
   };
-  
+
   const getProjectProgress = (job) => {
     const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
     if (jobWorkOrders.length === 0) return 0;
