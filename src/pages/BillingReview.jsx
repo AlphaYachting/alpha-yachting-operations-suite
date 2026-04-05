@@ -214,7 +214,7 @@ export default function BillingReview() {
       if (!result?.success) {
         const errorMsg = result?.error || 'Failed to create billing offer';
         toast.error(`Offer creation failed: ${errorMsg}`);
-        throw new Error(errorMsg);
+        return;
       }
       
       if (result.line_items_created === 0) {
@@ -226,8 +226,9 @@ export default function BillingReview() {
       toast.success(`Billing Offer ${result.offer_number} created — ${result.line_items_created} line item${result.line_items_created !== 1 ? 's' : ''} transferred.`);
       await loadAll(true);
     } catch (e) {
-      toast.error(`Error: ${e.message}`);
-      throw e;
+      // Handle Axios errors (HTTP 400/500 from backend)
+      const errorMsg = e.response?.data?.error || e.message || 'Failed to create billing offer';
+      toast.error(`Error: ${errorMsg}`);
     }
   };
 
