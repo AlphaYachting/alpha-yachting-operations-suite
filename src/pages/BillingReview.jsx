@@ -1,6 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { base44 } from '@/api/base44Client';
+
+// Module-level cache — survives page navigation, cleared after 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const _cache = {
+  data: null,      // { workOrders, jobs, customers, boats, technicians, timeEntries, materialUsages, allCME }
+  loadedAt: null,  // timestamp
+  isValid() { return this.data && this.loadedAt && (Date.now() - this.loadedAt < CACHE_TTL_MS); },
+  set(data) { this.data = data; this.loadedAt = Date.now(); },
+  invalidate() { this.data = null; this.loadedAt = null; },
+};
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,7 +46,25 @@ export default function BillingReview() {
   const [reconcileResult, setReconcileResult] = useState(null);
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
 
-  useEffect(() => { loadAll(); }, []);
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    if (_cache.isValid()) {
+      // Restore from cache instantly — no API calls
+      const d = _cache.data;
+      setWorkOrders(d.workOrders);
+      setJobs(d.jobs);
+      setCustomers(d.customers);
+      setBoats(d.boats);
+      setTechnicians(d.technicians);
+      setTimeEntries(d.timeEntries);
+      setMaterialUsages(d.materialUsages);
+      setAllCME(d.allCME);
+      setLoading(false);
+    } else {
+      loadAll();
+    }
+  }, []);
 
   // Batch sequential fetches to avoid rate limiting
   const batchFetch = async (ids, fetchFn, chunkSize = 3) => {
@@ -60,38 +88,39 @@ export default function BillingReview() {
       const jobIds = [...new Set(eligibleWOs.map(wo => wo.job_id).filter(Boolean))];
       setWorkOrders(eligibleWOs);
 
-      // On first load: also fetch static reference data (jobs, customers, boats, technicians)
-      // On background refresh: skip these — they didn't change
+      // Static reference data — skip on background refresh if already loaded
       let jobList = jobs;
+      let techList = technicians;
+      let customerList = customers;
+      let boatList = boats;
       if (!background || jobs.length === 0) {
-        const [fetchedJobs, techList, allCustomers, allBoats] = await Promise.all([
+        const [fetchedJobs, fetchedTechs, fetchedCustomers, fetchedBoats] = await Promise.all([
           base44.entities.Job.list('-created_date', 500),
           base44.entities.Technician.list('-created_date', 200),
           base44.entities.Customer.list('-created_date', 500),
           base44.entities.Boat.list('-created_date', 500),
         ]);
         jobList = fetchedJobs;
-        setJobs(fetchedJobs);
+        techList = fetchedTechs;
+        customerList = fetchedCustomers;
+        boatList = fetchedBoats;
+        setJobs(jobList);
         setTechnicians(techList);
-        setCustomers(allCustomers);
-        setBoats(allBoats);
+        setCustomers(customerList);
+        setBoats(boatList);
       }
 
-      // Dynamic data: fetch sequentially in small chunks
-      const teAll = await batchFetch(woIds, id => base44.entities.TimeEntry.filter({ work_order_id: id }));
-      const muAll = await batchFetch(woIds, id => base44.entities.MaterialUsage.filter({ work_order_id: id }));
-      setTimeEntries(teAll);
-      setMaterialUsages(muAll);
-
-      // CME per customer
-      const relevantJobMap = Object.fromEntries(jobList.filter(j => jobIds.includes(j.id)).map(j => [j.id, j]));
-      const customerIds = [...new Set(Object.values(relevantJobMap).map(j => j.customer_id).filter(Boolean))];
-      const cmeAll = await batchFetch(customerIds, cid =>
-        base44.entities.CustomerMaterialEntry.filter({ customer_id: cid })
-          .then(r => r.filter(c => !c.billed_offer_id))
-          .catch(() => [])
-      );
-      setAllCME(cmeAll);
+      // Save to module-level cache
+      _cache.set({
+        workOrders: eligibleWOs,
+        jobs: jobList,
+        customers: customerList,
+        boats: boatList,
+        technicians: techList,
+        timeEntries: teAll,
+        materialUsages: muAll,
+        allCME: cmeAll,
+      });
     } catch (e) {
       setError(e.message);
       toast.error('Failed to load billing data');
