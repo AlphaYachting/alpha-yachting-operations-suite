@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
   const [preparationTasks, setPreparationTasks] = useState([]);
+  const [orgTasks, setOrgTasks] = useState([]);
   const [kpis, setKpis] = useState(null);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
@@ -91,7 +92,7 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData, prepTasksData] = await Promise.all([
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData, prepTasksData, orgTasksData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
@@ -100,7 +101,8 @@ export default function Dashboard() {
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
         base44.entities.Note.list('-created_date', 50),
-        base44.entities.PreparationTask.list('-created_date', 200)
+        base44.entities.PreparationTask.list('-created_date', 200),
+        base44.entities.Task.filter({ task_stream: 'ORGANIZATION' }, '-created_date', 500)
       ]);
 
       setWorkOrders(woData);
@@ -112,6 +114,7 @@ export default function Dashboard() {
       setOffers(offersData);
       setNotes(notesData);
       setPreparationTasks(prepTasksData);
+      setOrgTasks(orgTasksData);
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
@@ -268,19 +271,25 @@ export default function Dashboard() {
 
   const getReadinessHealth = (job) => {
     const jobWOs = workOrders.filter(wo => wo.job_id === job.id && !['Completed', 'Cancelled'].includes(wo.status));
-    const scheduledDates = jobWOs
-      .filter(wo => wo.scheduled_date)
-      .map(wo => parseISO(wo.scheduled_date))
-      .sort((a, b) => a - b);
-
+    const scheduledDates = jobWOs.filter(wo => wo.scheduled_date).map(wo => parseISO(wo.scheduled_date)).sort((a, b) => a - b);
     if (scheduledDates.length === 0) return { status: 'green', label: null, step: null };
-
     const daysUntilStart = differenceInDays(scheduledDates[0], today);
     if (daysUntilStart > 14) return { status: 'green', label: null, step: null };
 
-    // Source 1: ORGANIZATION-type WorkOrders (existing orga checklist pattern)
+    // Source 1: ORGANIZATION WOs — readiness = all ORGANIZATION tasks completed (not WO.status)
     const orgaWOs = jobWOs.filter(wo => wo.workorder_type === 'ORGANIZATION');
-    const orgaComplete = orgaWOs.length > 0 && orgaWOs.every(wo => wo.status === 'Completed');
+    let orgaComplete = false;
+    if (orgaWOs.length > 0) {
+      const orgaWOIds = new Set(orgaWOs.map(wo => wo.id));
+      const orgaTasksForJob = orgTasks.filter(t => orgaWOIds.has(t.work_order_id));
+      if (orgaTasksForJob.length > 0) {
+        // Has tasks: done when all are Completed or Skipped
+        orgaComplete = orgaTasksForJob.every(t => ['Completed', 'Skipped'].includes(t.status));
+      } else {
+        // No tasks defined: fall back to WO status
+        orgaComplete = orgaWOs.every(wo => wo.status === 'Completed');
+      }
+    }
 
     // Source 2: PreparationTask entity
     const jobPrepTasks = preparationTasks.filter(t => t.job_id === job.id && t.required !== false);
@@ -330,14 +339,14 @@ export default function Dashboard() {
       }
     }
 
-    // Readiness Health — checks ORGANIZATION WOs + PreparationTasks
+    // Readiness Health — task-level check
     const readinessHealth = getReadinessHealth(job);
 
     // Composite: worst wins
     const rank = { red: 2, yellow: 1, green: 0 };
     return rank[executionHealth.status] >= rank[readinessHealth.status] ? executionHealth : readinessHealth;
   };
-
+  
   const getProjectProgress = (job) => {
     const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
     if (jobWorkOrders.length === 0) return 0;
