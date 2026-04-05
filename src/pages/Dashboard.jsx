@@ -69,6 +69,7 @@ export default function Dashboard() {
   const [leads, setLeads] = useState([]);
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [preparationTasks, setPreparationTasks] = useState([]);
   const [kpis, setKpis] = useState(null);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
@@ -90,7 +91,7 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData, prepTasksData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
@@ -98,7 +99,8 @@ export default function Dashboard() {
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
-        base44.entities.Note.list('-created_date', 50)
+        base44.entities.Note.list('-created_date', 50),
+        base44.entities.PreparationTask.list('-created_date', 200)
       ]);
 
       setWorkOrders(woData);
@@ -109,6 +111,7 @@ export default function Dashboard() {
       setLeads(leadsData);
       setOffers(offersData);
       setNotes(notesData);
+      setPreparationTasks(prepTasksData);
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
@@ -260,43 +263,88 @@ export default function Dashboard() {
     return daysAway > 0 && daysAway <= 7;
   });
 
-  // PROJECT HEALTH
-  const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
-  
+  // PROJECT HEALTH — execution-phase only (whitelist)
+  const activeJobs = jobs.filter(j => ['Scheduled', 'In Progress', 'Waiting for Parts', 'Approved'].includes(j.status));
+
+  // Readiness Health helper
+  const getReadinessHealth = (job) => {
+    // Determine effective start date: earliest active WO scheduled_date
+    const jobWOs = workOrders.filter(wo => wo.job_id === job.id && !['Completed', 'Cancelled'].includes(wo.status));
+    const scheduledDates = jobWOs
+      .filter(wo => wo.scheduled_date)
+      .map(wo => parseISO(wo.scheduled_date))
+      .sort((a, b) => a - b);
+
+    if (scheduledDates.length === 0) {
+      // No effective start date — skip readiness evaluation
+      return { status: 'green', label: null, step: null };
+    }
+
+    const effectiveStart = scheduledDates[0];
+    const daysUntilStart = differenceInDays(effectiveStart, today);
+
+    // Only evaluate readiness if start is within 14 days
+    if (daysUntilStart > 14) {
+      return { status: 'green', label: null, step: null };
+    }
+
+    const jobPrepTasks = preparationTasks.filter(t => t.job_id === job.id);
+    const requiredTasks = jobPrepTasks.filter(t => t.required !== false); // default true
+    const openRequired = requiredTasks.filter(t => !t.completed);
+
+    if (openRequired.length > 0 && daysUntilStart <= 7) {
+      return { status: 'red', label: 'Prep Overdue', step: `${openRequired.length} required prep task${openRequired.length > 1 ? 's' : ''} overdue` };
+    }
+    if (openRequired.length > 0 && daysUntilStart <= 14) {
+      return { status: 'yellow', label: 'Prep Needed', step: `${openRequired.length} required prep task${openRequired.length > 1 ? 's' : ''} open` };
+    }
+    if (requiredTasks.length === 0 && ['Scheduled', 'In Progress'].includes(job.status)) {
+      return { status: 'yellow', label: 'No Checklist', step: 'No preparation checklist defined' };
+    }
+
+    return { status: 'green', label: null, step: null };
+  };
+
   const getProjectHealth = (job) => {
     const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
     const activeWOs = jobWorkOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status));
-    
-    // Red: overdue WO OR no active WO OR missing planning
+
+    // Execution Health
     const hasOverdueWO = activeWOs.some(wo => {
       if (!wo.scheduled_date) return false;
       const schedDate = parseISO(wo.scheduled_date);
       return isPast(schedDate) && !isToday(schedDate);
     });
-    
+
+    let executionHealth;
     if (hasOverdueWO || activeWOs.length === 0) {
-      return { status: 'red', label: 'Critical', step: hasOverdueWO ? 'Overdue work order' : 'No active work orders' };
+      executionHealth = { status: 'red', label: 'Critical', step: hasOverdueWO ? 'Overdue work order' : 'No active work orders' };
+    } else {
+      const hasUnplannedWO = activeWOs.some(wo => !wo.scheduled_date || !wo.assigned_technicians || wo.assigned_technicians.length === 0);
+      if (hasUnplannedWO) {
+        executionHealth = { status: 'red', label: 'Critical', step: 'Missing planning' };
+      } else {
+        const hasDueSoonWO = activeWOs.some(wo => {
+          if (!wo.scheduled_date) return false;
+          const daysAway = differenceInDays(parseISO(wo.scheduled_date), today);
+          return daysAway > 0 && daysAway <= 7;
+        });
+        executionHealth = hasDueSoonWO
+          ? { status: 'yellow', label: 'Attention', step: 'Work order due soon' }
+          : { status: 'green', label: 'Healthy', step: 'On track' };
+      }
     }
-    
-    const hasUnplannedWO = activeWOs.some(wo => !wo.scheduled_date || !wo.assigned_technicians || wo.assigned_technicians.length === 0);
-    if (hasUnplannedWO) {
-      return { status: 'red', label: 'Critical', step: 'Missing planning' };
+
+    // Readiness Health
+    const readinessHealth = getReadinessHealth(job);
+
+    // Composite: worst of the two
+    const statusRank = { red: 2, yellow: 1, green: 0 };
+    if (statusRank[executionHealth.status] >= statusRank[readinessHealth.status]) {
+      return executionHealth;
     }
-    
-    // Yellow: WO due soon
-    const hasDueSoonWO = activeWOs.some(wo => {
-      if (!wo.scheduled_date) return false;
-      const schedDate = parseISO(wo.scheduled_date);
-      const daysAway = differenceInDays(schedDate, today);
-      return daysAway > 0 && daysAway <= 7;
-    });
-    
-    if (hasDueSoonWO) {
-      return { status: 'yellow', label: 'Attention', step: 'Work order due soon' };
-    }
-    
-    // Green: all good
-    return { status: 'green', label: 'Healthy', step: 'On track' };
+    // Readiness is worse — return readiness signal
+    return readinessHealth;
   };
   
   const getProjectProgress = (job) => {
@@ -462,40 +510,9 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* KPI Block — morning priority: operational first, commercial second */}
+      {/* KPI Block */}
       {kpis && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {/* 1: Capacity Today — do we have people? */}
-          <div onClick={() => setShowCapacityModal(true)} className="cursor-pointer">
-            <Card className="hover:shadow-md transition-shadow border-emerald-200">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Capacity Today</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.capacity_today}%</p>
-                  </div>
-                  <Users className="h-8 w-8 text-emerald-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 2: Open Work Orders — how much is in flight? */}
-          <Link to={createPageUrl('WorkOrders')} className="block">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer border-indigo-200">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Open Work Orders</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.open_work_orders}</p>
-                  </div>
-                  <Clock className="h-8 w-8 text-indigo-500 opacity-50" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* 3: Active Projects — management secondary */}
           <Link to={createPageUrl('Jobs')} className="block">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4">
@@ -510,7 +527,20 @@ export default function Dashboard() {
             </Card>
           </Link>
 
-          {/* 4: Open Offers — commercial secondary */}
+          <Link to={createPageUrl('WorkOrders')} className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Open Work Orders</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.open_work_orders}</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-indigo-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
           <Link to={createPageUrl('Offers')} className="block">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4">
@@ -525,7 +555,6 @@ export default function Dashboard() {
             </Card>
           </Link>
 
-          {/* 5: Active Leads — commercial secondary */}
           <Link to={createPageUrl('Leads')} className="block">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4">
@@ -539,6 +568,20 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </Link>
+
+          <div onClick={() => setShowCapacityModal(true)} className="cursor-pointer">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide">Capacity Today</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{kpis.capacity_today}%</p>
+                  </div>
+                  <Users className="h-8 w-8 text-emerald-500 opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 

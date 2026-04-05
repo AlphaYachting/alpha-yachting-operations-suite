@@ -1,0 +1,58 @@
+{
+  "name": "PreparationTask",
+  "type": "object",
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "Required \u2014 project scope"
+    },
+    "work_order_id": {
+      "type": "string",
+      "description": "Optional \u2014 WO scope if specific"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "MATERIAL_ORDER",
+        "MARINA_COORDINATION",
+        "CUSTOMER_CONFIRMATION",
+        "ACCESS_ARRANGEMENT",
+        "TECHNICAL_PREP",
+        "OTHER"
+      ]
+    },
+    "title": {
+      "type": "string"
+    },
+    "required": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this task is required for readiness health scoring"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional explicit due date for this preparation task"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_by": {
+      "type": "string",
+      "description": "Email of user who completed this task"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_id",
+    "title",
+    "category"
+  ]
+}
