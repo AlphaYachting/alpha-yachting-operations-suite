@@ -161,6 +161,19 @@ Deno.serve(async (req) => {
     const techMap = Object.fromEntries(allTechs.map(t => [t.id, t]));
     const inventoryMap = Object.fromEntries(allInventory.map(i => [i.id, i]));
 
+    // Build WO map for title prefixing (already loaded, zero extra fetch)
+    const woMap = Object.fromEntries(targetWOs.map(wo => [wo.id, wo]));
+
+    // Load Tasks for TimeEntry + MaterialUsage lines that carry task_id
+    const sourceTaskIds = [
+      ...unbilledTimeEntries.map(te => te.task_id),
+      ...unbilledMaterial.map(m => m.task_id),
+    ].filter(Boolean);
+    const allSourceTasks = sourceTaskIds.length > 0
+      ? await base44.asServiceRole.entities.Task.list()
+      : [];
+    const taskMap = Object.fromEntries(allSourceTasks.map(t => [t.id, t]));
+
     // ── 7. Calculate totals (snapshot at creation time) ───────────────────────
     let totalAmount = 0;
 
@@ -272,16 +285,24 @@ Deno.serve(async (req) => {
       const rate = tech?.hourly_rate_billable || 0;
       const hours = parseFloat(((te.duration_minutes || 0) / 60).toFixed(2));
       const techName = tech ? `${tech.first_name} ${tech.last_name}` : 'Technician';
+      const wo = woMap[te.work_order_id];
+      const woPrefix = wo?.work_order_number ? `${wo.work_order_number} — ` : '';
+      const task = te.task_id ? taskMap[te.task_id] : null;
 
       if (rate === 0) {
         warnings.push(`TimeEntry ${te.id}: Technician ${techName} has no hourly_rate_billable set — line item created with €0 rate.`);
       }
 
+      // Build description: Task first, then Notes (no duplication in title)
+      const descParts = [];
+      if (task?.title) descParts.push(`Task: ${task.title}`);
+      if (te.notes) descParts.push(`Notes: ${te.notes}`);
+
       await base44.asServiceRole.entities.OfferTask.create({
         offer_id: offerId,
         sequence_order: lineOrder++,
-        title: `Labor: ${techName}${te.entry_date ? ` — ${te.entry_date}` : ''}${te.notes ? ` (${te.notes})` : ''}`,
-        description: te.notes || '',
+        title: `${woPrefix}Labor: ${techName}${te.entry_date ? ` — ${te.entry_date}` : ''}`,
+        description: descParts.join('\n'),
         item_type: 'Labor',
         unit_type: 'Hour',
         quantity: hours,
@@ -299,16 +320,25 @@ Deno.serve(async (req) => {
       const salesPrice = m.unit_price || item?.sales_price || 0;
       const itemName = item?.name || `Item ${m.inventory_item_id}`;
       const unit = item?.unit || 'Piece';
+      const wo = woMap[m.work_order_id];
+      const woPrefix = wo?.work_order_number ? `${wo.work_order_number} — ` : '';
+      const task = m.task_id ? taskMap[m.task_id] : null;
 
       if (salesPrice === 0) {
         warnings.push(`MaterialUsage ${m.id}: Item "${itemName}" has no recorded price — line item created with €0.`);
       }
 
+      // Build description: Task first, then usage notes, then item description as fallback
+      const descParts = [];
+      if (task?.title) descParts.push(`Task: ${task.title}`);
+      if (m.notes) descParts.push(`Notes: ${m.notes}`);
+      else if (item?.description) descParts.push(item.description);
+
       await base44.asServiceRole.entities.OfferTask.create({
         offer_id: offerId,
         sequence_order: lineOrder++,
-        title: `Material: ${itemName}`,
-        description: item?.description || '',
+        title: `${woPrefix}Material: ${itemName}`,
+        description: descParts.join('\n'),
         item_type: 'Material',
         unit_type: normalizeUnit(unit),
         quantity: m.quantity || 1,
@@ -322,14 +352,22 @@ Deno.serve(async (req) => {
     // ── 12. Create OfferTask rows — CUSTOMER MATERIAL ENTRIES ─────────────────
     for (const cme of unbilledCME) {
       const purchasePrice = cme.unit_purchase_price || 0;
+      const cmeWO = cme.work_order_id ? woMap[cme.work_order_id] : null;
+      const cmeWOPrefix = cmeWO?.work_order_number ? `${cmeWO.work_order_number} — ` : '';
 
       warnings.push(`CustomerMaterialEntry ${cme.id} ("${cme.item_title}"): using purchase price €${purchasePrice}. Review and add margin before FIRA export.`);
+
+      // Build description: supplier/doc context + notes
+      const cmeDescParts = [];
+      if (cme.supplier_name) cmeDescParts.push(`Supplier: ${cme.supplier_name}`);
+      if (cme.document_number) cmeDescParts.push(`Doc: ${cme.document_number}`);
+      if (cme.notes) cmeDescParts.push(`Notes: ${cme.notes}`);
 
       await base44.asServiceRole.entities.OfferTask.create({
         offer_id: offerId,
         sequence_order: lineOrder++,
-        title: `Customer Material: ${cme.item_title}`,
-        description: `${cme.supplier_name ? `Supplier: ${cme.supplier_name}. ` : ''}${cme.document_number ? `Doc: ${cme.document_number}.` : ''}`,
+        title: `${cmeWOPrefix}Customer Material: ${cme.item_title}`,
+        description: cmeDescParts.join(' | '),
         item_type: 'Material',
         unit_type: normalizeUnit(cme.unit),  // free-text unit → normalized enum value
         quantity: cme.quantity || 1,
