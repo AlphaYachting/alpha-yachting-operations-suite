@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       await Promise.all([
         ...stagedRecordIds.timeEntries.map(id => base44.asServiceRole.entities.TimeEntry.update(id, { staged_offer_id: null }).catch(() => {})),
         ...stagedRecordIds.materialUsages.map(id => base44.asServiceRole.entities.MaterialUsage.update(id, { staged_offer_id: null }).catch(() => {})),
-        ...stagedRecordIds.cme.map(id => base44.asServiceRole.entities.CustomerMaterialEntry.update(cme.id, { staged_offer_id: null }).catch(() => {})),
+        ...stagedRecordIds.cme.map(id => base44.asServiceRole.entities.CustomerMaterialEntry.update(id, { staged_offer_id: null }).catch(() => {})),
       ]);
       console.log(`[createBillingOfferFromWO] Rollback completed.`);
     } catch (e) {
@@ -256,8 +256,8 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.OfferTask.create({
           offer_id: offerId,
           sequence_order: lineOrder++,
-          title: `WorkOrder: ${woNumber}`,
-          description: wo.title || '',
+          title: wo.title || woNumber,
+          description: `WorkOrder: ${woNumber}`,
           item_type: 'Lump Sum',
           unit_type: 'flat',
           quantity: 1,
