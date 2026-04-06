@@ -99,7 +99,10 @@ export default function OfferDetail() {
   const [convertMode, setConvertMode] = useState('new'); // 'new' | 'existing'
   const [selectedExistingJobId, setSelectedExistingJobId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState(null); // null | 'saving' | 'saved' | 'error'
   const [error, setError] = useState(null);
+  const autoSaveTimerRef = useRef(null);
+  const isInitialLoadRef = useRef(true);
   const [template, setTemplate] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -195,6 +198,54 @@ export default function OfferDetail() {
       setTasksLoaded(true);
     }
   }, [offerTasks]);
+
+  // Auto-save: debounced 30s after any formData or tasks change (existing offers only)
+  useEffect(() => {
+    // Skip on initial load / before offer data is populated
+    if (!offerId || !tasksLoaded || isInitialLoadRef.current) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      if (!formData.customer_id || !formData.title) return;
+      setAutoSaveStatus('saving');
+      try {
+        const currentTotals = computeOfferTotals(
+          { vat_rate: formData.vat_rate, discount_mode: formData.discount_mode, discount_percent: formData.discount_percent, discount_target_total: formData.discount_target_total },
+          tasks
+        );
+        await base44.entities.Offer.update(offerId, {
+          ...formData,
+          total_amount: currentTotals.taxable_base_excl_tax,
+          discount_amount: currentTotals.discount_amount_excl_tax
+        });
+        const existingTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
+        await Promise.all(existingTasks.map(t => base44.entities.OfferTask.delete(t.id)));
+        if (tasks.length > 0) {
+          await base44.entities.OfferTask.bulkCreate(
+            tasks.map((task, idx) => ({ ...task, offer_id: offerId, sequence_order: idx, total_amount: task.quantity * task.unit_price }))
+          );
+        }
+        queryClient.invalidateQueries(['offer', offerId]);
+        queryClient.invalidateQueries(['offerTasks', offerId]);
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus(null), 3000);
+      } catch (err) {
+        console.warn('Auto-save failed:', err);
+        setAutoSaveStatus('error');
+        setTimeout(() => setAutoSaveStatus(null), 4000);
+      }
+    }, 30000);
+
+    return () => clearTimeout(autoSaveTimerRef.current);
+  }, [formData, tasks, offerId, tasksLoaded]);
+
+  // Mark initial load complete once offer data is populated
+  useEffect(() => {
+    if (offer && tasksLoaded) {
+      // Give one render cycle for state to settle before enabling auto-save
+      setTimeout(() => { isInitialLoadRef.current = false; }, 500);
+    }
+  }, [offer, tasksLoaded]);
 
   // Calculate totals using the single source of truth
   const totals = computeOfferTotals(
@@ -1106,6 +1157,16 @@ Requirements:
                 Save as Template
               </Button>
             )}
+            {autoSaveStatus && (
+              <span className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
+                autoSaveStatus === 'saved' ? 'text-green-600 bg-green-50' :
+                autoSaveStatus === 'saving' ? 'text-slate-500 bg-slate-100' :
+                'text-red-500 bg-red-50'
+              }`}>
+                {autoSaveStatus === 'saving' && <Loader2 className="h-3 w-3 animate-spin" />}
+                {autoSaveStatus === 'saved' ? '✓ Auto-gespeichert' : autoSaveStatus === 'saving' ? 'Auto-speichern...' : '⚠ Auto-save fehlgeschlagen'}
+              </span>
+            )}
             <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
               <Save className="h-4 w-4 mr-2" />
               {saving ? 'Saving...' : 'Save Offer'}
@@ -1646,6 +1707,14 @@ Requirements:
           {/* Bottom Save Button */}
           <Card>
             <CardContent className="pt-6">
+              {autoSaveStatus && (
+                <p className={`text-xs text-center mb-2 ${
+                  autoSaveStatus === 'saved' ? 'text-green-600' :
+                  autoSaveStatus === 'saving' ? 'text-slate-500' : 'text-red-500'
+                }`}>
+                  {autoSaveStatus === 'saving' ? 'Auto-speichern...' : autoSaveStatus === 'saved' ? '✓ Auto-gespeichert' : '⚠ Auto-save fehlgeschlagen'}
+                </p>
+              )}
               <Button 
                 onClick={handleSave} 
                 disabled={saving} 
