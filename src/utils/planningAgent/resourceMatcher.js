@@ -265,7 +265,8 @@ function getPoolAdmission(ownership, tendency, availabilityClass, domainTier) {
 
 // ─── MAIN BUILDER ─────────────────────────────────────────────────────────────
 // B: statuses that make a technician truly unavailable for planning proposals
-const UNAVAILABLE_FOR_PLANNING = ['Sick', 'Vacation', 'Off Duty'];
+// Exported so computeCapacity() in agentLogic.js can reuse the same constant
+export const UNAVAILABLE_FOR_PLANNING = ['Sick', 'Vacation', 'Off Duty'];
 
 export function buildResourcePools(technicians, serviceArea, jobZone, effortMax, remainingWorkdays, workloadMap = {}) {
   const domainTier = getDomainTier(serviceArea);
