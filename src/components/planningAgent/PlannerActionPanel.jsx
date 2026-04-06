@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { getTechnicianCandidates, reorderByOwnerType } from '@/utils/technicianFilters';
 import { Button } from '@/components/ui/button';
 import { UserCheck, ClipboardPlus, CheckCircle2, AlertTriangle, Loader2, Lock, MapPin, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -143,37 +144,13 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
   const hasGaps = derived.executionOwnerMissing || derived.orgTasksMissing || !workOrder.access_confirmed || !job?.location_id || (job?.parts_ordered && !job?.parts_eta);
   if (!hasGaps && Object.values(done).every(v => !v)) return null;
 
-  // Only org-capable candidates for org owner
-  const orgCandidates = technicians.filter(t =>
-    t.status !== 'Inactive' && (t.skills || []).includes('Organisation')
-  );
+  // Execution owner candidates: use shared base filter (no reordering)
+  const execCandidates = getTechnicianCandidates(workOrder, technicians);
 
-  // Exec owner candidates: if team already assigned, only show them; otherwise show all active
-  const execCandidates = (() => {
-    const all = technicians.filter(t => t.status !== 'Inactive' && t.primary_role_tendency !== 'SUPPORT');
-    if (workOrder.assigned_technicians?.length > 0) {
-      // Filter to only assigned team members
-      return all.filter(t => workOrder.assigned_technicians.includes(t.id));
-    }
-    return all;
-  })();
-
-  // Ordered assignee list based on active suggestion's ownerType
+  // Org assignee candidates: use shared base filter, then apply suggestion-based reordering
   const activeSuggestionOwnerType = activeSuggestion !== null ? orgSuggestions[activeSuggestion]?.ownerType : null;
-  const orderedAssigneeCandidates = (() => {
-    const allActive = technicians.filter(t => t.status !== 'Inactive');
-    if (activeSuggestionOwnerType === 'ORG_OWNER') {
-      const org = allActive.filter(t => (t.skills || []).includes('Organisation'));
-      const rest = allActive.filter(t => !(t.skills || []).includes('Organisation'));
-      return [...org, ...rest];
-    }
-    if (activeSuggestionOwnerType === 'EXEC_OWNER') {
-      const exec = allActive.filter(t => t.primary_role_tendency !== 'SUPPORT');
-      const rest = allActive.filter(t => t.primary_role_tendency === 'SUPPORT');
-      return [...exec, ...rest];
-    }
-    return allActive;
-  })();
+  const baseCandidates = getTechnicianCandidates(workOrder, technicians);
+  const orderedAssigneeCandidates = reorderByOwnerType(baseCandidates, activeSuggestionOwnerType);
 
   async function saveExecOwner() {
     if (!execTechId) return;
