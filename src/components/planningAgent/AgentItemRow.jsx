@@ -56,10 +56,8 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
 
-  // Resolve assigned executor from lead_technician_id
-  const assignedExecutor = workOrder.lead_technician_id
-    ? technicians.find(t => t.id === workOrder.lead_technician_id)
-    : null;
+  // Resolve assigned executor from lead_technician_id (live lookup from current technicians list)
+  const assignedExecutor = technicians.find(t => t.id === workOrder.lead_technician_id);
   const assignedExecutorName = assignedExecutor
     ? `${assignedExecutor.first_name} ${assignedExecutor.last_name}`
     : null;
