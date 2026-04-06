@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 // ─── Org Task Suggestion Engine ──────────────────────────────────────────────
 // Pure function — no state, no side effects. Returns up to 3 contextual suggestions.
+// Suggestions are ranked by operational priority, not definition order.
 // ownerType: 'EXEC_OWNER' | 'ORG_OWNER' | 'FLEXIBLE'
 function suggestOrgTasks(item) {
   const { workOrder, job, derived, tasks = [] } = item;
@@ -25,6 +26,7 @@ function suggestOrgTasks(item) {
       title: 'Confirm site/vessel access before scheduled date',
       ownerType: isExecKnown ? 'EXEC_OWNER' : 'FLEXIBLE',
       reason: 'Access not yet confirmed',
+      priority: 90,
     });
   }
 
@@ -34,6 +36,7 @@ function suggestOrgTasks(item) {
       title: 'Assign a work location to this project',
       ownerType: 'ORG_OWNER',
       reason: 'No location assigned to job',
+      priority: 80,
     });
   }
 
@@ -43,6 +46,7 @@ function suggestOrgTasks(item) {
       title: 'Order required materials and confirm delivery window',
       ownerType: 'ORG_OWNER',
       reason: 'Parts required but not ordered',
+      priority: 70,
     });
   }
 
@@ -52,6 +56,7 @@ function suggestOrgTasks(item) {
       title: 'Confirm parts delivery ETA with supplier',
       ownerType: 'FLEXIBLE',
       reason: 'Parts ordered but delivery date unknown',
+      priority: 65,
     });
   }
 
@@ -62,6 +67,7 @@ function suggestOrgTasks(item) {
       title: 'Clarify required tools and parts before execution',
       ownerType: 'EXEC_OWNER',
       reason: `${area} work typically needs pre-execution prep`,
+      priority: 50,
     });
   }
 
@@ -72,6 +78,7 @@ function suggestOrgTasks(item) {
       title: 'Notify customer of scheduled date and confirm attendance',
       ownerType: 'ORG_OWNER',
       reason: 'Urgent/Express priority — customer should be informed',
+      priority: 60,
     });
   }
 
@@ -81,6 +88,7 @@ function suggestOrgTasks(item) {
       title: 'Coordinate marina/berth access and mooring availability',
       ownerType: 'FLEXIBLE',
       reason: 'Multi-hour job may require site coordination',
+      priority: 40,
     });
   }
 
@@ -90,26 +98,29 @@ function suggestOrgTasks(item) {
       title: 'Follow up on external dependency and update status',
       ownerType: 'FLEXIBLE',
       reason: 'Externally blocked — needs status tracking',
+      priority: 55,
     });
   }
 
-  // 9. Execution owner missing — responsibility clarification
+  // 9. Execution owner missing — responsibility clarification (HIGHEST PRIORITY)
   if (derived.executionOwnerMissing && !hasExisting('owner') && !hasExisting('verantwort')) {
     suggestions.push({
       title: 'Clarify execution responsibility and assign work owner',
       ownerType: 'ORG_OWNER',
       reason: 'No execution owner set',
+      priority: 100,
     });
   }
 
-  // Return max 3, most specific first (already ordered by specificity above)
-  return suggestions.slice(0, 3);
+  // Sort by priority descending, then return top 3
+  suggestions.sort((a, b) => b.priority - a.priority);
+  return { top3: suggestions.slice(0, 3), allCount: suggestions.length };
 }
 
 const OWNER_BADGE = {
   EXEC_OWNER:  { label: 'EXEC', cls: 'bg-blue-100 text-blue-700' },
   ORG_OWNER:   { label: 'ORG',  cls: 'bg-purple-100 text-purple-700' },
-  FLEXIBLE:    { label: '?',    cls: 'bg-slate-100 text-slate-500' },
+  FLEXIBLE:    { label: 'FLEX', cls: 'bg-slate-100 text-slate-500' },
 };
 
 export default function PlannerActionPanel({ item, technicians = [], onRefresh }) {
@@ -121,7 +132,7 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
   const [done, setDone] = useState({}); // { exec: bool, org: bool }
   const [activeSuggestion, setActiveSuggestion] = useState(null); // index of selected chip
 
-  const orgSuggestions = suggestOrgTasks(item);
+  const { top3: orgSuggestions, allCount: allOrgSuggestionCount } = suggestOrgTasks(item);
 
   const hasGaps = derived.executionOwnerMissing || derived.orgTasksMissing;
   if (!hasGaps && !done.exec && !done.org) return null;
@@ -272,6 +283,9 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
                         );
                       })}
                     </div>
+                    {allOrgSuggestionCount > 3 && (
+                      <p className="text-xs text-slate-400 mt-1">+{allOrgSuggestionCount - 3} more suggestion{allOrgSuggestionCount - 4 !== 0 ? 's' : ''}…</p>
+                    )}
                     {activeSuggestion !== null && (
                       <p className="text-xs text-slate-400 mt-1">
                         {orgSuggestions[activeSuggestion]?.reason}
