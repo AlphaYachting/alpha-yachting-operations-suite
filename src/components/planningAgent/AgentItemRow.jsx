@@ -126,19 +126,18 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
                 <Calendar className="h-3 w-3" />{formatScheduledDate()}
               </span>
             )}
-            <div className="relative">
-              <button
+            <div className="relative inline-block">
+              <div
                 onClick={(e) => {
                   e.stopPropagation();
                   setLocationDropdownOpen(!locationDropdownOpen);
                 }}
-                className="flex items-center gap-1 hover:text-slate-700 transition-colors"
-                disabled={locationSaving}
+                className="flex items-center gap-1 hover:text-slate-700 transition-colors cursor-pointer"
               >
                 <MapPin className="h-3 w-3" />
                 {location?.name || 'No location'}
                 {locationSaving && <Loader2 className="h-3 w-3 animate-spin" />}
-              </button>
+              </div>
               {locationDropdownOpen && (
                 <div className="absolute top-5 left-0 z-40 bg-white border border-slate-200 rounded-lg shadow-lg min-w-max">
                   {locationsData.map(loc => (
