@@ -4,6 +4,7 @@
  */
 
 const HARD_BLOCKER_STATUSES = ['Cancelled', 'Waiting for Parts', 'Waiting for Approval'];
+const LOW_CONFIDENCE_STATUSES = ['Paused', 'On Hold'];
 const MAX_BUNDLE_EFFORT = 8; // hours
 const TIMING_WINDOW_DAYS = 7;
 
@@ -32,12 +33,15 @@ export function findBundleCandidates(workOrder, allWorkOrders, jobs, locations) 
   if (sameBoatGroup.length > 0) {
     const bundleCheck = checkBundlingValidity(wo, sameBoatGroup, jobs);
     if (!bundleCheck.blocked) {
+      const analysis = analyzeActionabilityAndEffort(wo, sameBoatGroup);
       return {
         group: sameBoatGroup,
         tier: 'SAME_BOAT',
         reason: `Same vessel at ${location?.name || 'same location'}. Can combine into efficient visit.`,
         blockedReason: null,
-        effort: estimateBundleEffort([wo, ...sameBoatGroup]),
+        effort: analysis.effort,
+        actionable: analysis.actionable,
+        excluded: analysis.excluded,
       };
     }
     return {
@@ -56,12 +60,15 @@ export function findBundleCandidates(workOrder, allWorkOrders, jobs, locations) 
   if (sameLocationGroup.length > 0) {
     const bundleCheck = checkBundlingValidity(wo, sameLocationGroup, jobs);
     if (!bundleCheck.blocked) {
+      const analysis = analyzeActionabilityAndEffort(wo, sameLocationGroup);
       return {
         group: sameLocationGroup,
         tier: 'SAME_LOCATION',
         reason: `Same marina (${location?.name || 'same location'}), different vessels. May combine if scheduling allows.`,
         blockedReason: null,
-        effort: estimateBundleEffort([wo, ...sameLocationGroup]),
+        effort: analysis.effort,
+        actionable: analysis.actionable,
+        excluded: analysis.excluded,
       };
     }
     return {
@@ -76,16 +83,17 @@ export function findBundleCandidates(workOrder, allWorkOrders, jobs, locations) 
 }
 
 function checkBundlingValidity(mainWo, candidates, jobs) {
-  // Check for hard blockers
+  // Check for hard blockers on ALL members
   for (const wo of [mainWo, ...candidates]) {
     if (HARD_BLOCKER_STATUSES.includes(wo.status)) {
       return { blocked: true, reason: `One work order is ${wo.status.toLowerCase()}. Cannot bundle until resolved.` };
     }
   }
 
-  // Check combined effort
-  const allWos = [mainWo, ...candidates.slice(0, 3)]; // Limit to 4 WOs max
-  const effort = estimateBundleEffort(allWos);
+  // Check combined effort on ACTIONABLE items only (exclude low-confidence)
+  const allWos = [mainWo, ...candidates.slice(0, 3)];
+  const actionable = allWos.filter(w => !LOW_CONFIDENCE_STATUSES.includes(w.status));
+  const effort = estimateBundleEffort(actionable);
   if (effort.max > MAX_BUNDLE_EFFORT) {
     return { blocked: true, reason: `Combined effort (${effort.min}–${effort.max}h) exceeds practical visit duration. Consider separate visits.` };
   }
@@ -125,12 +133,35 @@ export function estimateBundleEffort(workOrders) {
   };
 }
 
+/**
+ * Separates actionable from excluded work orders and calculates effort for actionable items only.
+ * Excludes:
+ * - Hard blockers (Waiting for Parts, Waiting for Approval)
+ * - Low-confidence statuses (Paused, On Hold)
+ */
+function analyzeActionabilityAndEffort(mainWo, candidates) {
+  const actionable = [mainWo, ...candidates].filter(
+    w => !HARD_BLOCKER_STATUSES.includes(w.status) && !LOW_CONFIDENCE_STATUSES.includes(w.status)
+  );
+  const excluded = [mainWo, ...candidates].filter(
+    w => HARD_BLOCKER_STATUSES.includes(w.status) || LOW_CONFIDENCE_STATUSES.includes(w.status)
+  );
+
+  return {
+    effort: estimateBundleEffort(actionable),
+    actionable,
+    excluded,
+  };
+}
+
 export function getBundleSummary(bundling) {
   if (!bundling?.group?.length) return null;
 
   const count = bundling.group.length;
   const tier = bundling.tier;
   const effort = bundling.effort;
+  const actionableCount = bundling.actionable?.length || 0;
+  const excludedCount = bundling.excluded?.length || 0;
 
   return {
     count,
@@ -140,5 +171,9 @@ export function getBundleSummary(bundling) {
       : `Can combine with ${count} other WOs on ${tier === 'SAME_BOAT' ? 'same vessel' : 'same marina'}`,
     effort,
     reason: bundling.reason,
+    actionableCount,
+    excludedCount,
+    actionable: bundling.actionable,
+    excluded: bundling.excluded,
   };
 }
