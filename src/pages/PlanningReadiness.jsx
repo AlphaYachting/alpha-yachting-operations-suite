@@ -65,9 +65,10 @@ export default function PlanningReadiness() {
   const tasksByWO = useMemo(() => {
     const m = {};
     for (const t of tasks) {
-      if (!m[t.work_order_id]) m[t.work_order_id] = { count: 0, minutesSum: 0 };
+      if (!m[t.work_order_id]) m[t.work_order_id] = { count: 0, minutesSum: 0, orgCount: 0 };
       m[t.work_order_id].count++;
       m[t.work_order_id].minutesSum += (t.estimated_minutes || 0);
+      if (t.task_stream === 'ORGANIZATION') m[t.work_order_id].orgCount++;
     }
     return m;
   }, [tasks]);
@@ -88,8 +89,8 @@ export default function PlanningReadiness() {
       const customer = job?.customer_id ? maps.customers[job.customer_id] : null;
       const boat     = job?.boat_id ? maps.boats[job.boat_id] : null;
       const location = job?.location_id ? maps.locations[job.location_id] : null;
-      const tData    = tasksByWO[wo.id] || { count: 0, minutesSum: 0 };
-      const evaluation = evaluateWorkOrder({ workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum });
+      const tData    = tasksByWO[wo.id] || { count: 0, minutesSum: 0, orgCount: 0 };
+      const evaluation = evaluateWorkOrder({ workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum, orgTaskCount: tData.orgCount });
       return { workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum, evaluation };
     });
   }, [workOrders, activeJobIds, maps, tasksByWO]);

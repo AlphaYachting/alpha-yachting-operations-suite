@@ -88,7 +88,7 @@ export function detectBlocker(workOrder, job, customer) {
 }
 
 // ─── Confidence ───────────────────────────────────────────────────────────────
-export function computeConfidence(workOrder, job, effortSource, serviceArea) {
+export function computeConfidence(workOrder, job, effortSource, serviceArea, orgTasksMissing) {
   const hasLocation = !!(job && job.location_id);
   const durationExplicit = effortSource === 'explicit';
   const durationTaskBased = effortSource === 'task_based';
@@ -98,6 +98,8 @@ export function computeConfidence(workOrder, job, effortSource, serviceArea) {
   if (!workOrder.assigned_technicians?.length) softCount++;
   if (!workOrder.access_confirmed) softCount++;
   if (!hasServiceArea) softCount++;
+  // Org gap nudges confidence down for non-trivial WOs (not quick-wins)
+  if (orgTasksMissing && workOrder.estimated_duration_hours > 2) softCount++;
 
   if ((durationExplicit || durationTaskBased) && hasLocation && hasServiceArea && softCount === 0) return 'HIGH';
   if ((durationExplicit || durationTaskBased || effortSource === 'service_area_default') && hasLocation && softCount <= 1) return 'MEDIUM';
@@ -108,7 +110,7 @@ export function computeConfidence(workOrder, job, effortSource, serviceArea) {
 const URGENT_PRIORITIES = ['Urgent', 'Express'];
 const HIGH_PRIORITIES   = ['Urgent', 'Express', 'High'];
 
-export function classifyBucket(workOrder, job, blocker, confidence, today, resourceGate) {
+export function classifyBucket(workOrder, job, blocker, confidence, today, resourceGate, orgTasksMissing, effortMax) {
   if (!today) today = new Date();
   if (blocker.type === 'HARD' || blocker.type === 'EXTERNAL') return 'BLOCKED';
 
@@ -136,6 +138,8 @@ export function classifyBucket(workOrder, job, blocker, confidence, today, resou
 
   if (thisWeekSignal) {
     if (confidence === 'LOW' && !isUrgent) return 'NEEDS_CLARIFICATION';
+    // Org gap: non-urgent, non-trivial WOs missing org tasks pushed to clarification
+    if (orgTasksMissing && !isUrgent && effortMax > 2) return 'NEEDS_CLARIFICATION';
     // V2: day-of-week resource gate — Thu/Fri shifts non-urgent WOs with no quick-response candidate
     if (resourceGate === 'shift_next_week' && !isUrgent) return 'NEXT_WEEK_CANDIDATE';
     return 'THIS_WEEK_CANDIDATE';
@@ -191,7 +195,7 @@ export function computeRankingScore(workOrder, job, confidence, effortMax, servi
 }
 
 // ─── Suggested Action ────────────────────────────────────────────────────────
-export function suggestNextAction(blocker, workOrder, job, confidence, resourcePools) {
+export function suggestNextAction(blocker, workOrder, job, confidence, resourcePools, orgTasksMissing) {
   if (blocker.type === 'HARD') {
     if (blocker.reason.includes('Parts'))    return 'Order parts before scheduling';
     if (blocker.reason.includes('location')) return 'Assign a location to the job';
@@ -212,6 +216,7 @@ export function suggestNextAction(blocker, workOrder, job, confidence, resourceP
     }
     return 'Assign a technician and schedule';
   }
+  if (orgTasksMissing) return 'Add organization tasks (access, customer coordination, scheduling prep)';
   if (!workOrder.estimated_duration_hours) return 'Confirm duration estimate';
   if (!workOrder.access_confirmed) return 'Confirm boat/site access';
   if (confidence === 'HIGH') return 'Ready to schedule - confirm date';
@@ -245,7 +250,7 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   const partsEtaUnknown = !!(job && job.requires_parts && job.parts_ordered && !job.parts_eta);
 
   // Confidence
-  const confidence = blocker.type !== 'NONE' ? 'LOW' : computeConfidence(workOrder, job, effort.source, serviceArea);
+  const confidence = blocker.type !== 'NONE' ? 'LOW' : computeConfidence(workOrder, job, effort.source, serviceArea, orgTasksMissing);
 
   // V2: Job zone + resource pools
   const locationText = [(location && location.name) || '', (location && location.city) || '', (location && location.address) || ''].join(' ');
@@ -256,7 +261,7 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   const resourcePools = buildResourcePools(technicians, serviceArea, jobZone, effort.max, remainingWorkdays, workloadMap);
 
   // Bucket (resource-gate aware)
-  const bucket = classifyBucket(workOrder, job, blocker, confidence, today, resourcePools.weekResourceGate);
+  const bucket = classifyBucket(workOrder, job, blocker, confidence, today, resourcePools.weekResourceGate, orgTasksMissing, effort.max);
 
   // Ranking
   const { score, breakdown } = computeRankingScore(workOrder, job, confidence, effort.max, serviceArea, blocker, today);
@@ -272,8 +277,8 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   else if (effort.source === 'service_area_default') mainUncertainty = 'Duration estimated from service area average';
   else if (!workOrder.assigned_technicians?.length) mainUncertainty = 'No technician assigned';
 
-  const reasoningSummary = buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job);
-  const suggestedNextAction = suggestNextAction(blocker, workOrder, job, confidence, resourcePools);
+  const reasoningSummary = buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job, orgTasksMissing);
+  const suggestedNextAction = suggestNextAction(blocker, workOrder, job, confidence, resourcePools, orgTasksMissing);
 
   // Phase 2: ownership gap detection
   const executionOwnerMissing = !workOrder.lead_technician_id;
@@ -325,7 +330,7 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   };
 }
 
-function buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job) {
+function buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job, orgTasksMissing) {
   const parts = [];
   parts.push('Classified as ' + bucket.replace(/_/g, ' ') + '.');
   if (blocker.type !== 'NONE') parts.push(blocker.type + ' blocker: ' + blocker.reason + '.');
@@ -334,6 +339,7 @@ function buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaIn
   if (!serviceArea) parts.push('Service area unknown.');
   parts.push('Confidence: ' + confidence + '.');
   if (!workOrder.assigned_technicians?.length) parts.push('No technician assigned.');
+  if (orgTasksMissing) parts.push('Organization tasks missing — access, coordination and prep not yet defined.');
   if (job && job.requested_date) parts.push('Requested by: ' + new Date(job.requested_date).toLocaleDateString('de-AT') + '.');
   return parts.join(' ');
 }

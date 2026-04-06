@@ -22,6 +22,7 @@ export const BLOCKER_META = {
   NO_PARENT_JOB:               { label: 'No parent project',      severity: 'gap',   color: 'blue' },
   BOAT_ACCESS_UNKNOWN:         { label: 'Boat access unknown',    severity: 'gap',   color: 'blue' },
   NO_LOCATION_NOTES:           { label: 'No location notes',      severity: 'gap',   color: 'blue' },
+  ORG_TASKS_MISSING:           { label: 'No org tasks',           severity: 'gap',   color: 'orange' },
 };
 
 // ─── NEXT ACTION MAPPING ───────────────────────────────────────────────────
@@ -40,11 +41,12 @@ export const NEXT_ACTIONS = {
   NO_PARENT_JOB:       { text: 'Link this work order to a project',                   role: 'Operations Manager',  type: 'Internal clarification',  priority: 'Later' },
   BOAT_ACCESS_UNKNOWN: { text: 'Add access details to the boat record',               role: 'Operations Manager',  type: 'Internal clarification',  priority: 'Later' },
   NO_LOCATION_NOTES:   { text: 'Add access notes to the marina record',               role: 'Operations Manager',  type: 'Internal clarification',  priority: 'Later' },
+  ORG_TASKS_MISSING:   { text: 'Create organization tasks: access coordination, customer confirmation, scheduling prep', role: 'Operations Manager', type: 'Organizational prep', priority: 'This week' },
 };
 
 // ─── CORE EVALUATOR ────────────────────────────────────────────────────────
 
-export function evaluateWorkOrder({ workOrder, job, customer, boat, location, taskCount, taskEstimatedMinutesSum }) {
+export function evaluateWorkOrder({ workOrder, job, customer, boat, location, taskCount, taskEstimatedMinutesSum, orgTaskCount = 0 }) {
   const blockers = [];
   const now = today();
 
@@ -75,6 +77,9 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   if (!workOrder.job_id) addBlocker('NO_PARENT_JOB');
   if (!boat?.access_details) addBlocker('BOAT_ACCESS_UNKNOWN');
   if (!location?.access_notes) addBlocker('NO_LOCATION_NOTES');
+  // Org gap: non-trivial WOs with no organization tasks defined
+  const durationHours = workOrder.estimated_duration_hours || (taskEstimatedMinutesSum / 60);
+  if (orgTaskCount === 0 && durationHours > 2) addBlocker('ORG_TASKS_MISSING');
 
   // ── PLANNING READINESS RESULT ──
   const hardBlockers = blockers.filter(b => BLOCKER_META[b]?.severity === 'hard');
