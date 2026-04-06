@@ -230,181 +230,183 @@ export default function PlanningAgent() {
       {/* Ranking view */}
       {viewMode === 'ranking' && (
         <>
-      {/* Summary bar */}
-      <AgentSummaryBar
-        buckets={buckets}
-        capacity={capacity}
-        onFilterClick={setActiveFilter}
-        activeFilter={activeFilter}
-      />
+          {/* Summary bar */}
+          <AgentSummaryBar
+            buckets={buckets}
+            capacity={capacity}
+            onFilterClick={setActiveFilter}
+            activeFilter={activeFilter}
+          />
 
-      {activeFilter && filteredView ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-700">Filtered: {activeFilter.replace(/_/g, ' ')}</h2>
-            <Button variant="ghost" size="sm" onClick={() => setActiveFilter(null)}>Clear filter</Button>
-          </div>
-          <div className="space-y-2">
-            {filteredView.length === 0
-              ? <p className="text-sm text-slate-400 py-6 text-center">No items in this category.</p>
-              : filteredView.map((item, idx) => (
-                  <div key={item.workOrder.id}>
-                    {/* inline import to avoid circular — use AgentItemRow directly */}
-                    <AgentSectionItem item={item} rank={idx + 1} technicians={technicians} allWorkOrders={workOrders} jobs={maps.jobs} locations={maps.locations} onRefresh={handleRefresh} />
+          {activeFilter && filteredView ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold text-slate-700">Filtered: {activeFilter.replace(/_/g, ' ')}</h2>
+                <Button variant="ghost" size="sm" onClick={() => setActiveFilter(null)}>Clear filter</Button>
+              </div>
+              <div className="space-y-2">
+                {filteredView.length === 0
+                  ? <p className="text-sm text-slate-400 py-6 text-center">No items in this category.</p>
+                  : filteredView.map((item, idx) => (
+                      <div key={item.workOrder.id}>
+                        {/* inline import to avoid circular — use AgentItemRow directly */}
+                        <AgentSectionItem item={item} rank={idx + 1} technicians={technicians} allWorkOrders={workOrders} jobs={maps.jobs} locations={maps.locations} onRefresh={handleRefresh} />
+                      </div>
+                    ))
+                }
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* THIS WEEK — HIGH CONFIDENCE */}
+              <AgentSection
+                title={`This Week — Recommended (${weekRanges.thisWeek})`}
+                subtitle="Highest-value, high-confidence candidates. Ranked by urgency + priority + confidence."
+                items={buckets.thisWeekHigh}
+                ranked
+                emptyMessage="No high-confidence work is recommended for this week."
+                badgeClass="bg-emerald-100 text-emerald-700"
+                badge={buckets.thisWeekHigh.length}
+                technicians={technicians}
+                allWorkOrders={workOrders}
+                jobs={maps.jobs}
+                locations={maps.locations}
+                onRefresh={handleRefresh}
+              />
+
+              {/* THIS WEEK — LOW CONFIDENCE / RISKY */}
+              {buckets.thisWeekLow.length > 0 && (
+                <AgentSection
+                  title={`This Week — Urgent but Uncertain (${weekRanges.thisWeek})`}
+                  subtitle="Urgent or overdue items with low confidence. Verify before committing."
+                  items={buckets.thisWeekLow}
+                  ranked
+                  emptyMessage=""
+                  badgeClass="bg-orange-100 text-orange-700"
+                  badge={buckets.thisWeekLow.length}
+                  technicians={technicians}
+                  allWorkOrders={workOrders}
+                  jobs={maps.jobs}
+                  locations={maps.locations}
+                  onRefresh={handleRefresh}
+                />
+              )}
+
+              {/* NEXT WEEK */}
+              <AgentSection
+                title={`Next Week — Prepare Now (${weekRanges.nextWeek})`}
+                subtitle="Start resolving gaps today so these are ready to schedule next week."
+                items={buckets.nextWeek}
+                ranked
+                emptyMessage="No items queued for next week preparation."
+                badgeClass="bg-blue-100 text-blue-700"
+                badge={buckets.nextWeek.length}
+                technicians={technicians}
+                allWorkOrders={workOrders}
+                jobs={maps.jobs}
+                locations={maps.locations}
+                onRefresh={handleRefresh}
+              />
+
+              {/* BLOCKED */}
+              {(buckets.hardBlocked.length > 0 || buckets.externalBlocked.length > 0) && (
+                <section>
+                  <div className="mb-3">
+                    <h2 className="text-base font-semibold text-slate-800">Blocked</h2>
+                    <p className="text-xs text-slate-400 mt-0.5">These cannot be scheduled until the underlying issue is resolved.</p>
                   </div>
-                ))
-            }
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* THIS WEEK — HIGH CONFIDENCE */}
-          <AgentSection
-            title={`This Week — Recommended (${weekRanges.thisWeek})`}
-            subtitle="Highest-value, high-confidence candidates. Ranked by urgency + priority + confidence."
-            items={buckets.thisWeekHigh}
-            ranked
-            emptyMessage="No high-confidence work is recommended for this week."
-            badgeClass="bg-emerald-100 text-emerald-700"
-            badge={buckets.thisWeekHigh.length}
-            technicians={technicians}
-            allWorkOrders={workOrders}
-            jobs={maps.jobs}
-            locations={maps.locations}
-            onRefresh={handleRefresh}
-          />
+                  <div className="space-y-4">
+                    {buckets.hardBlocked.length > 0 && (
+                      <AgentSection
+                        title="Hard Blocked"
+                        subtitle="Cannot proceed. Requires immediate resolution before any planning."
+                        items={buckets.hardBlocked}
+                        emptyMessage=""
+                        badgeClass="bg-red-100 text-red-700"
+                        badge={buckets.hardBlocked.length}
+                        technicians={technicians}
+                        allWorkOrders={workOrders}
+                        jobs={maps.jobs}
+                        locations={maps.locations}
+                        onRefresh={handleRefresh}
+                      />
+                    )}
+                    {buckets.externalBlocked.length > 0 && (
+                      <AgentSection
+                        title="Externally Blocked"
+                        subtitle="Waiting on parts delivery or external approval."
+                        items={buckets.externalBlocked}
+                        emptyMessage=""
+                        badgeClass="bg-orange-100 text-orange-700"
+                        badge={buckets.externalBlocked.length}
+                        technicians={technicians}
+                        allWorkOrders={workOrders}
+                        jobs={maps.jobs}
+                        locations={maps.locations}
+                        onRefresh={handleRefresh}
+                      />
+                    )}
+                  </div>
+                </section>
+              )}
 
-          {/* THIS WEEK — LOW CONFIDENCE / RISKY */}
-          {buckets.thisWeekLow.length > 0 && (
-            <AgentSection
-              title={`This Week — Urgent but Uncertain (${weekRanges.thisWeek})`}
-              subtitle="Urgent or overdue items with low confidence. Verify before committing."
-              items={buckets.thisWeekLow}
-              ranked
-              emptyMessage=""
-              badgeClass="bg-orange-100 text-orange-700"
-              badge={buckets.thisWeekLow.length}
-              technicians={technicians}
-              allWorkOrders={workOrders}
-              jobs={maps.jobs}
-              locations={maps.locations}
-              onRefresh={handleRefresh}
-            />
+              {/* NEEDS CLARIFICATION */}
+              <AgentSection
+                title="Needs Clarification"
+                subtitle="These have insufficient data for reliable planning. Review and fill gaps."
+                items={buckets.needsClarification}
+                emptyMessage="No items need clarification right now."
+                badgeClass="bg-yellow-100 text-yellow-700"
+                badge={buckets.needsClarification.length}
+                technicians={technicians}
+                allWorkOrders={workOrders}
+                jobs={maps.jobs}
+                locations={maps.locations}
+                onRefresh={handleRefresh}
+              />
+
+              {/* QUICK WINS */}
+              <AgentSection
+                title="Quick Wins"
+                subtitle="Short jobs (≤2h) with medium+ confidence. Good for filling schedule gaps."
+                items={buckets.quickWins}
+                ranked
+                emptyMessage="No quick wins identified."
+                badgeClass="bg-purple-100 text-purple-700"
+                badge={buckets.quickWins.length}
+                technicians={technicians}
+                allWorkOrders={workOrders}
+                jobs={maps.jobs}
+                locations={maps.locations}
+                onRefresh={handleRefresh}
+              />
+
+              {/* BAD WEATHER FALLBACK */}
+              <AgentSection
+                title="Bad Weather Fallback"
+                subtitle="Indoor or sheltered work (Electrical, Electronics, HVAC, GRP). Useful when outdoor access is limited."
+                items={buckets.badWeather}
+                emptyMessage="No bad-weather fallback jobs were identified."
+                badgeClass="bg-sky-100 text-sky-700"
+                badge={buckets.badWeather.length}
+                technicians={technicians}
+                allWorkOrders={workOrders}
+                jobs={maps.jobs}
+                locations={maps.locations}
+                onRefresh={handleRefresh}
+              />
+
+              <p className="text-xs text-slate-400 text-center">
+                Planning Agent V2 · {evaluatedItems.length} work orders analysed
+              </p>
+            </>
           )}
+        </>
+      )}
 
-          {/* NEXT WEEK */}
-          <AgentSection
-            title={`Next Week — Prepare Now (${weekRanges.nextWeek})`}
-            subtitle="Start resolving gaps today so these are ready to schedule next week."
-            items={buckets.nextWeek}
-            ranked
-            emptyMessage="No items queued for next week preparation."
-            badgeClass="bg-blue-100 text-blue-700"
-            badge={buckets.nextWeek.length}
-            technicians={technicians}
-            allWorkOrders={workOrders}
-            jobs={maps.jobs}
-            locations={maps.locations}
-            onRefresh={handleRefresh}
-          />
-
-          {/* BLOCKED */}
-          {(buckets.hardBlocked.length > 0 || buckets.externalBlocked.length > 0) && (
-            <section>
-              <div className="mb-3">
-                <h2 className="text-base font-semibold text-slate-800">Blocked</h2>
-                <p className="text-xs text-slate-400 mt-0.5">These cannot be scheduled until the underlying issue is resolved.</p>
-              </div>
-              <div className="space-y-4">
-                {buckets.hardBlocked.length > 0 && (
-                  <AgentSection
-                    title="Hard Blocked"
-                    subtitle="Cannot proceed. Requires immediate resolution before any planning."
-                    items={buckets.hardBlocked}
-                    emptyMessage=""
-                    badgeClass="bg-red-100 text-red-700"
-                    badge={buckets.hardBlocked.length}
-                    technicians={technicians}
-                    allWorkOrders={workOrders}
-                    jobs={maps.jobs}
-                    locations={maps.locations}
-                    onRefresh={handleRefresh}
-                  />
-                )}
-                {buckets.externalBlocked.length > 0 && (
-                  <AgentSection
-                    title="Externally Blocked"
-                    subtitle="Waiting on parts delivery or external approval."
-                    items={buckets.externalBlocked}
-                    emptyMessage=""
-                    badgeClass="bg-orange-100 text-orange-700"
-                    badge={buckets.externalBlocked.length}
-                    technicians={technicians}
-                    allWorkOrders={workOrders}
-                    jobs={maps.jobs}
-                    locations={maps.locations}
-                    onRefresh={handleRefresh}
-                  />
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* NEEDS CLARIFICATION */}
-          <AgentSection
-            title="Needs Clarification"
-            subtitle="These have insufficient data for reliable planning. Review and fill gaps."
-            items={buckets.needsClarification}
-            emptyMessage="No items need clarification right now."
-            badgeClass="bg-yellow-100 text-yellow-700"
-            badge={buckets.needsClarification.length}
-            technicians={technicians}
-            allWorkOrders={workOrders}
-            jobs={maps.jobs}
-            locations={maps.locations}
-            onRefresh={handleRefresh}
-          />
-
-          {/* QUICK WINS */}
-          <AgentSection
-            title="Quick Wins"
-            subtitle="Short jobs (≤2h) with medium+ confidence. Good for filling schedule gaps."
-            items={buckets.quickWins}
-            ranked
-            emptyMessage="No quick wins identified."
-            badgeClass="bg-purple-100 text-purple-700"
-            badge={buckets.quickWins.length}
-            technicians={technicians}
-            allWorkOrders={workOrders}
-            jobs={maps.jobs}
-            locations={maps.locations}
-            onRefresh={handleRefresh}
-          />
-
-          {/* BAD WEATHER FALLBACK */}
-          <AgentSection
-            title="Bad Weather Fallback"
-            subtitle="Indoor or sheltered work (Electrical, Electronics, HVAC, GRP). Useful when outdoor access is limited."
-            items={buckets.badWeather}
-            emptyMessage="No bad-weather fallback jobs were identified."
-            badgeClass="bg-sky-100 text-sky-700"
-            badge={buckets.badWeather.length}
-            technicians={technicians}
-            allWorkOrders={workOrders}
-            jobs={maps.jobs}
-            locations={maps.locations}
-            onRefresh={handleRefresh}
-          />
-
-          <p className="text-xs text-slate-400 text-center">
-          Planning Agent V2 · {evaluatedItems.length} work orders analysed
-          </p>
-          </>
-          )}
-
-          {/* Date-First Board view */}
-          {viewMode === 'dateFirst' && (
-          <div className="space-y-6">
+      {/* Date-First Board view */}
+      {viewMode === 'dateFirst' && (
+        <div className="space-y-6">
           {/* Summary stats */}
           <div className="grid grid-cols-4 gap-4">
             <div className="px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
@@ -522,10 +524,10 @@ export default function PlanningAgent() {
                 Save
               </button>
             </div>
-            </div>
-            </div>
-            )}
-            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -310,8 +310,8 @@ export default function PlanningReadiness() {
               queryClient.invalidateQueries({ queryKey: ['planning-jobs'] });
             }}
             />
-            </div>
-            )}
-            </div>
-            );
-}
+        </div>
+      )}
+    </div>
+    );
+    }
