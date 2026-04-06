@@ -4,6 +4,8 @@ import { buildResourcePools, getZone, UNAVAILABLE_FOR_PLANNING, isNonExecutionSt
 
 // ─── Service Area Inference ───────────────────────────────────────────────────
 const AREA_KEYWORDS = {
+  // Organisation must be first — prevents org-titled WOs from matching 'service'/'check' keywords below
+  Organisation:     ['organisation', 'kommunikation', 'communication', 'koordination', 'coordination'],
   Mechanical:       ['motor', 'engine', 'getriebe', 'diesel', 'pump', 'pumpe', 'antrieb', 'propeller', 'shaft', 'welle'],
   Electrical:       ['elektr', 'kabel', 'battery', 'batterie', 'strom', 'wiring', 'panel', 'sicherung', 'fuse', 'licht', 'light'],
   Electronics:      ['chart', 'plotter', 'vhf', 'ais', 'radar', 'nmea', 'autopilot', 'gps', 'display', 'elektronik'],

@@ -31,6 +31,9 @@ const DOMAIN_TIERS = {
   'Polish':         3,
   'Steel Work':     3,
   'Other':          3,
+  // Organisation: Tier 3 so only techs with the 'Organisation' skill match.
+  // Execution mechanics have NO_MEANINGFUL_MATCH here → excluded from org WO pools.
+  'Organisation':   3,
 };
 
 export function getDomainTier(serviceArea) {
@@ -90,6 +93,10 @@ const AREA_TO_SKILLS = {
   'Woodworking':     ['Woodworking', 'Carpentry'],
   'Steel Work':      ['Steel Work'],
   'Other':           ['General Service'],
+  // Organisation: only maps to 'Organisation' skill.
+  // Execution techs (Mechanics, Electronics etc.) have NO_MEANINGFUL_MATCH → excluded.
+  // Org-skilled staff (Silke, Oliver, Irene, Alfons) → CAPABLE_MATCH/STRONG_MATCH → preferred pool.
+  'Organisation':    ['Organisation'],
 };
 
 // Adjacent skill map — PRUNED to remove misleading Tier 1 adjacencies.
