@@ -93,6 +93,19 @@ export default function PlanningAgent() {
     return computeCapacity(technicians, buckets.thisWeek, buckets.nextWeek);
   }, [technicians, buckets]);
 
+  // Week date ranges for display
+  const weekRanges = useMemo(() => {
+    const fmt = d => d.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' });
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const thisEnd  = new Date(today); thisEnd.setDate(today.getDate() + 6);
+    const nextStart = new Date(today); nextStart.setDate(today.getDate() + 7);
+    const nextEnd  = new Date(today); nextEnd.setDate(today.getDate() + 13);
+    return {
+      thisWeek: `${fmt(today)} – ${fmt(thisEnd)}`,
+      nextWeek: `${fmt(nextStart)} – ${fmt(nextEnd)}`,
+    };
+  }, []);
+
   // Filter override
   const filterMap = {
     THIS_WEEK_CANDIDATE: buckets.thisWeek,
@@ -161,7 +174,7 @@ export default function PlanningAgent() {
         <>
           {/* THIS WEEK — HIGH CONFIDENCE */}
           <AgentSection
-            title="This Week — Recommended"
+            title={`This Week — Recommended (${weekRanges.thisWeek})`}
             subtitle="Highest-value, high-confidence candidates. Ranked by urgency + priority + confidence."
             items={buckets.thisWeekHigh}
             ranked
@@ -173,7 +186,7 @@ export default function PlanningAgent() {
           {/* THIS WEEK — LOW CONFIDENCE / RISKY */}
           {buckets.thisWeekLow.length > 0 && (
             <AgentSection
-              title="This Week — Urgent but Uncertain"
+              title={`This Week — Urgent but Uncertain (${weekRanges.thisWeek})`}
               subtitle="Urgent or overdue items with low confidence. Verify before committing."
               items={buckets.thisWeekLow}
               ranked
@@ -185,8 +198,9 @@ export default function PlanningAgent() {
 
           {/* NEXT WEEK */}
           <AgentSection
-            title="Next Week — Prepare Now"
+            title={`Next Week — Prepare Now (${weekRanges.nextWeek})`}
             subtitle="Start resolving gaps today so these are ready to schedule next week."
+
             items={buckets.nextWeek}
             ranked
             emptyMessage="No items queued for next week preparation."
