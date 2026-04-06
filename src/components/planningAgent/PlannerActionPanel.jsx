@@ -125,11 +125,11 @@ const OWNER_BADGE = {
 
 export default function PlannerActionPanel({ item, technicians = [], onRefresh }) {
   const { workOrder, derived } = item;
-  const [saving, setSaving] = useState(null); // 'exec' | 'org'
+  const [saving, setSaving] = useState(null); // 'exec' | 'org' | 'no-task'
   const [execTechId, setExecTechId] = useState(workOrder.lead_technician_id || '');
   const [orgTitle, setOrgTitle] = useState('');
   const [orgAssigneeId, setOrgAssigneeId] = useState('');
-  const [done, setDone] = useState({}); // { exec: bool, org: bool }
+  const [done, setDone] = useState({}); // { exec: bool, org: bool, noTask: bool }
   const [activeSuggestion, setActiveSuggestion] = useState(null); // index of selected chip
 
   const { top3: orgSuggestions, allCount: allOrgSuggestionCount } = suggestOrgTasks(item);
@@ -186,6 +186,14 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
     });
     setSaving(null);
     setDone(d => ({ ...d, org: true }));
+    onRefresh?.();
+  }
+
+  async function confirmNoTaskNeeded() {
+    setSaving('no-task');
+    await base44.entities.WorkOrder.update(workOrder.id, { org_tasks_not_needed: true });
+    setSaving(null);
+    setDone(d => ({ ...d, noTask: true }));
     onRefresh?.();
   }
 
@@ -334,11 +342,23 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
                   >
                     {saving === 'org' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Create'}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={confirmNoTaskNeeded}
+                    disabled={saving === 'no-task'}
+                    className="text-xs h-7 px-3 text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  >
+                    {saving === 'no-task' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'No task needed'}
+                  </Button>
                 </div>
               </div>
             )}
             {done.org && (
               <p className="text-xs text-emerald-600">Organisation task created — refresh to see updated data.</p>
+            )}
+            {done.noTask && (
+              <p className="text-xs text-emerald-600">Confirmed: no organization task needed — refresh to update.</p>
             )}
           </div>
         )}

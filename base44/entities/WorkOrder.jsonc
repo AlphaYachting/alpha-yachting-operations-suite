@@ -182,6 +182,11 @@
       "type": "boolean",
       "default": false
     },
+    "org_tasks_not_needed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Planner has explicitly confirmed no organization task is needed for this work order"
+    },
     "documentation_complete": {
       "type": "boolean",
       "default": false

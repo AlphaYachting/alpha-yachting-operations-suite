@@ -251,7 +251,7 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
 
   // Org task detection — must be before confidence
   const orgTasks = (tasks || []).filter(t => t.task_stream === 'ORGANIZATION');
-  const orgTasksMissing = orgTasks.length === 0;
+  const orgTasksMissing = orgTasks.length === 0 && !workOrder.org_tasks_not_needed;
   const orgOwnerSet = orgTasks.some(t => !!t.assigned_user_id);
   // Job-level org gap: no org tasks exist anywhere across the entire job's WOs
   // jobOrgTaskCount is the total ORGANIZATION tasks across ALL WOs of this job (passed from caller)
