@@ -249,6 +249,11 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   // Parts ETA
   const partsEtaUnknown = !!(job && job.requires_parts && job.parts_ordered && !job.parts_eta);
 
+  // Org task detection — must be before confidence
+  const orgTasks = (tasks || []).filter(t => t.task_stream === 'ORGANIZATION');
+  const orgTasksMissing = orgTasks.length === 0;
+  const orgOwnerSet = orgTasks.some(t => !!t.assigned_user_id);
+
   // Confidence
   const confidence = blocker.type !== 'NONE' ? 'LOW' : computeConfidence(workOrder, job, effort.source, serviceArea, orgTasksMissing);
 
@@ -282,9 +287,6 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
 
   // Phase 2: ownership gap detection
   const executionOwnerMissing = !workOrder.lead_technician_id;
-  const orgTasks = (tasks || []).filter(t => t.task_stream === 'ORGANIZATION');
-  const orgTasksMissing = orgTasks.length === 0;
-  const orgOwnerSet = orgTasks.some(t => !!t.assigned_user_id);
 
   return {
     workOrder,
