@@ -94,6 +94,7 @@ const navItems = [
   { header: 'PLANNING' },
   { name: 'Quick Capture', icon: Zap, page: 'QuickCaptureReview', leadTechAllowed: true },
   { name: 'Planning Agent', icon: Brain, page: 'PlanningAgent', leadTechAllowed: true },
+  { name: 'Planning Board', icon: LayoutDashboard, page: 'PlanningBoard', leadTechAllowed: true },
   { name: 'Planning Readiness', icon: LayoutDashboard, page: 'PlanningReadiness', leadTechAllowed: true },
 
   // INTELLIGENCE
