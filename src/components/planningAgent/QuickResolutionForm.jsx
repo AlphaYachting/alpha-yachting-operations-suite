@@ -101,8 +101,23 @@ export default function QuickResolutionForm({ item, technicians = [], onSave }) 
     <div className="mt-3 pt-2 border-t border-slate-200 space-y-2">
       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Quick Actions</p>
 
-      {/* Top row: Date + Duration */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* Owner + Date + Duration in one row */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-slate-600">Owner</label>
+          <Select value={formData.lead_technician_id} onValueChange={handleTechnicianChange}>
+            <SelectTrigger className="text-xs h-8">
+              <SelectValue placeholder="Select" />
+            </SelectTrigger>
+            <SelectContent>
+              {activeFilter.map(t => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.first_name} {t.last_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-slate-600">Date</label>
           <Input
@@ -124,23 +139,6 @@ export default function QuickResolutionForm({ item, technicians = [], onSave }) 
             className="text-xs h-8"
           />
         </div>
-      </div>
-
-      {/* Execution Owner */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium text-slate-600">Owner</label>
-        <Select value={formData.lead_technician_id} onValueChange={handleTechnicianChange}>
-          <SelectTrigger className="text-xs h-8">
-            <SelectValue placeholder="Select" />
-          </SelectTrigger>
-          <SelectContent>
-            {activeFilter.map(t => (
-              <SelectItem key={t.id} value={t.id}>
-                {t.first_name} {t.last_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Access + Org Tasks in row */}
