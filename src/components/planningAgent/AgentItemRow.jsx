@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck } from 'lucide-react';
+import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const CONF_STYLE = {
@@ -89,6 +89,44 @@ export default function AgentItemRow({ item, rank }) {
       {/* Expanded detail */}
       {expanded && (
         <div className="border-t border-slate-100 px-4 py-3 bg-slate-50 space-y-3 text-sm">
+
+          {/* Task context block */}
+          {item.tasks?.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <ListChecks className="h-3.5 w-3.5" /> Work Content ({item.tasks.length} task{item.tasks.length !== 1 ? 's' : ''})
+              </p>
+              <div className="flex flex-col gap-1">
+                {item.tasks.slice(0, 8).map((t, i) => (
+                  <div key={t.id || i} className="flex items-start gap-2 px-2 py-1.5 rounded bg-white border border-slate-200">
+                    <span className={cn(
+                      'mt-0.5 flex-shrink-0 w-2 h-2 rounded-full',
+                      t.status === 'Completed' ? 'bg-emerald-400' :
+                      t.status === 'In Progress' ? 'bg-blue-400' :
+                      t.status === 'Not Possible' ? 'bg-red-300' : 'bg-slate-300'
+                    )} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-slate-700 leading-snug">{t.title}</p>
+                      {t.description && (
+                        <p className="text-xs text-slate-400 truncate mt-0.5">{t.description}</p>
+                      )}
+                      {t.estimated_minutes > 0 && (
+                        <p className="text-xs text-slate-400 mt-0.5">{Math.round(t.estimated_minutes / 60 * 10) / 10}h estimated</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {item.tasks.length > 8 && (
+                  <p className="text-xs text-slate-400 px-2">+{item.tasks.length - 8} more tasks</p>
+                )}
+              </div>
+            </div>
+          )}
+          {item.tasks?.length === 0 && (
+            <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
+              <ListChecks className="h-3.5 w-3.5" /> No tasks defined for this work order
+            </div>
+          )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Detail label="Bucket" value={d.planningBucket.replace(/_/g, ' ')} />
             <Detail label="Blocker" value={d.mainBlocker || 'None'} />
