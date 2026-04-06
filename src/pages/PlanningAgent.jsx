@@ -395,8 +395,7 @@ export default function PlanningAgent() {
             locations={maps.locations}
             onRefresh={handleRefresh}
           />
-          </div>
-          )}
+          </AgentSection>
 
           <p className="text-xs text-slate-400 text-center">
           Planning Agent V2 · {evaluatedItems.length} work orders analysed
@@ -455,12 +454,12 @@ export default function PlanningAgent() {
               <p className="text-slate-600">No work orders ready for visit clustering.</p>
             </div>
           )}
-          </div>
-          )}
+        </div>
+      )}
 
-          {/* Modals for Date-First Board */}
-          {showStartDateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      {/* Modals for Date-First Board */}
+      {showStartDateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Set Visit Start Date</h3>
             <p className="text-sm text-slate-600 mb-4">
@@ -487,11 +486,11 @@ export default function PlanningAgent() {
               </button>
             </div>
           </div>
-          </div>
-          )}
+        </div>
+      )}
 
-          {showAssignModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Assign Executor</h3>
             <p className="text-sm text-slate-600 mb-4">
@@ -524,6 +523,7 @@ export default function PlanningAgent() {
                 Save
               </button>
             </div>
+          </div>
           </div>
           </div>
           )}
