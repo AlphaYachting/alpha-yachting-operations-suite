@@ -16,6 +16,27 @@ const BLOCKER_STYLE = {
   NONE:     '',
 };
 
+const ZONE_STYLE = {
+  near:        'text-emerald-600',
+  reasonable:  'text-blue-600',
+  inefficient: 'text-orange-500',
+  unknown:     'text-slate-400',
+};
+
+const OWNERSHIP_STYLE = {
+  DOMAIN_OWNER:     'text-emerald-700 font-semibold',
+  STRONG_MATCH:     'text-blue-600',
+  CAPABLE_MATCH:    'text-slate-500',
+  ADJACENT_CAPABLE: 'text-orange-400',
+};
+
+const OWNERSHIP_LABEL = {
+  DOMAIN_OWNER:     'domain owner',
+  STRONG_MATCH:     'strong match',
+  CAPABLE_MATCH:    'capable',
+  ADJACENT_CAPABLE: 'adjacent only',
+};
+
 export default function AgentItemRow({ item, rank, technicians = [], onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const { workOrder, job, customer, location, derived } = item;
@@ -72,7 +93,7 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
         </div>
       </button>
 
-      {/* Suggested action + top resource — always visible */}
+      {/* Summary bar — always visible */}
       <div className="px-4 pb-2 space-y-0.5">
         {d.suggestedNextAction && (
           <div className="flex items-start gap-2 text-xs">
@@ -81,25 +102,27 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
             {d.mainUncertainty && <span className="text-slate-400 italic">· {d.mainUncertainty}</span>}
           </div>
         )}
-        {/* Assigned executor — shown prominently if set */}
+        {/* Assigned executor shown prominently if set, else show suggestion */}
         {assignedExecutorName ? (
           <div className="flex items-center gap-1.5 text-xs">
             <UserCheck className="h-3 w-3 text-emerald-600 flex-shrink-0" />
             <span className="text-emerald-700 font-semibold">{assignedExecutorName}</span>
             <span className="text-slate-400">assigned executor</span>
           </div>
-        ) : d.preferredResourcePool?.length > 0 && (
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <UserCheck className="h-3 w-3 flex-shrink-0" />
-            <span className="text-slate-400">Suggested:</span>
-            {d.preferredResourcePool.slice(0, 2).map((r, i) => (
-              <span key={r.name}>
-                {i > 0 && <span className="text-slate-300"> · </span>}
-                <span className={cn('font-medium', r.team_type === 'Core' ? 'text-blue-700' : 'text-slate-600')}>{r.name}</span>
-                <span className="text-slate-400"> ({r.skill_match_level}/{r.zone_compatibility})</span>
-              </span>
-            ))}
-          </div>
+        ) : (
+          d.preferredResourcePool?.length > 0 && (
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <UserCheck className="h-3 w-3 flex-shrink-0" />
+              <span className="text-slate-400">Suggested:</span>
+              {d.preferredResourcePool.slice(0, 2).map((r, i) => (
+                <span key={r.name}>
+                  {i > 0 && <span className="text-slate-300"> · </span>}
+                  <span className={cn('font-medium', r.team_type === 'Core' ? 'text-blue-700' : 'text-slate-600')}>{r.name}</span>
+                  <span className="text-slate-400"> ({r.skill_match_level}/{r.zone_compatibility})</span>
+                </span>
+              ))}
+            </div>
+          )
         )}
       </div>
 
@@ -144,6 +167,7 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
               <ListChecks className="h-3.5 w-3.5" /> No tasks defined for this work order
             </div>
           )}
+
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Detail label="Bucket" value={d.planningBucket.replace(/_/g, ' ')} />
             <Detail label="Blocker" value={d.mainBlocker || 'None'} />
@@ -157,7 +181,7 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
             {d.partsEtaUnknown && <Detail label="Parts ETA" value="Unknown" warn />}
           </div>
 
-          {/* Assigned Executor block — expanded detail */}
+          {/* Assigned Executor block */}
           {assignedExecutorName && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
               <UserCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
@@ -232,27 +256,6 @@ function Detail({ label, value, warn }) {
     </div>
   );
 }
-
-const ZONE_STYLE = {
-  near:       'text-emerald-600',
-  reasonable: 'text-blue-600',
-  inefficient:'text-orange-500',
-  unknown:    'text-slate-400',
-};
-
-const OWNERSHIP_STYLE = {
-  DOMAIN_OWNER:     'text-emerald-700 font-semibold',
-  STRONG_MATCH:     'text-blue-600',
-  CAPABLE_MATCH:    'text-slate-500',
-  ADJACENT_CAPABLE: 'text-orange-400',
-};
-
-const OWNERSHIP_LABEL = {
-  DOMAIN_OWNER:     'domain owner',
-  STRONG_MATCH:     'strong match',
-  CAPABLE_MATCH:    'capable',
-  ADJACENT_CAPABLE: 'adjacent only',
-};
 
 function ResourceCandidate({ r, fallback }) {
   return (
