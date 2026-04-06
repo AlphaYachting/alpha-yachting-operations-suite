@@ -87,6 +87,7 @@ export default function ProjectDetail() {
    const [workOrders, setWorkOrders] = useState([]);
    const [tasks, setTasks] = useState([]);
    const [teamOrders, setTeamOrders] = useState([]);
+   const [timeEntries, setTimeEntries] = useState([]);
    const [loading, setLoading] = useState(true);
    const [showEditDialog, setShowEditDialog] = useState(false);
    const [allCustomers, setAllCustomers] = useState([]);
@@ -111,7 +112,7 @@ export default function ProjectDetail() {
 
    const loadProjectData = async () => {
      try {
-       const [projectsData, allWOs, allTasks, customers, boats, locations, technicians, allTeamOrders] = await Promise.all([
+       const [projectsData, allWOs, allTasks, customers, boats, locations, technicians, allTeamOrders, allTimeEntries] = await Promise.all([
          base44.entities.Job.list(),
          base44.entities.WorkOrder.list(),
          base44.entities.Task.list(),
@@ -119,7 +120,8 @@ export default function ProjectDetail() {
          base44.entities.Boat.list(),
          base44.entities.Location.list(),
          base44.entities.Technician.list(),
-         base44.entities.TeamOrder.list()
+         base44.entities.TeamOrder.list(),
+         base44.entities.TimeEntry.list()
        ]);
 
        const currentProject = projectsData.find(j => j.id === projectId);
@@ -166,6 +168,9 @@ export default function ProjectDetail() {
 
          const projectTeamOrders = allTeamOrders.filter(to => woIds.includes(to.work_order_id));
          setTeamOrders(projectTeamOrders);
+
+         const projectTimeEntries = allTimeEntries.filter(te => woIds.includes(te.work_order_id));
+         setTimeEntries(projectTimeEntries);
        }
      } catch (error) {
        console.error('Error loading project data:', error);
@@ -892,7 +897,20 @@ export default function ProjectDetail() {
                             <Clock className="h-4 w-4" />
                             <span className="font-medium">Planned:</span> {(() => {
                               const hours = parseFloat(wo.estimated_duration_hours);
-                              return isNaN(hours) ? '0 h' : `${hours} h`;
+                              return isNaN(hours) ? '— h' : `${hours} h`;
+                            })()}
+                            {(() => {
+                              const booked = timeEntries
+                                .filter(te => te.work_order_id === wo.id)
+                                .reduce((sum, te) => sum + ((te.duration_minutes || 0) / 60), 0);
+                              if (booked > 0) {
+                                return (
+                                  <span className="ml-2 text-emerald-700 font-medium">
+                                    • Gebucht: {booked.toFixed(1)} h
+                                  </span>
+                                );
+                              }
+                              return null;
                             })()}
                           </p>
                         </div>
