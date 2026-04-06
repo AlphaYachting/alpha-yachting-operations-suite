@@ -75,7 +75,8 @@
           "Woodworking",
           "Steel Work",
           "Antifouling",
-          "Polish"
+          "Polish",
+          "Organisation"
         ]
       },
       "description": "Skill tags for assignment"
