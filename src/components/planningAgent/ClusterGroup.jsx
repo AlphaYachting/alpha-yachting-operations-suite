@@ -30,7 +30,7 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
     return formatted;
   };
 
-  const boatName = boat?.name || 'Unknown Boat';
+  const boatName = boat?.name || boat?.vessel_name || boat?.boat_name || boat?.id || 'Unknown Boat';
   const jobTitle = job?.title || 'Unknown Project';
   const locationName = location?.name || 'Unknown Location';
 
