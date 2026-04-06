@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import QuickResolutionForm from './QuickResolutionForm';
 import { findBundleCandidates, getBundleSummary } from '@/utils/bundleAnalyzer';
 import BundleRecommendation from './BundleRecommendation';
 import { cn } from '@/lib/utils';
@@ -281,6 +282,13 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
               <p className="text-xs text-orange-600">{bundling.blockedReason}</p>
             </div>
           )}
+
+          {/* ── QUICK RESOLUTION ACTIONS ─────────────────────── */}
+          <QuickResolutionForm
+            item={item}
+            technicians={technicians}
+            onSave={onRefresh}
+          />
 
           {/* ── DIAGNOSIS ───────────────────────────────────── */}
           <div className="mt-4 pt-3 border-t border-slate-200">
