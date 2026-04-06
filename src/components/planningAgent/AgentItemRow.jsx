@@ -39,6 +39,8 @@ const OWNERSHIP_LABEL = {
 
 export default function AgentItemRow({ item, rank, technicians = [], onRefresh }) {
   const [expanded, setExpanded] = useState(false);
+  const [showResources, setShowResources] = useState(false);
+  const [showScore, setShowScore] = useState(false);
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
 
@@ -128,13 +130,16 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
 
       {/* Expanded detail */}
       {expanded && (
-        <div className="border-t border-slate-100 px-4 py-3 bg-slate-50 space-y-3 text-sm">
+        <div className="border-t border-slate-100 px-4 py-3 bg-slate-50 text-sm">
 
-          {/* Task context block */}
-          {item.tasks?.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <ListChecks className="h-3.5 w-3.5" /> Work Content ({item.tasks.length} task{item.tasks.length !== 1 ? 's' : ''})
+          {/* ── CURRENT STATE ───────────────────────────────── */}
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Current State</p>
+
+          {/* Task list */}
+          {item.tasks?.length > 0 ? (
+            <div className="mb-3">
+              <p className="text-xs text-slate-500 mb-1.5 flex items-center gap-1.5">
+                <ListChecks className="h-3.5 w-3.5" /> {item.tasks.length} task{item.tasks.length !== 1 ? 's' : ''} defined
               </p>
               <div className="flex flex-col gap-1">
                 {item.tasks.slice(0, 8).map((t, i) => (
@@ -147,122 +152,122 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
                     )} />
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-slate-700 leading-snug">{t.title}</p>
-                      {t.description && (
-                        <p className="text-xs text-slate-400 truncate mt-0.5">{t.description}</p>
-                      )}
-                      {t.estimated_minutes > 0 && (
-                        <p className="text-xs text-slate-400 mt-0.5">{Math.round(t.estimated_minutes / 60 * 10) / 10}h estimated</p>
-                      )}
+                      {t.description && <p className="text-xs text-slate-400 truncate mt-0.5">{t.description}</p>}
+                      {t.estimated_minutes > 0 && <p className="text-xs text-slate-400 mt-0.5">{Math.round(t.estimated_minutes / 60 * 10) / 10}h estimated</p>}
                     </div>
                   </div>
                 ))}
-                {item.tasks.length > 8 && (
-                  <p className="text-xs text-slate-400 px-2">+{item.tasks.length - 8} more tasks</p>
-                )}
+                {item.tasks.length > 8 && <p className="text-xs text-slate-400 px-2">+{item.tasks.length - 8} more tasks</p>}
               </div>
             </div>
-          )}
-          {item.tasks?.length === 0 && (
-            <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
+          ) : (
+            <p className="text-xs text-slate-400 flex items-center gap-1.5 mb-3">
               <ListChecks className="h-3.5 w-3.5" /> No tasks defined for this work order
-            </div>
+            </p>
           )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <Detail label="Bucket" value={d.planningBucket.replace(/_/g, ' ')} />
-            <Detail label="Blocker" value={d.mainBlocker || 'None'} />
-            <Detail label="Effort source" value={d.effortSource.replace(/_/g, ' ')} />
-            <Detail label="Effort range" value={`${d.estimatedEffortMin}–${d.estimatedEffortMax}h`} />
-            <Detail label="Team" value={`${d.estimatedTeamSizeMin}–${d.estimatedTeamSizeMax} person(s)`} />
-            <Detail label="Tasks" value={`${d.taskCount} defined`} />
-            <Detail label="Zone" value={d.jobZone?.replace(/_/g, ' ') || '—'} />
-            {d.areaInferred && <Detail label="Service area" value={`${d.inferredServiceArea} (inferred)`} />}
-            {d.durationUnknown && <Detail label="Duration" value="Unknown — fallback used" warn />}
-            {d.partsEtaUnknown && <Detail label="Parts ETA" value="Unknown" warn />}
-          </div>
-
-          {/* Project-level org gap warning */}
-          {d.jobOrgGapMissing && (
-            <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
-              <span className="text-amber-500 text-sm flex-shrink-0">⚠</span>
-              <div>
-                <p className="text-xs font-semibold text-amber-800">Project has no organization tasks</p>
-                <p className="text-xs text-amber-700 mt-0.5">No work order in this project has any ORGANIZATION stream tasks defined. Access coordination, customer confirmation and preparation responsibilities are not yet structured at the project level.</p>
-              </div>
-            </div>
-          )}
-          {/* WO-level org gap warning (only show if project level is ok) */}
-          {!d.jobOrgGapMissing && d.orgTasksMissing && d.estimatedEffortMax > 2 && (
-            <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-yellow-50 border border-yellow-200">
-              <span className="text-yellow-500 text-sm flex-shrink-0">○</span>
-              <div>
-                <p className="text-xs font-semibold text-yellow-800">Work order missing organization tasks</p>
-                <p className="text-xs text-yellow-700 mt-0.5">Other work orders in this project may have org tasks, but this specific work order has none. Consider adding access, customer, or coordination tasks here.</p>
-              </div>
-            </div>
-          )}
-
-          {/* Assigned Executor block */}
+          {/* Assigned executor */}
           {assignedExecutorName && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 mb-3">
               <UserCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-emerald-800">Assigned Executor</p>
+                <p className="text-xs text-emerald-600">Assigned Executor</p>
                 <p className="text-sm font-bold text-emerald-900">{assignedExecutorName}</p>
               </div>
             </div>
           )}
 
-          {/* Resource Pools */}
+          {/* ── ACTIONS ─────────────────────────────────────── */}
+          <PlannerActionPanel item={item} technicians={technicians} onRefresh={onRefresh} />
+
+          {/* ── DIAGNOSIS ───────────────────────────────────── */}
+          <div className="mt-4 pt-3 border-t border-slate-200">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Diagnosis</p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+              <Detail label="Bucket" value={d.planningBucket.replace(/_/g, ' ')} />
+              <Detail label="Blocker" value={d.mainBlocker || 'None'} />
+              <Detail label="Effort source" value={d.effortSource.replace(/_/g, ' ')} />
+              <Detail label="Effort range" value={`${d.estimatedEffortMin}–${d.estimatedEffortMax}h`} />
+              <Detail label="Team" value={`${d.estimatedTeamSizeMin}–${d.estimatedTeamSizeMax} person(s)`} />
+              <Detail label="Tasks" value={`${d.taskCount} defined`} />
+              <Detail label="Zone" value={d.jobZone?.replace(/_/g, ' ') || '—'} />
+              {d.areaInferred && <Detail label="Service area" value={`${d.inferredServiceArea} (inferred)`} />}
+              {d.durationUnknown && <Detail label="Duration" value="Unknown — fallback used" warn />}
+              {d.partsEtaUnknown && <Detail label="Parts ETA" value="Unknown" warn />}
+            </div>
+
+            {/* Org-gap warnings — left-border style to distinguish from action cards */}
+            {d.jobOrgGapMissing && (
+              <div className="border-l-2 border-amber-400 pl-3 py-1 mb-2">
+                <p className="text-xs font-semibold text-amber-700">⚠ Project has no organization tasks</p>
+                <p className="text-xs text-amber-600 mt-0.5">No work order in this project has any ORGANIZATION stream tasks defined. Access, coordination and preparation responsibilities are not yet structured.</p>
+              </div>
+            )}
+            {!d.jobOrgGapMissing && d.orgTasksMissing && d.estimatedEffortMax > 2 && (
+              <div className="border-l-2 border-yellow-400 pl-3 py-1 mb-2">
+                <p className="text-xs font-semibold text-yellow-700">○ Work order missing organization tasks</p>
+                <p className="text-xs text-yellow-600 mt-0.5">Other work orders in this project may have org tasks, but this specific work order has none.</p>
+              </div>
+            )}
+          </div>
+
+          {/* ── RECOMMENDATION ──────────────────────────────── */}
           {(d.preferredResourcePool?.length > 0 || d.fallbackResourcePool?.length > 0) && (
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                {assignedExecutorName ? 'System Suggestion (planning reference only)' : 'Resource Proposal'}
-              </p>
-              {d.resourceReasoning && (
-                <p className="text-xs text-slate-600 mb-2 leading-relaxed">{d.resourceReasoning}</p>
-              )}
-              {d.preferredResourcePool?.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs text-slate-400 mb-1">Preferred candidates</p>
-                  <div className="flex flex-col gap-1">
-                    {d.preferredResourcePool.map(r => (
-                      <ResourceCandidate key={r.name} r={r} />
-                    ))}
-                  </div>
-                </div>
-              )}
-              {d.fallbackResourcePool?.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-slate-200">
+              <button
+                className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 uppercase tracking-wider mb-2"
+                onClick={() => setShowResources(v => !v)}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Recommendation
+                <span className="ml-1 text-slate-400 normal-case font-normal">{showResources ? '▲ hide' : '▼ show'}</span>
+              </button>
+              {showResources && (
                 <div>
-                  <p className="text-xs text-slate-400 mb-1">Fallback candidates</p>
-                  <div className="flex flex-col gap-1">
-                    {d.fallbackResourcePool.map(r => (
-                      <ResourceCandidate key={r.name} r={r} fallback />
-                    ))}
-                  </div>
+                  {d.resourceReasoning && <p className="text-xs text-slate-600 mb-2 leading-relaxed">{d.resourceReasoning}</p>}
+                  {d.preferredResourcePool?.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-xs text-slate-400 mb-1">{assignedExecutorName ? 'System suggestion (reference only)' : 'Preferred candidates'}</p>
+                      <div className="flex flex-col gap-1">
+                        {d.preferredResourcePool.map(r => <ResourceCandidate key={r.name} r={r} />)}
+                      </div>
+                    </div>
+                  )}
+                  {d.fallbackResourcePool?.length > 0 && (
+                    <div>
+                      <p className="text-xs text-slate-400 mb-1">Fallback candidates</p>
+                      <div className="flex flex-col gap-1">
+                        {d.fallbackResourcePool.map(r => <ResourceCandidate key={r.name} r={r} fallback />)}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Score breakdown</p>
-            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-              {Object.entries(d.rankingBreakdown).map(([k, v]) => (
-                <span key={k} className={cn('px-2 py-0.5 rounded bg-white border border-slate-200', v < 0 && 'text-red-500')}>
-                  {k.replace(/([A-Z])/g, ' $1').trim()}: {v > 0 ? '+' : ''}{v}
-                </span>
-              ))}
-              <span className="px-2 py-0.5 rounded bg-slate-800 text-white font-semibold">Total: {d.rankingScore}</span>
-            </div>
+          {/* ── SCORE + REASONING ───────────────────────────── */}
+          <div className="mt-3 pt-3 border-t border-slate-200">
+            <button
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mb-1"
+              onClick={() => setShowScore(v => !v)}
+            >
+              Score details {showScore ? '▲' : '▼'}
+            </button>
+            {showScore && (
+              <div className="flex flex-wrap gap-2 text-xs text-slate-500 mb-2">
+                {Object.entries(d.rankingBreakdown).map(([k, v]) => (
+                  <span key={k} className={cn('px-2 py-0.5 rounded bg-white border border-slate-200', v < 0 && 'text-red-500')}>
+                    {k.replace(/([A-Z])/g, ' $1').trim()}: {v > 0 ? '+' : ''}{v}
+                  </span>
+                ))}
+                <span className="px-2 py-0.5 rounded bg-slate-800 text-white font-semibold">Total: {d.rankingScore}</span>
+              </div>
+            )}
+            <p className="text-xs text-slate-500 leading-relaxed">{d.reasoningSummary}</p>
           </div>
 
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Reasoning</p>
-            <p className="text-xs text-slate-600 leading-relaxed">{d.reasoningSummary}</p>
-          </div>
-
-          <PlannerActionPanel item={item} technicians={technicians} onRefresh={onRefresh} />
         </div>
       )}
     </div>

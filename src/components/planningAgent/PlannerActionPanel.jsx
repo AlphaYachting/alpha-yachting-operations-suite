@@ -55,10 +55,10 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
   }
 
   return (
-    <div className="mt-3 border border-slate-200 rounded-lg bg-white overflow-hidden">
-      <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
-        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-        <span className="text-xs font-semibold text-slate-600">Planning Gaps — Quick Actions</span>
+    <div className="mt-2 border border-blue-200 rounded-lg bg-blue-50/40 overflow-hidden">
+      <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+        <AlertTriangle className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+        <span className="text-xs font-semibold text-blue-700">Actions — resolve planning gaps</span>
       </div>
 
       <div className="px-3 py-3 space-y-4">
