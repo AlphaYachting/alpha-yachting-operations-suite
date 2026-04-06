@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { createPageUrl } from '@/utils';
 import { 
   ArrowLeft, 
@@ -212,9 +213,12 @@ export default function TemplateDetail() {
         )
       );
       await loadItems();
+      toast.success(`${generatedTasks.length} Task${generatedTasks.length !== 1 ? 's' : ''} gespeichert`);
     } catch (error) {
       console.error('Error adding AI generated tasks:', error);
       setError('Failed to add tasks: ' + error.message);
+      toast.error('Fehler beim Speichern: ' + error.message);
+      throw error;
     }
   };
 

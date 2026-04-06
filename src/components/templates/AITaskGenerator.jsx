@@ -84,15 +84,22 @@ Return ONLY the JSON object, no other text.`,
     setSelectedTasks(newSelected);
   };
 
-  const handleAddTasks = () => {
+  const handleAddTasks = async () => {
     const tasksToAdd = Array.from(selectedTasks)
       .map(index => generatedTasks[index])
       .sort((a, b) => (a.default_estimated_hours || 0) - (b.default_estimated_hours || 0));
     
-    onTasksGenerated(tasksToAdd);
-    setGeneratedTasks([]);
-    setSelectedTasks(new Set());
-    setJobDescription('');
+    setLoading(true);
+    try {
+      await onTasksGenerated(tasksToAdd);
+      setGeneratedTasks([]);
+      setSelectedTasks(new Set());
+      setJobDescription('');
+    } catch (e) {
+      // error already shown by parent
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
