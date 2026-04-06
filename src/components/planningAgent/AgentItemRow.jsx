@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
@@ -46,6 +46,13 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState(item.job?.location_id || '');
   const [locationSaving, setLocationSaving] = useState(false);
+
+  // Close location dropdown when card expands
+  useEffect(() => {
+    if (expanded && locationDropdownOpen) {
+      setLocationDropdownOpen(false);
+    }
+  }, [expanded]);
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
 
@@ -206,11 +213,6 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
           )
         )}
       </div>
-
-      {/* Close location dropdown when expanding */}
-      {expanded && locationDropdownOpen && (
-        <script>setLocationDropdownOpen(false)</script>
-      )}
 
       {/* Expanded detail */}
       {expanded && (
