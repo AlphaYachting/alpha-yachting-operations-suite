@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { findBundleCandidates, getBundleSummary } from '@/utils/bundleAnalyzer';
+import BundleRecommendation from './BundleRecommendation';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks, Calendar, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +41,7 @@ const OWNERSHIP_LABEL = {
   ADJACENT_CAPABLE: 'adjacent only',
 };
 
-export default function AgentItemRow({ item, rank, technicians = [], onRefresh }) {
+export default function AgentItemRow({ item, rank, technicians = [], allWorkOrders = [], jobs = {}, locations = {}, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [showResources, setShowResources] = useState(false);
   const [showScore, setShowScore] = useState(false);
@@ -55,6 +57,10 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
   }, [expanded]);
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
+
+  // Compute bundling recommendation
+  const bundling = findBundleCandidates(workOrder, allWorkOrders, jobs, locations);
+  const bundleSummary = getBundleSummary(bundling);
 
   // Resolve assigned executor from lead_technician_id (live lookup from current technicians list)
   const assignedExecutor = technicians.find(t => t.id === workOrder.lead_technician_id);
@@ -182,6 +188,13 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
             {d.mainUncertainty && <span className="text-slate-400 italic">· {d.mainUncertainty}</span>}
           </div>
         )}
+        {/* Bundling badge */}
+        {bundleSummary && (
+        <div className="flex items-center gap-1.5 text-xs text-cyan-600 font-medium">
+          <span>📦 {bundleSummary.label}</span>
+        </div>
+        )}
+
         {/* Assigned executor shown prominently if set, else show suggestion */}
         {assignedExecutorName ? (
           <div className="flex items-center gap-1.5 text-xs">
@@ -257,6 +270,17 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
 
           {/* ── ACTIONS ─────────────────────────────────────── */}
           <PlannerActionPanel item={item} technicians={technicians} onRefresh={onRefresh} />
+
+          {/* ── BUNDLING RECOMMENDATION ─────────────────── */}
+          {bundling?.group?.length > 0 && (
+            <BundleRecommendation bundling={bundling} jobs={jobs} locations={locations} />
+          )}
+          {bundling?.blockedReason && (
+            <div className="mt-3 p-2.5 rounded bg-orange-50 border border-orange-200">
+              <p className="text-xs font-medium text-orange-700 mb-0.5">Bundling Not Recommended</p>
+              <p className="text-xs text-orange-600">{bundling.blockedReason}</p>
+            </div>
+          )}
 
           {/* ── DIAGNOSIS ───────────────────────────────────── */}
           <div className="mt-4 pt-3 border-t border-slate-200">

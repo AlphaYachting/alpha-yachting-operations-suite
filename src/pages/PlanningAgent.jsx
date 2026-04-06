@@ -180,7 +180,7 @@ export default function PlanningAgent() {
               : filteredView.map((item, idx) => (
                   <div key={item.workOrder.id}>
                     {/* inline import to avoid circular — use AgentItemRow directly */}
-                    <AgentSectionItem item={item} rank={idx + 1} technicians={technicians} onRefresh={handleRefresh} />
+                    <AgentSectionItem item={item} rank={idx + 1} technicians={technicians} allWorkOrders={workOrders} jobs={maps.jobs} locations={maps.locations} onRefresh={handleRefresh} />
                   </div>
                 ))
             }
@@ -198,6 +198,9 @@ export default function PlanningAgent() {
             badgeClass="bg-emerald-100 text-emerald-700"
             badge={buckets.thisWeekHigh.length}
             technicians={technicians}
+            allWorkOrders={workOrders}
+            jobs={maps.jobs}
+            locations={maps.locations}
             onRefresh={handleRefresh}
           />
 
@@ -212,6 +215,9 @@ export default function PlanningAgent() {
               badgeClass="bg-orange-100 text-orange-700"
               badge={buckets.thisWeekLow.length}
               technicians={technicians}
+              allWorkOrders={workOrders}
+              jobs={maps.jobs}
+              locations={maps.locations}
               onRefresh={handleRefresh}
             />
           )}
@@ -226,6 +232,9 @@ export default function PlanningAgent() {
             badgeClass="bg-blue-100 text-blue-700"
             badge={buckets.nextWeek.length}
             technicians={technicians}
+            allWorkOrders={workOrders}
+            jobs={maps.jobs}
+            locations={maps.locations}
             onRefresh={handleRefresh}
           />
 
@@ -246,6 +255,9 @@ export default function PlanningAgent() {
                     badgeClass="bg-red-100 text-red-700"
                     badge={buckets.hardBlocked.length}
                     technicians={technicians}
+                    allWorkOrders={workOrders}
+                    jobs={maps.jobs}
+                    locations={maps.locations}
                     onRefresh={handleRefresh}
                   />
                 )}
@@ -258,6 +270,9 @@ export default function PlanningAgent() {
                     badgeClass="bg-orange-100 text-orange-700"
                     badge={buckets.externalBlocked.length}
                     technicians={technicians}
+                    allWorkOrders={workOrders}
+                    jobs={maps.jobs}
+                    locations={maps.locations}
                     onRefresh={handleRefresh}
                   />
                 )}
@@ -274,6 +289,9 @@ export default function PlanningAgent() {
             badgeClass="bg-yellow-100 text-yellow-700"
             badge={buckets.needsClarification.length}
             technicians={technicians}
+            allWorkOrders={workOrders}
+            jobs={maps.jobs}
+            locations={maps.locations}
             onRefresh={handleRefresh}
           />
 
@@ -287,6 +305,9 @@ export default function PlanningAgent() {
             badgeClass="bg-purple-100 text-purple-700"
             badge={buckets.quickWins.length}
             technicians={technicians}
+            allWorkOrders={workOrders}
+            jobs={maps.jobs}
+            locations={maps.locations}
             onRefresh={handleRefresh}
           />
 
@@ -299,6 +320,9 @@ export default function PlanningAgent() {
             badgeClass="bg-sky-100 text-sky-700"
             badge={buckets.badWeather.length}
             technicians={technicians}
+            allWorkOrders={workOrders}
+            jobs={maps.jobs}
+            locations={maps.locations}
             onRefresh={handleRefresh}
           />
         </>
@@ -311,6 +335,6 @@ export default function PlanningAgent() {
   );
 }
 
-function AgentSectionItem({ item, rank, technicians, onRefresh }) {
+function AgentSectionItem({ item, rank, technicians, allWorkOrders, jobs, locations, onRefresh }) {
   return <AgentItemRow item={item} rank={rank} technicians={technicians} onRefresh={onRefresh} />;
 }
