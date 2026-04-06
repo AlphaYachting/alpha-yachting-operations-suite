@@ -348,7 +348,19 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    console.log(`[createBillingOfferFromWO] SUCCESS: Created Offer ${offerId} with ${lineItemsCreated} line items`);
+    // ── 12. Mark WorkOrders as Completed (removes them from Billing Review) ──
+    try {
+      await Promise.all(
+        targetWOs.map(wo =>
+          base44.asServiceRole.entities.WorkOrder.update(wo.id, { status: 'Completed' })
+        )
+      );
+      console.log('[createBillingOfferFromWO] WorkOrders marked Completed: ' + targetWOs.map(w => w.work_order_number).join(', '));
+    } catch (e) {
+      warnings.push('Could not update WorkOrder status to Completed: ' + e.message);
+    }
+
+    console.log('[createBillingOfferFromWO] SUCCESS: Created Offer ' + offerId + ' with ' + lineItemsCreated + ' line items');
 
     return Response.json({
       success: true,
