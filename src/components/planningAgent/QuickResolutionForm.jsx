@@ -98,40 +98,40 @@ export default function QuickResolutionForm({ item, technicians = [], onSave }) 
   const activeFilter = technicians.filter(t => t.status === 'Active');
 
   return (
-    <div className="mt-4 pt-3 border-t border-slate-200 space-y-3">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Quick Planning Actions</p>
+    <div className="mt-3 pt-2 border-t border-slate-200 space-y-2">
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Quick Actions</p>
 
-      {/* Start Date */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-slate-600">Start Date</label>
-        <Input
-          type="date"
-          value={formData.scheduled_date}
-          onChange={handleDateChange}
-          className="text-sm"
-        />
-      </div>
-
-      {/* Duration */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-slate-600">Duration (hours)</label>
-        <Input
-          type="number"
-          min="0"
-          step="0.5"
-          value={formData.estimated_duration_hours}
-          onChange={handleDurationChange}
-          placeholder="e.g., 6"
-          className="text-sm"
-        />
+      {/* Top row: Date + Duration */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-slate-600">Date</label>
+          <Input
+            type="date"
+            value={formData.scheduled_date}
+            onChange={handleDateChange}
+            className="text-xs h-8"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-slate-600">Hrs</label>
+          <Input
+            type="number"
+            min="0"
+            step="0.5"
+            value={formData.estimated_duration_hours}
+            onChange={handleDurationChange}
+            placeholder="6"
+            className="text-xs h-8"
+          />
+        </div>
       </div>
 
       {/* Execution Owner */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-medium text-slate-600">Execution Owner</label>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-slate-600">Owner</label>
         <Select value={formData.lead_technician_id} onValueChange={handleTechnicianChange}>
-          <SelectTrigger className="text-sm">
-            <SelectValue placeholder="Select technician" />
+          <SelectTrigger className="text-xs h-8">
+            <SelectValue placeholder="Select" />
           </SelectTrigger>
           <SelectContent>
             {activeFilter.map(t => (
@@ -143,57 +143,53 @@ export default function QuickResolutionForm({ item, technicians = [], onSave }) 
         </Select>
       </div>
 
-      {/* Access Confirmed */}
-      <div className="flex items-center gap-3 p-2 rounded bg-slate-50 border border-slate-100">
-        <Checkbox
-          id="access_confirmed"
-          checked={formData.access_confirmed}
-          onCheckedChange={handleAccessChange}
-        />
-        <label htmlFor="access_confirmed" className="text-xs font-medium text-slate-700 cursor-pointer flex-1">
-          Access confirmed
-        </label>
-      </div>
-
-      {/* Org Tasks */}
-      <div className="flex flex-col gap-2 p-2 rounded bg-slate-50 border border-slate-100">
-        <p className="text-xs font-medium text-slate-700">Organization Tasks</p>
-        <div className="flex gap-3">
-          <button
-            onClick={() => handleOrgAction(formData.org_action === 'create' ? '' : 'create')}
-            className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
-              formData.org_action === 'create'
-                ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                : 'bg-white border border-slate-300 text-slate-600 hover:border-blue-300'
-            }`}
-          >
-            Create org task
-          </button>
-          <button
-            onClick={() => handleOrgAction(formData.org_action === 'not_needed' ? '' : 'not_needed')}
-            className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
-              formData.org_action === 'not_needed'
-                ? 'bg-green-100 text-green-700 border border-green-300'
-                : 'bg-white border border-slate-300 text-slate-600 hover:border-green-300'
-            }`}
-          >
-            Not needed
-          </button>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
+      {/* Access + Org Tasks in row */}
       <div className="flex gap-2">
-        <Button
-          onClick={handleSave}
-          disabled={loading}
-          size="sm"
-          className="flex-1"
+        <div className="flex-1 flex items-center gap-2 px-2 py-1.5 rounded bg-slate-50 border border-slate-100">
+          <Checkbox
+            id="access_confirmed"
+            checked={formData.access_confirmed}
+            onCheckedChange={handleAccessChange}
+            className="h-3 w-3"
+          />
+          <label htmlFor="access_confirmed" className="text-xs font-medium text-slate-700 cursor-pointer">
+            Access
+          </label>
+        </div>
+        <button
+          onClick={() => handleOrgAction(formData.org_action === 'create' ? '' : 'create')}
+          className={`flex-1 px-1.5 py-1.5 rounded text-xs font-medium transition-colors ${
+            formData.org_action === 'create'
+              ? 'bg-blue-100 text-blue-700 border border-blue-300'
+              : 'bg-white border border-slate-300 text-slate-600 hover:border-blue-300'
+          }`}
+          title="Create organization task"
         >
-          {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle className="h-3 w-3 mr-1" />}
-          Save Changes
-        </Button>
+          Org
+        </button>
+        <button
+          onClick={() => handleOrgAction(formData.org_action === 'not_needed' ? '' : 'not_needed')}
+          className={`flex-1 px-1.5 py-1.5 rounded text-xs font-medium transition-colors ${
+            formData.org_action === 'not_needed'
+              ? 'bg-green-100 text-green-700 border border-green-300'
+              : 'bg-white border border-slate-300 text-slate-600 hover:border-green-300'
+          }`}
+          title="Mark org task not needed"
+        >
+          Skip
+        </button>
       </div>
+
+      {/* Save Button */}
+      <Button
+        onClick={handleSave}
+        disabled={loading}
+        size="sm"
+        className="w-full h-8 text-xs"
+      >
+        {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle className="h-3 w-3 mr-1" />}
+        Save
+      </Button>
 
       {/* Org Confirmation Dialog */}
       <AlertDialog open={showOrgConfirm !== null} onOpenChange={() => setShowOrgConfirm(null)}>
