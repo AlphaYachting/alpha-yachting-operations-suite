@@ -30,7 +30,8 @@ const SKILLS = [
   'Woodworking',
   'Steel Work',
   'Antifouling',
-  'Polish'
+  'Polish',
+  'Organisation'
 ];
 
 const ROLE_TENDENCIES = ['LEAD', 'EXECUTION', 'SUPPORT', 'SPECIALIST', 'FINISHING_QC'];
