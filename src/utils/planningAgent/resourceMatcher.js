@@ -268,11 +268,24 @@ function getPoolAdmission(ownership, tendency, availabilityClass, domainTier) {
 // Exported so computeCapacity() in agentLogic.js can reuse the same constant
 export const UNAVAILABLE_FOR_PLANNING = ['Sick', 'Vacation', 'Off Duty'];
 
+// Phase 1.2: non-execution staff exclusion — structural rule, NOT name-based
+// Excludes SUPPORT-role technicians whose skills contain only 'Organisation' (no execution skills).
+// Null primary_role_tendency → safe default = included (field not yet filled).
+// Mixed profiles (SUPPORT + any technical skill) → included (hybrid roles).
+export function isNonExecutionStaff(tech) {
+  if (tech.primary_role_tendency !== 'SUPPORT') return false;
+  const skills = tech.skills || [];
+  return skills.length === 0 || skills.every(s => s === 'Organisation');
+}
+
 export function buildResourcePools(technicians, serviceArea, jobZone, effortMax, remainingWorkdays, workloadMap = {}) {
   const domainTier = getDomainTier(serviceArea);
   // B: exclude Inactive AND currently unavailable technicians from all pools
+  // Phase 1.2: also exclude non-execution staff (SUPPORT tendency + no execution skills)
   const active = (technicians || []).filter(t =>
-    t.status !== 'Inactive' && !UNAVAILABLE_FOR_PLANNING.includes(t.availability_status)
+    t.status !== 'Inactive' &&
+    !UNAVAILABLE_FOR_PLANNING.includes(t.availability_status) &&
+    !isNonExecutionStaff(t)
   );
 
   // Build candidate list with ownership + score

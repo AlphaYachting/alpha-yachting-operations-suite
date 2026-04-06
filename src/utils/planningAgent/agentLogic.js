@@ -1,6 +1,6 @@
 // Planning Agent V2 — Heuristic Decision Logic
 // READ-ONLY. No writes. No side effects.
-import { buildResourcePools, getZone, UNAVAILABLE_FOR_PLANNING } from './resourceMatcher.js';
+import { buildResourcePools, getZone, UNAVAILABLE_FOR_PLANNING, isNonExecutionStaff } from './resourceMatcher.js';
 
 // ─── Service Area Inference ───────────────────────────────────────────────────
 const AREA_KEYWORDS = {
@@ -328,8 +328,11 @@ function buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaIn
 export function computeCapacity(technicians, thisWeekItems, nextWeekItems) {
   // V2: only count CORE team as base capacity
   // Phase 1.1: exclude Sick/Vacation/Off Duty — aligned with resource pool filter in resourceMatcher.js
+  // Phase 1.2: exclude non-execution staff (SUPPORT tendency + no execution skills)
   const active = (technicians || []).filter(t =>
-    t.status !== 'Inactive' && !UNAVAILABLE_FOR_PLANNING.includes(t.availability_status)
+    t.status !== 'Inactive' &&
+    !UNAVAILABLE_FOR_PLANNING.includes(t.availability_status) &&
+    !isNonExecutionStaff(t)
   );
   const coreTechs = active.filter(t =>
     t.team_type === 'Core' || ['CORE_PREFERRED', 'CORE_LIMITED'].includes(t.availability_class)
