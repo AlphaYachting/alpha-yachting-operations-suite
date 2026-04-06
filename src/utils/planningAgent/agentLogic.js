@@ -224,7 +224,7 @@ export function suggestNextAction(blocker, workOrder, job, confidence, resourceP
 }
 
 // ─── Main Evaluator ───────────────────────────────────────────────────────────
-export function evaluateWorkOrder({ workOrder, job, customer, boat, location, tasks, technicians, today, workloadMap = {} }) {
+export function evaluateWorkOrder({ workOrder, job, customer, boat, location, tasks, technicians, today, workloadMap = {}, jobOrgTaskCount = null }) {
   if (!today) today = new Date();
   if (!technicians) technicians = [];
 
@@ -253,6 +253,10 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   const orgTasks = (tasks || []).filter(t => t.task_stream === 'ORGANIZATION');
   const orgTasksMissing = orgTasks.length === 0;
   const orgOwnerSet = orgTasks.some(t => !!t.assigned_user_id);
+  // Job-level org gap: no org tasks exist anywhere across the entire job's WOs
+  // jobOrgTaskCount is the total ORGANIZATION tasks across ALL WOs of this job (passed from caller)
+  // null means caller didn't provide it — treat as unknown, don't flag
+  const jobOrgGapMissing = jobOrgTaskCount !== null && jobOrgTaskCount === 0 && effort.max > 2;
 
   // Confidence
   const confidence = blocker.type !== 'NONE' ? 'LOW' : computeConfidence(workOrder, job, effort.source, serviceArea, orgTasksMissing);
@@ -282,7 +286,7 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   else if (effort.source === 'service_area_default') mainUncertainty = 'Duration estimated from service area average';
   else if (!workOrder.assigned_technicians?.length) mainUncertainty = 'No technician assigned';
 
-  const reasoningSummary = buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job, orgTasksMissing);
+  const reasoningSummary = buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job, orgTasksMissing, jobOrgGapMissing);
   const suggestedNextAction = suggestNextAction(blocker, workOrder, job, confidence, resourcePools, orgTasksMissing);
 
   // Phase 2: ownership gap detection
@@ -301,6 +305,7 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
       orgTasksMissing,
       orgOwnerSet,
       orgTaskCount: orgTasks.length,
+      jobOrgGapMissing,
       taskEstimatedMinutesSum: (tasks || []).filter(t => t.estimated_minutes).reduce((s, t) => s + t.estimated_minutes, 0),
       inferredServiceArea: serviceArea,
       effortSource: effort.source,
@@ -332,7 +337,7 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   };
 }
 
-function buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job, orgTasksMissing) {
+function buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job, orgTasksMissing, jobOrgGapMissing) {
   const parts = [];
   parts.push('Classified as ' + bucket.replace(/_/g, ' ') + '.');
   if (blocker.type !== 'NONE') parts.push(blocker.type + ' blocker: ' + blocker.reason + '.');
@@ -341,7 +346,8 @@ function buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaIn
   if (!serviceArea) parts.push('Service area unknown.');
   parts.push('Confidence: ' + confidence + '.');
   if (!workOrder.assigned_technicians?.length) parts.push('No technician assigned.');
-  if (orgTasksMissing) parts.push('Organization tasks missing — access, coordination and prep not yet defined.');
+  if (jobOrgGapMissing) parts.push('Project has no organization tasks at all — project-level coordination is undefined.');
+  else if (orgTasksMissing) parts.push('This work order is missing organization tasks — access, coordination and prep not yet defined.');
   if (job && job.requested_date) parts.push('Requested by: ' + new Date(job.requested_date).toLocaleDateString('de-AT') + '.');
   return parts.join(' ');
 }

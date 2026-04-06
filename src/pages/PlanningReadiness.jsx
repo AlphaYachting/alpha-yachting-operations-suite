@@ -73,6 +73,19 @@ export default function PlanningReadiness() {
     return m;
   }, [tasks]);
 
+  // Count org tasks per job (across all WOs) for job-level gap detection
+  const jobOrgTaskCountMap = useMemo(() => {
+    const woToJob = Object.fromEntries(workOrders.map(wo => [wo.id, wo.job_id]).filter(([, jid]) => jid));
+    const m = {};
+    for (const t of tasks) {
+      if (t.task_stream !== 'ORGANIZATION') continue;
+      const jobId = woToJob[t.work_order_id];
+      if (!jobId) continue;
+      m[jobId] = (m[jobId] || 0) + 1;
+    }
+    return m;
+  }, [tasks, workOrders]);
+
   const activeJobIds = useMemo(() =>
     new Set(jobs.filter(j => !EXCLUDED_JOB_STATUSES.includes(j.status)).map(j => j.id)),
   [jobs]);
@@ -90,6 +103,7 @@ export default function PlanningReadiness() {
       const boat     = job?.boat_id ? maps.boats[job.boat_id] : null;
       const location = job?.location_id ? maps.locations[job.location_id] : null;
       const tData    = tasksByWO[wo.id] || { count: 0, minutesSum: 0, orgCount: 0 };
+      const jobOrgTaskCount = job ? (jobOrgTaskCountMap[job.id] ?? 0) : null;
       const evaluation = evaluateWorkOrder({ workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum, orgTaskCount: tData.orgCount });
       return { workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum, evaluation };
     });

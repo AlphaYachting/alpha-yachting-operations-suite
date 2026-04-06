@@ -42,6 +42,19 @@ export default function PlanningAgent() {
     return m;
   }, [tasks]);
 
+  // Count org tasks per job (across all WOs of that job) for job-level gap detection
+  const jobOrgTaskCountMap = useMemo(() => {
+    const woToJob = Object.fromEntries(workOrders.map(wo => [wo.id, wo.job_id]).filter(([, jid]) => jid));
+    const m = {};
+    for (const t of tasks) {
+      if (t.task_stream !== 'ORGANIZATION') continue;
+      const jobId = woToJob[t.work_order_id];
+      if (!jobId) continue;
+      m[jobId] = (m[jobId] || 0) + 1;
+    }
+    return m;
+  }, [tasks, workOrders]);
+
   // C: build technician workload map from currently active WOs
   const workloadMap = useMemo(() => {
     const map = {};
@@ -69,7 +82,8 @@ export default function PlanningAgent() {
 
         if (job && !ACTIVE_JOB_STATUSES.includes(job.status)) return null;
 
-        return evaluateWorkOrder({ workOrder: wo, job, customer, location, tasks: woTasks, technicians, today, workloadMap }); // C: pass load signal
+        const jobOrgTaskCount = job ? (jobOrgTaskCountMap[job.id] ?? 0) : null;
+        return evaluateWorkOrder({ workOrder: wo, job, customer, location, tasks: woTasks, technicians, today, workloadMap, jobOrgTaskCount }); // C: pass load signal
       })
       .filter(Boolean);
   }, [workOrders, maps, tasksByWO, isLoading]);

@@ -181,6 +181,27 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
             {d.partsEtaUnknown && <Detail label="Parts ETA" value="Unknown" warn />}
           </div>
 
+          {/* Project-level org gap warning */}
+          {d.jobOrgGapMissing && (
+            <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200">
+              <span className="text-amber-500 text-sm flex-shrink-0">⚠</span>
+              <div>
+                <p className="text-xs font-semibold text-amber-800">Project has no organization tasks</p>
+                <p className="text-xs text-amber-700 mt-0.5">No work order in this project has any ORGANIZATION stream tasks defined. Access coordination, customer confirmation and preparation responsibilities are not yet structured at the project level.</p>
+              </div>
+            </div>
+          )}
+          {/* WO-level org gap warning (only show if project level is ok) */}
+          {!d.jobOrgGapMissing && d.orgTasksMissing && d.estimatedEffortMax > 2 && (
+            <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-yellow-50 border border-yellow-200">
+              <span className="text-yellow-500 text-sm flex-shrink-0">○</span>
+              <div>
+                <p className="text-xs font-semibold text-yellow-800">Work order missing organization tasks</p>
+                <p className="text-xs text-yellow-700 mt-0.5">Other work orders in this project may have org tasks, but this specific work order has none. Consider adding access, customer, or coordination tasks here.</p>
+              </div>
+            </div>
+          )}
+
           {/* Assigned Executor block */}
           {assignedExecutorName && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
