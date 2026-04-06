@@ -395,7 +395,6 @@ export default function PlanningAgent() {
             locations={maps.locations}
             onRefresh={handleRefresh}
           />
-          </AgentSection>
 
           <p className="text-xs text-slate-400 text-center">
           Planning Agent V2 · {evaluatedItems.length} work orders analysed
@@ -523,11 +522,10 @@ export default function PlanningAgent() {
                 Save
               </button>
             </div>
-          </div>
-          </div>
-          </div>
-          )}
-          </div>
+            </div>
+            </div>
+            )}
+            </div>
   );
 }
 
