@@ -527,6 +527,7 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             <SelectItem value="Paused">Paused</SelectItem>
             <SelectItem value="Waiting for Parts">Waiting for Parts</SelectItem>
             <SelectItem value="Waiting for Approval">Waiting for Approval</SelectItem>
+            <SelectItem value="Ready to Invoice">Ready to Invoice</SelectItem>
             <SelectItem value="Completed">Completed</SelectItem>
             <SelectItem value="Cancelled">Cancelled</SelectItem>
           </SelectContent>
