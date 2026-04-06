@@ -312,6 +312,8 @@ export default function PlanningReadiness() {
             />
         </div>
       )}
+      </>
+      </div>
     </div>
     );
-    }
+  }

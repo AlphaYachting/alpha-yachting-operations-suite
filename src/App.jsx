@@ -182,19 +182,16 @@ function App() {
   return (
     <Router>
       <QueryClientProvider client={queryClientInstance}>
-        <Routes>
-          {/* Public route: InviteAccept (OUTSIDE AuthProvider entirely) */}
-          <Route path="/InviteAccept" element={<InviteAccept />} />
-          
-          {/* ALL other routes: wrapped with AuthProvider FIRST, then auth checks */}
-          <Route path="*" element={
-            <AuthProvider>
+        <AuthProvider>
+          <Routes>
+            <Route path="/InviteAccept" element={<InviteAccept />} />
+            <Route path="*" element={<>
               <NavigationTracker />
               <AuthenticatedApp />
-            </AuthProvider>
-          } />
-        </Routes>
-        <Toaster />
+            </>} />
+          </Routes>
+          <Toaster />
+        </AuthProvider>
       </QueryClientProvider>
     </Router>
   );
