@@ -225,7 +225,7 @@ Deno.serve(async (req) => {
           base44.asServiceRole.entities.MaterialUsage.update(m.id, { staged_offer_id: offerId })
         ),
         ...unbilledCME.map(cme =>
-          base44.asServiceRole.entities.CustomerMaterialEntry.update(cme.id, { staged_offer_id: offerId })
+          base44.asServiceRole.entities.CustomerMaterialEntry.update(cme.id, { staged_offer_id: offerId, billing_status: 'verrechnet' })
         ),
       ]);
       console.log(`[createBillingOfferFromWO] Reserved items for offer ${offerId}`);

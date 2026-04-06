@@ -72,6 +72,15 @@
       "type": "string",
       "description": "Internal notes"
     },
+    "billing_status": {
+      "type": "string",
+      "enum": [
+        "offen",
+        "verrechnet"
+      ],
+      "default": "offen",
+      "description": "Billing status \u2014 offen = not yet billed, verrechnet = billed to customer. Can be set manually or automatically via billing offer."
+    },
     "staged_offer_id": {
       "type": "string",
       "description": "Reservation field \u2014 set when this entry is included in a pending billing Offer, before FIRA export. Prevents double-inclusion. Cleared if offer is cancelled/deleted."

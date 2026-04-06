@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useState } from 'react';
-import { Package, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Package, Plus, Pencil, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import ManualMaterialEntryModal from './ManualMaterialEntryModal';
@@ -15,6 +15,13 @@ export default function CustomerMaterialSection({ customerId }) {
     if (!confirm(`"${entry.item_title}" wirklich löschen?`)) return;
     await base44.entities.CustomerMaterialEntry.delete(entry.id);
     toast.success('Eintrag gelöscht');
+    refetch();
+  };
+
+  const handleToggleBillingStatus = async (entry) => {
+    const newStatus = entry.billing_status === 'verrechnet' ? 'offen' : 'verrechnet';
+    await base44.entities.CustomerMaterialEntry.update(entry.id, { billing_status: newStatus });
+    toast.success(newStatus === 'verrechnet' ? 'Als verrechnet markiert' : 'Status zurückgesetzt');
     refetch();
   };
 
@@ -62,6 +69,7 @@ export default function CustomerMaterialSection({ customerId }) {
                 <th className="text-right px-3 py-2 font-medium text-slate-500">Total</th>
                 <th className="text-left px-3 py-2 font-medium text-slate-500">Date</th>
                 <th className="text-left px-3 py-2 font-medium text-slate-500">Source</th>
+                <th className="text-left px-3 py-2 font-medium text-slate-500">Status</th>
                 <th className="px-3 py-2"></th>
                 </tr>
             </thead>
@@ -90,6 +98,25 @@ export default function CustomerMaterialSection({ customerId }) {
                     }`}>
                       {entry.source_type === 'manual' ? 'manual' : 'import'}
                     </span>
+                    </td>
+                  <td className="px-3 py-2">
+                    <button
+                      onClick={() => handleToggleBillingStatus(entry)}
+                      title={entry.billing_status === 'verrechnet' ? 'Zurücksetzen auf offen' : 'Als verrechnet markieren'}
+                      className="flex items-center gap-1"
+                    >
+                      {entry.billing_status === 'verrechnet' ? (
+                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">
+                          <CheckCircle2 className="h-3 w-3" />
+                          verrechnet
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">
+                          <Circle className="h-3 w-3" />
+                          offen
+                        </span>
+                      )}
+                    </button>
                     </td>
                     <td className="px-3 py-2">
                     <div className="flex items-center gap-1">

@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     const stagedCME = allCME.filter(c => c.staged_offer_id === offerId);
     for (const c of stagedCME) {
       try {
-        await base44.asServiceRole.entities.CustomerMaterialEntry.update(c.id, { staged_offer_id: null });
+        await base44.asServiceRole.entities.CustomerMaterialEntry.update(c.id, { staged_offer_id: null, billing_status: 'offen' });
         results.cme_cleared++;
       } catch (e) {
         results.errors.push(`CME ${c.id}: ${e.message}`);
