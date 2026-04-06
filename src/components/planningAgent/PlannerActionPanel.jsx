@@ -127,23 +127,15 @@ const OWNER_BADGE = {
 
 export default function PlannerActionPanel({ item, technicians = [], onRefresh }) {
   const { workOrder, job, derived } = item;
-  const [saving, setSaving] = useState(null); // 'exec' | 'org' | 'no-task' | 'access' | 'location' | 'parts-ordered' | 'parts-eta'
+  const [saving, setSaving] = useState(null); // 'exec' | 'org' | 'no-task' | 'access' | 'parts-ordered' | 'parts-eta'
   const [execTechId, setExecTechId] = useState(workOrder.lead_technician_id || '');
   const [orgTitle, setOrgTitle] = useState('');
   const [orgAssigneeId, setOrgAssigneeId] = useState('');
-  const [done, setDone] = useState({}); // { exec, org, noTask, access, location, partsOrdered, partsEta }
+  const [done, setDone] = useState({}); // { exec, org, noTask, access, partsOrdered, partsEta }
   const [activeSuggestion, setActiveSuggestion] = useState(null); // index of selected chip
-  const [selectedLocationId, setSelectedLocationId] = useState(job?.location_id || '');
   const [selectedPartsEta, setSelectedPartsEta] = useState(job?.parts_eta || '');
 
-  // Fetch locations
-  const { data: locationsData = [] } = useQuery({
-    queryKey: ['locations'],
-    queryFn: async () => {
-      const res = await base44.entities.Location.list('-updated_date', 100);
-      return res.filter(l => l.status === 'Active');
-    },
-  });
+
 
   const { top3: orgSuggestions, allCount: allOrgSuggestionCount } = suggestOrgTasks(item);
 
@@ -222,14 +214,7 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
     onRefresh?.();
   }
 
-  async function selectLocation() {
-    if (!selectedLocationId) return;
-    setSaving('location');
-    await base44.entities.Job.update(job.id, { location_id: selectedLocationId });
-    setSaving(null);
-    setDone(d => ({ ...d, location: true }));
-    onRefresh?.();
-  }
+
 
   async function togglePartsOrdered() {
     setSaving('parts-ordered');
@@ -282,46 +267,6 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
             )}
             {done.access && (
               <p className="text-xs text-emerald-600">Access confirmed — refresh to update.</p>
-            )}
-          </div>
-        )}
-
-        {/* Location & Logistics */}
-        {(!job?.location_id || done.location) && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin className="h-3.5 w-3.5 text-blue-600" />
-              <span className="text-xs font-semibold text-slate-700">Location & Logistics</span>
-              {done.location && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-              {!done.location && <span className="text-xs text-orange-500 font-medium">Unassigned</span>}
-            </div>
-            {!done.location && (
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedLocationId}
-                  onChange={e => setSelectedLocationId(e.target.value)}
-                  className="flex-1 text-xs border border-slate-200 rounded px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:border-blue-400"
-                >
-                  <option value="">— select location —</option>
-                  {locationsData.map(loc => (
-                    <option key={loc.id} value={loc.id}>
-                      {loc.name} {loc.city ? `(${loc.city})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={selectLocation}
-                  disabled={!selectedLocationId || saving === 'location'}
-                  className="text-xs h-7 px-3 border-blue-200 text-blue-700 hover:bg-blue-50"
-                >
-                  {saving === 'location' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Set'}
-                </Button>
-              </div>
-            )}
-            {done.location && (
-              <p className="text-xs text-emerald-600">Location assigned — refresh to update.</p>
             )}
           </div>
         )}
