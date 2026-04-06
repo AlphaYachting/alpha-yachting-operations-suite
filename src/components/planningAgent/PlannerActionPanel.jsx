@@ -103,8 +103,9 @@ function suggestOrgTasks(item) {
     });
   }
 
-  // 9. Execution owner missing — responsibility clarification (HIGHEST PRIORITY)
-  if (derived.executionOwnerMissing && !hasExisting('owner') && !hasExisting('verantwort')) {
+  // 9. Execution owner missing — responsibility clarification (ONLY if no team assigned)
+  // If team is already assigned, just pick one as lead (don't suggest a new person)
+  if (derived.executionOwnerMissing && !workOrder.assigned_technicians?.length && !hasExisting('owner') && !hasExisting('verantwort')) {
     suggestions.push({
       title: 'Clarify execution responsibility and assign work owner',
       ownerType: 'ORG_OWNER',
@@ -154,11 +155,15 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
     t.status !== 'Inactive' && (t.skills || []).includes('Organisation')
   );
 
-  // All active execution technicians for exec owner
-  const execCandidates = technicians.filter(t =>
-    t.status !== 'Inactive' &&
-    t.primary_role_tendency !== 'SUPPORT'
-  );
+  // Exec owner candidates: if team already assigned, only show them; otherwise show all active
+  const execCandidates = (() => {
+    const all = technicians.filter(t => t.status !== 'Inactive' && t.primary_role_tendency !== 'SUPPORT');
+    if (workOrder.assigned_technicians?.length > 0) {
+      // Filter to only assigned team members
+      return all.filter(t => workOrder.assigned_technicians.includes(t.id));
+    }
+    return all;
+  })();
 
   // Ordered assignee list based on active suggestion's ownerType
   const activeSuggestionOwnerType = activeSuggestion !== null ? orgSuggestions[activeSuggestion]?.ownerType : null;
