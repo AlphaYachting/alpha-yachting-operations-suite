@@ -182,12 +182,12 @@ Deno.serve(async (req) => {
     let existingTotal = 0;
     let existingSourceWOIds = [];
 
-    const existingDrafts = await base44.asServiceRole.entities.Offer.filter({
+    const allCustomerDrafts = await base44.asServiceRole.entities.Offer.filter({
       customer_id: sourceCustomerId,
       status: 'Draft',
-      source_type: 'READY_TO_INVOICE_REVIEW',
     });
-    const existingDraft = existingDrafts[0] || null;
+    const existingDraft = allCustomerDrafts.find(o => o.source_type === 'READY_TO_INVOICE_REVIEW') || null;
+    console.log(`[createBillingOfferFromWO] Found ${allCustomerDrafts.length} Draft offers for customer, ${existingDraft ? 'reusing ' + existingDraft.offer_number : 'creating new'}`);
 
     if (existingDraft) {
       // Reuse the existing draft offer
