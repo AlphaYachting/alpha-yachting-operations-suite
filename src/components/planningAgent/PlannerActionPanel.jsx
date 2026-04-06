@@ -2,10 +2,11 @@
 // Two safe write actions: set execution owner, create org task.
 // All other planning logic remains read-only.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { UserCheck, ClipboardPlus, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { UserCheck, ClipboardPlus, CheckCircle2, AlertTriangle, Loader2, Lock, MapPin, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ─── Org Task Suggestion Engine ──────────────────────────────────────────────
@@ -124,18 +125,29 @@ const OWNER_BADGE = {
 };
 
 export default function PlannerActionPanel({ item, technicians = [], onRefresh }) {
-  const { workOrder, derived } = item;
-  const [saving, setSaving] = useState(null); // 'exec' | 'org' | 'no-task'
+  const { workOrder, job, derived } = item;
+  const [saving, setSaving] = useState(null); // 'exec' | 'org' | 'no-task' | 'access' | 'location' | 'parts-ordered' | 'parts-eta'
   const [execTechId, setExecTechId] = useState(workOrder.lead_technician_id || '');
   const [orgTitle, setOrgTitle] = useState('');
   const [orgAssigneeId, setOrgAssigneeId] = useState('');
-  const [done, setDone] = useState({}); // { exec: bool, org: bool, noTask: bool }
+  const [done, setDone] = useState({}); // { exec, org, noTask, access, location, partsOrdered, partsEta }
   const [activeSuggestion, setActiveSuggestion] = useState(null); // index of selected chip
+  const [selectedLocationId, setSelectedLocationId] = useState(job?.location_id || '');
+  const [selectedPartsEta, setSelectedPartsEta] = useState(job?.parts_eta || '');
+
+  // Fetch locations
+  const { data: locationsData = [] } = useQuery({
+    queryKey: ['locations'],
+    queryFn: async () => {
+      const res = await base44.entities.Location.list('-updated_date', 100);
+      return res.filter(l => l.status === 'Active');
+    },
+  });
 
   const { top3: orgSuggestions, allCount: allOrgSuggestionCount } = suggestOrgTasks(item);
 
-  const hasGaps = derived.executionOwnerMissing || derived.orgTasksMissing;
-  if (!hasGaps && !done.exec && !done.org) return null;
+  const hasGaps = derived.executionOwnerMissing || derived.orgTasksMissing || !workOrder.access_confirmed || !job?.location_id || (job?.parts_ordered && !job?.parts_eta);
+  if (!hasGaps && Object.values(done).every(v => !v)) return null;
 
   // Only org-capable candidates for org owner
   const orgCandidates = technicians.filter(t =>
@@ -197,6 +209,40 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
     onRefresh?.();
   }
 
+  async function toggleAccessConfirmed() {
+    setSaving('access');
+    await base44.entities.WorkOrder.update(workOrder.id, { access_confirmed: true });
+    setSaving(null);
+    setDone(d => ({ ...d, access: true }));
+    onRefresh?.();
+  }
+
+  async function selectLocation() {
+    if (!selectedLocationId) return;
+    setSaving('location');
+    await base44.entities.Job.update(job.id, { location_id: selectedLocationId });
+    setSaving(null);
+    setDone(d => ({ ...d, location: true }));
+    onRefresh?.();
+  }
+
+  async function togglePartsOrdered() {
+    setSaving('parts-ordered');
+    await base44.entities.Job.update(job.id, { parts_ordered: true });
+    setSaving(null);
+    setDone(d => ({ ...d, partsOrdered: true }));
+    onRefresh?.();
+  }
+
+  async function updatePartsEta() {
+    if (!selectedPartsEta) return;
+    setSaving('parts-eta');
+    await base44.entities.Job.update(job.id, { parts_eta: selectedPartsEta });
+    setSaving(null);
+    setDone(d => ({ ...d, partsEta: true }));
+    onRefresh?.();
+  }
+
   return (
     <div className="mt-2 border border-blue-200 rounded-lg bg-blue-50/40 overflow-hidden">
       <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
@@ -205,6 +251,126 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
       </div>
 
       <div className="px-3 py-3 space-y-4">
+
+        {/* Site & Access */}
+        {(!workOrder.access_confirmed || done.access) && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Lock className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="text-xs font-semibold text-slate-700">Site & Access</span>
+              {done.access && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+              {!done.access && <span className="text-xs text-orange-500 font-medium">Unconfirmed</span>}
+            </div>
+            {!done.access && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600 flex-1">Has access to site/vessel been confirmed?</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={toggleAccessConfirmed}
+                  disabled={saving === 'access'}
+                  className="text-xs h-7 px-3 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                >
+                  {saving === 'access' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Confirm'}
+                </Button>
+              </div>
+            )}
+            {done.access && (
+              <p className="text-xs text-emerald-600">Access confirmed — refresh to update.</p>
+            )}
+          </div>
+        )}
+
+        {/* Location & Logistics */}
+        {(!job?.location_id || done.location) && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <MapPin className="h-3.5 w-3.5 text-blue-600" />
+              <span className="text-xs font-semibold text-slate-700">Location & Logistics</span>
+              {done.location && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+              {!done.location && <span className="text-xs text-orange-500 font-medium">Unassigned</span>}
+            </div>
+            {!done.location && (
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedLocationId}
+                  onChange={e => setSelectedLocationId(e.target.value)}
+                  className="flex-1 text-xs border border-slate-200 rounded px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:border-blue-400"
+                >
+                  <option value="">— select location —</option>
+                  {locationsData.map(loc => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name} {loc.city ? `(${loc.city})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={selectLocation}
+                  disabled={!selectedLocationId || saving === 'location'}
+                  className="text-xs h-7 px-3 border-blue-200 text-blue-700 hover:bg-blue-50"
+                >
+                  {saving === 'location' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Set'}
+                </Button>
+              </div>
+            )}
+            {done.location && (
+              <p className="text-xs text-emerald-600">Location assigned — refresh to update.</p>
+            )}
+          </div>
+        )}
+
+        {/* Parts & Procurement */}
+        {((job?.parts_ordered && !job?.parts_eta) || done.partsOrdered || done.partsEta) && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Package className="h-3.5 w-3.5 text-amber-600" />
+              <span className="text-xs font-semibold text-slate-700">Parts & Procurement</span>
+              {(done.partsOrdered || done.partsEta) && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+            </div>
+            {job?.parts_ordered && !job?.parts_eta && !done.partsEta && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs text-slate-600 flex-1">Parts ordered but ETA unknown. Set delivery date:</span>
+                <input
+                  type="date"
+                  value={selectedPartsEta}
+                  onChange={e => setSelectedPartsEta(e.target.value)}
+                  className="text-xs border border-slate-200 rounded px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:border-amber-400"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={updatePartsEta}
+                  disabled={!selectedPartsEta || saving === 'parts-eta'}
+                  className="text-xs h-7 px-3 border-amber-200 text-amber-700 hover:bg-amber-50"
+                >
+                  {saving === 'parts-eta' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Set ETA'}
+                </Button>
+              </div>
+            )}
+            {!job?.parts_ordered && !done.partsOrdered && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-600 flex-1">Have materials been ordered?</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={togglePartsOrdered}
+                  disabled={saving === 'parts-ordered'}
+                  className="text-xs h-7 px-3 border-amber-200 text-amber-700 hover:bg-amber-50"
+                >
+                  {saving === 'parts-ordered' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Mark ordered'}
+                </Button>
+              </div>
+            )}
+            {done.partsOrdered && (
+              <p className="text-xs text-emerald-600">Parts marked as ordered — set ETA in next step.</p>
+            )}
+            {done.partsEta && (
+              <p className="text-xs text-emerald-600">Parts ETA set — refresh to update.</p>
+            )}
+          </div>
+        )}
 
         {/* Execution Owner */}
         {(derived.executionOwnerMissing || done.exec) && (
