@@ -112,11 +112,18 @@ export default function Technicians() {
     }
   };
 
-  const filteredTechnicians = technicians.filter(tech => {
-    const searchLower = searchTerm.toLowerCase();
-    const name = `${tech.first_name || ''} ${tech.last_name || ''}`.toLowerCase();
-    return name.includes(searchLower) || tech.email?.toLowerCase().includes(searchLower);
-  });
+  const filteredTechnicians = technicians
+    .filter(tech => {
+      const searchLower = searchTerm.toLowerCase();
+      const name = `${tech.first_name || ''} ${tech.last_name || ''}`.toLowerCase();
+      return name.includes(searchLower) || tech.email?.toLowerCase().includes(searchLower);
+    })
+    .sort((a, b) => {
+      const aCore = a.team_type === 'Core' ? 0 : 1;
+      const bCore = b.team_type === 'Core' ? 0 : 1;
+      if (aCore !== bCore) return aCore - bCore;
+      return `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
+    });
 
   return (
     <div className="space-y-6">
@@ -164,7 +171,7 @@ export default function Technicians() {
       ) : (
         <div className="grid gap-4">
           {filteredTechnicians.map((tech) => (
-            <Card key={tech.id} className="hover:shadow-md transition-shadow">
+            <Card key={tech.id} className={`hover:shadow-md transition-shadow ${tech.team_type === 'Core' ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200 bg-white'}`}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1 min-w-0">
@@ -187,6 +194,9 @@ export default function Technicians() {
                           {tech.first_name} {tech.last_name}
                         </h3>
                         <Badge className={roleColors[tech.role]}>{tech.role}</Badge>
+                        {tech.team_type === 'Core' && (
+                          <Badge className="bg-blue-100 text-blue-800 border border-blue-200">Core Team</Badge>
+                        )}
                         <Badge className={availabilityColors[tech.availability_status]}>
                           {tech.availability_status}
                         </Badge>
