@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks } from 'lucide-react';
+import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks, Calendar, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import PlannerActionPanel from './PlannerActionPanel';
 
@@ -41,6 +43,9 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
   const [expanded, setExpanded] = useState(false);
   const [showResources, setShowResources] = useState(false);
   const [showScore, setShowScore] = useState(false);
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const [selectedLocationId, setSelectedLocationId] = useState(item.job?.location_id || '');
+  const [locationSaving, setLocationSaving] = useState(false);
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
 
@@ -53,6 +58,43 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
     : null;
 
   const customerName = customer?.company_name || [customer?.first_name, customer?.last_name].filter(Boolean).join(' ') || '—';
+
+  // Fetch locations for dropdown
+  const { data: locationsData = [] } = useQuery({
+    queryKey: ['locations'],
+    queryFn: async () => {
+      const res = await base44.entities.Location.list('-updated_date', 100);
+      return res.filter(l => l.status === 'Active');
+    },
+  });
+
+  // Format scheduled date for display
+  const formatScheduledDate = () => {
+    if (!workOrder.scheduled_date) return 'Unscheduled';
+    const date = new Date(workOrder.scheduled_date);
+    const today = new Date();
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() + 7);
+    const isThisWeek = date >= today && date <= weekEnd;
+    const formatted = date.toLocaleDateString('de-AT', { weekday: 'short', month: 'short', day: 'numeric' });
+    return isThisWeek ? `This week: ${formatted}` : formatted;
+  };
+
+  // Update location
+  const handleLocationChange = async (locationId) => {
+    if (!locationId || !job) return;
+    setLocationSaving(true);
+    try {
+      await base44.entities.Job.update(job.id, { location_id: locationId });
+      setSelectedLocationId(locationId);
+      setLocationDropdownOpen(false);
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error updating location:', error);
+    } finally {
+      setLocationSaving(false);
+    }
+  };
 
   return (
     <div className="border border-slate-200 rounded-xl bg-white overflow-hidden hover:shadow-sm transition-shadow">
@@ -72,9 +114,46 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
             {d.isBadWeatherCandidate && <Cloud className="h-3.5 w-3.5 text-sky-500 flex-shrink-0" title="Bad Weather Candidate" />}
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+            {workOrder.scheduled_date && (
+              <span className="flex items-center gap-1 text-slate-600 font-medium">
+                <Calendar className="h-3 w-3" />{formatScheduledDate()}
+              </span>
+            )}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLocationDropdownOpen(!locationDropdownOpen);
+                }}
+                className="flex items-center gap-1 hover:text-slate-700 transition-colors"
+                disabled={locationSaving}
+              >
+                <MapPin className="h-3 w-3" />
+                {location?.name || 'No location'}
+                {locationSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+              </button>
+              {locationDropdownOpen && (
+                <div className="absolute top-5 left-0 z-40 bg-white border border-slate-200 rounded-lg shadow-lg min-w-max">
+                  {locationsData.map(loc => (
+                    <button
+                      key={loc.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLocationChange(loc.id);
+                      }}
+                      className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
+                      disabled={locationSaving}
+                    >
+                      {loc.name} {loc.city && `(${loc.city})`}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {job && <span className="truncate text-slate-400">·</span>}
             {job && <span className="truncate">{job.title}</span>}
-            {customerName !== '—' && <span>· {customerName}</span>}
-            {location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{location.name}</span>}
+            {customerName !== '—' && <span className="text-slate-400">·</span>}
+            {customerName !== '—' && <span>{customerName}</span>}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 flex-shrink-0 ml-2">
@@ -127,6 +206,11 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
           )
         )}
       </div>
+
+      {/* Close location dropdown when expanding */}
+      {expanded && locationDropdownOpen && (
+        <script>setLocationDropdownOpen(false)</script>
+      )}
 
       {/* Expanded detail */}
       {expanded && (
