@@ -40,6 +40,17 @@ export default function PlanningAgent() {
     return m;
   }, [tasks]);
 
+  // C: build technician workload map from currently active WOs
+  const workloadMap = useMemo(() => {
+    const map = {};
+    workOrders.filter(wo => ACTIVE_WO_STATUSES.includes(wo.status)).forEach(wo => {
+      (wo.assigned_technicians || []).forEach(tid => {
+        map[tid] = (map[tid] || 0) + 1;
+      });
+    });
+    return map;
+  }, [workOrders]);
+
   // Evaluate all relevant WOs
   const evaluatedItems = useMemo(() => {
     if (isLoading) return [];
@@ -47,7 +58,7 @@ export default function PlanningAgent() {
     today.setHours(0, 0, 0, 0);
 
     return workOrders
-      .filter(wo => ACTIVE_WO_STATUSES.includes(wo.status))
+      .filter(wo => ACTIVE_WO_STATUSES.includes(wo.status) && wo.workorder_type !== 'ORGANIZATION') // A: exclude coordination-only WOs
       .map(wo => {
         const job      = wo.job_id ? maps.jobs[wo.job_id] : null;
         const customer = job?.customer_id ? maps.customers[job.customer_id] : null;
@@ -56,7 +67,7 @@ export default function PlanningAgent() {
 
         if (job && !ACTIVE_JOB_STATUSES.includes(job.status)) return null;
 
-        return evaluateWorkOrder({ workOrder: wo, job, customer, location, tasks: woTasks, technicians, today });
+        return evaluateWorkOrder({ workOrder: wo, job, customer, location, tasks: woTasks, technicians, today, workloadMap }); // C: pass load signal
       })
       .filter(Boolean);
   }, [workOrders, maps, tasksByWO, isLoading]);

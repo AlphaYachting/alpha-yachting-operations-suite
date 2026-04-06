@@ -79,6 +79,7 @@ export default function PlanningReadiness() {
   const allItems = useMemo(() => {
     const relevantWOs = workOrders.filter(wo => {
       if (EXCLUDED_WO_STATUSES.includes(wo.status)) return false;
+      if (wo.workorder_type === 'ORGANIZATION') return false; // A: exclude coordination-only WOs
       if (wo.job_id && !activeJobIds.has(wo.job_id)) return false;
       return true;
     });

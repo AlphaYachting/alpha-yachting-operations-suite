@@ -78,6 +78,8 @@ export function detectBlocker(workOrder, job, customer) {
   if (job && job.requires_parts && !job.parts_ordered) return { type: 'HARD', reason: 'Parts required but not ordered' };
   if (workOrder.status === 'Waiting for Parts') return { type: 'EXTERNAL', reason: 'Waiting for parts delivery' };
   if (workOrder.status === 'Waiting for Approval') return { type: 'EXTERNAL', reason: 'Waiting for customer approval' };
+  // E: align with readinessEvaluator PARTS_ETA_PASSED — parts ordered but delivery date passed
+  if (job && job.parts_eta && new Date(job.parts_eta) < new Date()) return { type: 'EXTERNAL', reason: 'Parts delivery date has passed — follow up with supplier' };
   return { type: 'NONE', reason: null };
 }
 
@@ -213,7 +215,7 @@ export function suggestNextAction(blocker, workOrder, job, confidence, resourceP
 }
 
 // ─── Main Evaluator ───────────────────────────────────────────────────────────
-export function evaluateWorkOrder({ workOrder, job, customer, boat, location, tasks, technicians, today }) {
+export function evaluateWorkOrder({ workOrder, job, customer, boat, location, tasks, technicians, today, workloadMap = {} }) {
   if (!today) today = new Date();
   if (!technicians) technicians = [];
 
@@ -245,7 +247,9 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   const locationText = [(location && location.name) || '', (location && location.city) || '', (location && location.address) || ''].join(' ');
   const jobZone = getZone(locationText);
   const dayOfWeek = today.getDay();
-  const resourcePools = buildResourcePools(technicians, serviceArea, jobZone, effort.max, dayOfWeek);
+  // D: remaining workdays in current week — Mon=4, Tue=3, Wed=2, Thu=1, Fri=0, weekend treated as 5
+  const remainingWorkdays = dayOfWeek >= 1 && dayOfWeek <= 5 ? (5 - dayOfWeek) : 5;
+  const resourcePools = buildResourcePools(technicians, serviceArea, jobZone, effort.max, remainingWorkdays, workloadMap);
 
   // Bucket (resource-gate aware)
   const bucket = classifyBucket(workOrder, job, blocker, confidence, today, resourcePools.weekResourceGate);

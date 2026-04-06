@@ -264,9 +264,15 @@ function getPoolAdmission(ownership, tendency, availabilityClass, domainTier) {
 }
 
 // ─── MAIN BUILDER ─────────────────────────────────────────────────────────────
-export function buildResourcePools(technicians, serviceArea, jobZone, effortMax, dayOfWeek) {
+// B: statuses that make a technician truly unavailable for planning proposals
+const UNAVAILABLE_FOR_PLANNING = ['Sick', 'Vacation', 'Off Duty'];
+
+export function buildResourcePools(technicians, serviceArea, jobZone, effortMax, remainingWorkdays, workloadMap = {}) {
   const domainTier = getDomainTier(serviceArea);
-  const active = (technicians || []).filter(t => t.status !== 'Inactive');
+  // B: exclude Inactive AND currently unavailable technicians from all pools
+  const active = (technicians || []).filter(t =>
+    t.status !== 'Inactive' && !UNAVAILABLE_FOR_PLANNING.includes(t.availability_status)
+  );
 
   // Build candidate list with ownership + score
   const evaluated = active.map(t => {
@@ -280,7 +286,10 @@ export function buildResourcePools(technicians, serviceArea, jobZone, effortMax,
     const pool           = getPoolAdmission(ownership, tendency, availClass, domainTier);
     if (pool === 'exclude') return null;
 
-    const score = computeCandidateScore(ownership, tendency, availClass, zoneCompat, domainTier);
+    // C: soft load penalty — techs already assigned to many active WOs are deprioritized
+    const currentLoad = workloadMap[t.id] || 0;
+    const loadPenalty = currentLoad >= 4 ? 12 : currentLoad >= 2 ? 6 : 0;
+    const score = computeCandidateScore(ownership, tendency, availClass, zoneCompat, domainTier) + loadPenalty;
     const hasMetadata = !!(t.availability_class && t.primary_role_tendency && t.team_type);
 
     return {
@@ -298,6 +307,7 @@ export function buildResourcePools(technicians, serviceArea, jobZone, effortMax,
         ? t.extended_skill_notes.split(';')[0].replace(/\.$/, '').trim()
         : '',
       has_metadata_gap:  !hasMetadata,
+      current_load:      currentLoad,  // C: exposed for UI transparency
       _score:            score,
     };
   }).filter(Boolean).sort((a, b) => a._score - b._score);
@@ -309,10 +319,10 @@ export function buildResourcePools(technicians, serviceArea, jobZone, effortMax,
   // Resource reasoning
   const reasoning = buildReasoning(preferred, fallback, serviceArea, domainTier);
 
-  // Day-of-week resource gate (Thu/Fri: need a quick-response preferred candidate)
-  const isThurFri = dayOfWeek === 4 || dayOfWeek === 5;
+  // D: week-end pressure gate — ≤1 remaining workday requires a quick-response preferred candidate
+  // remainingWorkdays: Mon=4, Tue=3, Wed=2, Thu=1, Fri=0, weekend=5
   let weekResourceGate = 'ok';
-  if (isThurFri && preferred.length > 0) {
+  if (remainingWorkdays <= 1 && preferred.length > 0) {
     const hasQuick = preferred.some(c => ['same_day', 'next_day'].includes(c.quick_response_mode));
     if (!hasQuick) weekResourceGate = 'shift_next_week';
   }
