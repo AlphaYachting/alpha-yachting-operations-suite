@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronDown, ChevronRight, Ship, Briefcase, MapPin, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AgentItemRow from './AgentItemRow';
@@ -9,6 +9,15 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
   // Count actionable vs blocked
   const actionableCount = items.filter(i => !['BLOCKED', 'HARD'].includes(i.derived.blockerType)).length;
   const blockedCount = items.length - actionableCount;
+
+  // Sort items by scheduled_date ascending (earliest first)
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const dateA = a.workOrder.scheduled_date ? new Date(a.workOrder.scheduled_date) : new Date(9999, 0, 1);
+      const dateB = b.workOrder.scheduled_date ? new Date(b.workOrder.scheduled_date) : new Date(9999, 0, 1);
+      return dateA - dateB;
+    });
+  }, [items]);
 
   // Find earliest scheduled date in cluster
   const scheduledDates = items
@@ -92,7 +101,7 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
       {expanded && (
         <div className="border-t border-slate-100 px-0">
           <div className="space-y-0">
-            {items.map((item, idx) => (
+            {sortedItems.map((item, idx) => (
               <div key={item.workOrder.id} className={cn('px-4 py-2', idx > 0 && 'border-t border-slate-100')}>
                 <AgentItemRow
                   item={item}
