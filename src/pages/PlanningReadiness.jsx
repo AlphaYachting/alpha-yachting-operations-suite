@@ -150,8 +150,7 @@ export default function PlanningReadiness() {
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div className="flex flex-1 gap-0 overflow-hidden">
-          <>
-      {/* LEFT: list panel */}
+        {/* LEFT: list panel */}
       <div className={cn('flex flex-col border-r border-slate-200 overflow-hidden', selectedId ? 'w-1/2' : 'w-full')}>
 
         {/* Header */}
@@ -312,7 +311,6 @@ export default function PlanningReadiness() {
             />
         </div>
       )}
-      </>
       </div>
     </div>
     );
