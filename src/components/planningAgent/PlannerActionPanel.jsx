@@ -3,7 +3,7 @@
 // All other planning logic remains read-only.
 
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { UserCheck, ClipboardPlus, CheckCircle2, AlertTriangle, Loader2, Lock, MapPin, Package } from 'lucide-react';
@@ -126,6 +126,7 @@ const OWNER_BADGE = {
 };
 
 export default function PlannerActionPanel({ item, technicians = [], onRefresh }) {
+  const queryClient = useQueryClient();
   const { workOrder, job, derived } = item;
   const [saving, setSaving] = useState(null); // 'exec' | 'org' | 'no-task' | 'access' | 'parts-ordered' | 'parts-eta'
   const [execTechId, setExecTechId] = useState(workOrder.lead_technician_id || '');
@@ -178,6 +179,7 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
     if (!execTechId) return;
     setSaving('exec');
     await base44.entities.WorkOrder.update(workOrder.id, { lead_technician_id: execTechId });
+    await queryClient.invalidateQueries({ queryKey: ['workOrders'] });
     setSaving(null);
     setDone(d => ({ ...d, exec: true }));
     onRefresh?.();
@@ -322,49 +324,48 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
           </div>
         )}
 
-        {/* Execution Owner — only if no technicians assigned yet */}
-        {((derived.executionOwnerMissing && !workOrder.assigned_technicians?.length) || done.exec) && (
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <UserCheck className="h-3.5 w-3.5 text-blue-500" />
-              <span className="text-xs font-semibold text-slate-700">Execution Owner</span>
-              {done.exec && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
-              {!done.exec && <span className="text-xs text-orange-500 font-medium">Missing</span>}
-            </div>
-            {!done.exec && (
-              <div className="flex items-center gap-2">
-                <select
-                  value={execTechId}
-                  onChange={e => setExecTechId(e.target.value)}
-                  className="flex-1 text-xs border border-slate-200 rounded px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:border-blue-400"
-                >
-                  <option value="">— select technician —</option>
-                  {execCandidates.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.first_name} {t.last_name}
-                      {t.primary_role_tendency ? ` (${t.primary_role_tendency})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={saveExecOwner}
-                  disabled={!execTechId || saving === 'exec'}
-                  className="text-xs h-7 px-3"
-                >
-                  {saving === 'exec' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                </Button>
-              </div>
-            )}
-            {done.exec && (
-              <p className="text-xs text-emerald-600">Execution owner assigned — refresh to see updated data.</p>
-            )}
+        {/* Execution Owner */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <UserCheck className="h-3.5 w-3.5 text-blue-500" />
+            <span className="text-xs font-semibold text-slate-700">Execution Owner</span>
+            {workOrder.lead_technician_id && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+            {!workOrder.lead_technician_id && <span className="text-xs text-orange-500 font-medium">Missing</span>}
           </div>
-        )}
+          {!workOrder.lead_technician_id ? (
+            <div className="flex items-center gap-2">
+              <select
+                value={execTechId}
+                onChange={e => setExecTechId(e.target.value)}
+                className="flex-1 text-xs border border-slate-200 rounded px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:border-blue-400"
+              >
+                <option value="">— select technician —</option>
+                {execCandidates.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.first_name} {t.last_name}
+                    {t.primary_role_tendency ? ` (${t.primary_role_tendency})` : ''}
+                  </option>
+                ))}
+              </select>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={saveExecOwner}
+                disabled={!execTechId || saving === 'exec'}
+                className="text-xs h-7 px-3"
+              >
+                {saving === 'exec' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
+              </Button>
+            </div>
+          ) : (
+            <div className="px-3 py-2 rounded bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">
+              <p className="font-semibold">✓ Assigned: {technicians.find(t => t.id === workOrder.lead_technician_id) ? `${technicians.find(t => t.id === workOrder.lead_technician_id).first_name} ${technicians.find(t => t.id === workOrder.lead_technician_id).last_name}` : '—'}</p>
+            </div>
+          )}
+        </div>
 
         {/* Org Task */}
-        {(derived.orgTasksMissing || done.org) && (
+        {(derived.orgTasksMissing || done.org || !workOrder.lead_technician_id) && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <ClipboardPlus className="h-3.5 w-3.5 text-purple-500" />
