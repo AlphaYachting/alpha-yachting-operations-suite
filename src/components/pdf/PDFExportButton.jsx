@@ -1,4 +1,9 @@
 import React, { useState } from 'react';
+
+// Module-level template cache to avoid repeated API calls
+let _cachedTemplate = null;
+let _cacheTimestamp = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 import { Button } from '@/components/ui/button';
 import { Download, Eye, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -18,38 +23,51 @@ export default function PDFExportButton({ document: documentData, lineItems, pay
   const [previewUrl, setPreviewUrl] = useState(null);
 
   const loadTemplate = async () => {
-    try {
-      const templates = await base44.entities.PDFTemplate.list();
-      
-      // If specific templateId provided, use that
-      let selectedTemplate = null;
-      if (templateId) {
-        selectedTemplate = templates.find(t => t.id === templateId || t.template_name === templateId);
-      }
-      
-      // Otherwise use default template
-      const defaultTemplate = selectedTemplate || templates.find(t => t.is_default) || templates[0];
-      
-      if (!defaultTemplate) {
-        const newTemplate = await base44.entities.PDFTemplate.create({
-          company_name: 'Alpha Yachting',
-          company_address: 'Novigrad, Croatia',
-          primary_color: '#2563eb',
-          secondary_color: '#06b6d4',
-          show_vat_column: true,
-          show_net_gross: true,
-          is_default: true,
-          render_dpi: 150,
-          page_format: 'A4'
-        });
-        return newTemplate;
-      }
-      
-      return defaultTemplate;
-    } catch (error) {
-      console.error('Error loading template:', error);
-      throw error;
+    // Return cached template if still fresh
+    if (_cachedTemplate && (Date.now() - _cacheTimestamp) < CACHE_TTL_MS) {
+      return _cachedTemplate;
     }
+
+    // Retry up to 3 times with backoff
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 1000));
+        const templates = await base44.entities.PDFTemplate.list();
+
+        let selectedTemplate = null;
+        if (templateId) {
+          selectedTemplate = templates.find(t => t.id === templateId || t.template_name === templateId);
+        }
+
+        const defaultTemplate = selectedTemplate || templates.find(t => t.is_default) || templates[0];
+
+        if (!defaultTemplate) {
+          const newTemplate = await base44.entities.PDFTemplate.create({
+            company_name: 'Alpha Yachting',
+            company_address: 'Novigrad, Croatia',
+            primary_color: '#2563eb',
+            secondary_color: '#06b6d4',
+            show_vat_column: true,
+            show_net_gross: true,
+            is_default: true,
+            render_dpi: 150,
+            page_format: 'A4'
+          });
+          _cachedTemplate = newTemplate;
+          _cacheTimestamp = Date.now();
+          return newTemplate;
+        }
+
+        _cachedTemplate = defaultTemplate;
+        _cacheTimestamp = Date.now();
+        return defaultTemplate;
+      } catch (error) {
+        lastError = error;
+        console.warn(`Template load attempt ${attempt + 1} failed:`, error.message);
+      }
+    }
+    throw lastError;
   };
 
   const generateAndDownloadPDF = async () => {
