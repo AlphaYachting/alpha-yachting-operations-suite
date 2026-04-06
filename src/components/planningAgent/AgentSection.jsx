@@ -1,7 +1,7 @@
 import AgentItemRow from './AgentItemRow';
 import { cn } from '@/lib/utils';
 
-export default function AgentSection({ title, subtitle, items, ranked = false, emptyMessage, colorClass = 'bg-slate-50 border-slate-200', badge, badgeClass }) {
+export default function AgentSection({ title, subtitle, items, ranked = false, emptyMessage, colorClass = 'bg-slate-50 border-slate-200', badge, badgeClass, technicians, onRefresh }) {
   return (
     <section>
       <div className="flex items-center gap-3 mb-3">
@@ -29,6 +29,8 @@ export default function AgentSection({ title, subtitle, items, ranked = false, e
               key={item.workOrder.id}
               item={item}
               rank={ranked ? idx + 1 : null}
+              technicians={technicians}
+              onRefresh={onRefresh}
             />
           ))}
         </div>

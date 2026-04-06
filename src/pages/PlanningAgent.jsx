@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { evaluateWorkOrder, computeCapacity } from '@/utils/planningAgent/agentLogic';
 import AgentSummaryBar from '@/components/planningAgent/AgentSummaryBar';
@@ -13,6 +13,8 @@ const ACTIVE_WO_STATUSES  = ['Draft', 'Scheduled', 'Dispatched', 'In Transit', '
 
 export default function PlanningAgent() {
   const [activeFilter, setActiveFilter] = useState(null);
+  const queryClient = useQueryClient();
+  const handleRefresh = () => queryClient.invalidateQueries({ queryKey: ['pa-wos'] }).then(() => queryClient.invalidateQueries({ queryKey: ['pa-tasks'] }));
 
   const { data: jobs = [],        isLoading: lJobs }   = useQuery({ queryKey: ['pa-jobs'],    queryFn: () => base44.entities.Job.list('-updated_date', 300) });
   const { data: workOrders = [],  isLoading: lWOs }    = useQuery({ queryKey: ['pa-wos'],     queryFn: () => base44.entities.WorkOrder.list('-updated_date', 500) });
@@ -164,7 +166,7 @@ export default function PlanningAgent() {
               : filteredView.map((item, idx) => (
                   <div key={item.workOrder.id}>
                     {/* inline import to avoid circular — use AgentItemRow directly */}
-                    <AgentSectionItem item={item} rank={idx + 1} />
+                    <AgentSectionItem item={item} rank={idx + 1} technicians={technicians} onRefresh={handleRefresh} />
                   </div>
                 ))
             }
@@ -181,6 +183,8 @@ export default function PlanningAgent() {
             emptyMessage="No high-confidence work is recommended for this week."
             badgeClass="bg-emerald-100 text-emerald-700"
             badge={buckets.thisWeekHigh.length}
+            technicians={technicians}
+            onRefresh={handleRefresh}
           />
 
           {/* THIS WEEK — LOW CONFIDENCE / RISKY */}
@@ -193,6 +197,8 @@ export default function PlanningAgent() {
               emptyMessage=""
               badgeClass="bg-orange-100 text-orange-700"
               badge={buckets.thisWeekLow.length}
+              technicians={technicians}
+              onRefresh={handleRefresh}
             />
           )}
 
@@ -200,12 +206,13 @@ export default function PlanningAgent() {
           <AgentSection
             title={`Next Week — Prepare Now (${weekRanges.nextWeek})`}
             subtitle="Start resolving gaps today so these are ready to schedule next week."
-
             items={buckets.nextWeek}
             ranked
             emptyMessage="No items queued for next week preparation."
             badgeClass="bg-blue-100 text-blue-700"
             badge={buckets.nextWeek.length}
+            technicians={technicians}
+            onRefresh={handleRefresh}
           />
 
           {/* BLOCKED */}
@@ -224,6 +231,8 @@ export default function PlanningAgent() {
                     emptyMessage=""
                     badgeClass="bg-red-100 text-red-700"
                     badge={buckets.hardBlocked.length}
+                    technicians={technicians}
+                    onRefresh={handleRefresh}
                   />
                 )}
                 {buckets.externalBlocked.length > 0 && (
@@ -234,6 +243,8 @@ export default function PlanningAgent() {
                     emptyMessage=""
                     badgeClass="bg-orange-100 text-orange-700"
                     badge={buckets.externalBlocked.length}
+                    technicians={technicians}
+                    onRefresh={handleRefresh}
                   />
                 )}
               </div>
@@ -248,6 +259,8 @@ export default function PlanningAgent() {
             emptyMessage="No items need clarification right now."
             badgeClass="bg-yellow-100 text-yellow-700"
             badge={buckets.needsClarification.length}
+            technicians={technicians}
+            onRefresh={handleRefresh}
           />
 
           {/* QUICK WINS */}
@@ -259,6 +272,8 @@ export default function PlanningAgent() {
             emptyMessage="No quick wins identified."
             badgeClass="bg-purple-100 text-purple-700"
             badge={buckets.quickWins.length}
+            technicians={technicians}
+            onRefresh={handleRefresh}
           />
 
           {/* BAD WEATHER FALLBACK */}
@@ -269,17 +284,19 @@ export default function PlanningAgent() {
             emptyMessage="No bad-weather fallback jobs were identified."
             badgeClass="bg-sky-100 text-sky-700"
             badge={buckets.badWeather.length}
+            technicians={technicians}
+            onRefresh={handleRefresh}
           />
         </>
       )}
 
       <p className="text-xs text-slate-400 pb-8 text-center">
-        Planning Agent V2 · Read-only · {evaluatedItems.length} work orders analysed · Suggestions only — no changes made to any data
+        Planning Agent V2 Phase 2 · {evaluatedItems.length} work orders analysed · Controlled actions available in expanded items
       </p>
     </div>
   );
 }
 
-function AgentSectionItem({ item, rank }) {
-  return <AgentItemRow item={item} rank={rank} />;
+function AgentSectionItem({ item, rank, technicians, onRefresh }) {
+  return <AgentItemRow item={item} rank={rank} technicians={technicians} onRefresh={onRefresh} />;
 }

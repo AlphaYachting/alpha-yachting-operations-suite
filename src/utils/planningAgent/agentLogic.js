@@ -275,6 +275,12 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   const reasoningSummary = buildReasoning(bucket, blocker, confidence, effort, serviceArea, areaInferred, workOrder, job);
   const suggestedNextAction = suggestNextAction(blocker, workOrder, job, confidence, resourcePools);
 
+  // Phase 2: ownership gap detection
+  const executionOwnerMissing = !workOrder.lead_technician_id;
+  const orgTasks = (tasks || []).filter(t => t.task_stream === 'ORGANIZATION');
+  const orgTasksMissing = orgTasks.length === 0;
+  const orgOwnerSet = orgTasks.some(t => !!t.assigned_user_id);
+
   return {
     workOrder,
     job,
@@ -284,6 +290,10 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
     tasks: tasks || [],
     derived: {
       taskCount: (tasks || []).length,
+      executionOwnerMissing,
+      orgTasksMissing,
+      orgOwnerSet,
+      orgTaskCount: orgTasks.length,
       taskEstimatedMinutesSum: (tasks || []).filter(t => t.estimated_minutes).reduce((s, t) => s + t.estimated_minutes, 0),
       inferredServiceArea: serviceArea,
       effortSource: effort.source,

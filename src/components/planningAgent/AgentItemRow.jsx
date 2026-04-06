@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import PlannerActionPanel from './PlannerActionPanel';
 
 const CONF_STYLE = {
   HIGH:   'bg-emerald-100 text-emerald-700',
@@ -15,7 +16,7 @@ const BLOCKER_STYLE = {
   NONE:     '',
 };
 
-export default function AgentItemRow({ item, rank }) {
+export default function AgentItemRow({ item, rank, technicians = [], onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
@@ -186,6 +187,8 @@ export default function AgentItemRow({ item, rank }) {
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Reasoning</p>
             <p className="text-xs text-slate-600 leading-relaxed">{d.reasoningSummary}</p>
           </div>
+
+          <PlannerActionPanel item={item} technicians={technicians} onRefresh={onRefresh} />
         </div>
       )}
     </div>
