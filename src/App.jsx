@@ -11,7 +11,6 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ErrorBoundary from '@/components/ErrorBoundary';
 // Add page imports here
 import PlanningAgent from './pages/PlanningAgent';
-import PlanningBoard from './pages/PlanningBoard';
 import QuickCaptureReview from './pages/QuickCaptureReview';
 import AIAssistantSettings from './pages/AIAssistantSettings';
 import PlanningReadiness from './pages/PlanningReadiness';
@@ -170,7 +169,6 @@ const AuthenticatedApp = () => {
         <Route path="/BillingReview" element={<LayoutWrapper currentPageName="BillingReview"><BillingReview /></LayoutWrapper>} />
         <Route path="/MaterialImportDetail" element={<LayoutWrapper currentPageName="MaterialImportDetail"><MaterialImportDetail /></LayoutWrapper>} />
         <Route path="/PlanningAgent" element={<LayoutWrapper currentPageName="PlanningAgent"><PlanningAgent /></LayoutWrapper>} />
-        <Route path="/PlanningBoard" element={<LayoutWrapper currentPageName="PlanningBoard"><PlanningBoard /></LayoutWrapper>} />
         <Route path="/PlanningReadiness" element={<LayoutWrapper currentPageName="PlanningReadiness"><PlanningReadiness /></LayoutWrapper>} />
         <Route path="/QuickCaptureReview" element={<LayoutWrapper currentPageName="QuickCaptureReview"><QuickCaptureReview /></LayoutWrapper>} />
         <Route path="*" element={<PageNotFound />} />

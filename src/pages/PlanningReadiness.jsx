@@ -4,9 +4,11 @@ import { base44 } from '@/api/base44Client';
 import { evaluateWorkOrder } from '@/components/planning/readinessEvaluator';
 import WOReadinessRow from '@/components/planning/WOReadinessRow';
 import WODetailPanel from '@/components/planning/WODetailPanel';
+import { computeVisits, groupVisitsByTimeBucket } from '@/utils/visitPlanner';
+import VisitCard from '@/components/planning/VisitCard';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, ChevronDown, ChevronRight, HelpCircle } from 'lucide-react';
+import { Loader2, Search, ChevronDown, ChevronRight, HelpCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const EXCLUDED_JOB_STATUSES = ['Completed', 'Cancelled', 'Invoiced'];
@@ -40,18 +42,23 @@ function SectionHeader({ label, count, open, onToggle, color, description }) {
 
 export default function PlanningReadiness() {
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState('readiness'); // 'readiness' or 'schedule'
   const [selectedId, setSelectedId] = useState(null);
   const [search, setSearch] = useState('');
   const [helpOpen, setHelpOpen] = useState(false);
   const [openSections, setOpenSections] = useState({ ready: true, needs_clarification: true, not_plannable: true });
+  const [showStartDateModal, setShowStartDateModal] = useState(null);
+  const [showAssignModal, setShowAssignModal] = useState(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedTechId, setSelectedTechId] = useState('');
 
-  const { data: jobs = [],        isLoading: l1 } = useQuery({ queryKey: ['planning-jobs'],        queryFn: () => base44.entities.Job.list() });
-  const { data: workOrders = [],  isLoading: l2 } = useQuery({ queryKey: ['planning-wos'],         queryFn: () => base44.entities.WorkOrder.list() });
-  const { data: tasks = [],       isLoading: l3 } = useQuery({ queryKey: ['planning-tasks'],       queryFn: () => base44.entities.Task.list() });
-  const { data: customers = [],   isLoading: l4 } = useQuery({ queryKey: ['planning-customers'],   queryFn: () => base44.entities.Customer.list() });
-  const { data: boats = [],       isLoading: l5 } = useQuery({ queryKey: ['planning-boats'],       queryFn: () => base44.entities.Boat.list() });
-  const { data: locations = [],   isLoading: l6 } = useQuery({ queryKey: ['planning-locations'],  queryFn: () => base44.entities.Location.list() });
-  const { data: technicians = [], isLoading: l7 } = useQuery({ queryKey: ['planning-technicians'],queryFn: () => base44.entities.Technician.list() });
+  const { data: jobs = [],        isLoading: l1 } = useQuery({ queryKey: ['planning-jobs'],        queryFn: () => base44.entities.Job.list('-updated_date', 100) });
+  const { data: workOrders = [],  isLoading: l2 } = useQuery({ queryKey: ['planning-wos'],         queryFn: () => base44.entities.WorkOrder.list('-updated_date', 200) });
+  const { data: tasks = [],       isLoading: l3 } = useQuery({ queryKey: ['planning-tasks'],       queryFn: () => base44.entities.Task.list('-updated_date', 500) });
+  const { data: customers = [],   isLoading: l4 } = useQuery({ queryKey: ['planning-customers'],   queryFn: () => base44.entities.Customer.list('-updated_date', 100) });
+  const { data: boats = [],       isLoading: l5 } = useQuery({ queryKey: ['planning-boats'],       queryFn: () => base44.entities.Boat.list('-updated_date', 100) });
+  const { data: locations = [],   isLoading: l6 } = useQuery({ queryKey: ['planning-locations'],  queryFn: () => base44.entities.Location.list('-updated_date', 50) });
+  const { data: technicians = [], isLoading: l7 } = useQuery({ queryKey: ['planning-technicians'],queryFn: () => base44.entities.Technician.list('-updated_date', 50) });
 
   const isLoading = l1 || l2 || l3 || l4 || l5 || l6 || l7;
 
@@ -138,6 +145,50 @@ export default function PlanningReadiness() {
   const selectedItem = useMemo(() => allItems.find(i => i.workOrder.id === selectedId), [allItems, selectedId]);
   const toggleSection = (key) => setOpenSections(s => ({ ...s, [key]: !s[key] }));
 
+  // Visit scheduling data (for Schedule tab)
+  const jobsMap = useMemo(() => Object.fromEntries(jobs.map(j => [j.id, j])), [jobs]);
+  const locationsMap = useMemo(() => Object.fromEntries(locations.map(l => [l.id, l])), [locations]);
+  const visits = useMemo(() => computeVisits(workOrders, jobsMap, locationsMap, technicians), [workOrders, jobsMap, locationsMap, technicians]);
+  const buckets = useMemo(() => groupVisitsByTimeBucket(visits), [visits]);
+
+  // Handle start date update
+  const handleSetStartDate = async (visit) => {
+    setShowStartDateModal(visit);
+    setSelectedDate(visit.startDate);
+  };
+
+  const saveStartDate = async () => {
+    if (!showStartDateModal || !selectedDate) return;
+    try {
+      for (const wo of showStartDateModal.actionable) {
+        await base44.entities.WorkOrder.update(wo.id, { scheduled_date: selectedDate });
+      }
+      await queryClient.invalidateQueries({ queryKey: ['planning-wos'] });
+      setShowStartDateModal(null);
+    } catch (error) {
+      console.error('Error updating start date:', error);
+    }
+  };
+
+  // Handle executor assignment
+  const handleAssignExecutor = async (visit) => {
+    setShowAssignModal(visit);
+    setSelectedTechId('');
+  };
+
+  const saveExecutor = async () => {
+    if (!showAssignModal || !selectedTechId) return;
+    try {
+      for (const wo of showAssignModal.actionable) {
+        await base44.entities.WorkOrder.update(wo.id, { lead_technician_id: selectedTechId });
+      }
+      await queryClient.invalidateQueries({ queryKey: ['planning-wos'] });
+      setShowAssignModal(null);
+    } catch (error) {
+      console.error('Error assigning executor:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -148,8 +199,37 @@ export default function PlanningReadiness() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] gap-0 bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-8rem)] bg-white rounded-xl border border-slate-200 overflow-hidden">
+      {/* Tab navigation */}
+      <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-200 bg-slate-50">
+        <button
+          onClick={() => setTab('readiness')}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+            tab === 'readiness'
+              ? 'bg-emerald-100 text-emerald-700'
+              : 'bg-white text-slate-600 hover:bg-slate-100'
+          )}
+        >
+          Readiness Check
+        </button>
+        <button
+          onClick={() => setTab('schedule')}
+          className={cn(
+            'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+            tab === 'schedule'
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-white text-slate-600 hover:bg-slate-100'
+          )}
+        >
+          Schedule Visits
+        </button>
+      </div>
 
+      <div className="flex flex-1 gap-0 overflow-hidden">
+        {/* Readiness mode */}
+        {tab === 'readiness' && (
+          <>
       {/* LEFT: list panel */}
       <div className={cn('flex flex-col border-r border-slate-200 overflow-hidden', selectedId ? 'w-1/2' : 'w-full')}>
 
@@ -309,6 +389,135 @@ export default function PlanningReadiness() {
               queryClient.invalidateQueries({ queryKey: ['planning-jobs'] });
             }}
           />
+        </div>
+      )}
+          </>
+        )}
+
+        {/* Schedule mode */}
+        {tab === 'schedule' && (
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="space-y-6">
+              {/* Summary stats */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
+                  <p className="text-xs text-blue-600 font-medium">Total Visits</p>
+                  <p className="text-2xl font-bold text-blue-900 mt-1">{visits.length}</p>
+                </div>
+                <div className="px-4 py-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                  <p className="text-xs text-emerald-600 font-medium">Actionable WOs</p>
+                  <p className="text-2xl font-bold text-emerald-900 mt-1">{visits.reduce((sum, v) => sum + v.actionableCount, 0)}</p>
+                </div>
+                <div className="px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <p className="text-xs text-amber-600 font-medium">Blocked/Paused</p>
+                  <p className="text-2xl font-bold text-amber-900 mt-1">{visits.reduce((sum, v) => sum + v.blockedCount, 0)}</p>
+                </div>
+                <div className="px-4 py-3 rounded-lg bg-slate-50 border border-slate-200">
+                  <p className="text-xs text-slate-600 font-medium">Total Effort</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">{visits.reduce((sum, v) => sum + v.effort.max, 0).toFixed(0)}h</p>
+                </div>
+              </div>
+
+              {/* Time buckets */}
+              {['This Week', 'Next Week', 'Later'].map(bucketName => {
+                const bucketVisits = buckets[bucketName];
+                if (!bucketVisits.length) return null;
+                return (
+                  <div key={bucketName}>
+                    <h2 className="text-lg font-semibold text-slate-900 mb-3">{bucketName}</h2>
+                    <div className="space-y-3">
+                      {bucketVisits.map(visit => (
+                        <VisitCard
+                          key={`${visit.boatId}|${visit.jobId}|${visit.locationId}`}
+                          visit={visit}
+                          onSetStartDate={handleSetStartDate}
+                          onAssignExecutor={handleAssignExecutor}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Empty state */}
+              {visits.length === 0 && (
+                <div className="text-center py-12">
+                  <AlertCircle className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                  <p className="text-slate-600">No work orders ready for scheduling.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {showStartDateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Set Visit Start Date</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              {showStartDateModal.job?.title} @ {showStartDateModal.location?.name}
+            </p>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-blue-400"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowStartDateModal(null)}
+                className="flex-1 px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveStartDate}
+                className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAssignModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Assign Executor</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              {showAssignModal.job?.title} @ {showAssignModal.location?.name}
+            </p>
+            <select
+              value={selectedTechId}
+              onChange={e => setSelectedTechId(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-4 focus:outline-none focus:border-blue-400"
+            >
+              <option value="">— Select technician —</option>
+              {technicians.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.first_name} {t.last_name}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowAssignModal(null)}
+                className="flex-1 px-4 py-2 text-sm border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveExecutor}
+                disabled={!selectedTechId}
+                className="flex-1 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
