@@ -84,7 +84,9 @@ const AREA_TO_SKILLS = {
   'Tent Making':     ['Tent Making'],
   'Plumbing':        ['Plumbing'],
   'Installation':    ['Installations'],
-  'Diagnostics':     ['Diagnostics', 'Mechanics'],
+  // Diagnostics: Mechanics removed from direct match — only explicit Diagnostics skill qualifies.
+  // Mechanics becomes adjacent-only (fallback), preventing pure mechanics from ranking as primary diagnostic candidates.
+  'Diagnostics':     ['Diagnostics'],
   'Mechanical':      ['Mechanics'],
   'General Service': ['General Service', 'Mechanics'],
   'Antifouling':     ['Antifouling'],
@@ -113,6 +115,7 @@ const ADJACENT_SKILLS_BY_TIER = {
   // Tier 2 adjacencies — moderate
   2: {
     'Mechanics':       ['Diagnostics', 'General Service'],
+    // Diagnostics → Mechanics adjacency: mechanic with no Diagnostics skill → ADJACENT_CAPABLE → fallback only at Tier 2
     'Diagnostics':     ['Mechanics'],
     'General Service': ['Mechanics', 'Diagnostics'],
     'Carpentry':       ['Woodworking'],
@@ -121,9 +124,10 @@ const ADJACENT_SKILLS_BY_TIER = {
     'Plumbing':        ['Installations'],
   },
   // Tier 3 adjacencies — broad
+  // Mechanics → Electronics adjacency removed: prevents mechanics from bleeding into electrical fallback pools at Tier 3
   3: {
-    'Mechanics':       ['Diagnostics', 'General Service', 'Electronics'],
-    'Diagnostics':     ['Mechanics', 'Electronics'],
+    'Mechanics':       ['Diagnostics', 'General Service'],
+    'Diagnostics':     ['Mechanics'],
     'General Service': ['Mechanics', 'Diagnostics', 'Installations'],
     'Electronics':     ['Diagnostics'],
     'Antifouling':     ['GRP/Gelcoat', 'Polish'],

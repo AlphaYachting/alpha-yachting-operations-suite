@@ -7,8 +7,10 @@ const AREA_KEYWORDS = {
   // Organisation must be first — prevents org-titled WOs from matching 'service'/'check' keywords below
   Organisation:     ['organisation', 'kommunikation', 'communication', 'koordination', 'coordination'],
   Mechanical:       ['motor', 'engine', 'getriebe', 'diesel', 'pump', 'pumpe', 'antrieb', 'propeller', 'shaft', 'welle'],
-  Electrical:       ['elektr', 'kabel', 'battery', 'batterie', 'strom', 'wiring', 'panel', 'sicherung', 'fuse', 'licht', 'light'],
-  Electronics:      ['chart', 'plotter', 'vhf', 'ais', 'radar', 'nmea', 'autopilot', 'gps', 'display', 'elektronik'],
+  Electrical:       ['elektr', 'kabel', 'battery', 'batterie', 'strom', 'wiring', 'panel', 'sicherung', 'fuse'],
+  // Electronics (Tier 1) — must include navigation + lighting to prevent fallthrough to Diagnostics
+  // 'navigat' catches navigation checks; 'positionslicht'/'signallampe' catch nav lights; 'licht'/'light' moved here from Electrical
+  Electronics:      ['chart', 'plotter', 'vhf', 'ais', 'radar', 'nmea', 'autopilot', 'gps', 'display', 'elektronik', 'navigat', 'positionslicht', 'signallampe', 'nav light', 'licht', 'light'],
   'GRP/Bodywork':   ['osmose', 'rumpf', 'gelcoat', 'grp', 'laminat', 'antifouling', 'polish', 'reparatur', 'scratch', 'dent'],
   Sealing:          ['dicht', 'seal', 'leak', 'leck', 'silicon', 'sealant', 'teak', 'window', 'fenster', 'hatch'],
   HVAC:             ['klima', 'hvac', 'heiz', 'heat', 'ventilation', 'aircon', 'cooling'],
