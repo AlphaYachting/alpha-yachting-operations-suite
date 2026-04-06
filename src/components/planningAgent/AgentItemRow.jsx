@@ -107,11 +107,6 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
         className="w-full text-left px-4 py-3 flex items-start gap-3"
         onClick={() => setExpanded(e => !e)}
       >
-        {rank != null && (
-          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-100 text-slate-500 text-xs font-bold flex items-center justify-center mt-0.5">
-            {rank}
-          </span>
-        )}
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-0.5">
             <span className="font-semibold text-slate-900 truncate">{workOrder.title}</span>
