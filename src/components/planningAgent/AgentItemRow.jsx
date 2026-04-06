@@ -41,7 +41,7 @@ const OWNERSHIP_LABEL = {
   ADJACENT_CAPABLE: 'adjacent only',
 };
 
-export default function AgentItemRow({ item, rank, technicians = [], allWorkOrders = [], jobs = {}, locations = {}, onRefresh }) {
+export default function AgentItemRow({ item, rank, technicians = [], allWorkOrders = [], jobs = {}, locations = {}, onRefresh, compact = false }) {
   const [expanded, setExpanded] = useState(false);
   const [showResources, setShowResources] = useState(false);
   const [showScore, setShowScore] = useState(false);

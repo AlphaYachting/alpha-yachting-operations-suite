@@ -5,6 +5,7 @@ import { evaluateWorkOrder, computeCapacity } from '@/utils/planningAgent/agentL
 import AgentSummaryBar from '@/components/planningAgent/AgentSummaryBar';
 import AgentItemRow from '@/components/planningAgent/AgentItemRow';
 import AgentSection from '@/components/planningAgent/AgentSection';
+import ClusterGroup from '@/components/planningAgent/ClusterGroup';
 import { RefreshCw, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -88,7 +89,7 @@ export default function PlanningAgent() {
         return evaluateWorkOrder({ workOrder: wo, job, customer, location, tasks: woTasks, technicians, today, workloadMap, jobOrgTaskCount }); // C: pass load signal
       })
       .filter(Boolean);
-  }, [workOrders, maps, tasksByWO, isLoading]);
+  }, [workOrders, maps, tasksByWO, isLoading, technicians, workloadMap, jobOrgTaskCountMap]);
 
   // Split into buckets
   const buckets = useMemo(() => {
@@ -123,6 +124,32 @@ export default function PlanningAgent() {
       nextWeek: `${fmt(nextStart)} – ${fmt(nextEnd)}`,
     };
   }, []);
+
+  // Group items by boat+job+location
+  const clusteredBuckets = useMemo(() => {
+    const clusterKey = (item) => `${item.job?.boat_id || 'no-boat'}|${item.job?.id || 'no-job'}|${item.job?.location_id || 'no-loc'}`;
+    const clusterize = (items) => {
+      const map = {};
+      items.forEach(item => {
+        const key = clusterKey(item);
+        if (!map[key]) {
+          map[key] = {
+            boat: item.job?.boat_id ? maps.boats[item.job.boat_id] : null,
+            job: item.job,
+            location: item.location,
+            items: [],
+          };
+        }
+        map[key].items.push(item);
+      });
+      return Object.values(map);
+    };
+    return {
+      thisWeek: clusterize(buckets.thisWeekHigh),
+      thisWeekLow: clusterize(buckets.thisWeekLow),
+      nextWeek: clusterize(buckets.nextWeek),
+    };
+  }, [buckets, maps]);
 
   // Filter override
   const filterMap = {
@@ -183,7 +210,6 @@ export default function PlanningAgent() {
                 ? <p className="text-sm text-slate-400 py-6 text-center">No items in this category.</p>
                 : filteredView.map((item, idx) => (
                     <div key={item.workOrder.id}>
-                      {/* inline import to avoid circular — use AgentItemRow directly */}
                       <AgentSectionItem item={item} rank={idx + 1} technicians={technicians} allWorkOrders={workOrders} jobs={maps.jobs} locations={maps.locations} onRefresh={handleRefresh} />
                     </div>
                   ))
@@ -193,54 +219,92 @@ export default function PlanningAgent() {
         ) : (
           <>
             {/* THIS WEEK — HIGH CONFIDENCE */}
-            <AgentSection
-              title={`This Week — Recommended (${weekRanges.thisWeek})`}
-              subtitle="Highest-value, high-confidence candidates. Ranked by urgency + priority + confidence."
-              items={buckets.thisWeekHigh}
-              ranked
-              emptyMessage="No high-confidence work is recommended for this week."
-              badgeClass="bg-emerald-100 text-emerald-700"
-              badge={buckets.thisWeekHigh.length}
-              technicians={technicians}
-              allWorkOrders={workOrders}
-              jobs={maps.jobs}
-              locations={maps.locations}
-              onRefresh={handleRefresh}
-            />
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-base font-semibold text-slate-800">{`This Week — Recommended (${weekRanges.thisWeek})`}</h2>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">{buckets.thisWeekHigh.length}</span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">Highest-value, high-confidence candidates. Ranked by urgency + priority + confidence.</p>
+              {buckets.thisWeekHigh.length === 0 ? (
+                <div className="rounded-xl border border-slate-200 px-4 py-6 text-center text-sm text-slate-400">No high-confidence work is recommended for this week.</div>
+              ) : (
+                <div className="space-y-3">
+                  {clusteredBuckets.thisWeek.map((cluster) => (
+                    <ClusterGroup
+                      key={`${cluster.boat?.id}-${cluster.job?.id}-${cluster.location?.id}`}
+                      boat={cluster.boat}
+                      job={cluster.job}
+                      location={cluster.location}
+                      items={cluster.items}
+                      ranked
+                      technicians={technicians}
+                      allWorkOrders={workOrders}
+                      jobs={maps.jobs}
+                      locations={maps.locations}
+                      onRefresh={handleRefresh}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* THIS WEEK — LOW CONFIDENCE / RISKY */}
             {buckets.thisWeekLow.length > 0 && (
-              <AgentSection
-                title={`This Week — Urgent but Uncertain (${weekRanges.thisWeek})`}
-                subtitle="Urgent or overdue items with low confidence. Verify before committing."
-                items={buckets.thisWeekLow}
-                ranked
-                emptyMessage=""
-                badgeClass="bg-orange-100 text-orange-700"
-                badge={buckets.thisWeekLow.length}
-                technicians={technicians}
-                allWorkOrders={workOrders}
-                jobs={maps.jobs}
-                locations={maps.locations}
-                onRefresh={handleRefresh}
-              />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <h2 className="text-base font-semibold text-slate-800">{`This Week — Urgent but Uncertain (${weekRanges.thisWeek})`}</h2>
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">{buckets.thisWeekLow.length}</span>
+                </div>
+                <p className="text-xs text-slate-400 mb-3">Urgent or overdue items with low confidence. Verify before committing.</p>
+                <div className="space-y-3">
+                  {clusteredBuckets.thisWeekLow.map((cluster) => (
+                    <ClusterGroup
+                      key={`${cluster.boat?.id}-${cluster.job?.id}-${cluster.location?.id}`}
+                      boat={cluster.boat}
+                      job={cluster.job}
+                      location={cluster.location}
+                      items={cluster.items}
+                      ranked
+                      technicians={technicians}
+                      allWorkOrders={workOrders}
+                      jobs={maps.jobs}
+                      locations={maps.locations}
+                      onRefresh={handleRefresh}
+                    />
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* NEXT WEEK */}
-            <AgentSection
-              title={`Next Week — Prepare Now (${weekRanges.nextWeek})`}
-              subtitle="Start resolving gaps today so these are ready to schedule next week."
-              items={buckets.nextWeek}
-              ranked
-              emptyMessage="No items queued for next week preparation."
-              badgeClass="bg-blue-100 text-blue-700"
-              badge={buckets.nextWeek.length}
-              technicians={technicians}
-              allWorkOrders={workOrders}
-              jobs={maps.jobs}
-              locations={maps.locations}
-              onRefresh={handleRefresh}
-            />
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-base font-semibold text-slate-800">{`Next Week — Prepare Now (${weekRanges.nextWeek})`}</h2>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{buckets.nextWeek.length}</span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">Start resolving gaps today so these are ready to schedule next week.</p>
+              {buckets.nextWeek.length === 0 ? (
+                <div className="rounded-xl border border-slate-200 px-4 py-6 text-center text-sm text-slate-400">No items queued for next week preparation.</div>
+              ) : (
+                <div className="space-y-3">
+                  {clusteredBuckets.nextWeek.map((cluster) => (
+                    <ClusterGroup
+                      key={`${cluster.boat?.id}-${cluster.job?.id}-${cluster.location?.id}`}
+                      boat={cluster.boat}
+                      job={cluster.job}
+                      location={cluster.location}
+                      items={cluster.items}
+                      ranked
+                      technicians={technicians}
+                      allWorkOrders={workOrders}
+                      jobs={maps.jobs}
+                      locations={maps.locations}
+                      onRefresh={handleRefresh}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* BLOCKED */}
             {(buckets.hardBlocked.length > 0 || buckets.externalBlocked.length > 0) && (
