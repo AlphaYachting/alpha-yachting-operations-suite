@@ -377,8 +377,8 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
           </div>
         )}
 
-        {/* Execution Owner */}
-        {(derived.executionOwnerMissing || done.exec) && (
+        {/* Execution Owner — only if no technicians assigned yet */}
+        {((derived.executionOwnerMissing && !workOrder.assigned_technicians?.length) || done.exec) && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <UserCheck className="h-3.5 w-3.5 text-blue-500" />
