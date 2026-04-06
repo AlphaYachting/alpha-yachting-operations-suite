@@ -174,42 +174,72 @@ Deno.serve(async (req) => {
       if (cme.work_order_id) woTotals[cme.work_order_id] = (woTotals[cme.work_order_id] || 0) + amount;
     });
 
-    // ── 8. Create Offer ──────────────────────────────────────────────────────
-    const validUntil = new Date(Date.now() + valid_until_days * 86400000).toISOString().split('T')[0];
-    const offerTitle = title || `Billing — ${targetWOs.map(w => w.work_order_number).join(', ')}`;
-    const fallbackNumber = `BILL-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
+    // ── 8. Check for existing Draft READY_TO_INVOICE_REVIEW offer for this customer ──
+    let offerId = null;
+    let offerNumber = null;
+    let reusedOffer = false;
+    let lineOrderStart = 0;
+    let existingTotal = 0;
+    let existingSourceWOIds = [];
 
-    let offerNumber = fallbackNumber;
-    try {
-      const offerNumberRes = await base44.functions.invoke('allocateWorkOrderNumber', {});
-      offerNumber = offerNumberRes?.data?.number || fallbackNumber;
-    } catch (e) {
-      warnings.push(`Could not allocate offer number, using fallback: ${fallbackNumber}`);
+    const existingDrafts = await base44.asServiceRole.entities.Offer.filter({
+      customer_id: sourceCustomerId,
+      status: 'Draft',
+      source_type: 'READY_TO_INVOICE_REVIEW',
+    });
+    const existingDraft = existingDrafts[0] || null;
+
+    if (existingDraft) {
+      // Reuse the existing draft offer
+      offerId = existingDraft.id;
+      offerNumber = existingDraft.offer_number;
+      reusedOffer = true;
+      existingTotal = existingDraft.subtotal || existingDraft.total_amount || 0;
+      existingSourceWOIds = existingDraft.source_work_order_ids || [];
+
+      // Find next available sequence_order
+      const existingTasks = await base44.asServiceRole.entities.OfferTask.filter({ offer_id: offerId });
+      lineOrderStart = existingTasks.length > 0 ? Math.max(...existingTasks.map(t => t.sequence_order || 0)) + 1 : 0;
+      console.log(`[createBillingOfferFromWO] Reusing existing Draft offer ${offerId}, starting at line ${lineOrderStart}`);
+    } else {
+      // Create new Offer
+      const validUntil = new Date(Date.now() + valid_until_days * 86400000).toISOString().split('T')[0];
+      const offerTitle = title || `Billing — ${targetWOs.map(w => w.work_order_number).join(', ')}`;
+      const fallbackNumber = `BILL-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
+
+      offerNumber = fallbackNumber;
+      try {
+        const offerNumberRes = await base44.functions.invoke('allocateWorkOrderNumber', {});
+        offerNumber = offerNumberRes?.data?.number || fallbackNumber;
+      } catch (e) {
+        warnings.push(`Could not allocate offer number, using fallback: ${fallbackNumber}`);
+      }
+
+      const newOffer = await base44.asServiceRole.entities.Offer.create({
+        offer_number: offerNumber,
+        customer_id: sourceCustomerId,
+        boat_id: job?.boat_id || null,
+        location_id: job?.location_id || null,
+        job_id: job?.id || null,
+        title: offerTitle,
+        language,
+        vat_rate,
+        total_amount: parseFloat(overallTotal.toFixed(2)),
+        subtotal: parseFloat(overallTotal.toFixed(2)),
+        status: 'Draft',
+        valid_until: validUntil,
+        source_type: 'READY_TO_INVOICE_REVIEW',
+        source_work_order_ids: work_order_ids,
+        source_job_ids: sourceJobIds,
+        fira_export_status: 'not_exported',
+        fira_export_attempt_count: 0,
+        notes: `Auto-generated billing offer from: ${targetWOs.map(w => w.work_order_number).join(', ')}`,
+        ai_generated: false,
+      });
+      offerId = newOffer.id;
     }
 
-    const newOffer = await base44.asServiceRole.entities.Offer.create({
-      offer_number: offerNumber,
-      customer_id: sourceCustomerId,
-      boat_id: job?.boat_id || null,
-      location_id: job?.location_id || null,
-      job_id: job?.id || null,
-      title: offerTitle,
-      language,
-      vat_rate,
-      total_amount: parseFloat(overallTotal.toFixed(2)),
-      subtotal: parseFloat(overallTotal.toFixed(2)),
-      status: 'Draft',
-      valid_until: validUntil,
-      source_type: 'READY_TO_INVOICE_REVIEW',
-      source_work_order_ids: work_order_ids,
-      source_job_ids: sourceJobIds,
-      fira_export_status: 'not_exported',
-      fira_export_attempt_count: 0,
-      notes: `Auto-generated billing offer from: ${targetWOs.map(w => w.work_order_number).join(', ')}`,
-      ai_generated: false,
-    });
-
-    const offerId = newOffer.id;
+    let lineOrder = lineOrderStart;
 
     // ── 9. Set staged_offer_id on all items ──────────────────────────────────
     stagedRecordIds.timeEntries = unbilledTimeEntries.map(te => te.id);
@@ -244,7 +274,6 @@ Deno.serve(async (req) => {
       return UNIT_MAP[raw] || 'Piece';
     };
 
-    let lineOrder = 0;
     let lineItemsCreated = 0;
 
     try {
@@ -348,6 +377,18 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
+    // ── 11b. Update totals + source_work_order_ids on reused offer ─────────────
+    if (reusedOffer) {
+      const newTotal = parseFloat((existingTotal + overallTotal).toFixed(2));
+      const mergedWOIds = [...new Set([...existingSourceWOIds, ...work_order_ids])];
+      await base44.asServiceRole.entities.Offer.update(offerId, {
+        total_amount: newTotal,
+        subtotal: newTotal,
+        source_work_order_ids: mergedWOIds,
+      });
+      console.log(`[createBillingOfferFromWO] Updated existing Draft offer ${offerId}: new total ${newTotal}`);
+    }
+
     // ── 12. Mark WorkOrders as Completed (removes them from Billing Review) ──
     try {
       await Promise.all(
@@ -360,12 +401,13 @@ Deno.serve(async (req) => {
       warnings.push('Could not update WorkOrder status to Completed: ' + e.message);
     }
 
-    console.log('[createBillingOfferFromWO] SUCCESS: Created Offer ' + offerId + ' with ' + lineItemsCreated + ' line items');
+    console.log('[createBillingOfferFromWO] SUCCESS: ' + (reusedOffer ? 'Appended to' : 'Created') + ' Offer ' + offerId + ' with ' + lineItemsCreated + ' line items');
 
     return Response.json({
       success: true,
       offer_id: offerId,
       offer_number: offerNumber,
+      reused_offer: reusedOffer,
       line_items_created: lineItemsCreated,
       workorder_base_lines: targetWOs.length,
       labor_lines: unbilledTimeEntries.length,

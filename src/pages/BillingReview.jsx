@@ -214,7 +214,8 @@ export default function BillingReview() {
       }
 
       setCreatedOffers(prev => ({ ...prev, [customerId]: result }));
-      toast.success(`Billing Offer ${result.offer_number} created — ${result.line_items_created} line item${result.line_items_created !== 1 ? 's' : ''} transferred.`);
+      const action = result.reused_offer ? 'Positionen zu bestehendem Entwurf hinzugefügt' : 'erstellt';
+      toast.success(`Billing Offer ${result.offer_number} ${action} — ${result.line_items_created} Position${result.line_items_created !== 1 ? 'en' : ''} übertragen.`);
       await loadAll(true);
     } catch (e) {
       const errorMsg = e.response?.data?.error || e.message || 'Failed to create billing offer';
