@@ -21,6 +21,14 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
 
+  // Resolve assigned executor from lead_technician_id
+  const assignedExecutor = workOrder.lead_technician_id
+    ? technicians.find(t => t.id === workOrder.lead_technician_id)
+    : null;
+  const assignedExecutorName = assignedExecutor
+    ? `${assignedExecutor.first_name} ${assignedExecutor.last_name}`
+    : null;
+
   const customerName = customer?.company_name || [customer?.first_name, customer?.last_name].filter(Boolean).join(' ') || '—';
 
   return (
@@ -73,9 +81,17 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
             {d.mainUncertainty && <span className="text-slate-400 italic">· {d.mainUncertainty}</span>}
           </div>
         )}
-        {d.preferredResourcePool?.length > 0 && (
+        {/* Assigned executor — shown prominently if set */}
+        {assignedExecutorName ? (
+          <div className="flex items-center gap-1.5 text-xs">
+            <UserCheck className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+            <span className="text-emerald-700 font-semibold">{assignedExecutorName}</span>
+            <span className="text-slate-400">assigned executor</span>
+          </div>
+        ) : d.preferredResourcePool?.length > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <UserCheck className="h-3 w-3 flex-shrink-0" />
+            <span className="text-slate-400">Suggested:</span>
             {d.preferredResourcePool.slice(0, 2).map((r, i) => (
               <span key={r.name}>
                 {i > 0 && <span className="text-slate-300"> · </span>}
@@ -141,10 +157,23 @@ export default function AgentItemRow({ item, rank, technicians = [], onRefresh }
             {d.partsEtaUnknown && <Detail label="Parts ETA" value="Unknown" warn />}
           </div>
 
+          {/* Assigned Executor block — expanded detail */}
+          {assignedExecutorName && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200">
+              <UserCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-emerald-800">Assigned Executor</p>
+                <p className="text-sm font-bold text-emerald-900">{assignedExecutorName}</p>
+              </div>
+            </div>
+          )}
+
           {/* Resource Pools */}
           {(d.preferredResourcePool?.length > 0 || d.fallbackResourcePool?.length > 0) && (
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Resource Proposal</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                {assignedExecutorName ? 'System Suggestion (planning reference only)' : 'Resource Proposal'}
+              </p>
               {d.resourceReasoning && (
                 <p className="text-xs text-slate-600 mb-2 leading-relaxed">{d.resourceReasoning}</p>
               )}
