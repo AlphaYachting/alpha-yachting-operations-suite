@@ -237,10 +237,14 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
   // CUSTOMER & VESSEL
   checkPageBreak(20);
   yPos = drawSectionHeader('CUSTOMER & VESSEL', yPos);
-  yPos = drawTwoColGrid([
+  const vesselRows = [
     ['Customer', document.customer_name, 'Vessel', document.boat_name],
     ['Type', document.boat_type, 'Length', document.boat_length ? `${document.boat_length} m` : '-']
-  ], yPos);
+  ];
+  if (document.boat_berth_number) {
+    vesselRows.push(['Berth / Stecknr.', document.boat_berth_number, null, null]);
+  }
+  yPos = drawTwoColGrid(vesselRows, yPos);
   yPos += 2;
   
   // LOCATION & ACCESS
@@ -251,6 +255,22 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     ['Access Notes', document.location_access_notes || 'None', null, null]
   ], yPos);
   yPos += 2;
+
+  // PARTNER NOTES - directly after location
+  if (document.partner_notes) {
+    checkPageBreak(20);
+    yPos = drawSectionHeader('PARTNER NOTES', yPos);
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    const noteLines = doc.splitTextToSize(document.partner_notes, contentWidth - 4);
+    noteLines.forEach(line => {
+      checkPageBreak(5);
+      doc.text(line, margins.left + 2, yPos);
+      yPos += 4.5;
+    });
+    yPos += 4;
+  }
   
   // WORK DESCRIPTION
   if (document.work_order_description) {

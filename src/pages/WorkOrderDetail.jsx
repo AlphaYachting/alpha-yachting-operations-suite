@@ -424,6 +424,7 @@ export default function WorkOrderDetail() {
       // Customer & Vessel
       customer_name: customerName,
       boat_name: boat?.vessel_name || 'Unknown',
+      boat_berth_number: boat?.berth_number || '',
       boat_type: boat?.vessel_type || 'Unknown',
       boat_length: boat?.length_m ? `${boat.length_m}m` : 'Unknown',
       

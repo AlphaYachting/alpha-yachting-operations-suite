@@ -257,6 +257,22 @@ Deno.serve(async (req) => {
       y += 4;
     }
 
+    // --- PARTNER NOTES (after location) ---
+    if (teamOrder.partner_notes) {
+      y = checkBreak(y, 20);
+      y = sectionHeading('Partner Notes', y);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(0, 0, 0);
+      const lines = doc.splitTextToSize(teamOrder.partner_notes, contentWidth);
+      lines.forEach(line => {
+        y = checkBreak(y, 5);
+        doc.text(line, marginLeft, y);
+        y += 4.5;
+      });
+      y += 4;
+    }
+
     // --- BUDGET ---
     y = checkBreak(y, 35);
     y = sectionHeading('Budget', y);
