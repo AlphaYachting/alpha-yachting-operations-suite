@@ -78,8 +78,14 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   if (!boat?.access_details) addBlocker('BOAT_ACCESS_UNKNOWN');
   if (!location?.access_notes) addBlocker('NO_LOCATION_NOTES');
   // Org gap: non-trivial WOs with no organization tasks defined
+  // Suppress if: this IS an org WO, already has a linked org WO, or explicitly marked not needed
   const durationHours = workOrder.estimated_duration_hours || (taskEstimatedMinutesSum / 60);
-  if (orgTaskCount === 0 && durationHours > 2) addBlocker('ORG_TASKS_MISSING');
+  const hasOrgCoverage = 
+    workOrder.workorder_type === 'ORGANIZATION' ||
+    workOrder.workorder_type === 'EXECUTION' && !!workOrder.linked_workorder_id ||
+    workOrder.org_tasks_not_needed === true ||
+    orgTaskCount > 0;
+  if (!hasOrgCoverage && durationHours > 2) addBlocker('ORG_TASKS_MISSING');
 
   // ── PLANNING READINESS RESULT ──
   const hardBlockers = blockers.filter(b => BLOCKER_META[b]?.severity === 'hard');
