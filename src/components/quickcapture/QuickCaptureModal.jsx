@@ -606,11 +606,16 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="
-        sm:max-w-lg sm:w-full sm:mx-4 sm:max-h-[90vh] sm:rounded-lg
-        max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:w-full max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:translate-y-0 max-sm:max-h-[92vh]
-        overflow-y-auto
-      ">
+      <DialogContent
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="
+          sm:max-w-lg sm:w-full sm:mx-4 sm:max-h-[90vh] sm:rounded-lg
+          max-sm:!fixed max-sm:!left-0 max-sm:!right-0 max-sm:!bottom-0 max-sm:!top-auto
+          max-sm:![transform:none] max-sm:!translate-x-0 max-sm:!translate-y-0
+          max-sm:!w-full max-sm:!max-w-none
+          max-sm:rounded-t-2xl max-sm:rounded-b-none
+          max-sm:max-h-[92vh] overflow-y-auto
+        ">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-500" />
