@@ -242,7 +242,7 @@ export async function generatePartnerBriefPDF(document, lineItems, template) {
     ['Type', document.boat_type, 'Length', document.boat_length ? `${document.boat_length} m` : '-']
   ];
   if (document.boat_berth_number) {
-    vesselRows.push(['Berth / Stecknr.', document.boat_berth_number, null, null]);
+    vesselRows.push(['Berth Nr.', document.boat_berth_number, null, null]);
   }
   yPos = drawTwoColGrid(vesselRows, yPos);
   yPos += 2;
