@@ -51,6 +51,8 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
+import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
+import { Zap } from 'lucide-react';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -69,8 +71,6 @@ export default function Dashboard() {
   const [leads, setLeads] = useState([]);
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
-  const [preparationTasks, setPreparationTasks] = useState([]);
-  const [orgTasks, setOrgTasks] = useState([]);
   const [kpis, setKpis] = useState(null);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
@@ -78,6 +78,7 @@ export default function Dashboard() {
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [showCaptureModal, setShowCaptureModal] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -92,7 +93,7 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData, prepTasksData, orgTasksData] = await Promise.all([
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
@@ -100,9 +101,7 @@ export default function Dashboard() {
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
-        base44.entities.Note.list('-created_date', 50),
-        base44.entities.PreparationTask.list('-created_date', 200),
-        base44.entities.Task.filter({ task_stream: 'ORGANIZATION' }, '-created_date', 500)
+        base44.entities.Note.list('-created_date', 50)
       ]);
 
       setWorkOrders(woData);
@@ -113,8 +112,6 @@ export default function Dashboard() {
       setLeads(leadsData);
       setOffers(offersData);
       setNotes(notesData);
-      setPreparationTasks(prepTasksData);
-      setOrgTasks(orgTasksData);
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
@@ -266,85 +263,43 @@ export default function Dashboard() {
     return daysAway > 0 && daysAway <= 7;
   });
 
-  // PROJECT HEALTH — execution-phase whitelist only
-  const activeJobs = jobs.filter(j => ['Scheduled', 'In Progress', 'Waiting for Parts', 'Approved'].includes(j.status));
-
-  const getReadinessHealth = (job) => {
-    const jobWOs = workOrders.filter(wo => wo.job_id === job.id && !['Completed', 'Cancelled'].includes(wo.status));
-    const scheduledDates = jobWOs.filter(wo => wo.scheduled_date).map(wo => parseISO(wo.scheduled_date)).sort((a, b) => a - b);
-    if (scheduledDates.length === 0) return { status: 'green', label: null, step: null };
-    const daysUntilStart = differenceInDays(scheduledDates[0], today);
-    if (daysUntilStart > 14) return { status: 'green', label: null, step: null };
-
-    // Source 1: ORGANIZATION WOs — readiness = all ORGANIZATION tasks completed (not WO.status)
-    const orgaWOs = jobWOs.filter(wo => wo.workorder_type === 'ORGANIZATION');
-    let orgaComplete = false;
-    if (orgaWOs.length > 0) {
-      const orgaWOIds = new Set(orgaWOs.map(wo => wo.id));
-      const orgaTasksForJob = orgTasks.filter(t => orgaWOIds.has(t.work_order_id));
-      if (orgaTasksForJob.length > 0) {
-        // Has tasks: done when all are Completed or Skipped
-        orgaComplete = orgaTasksForJob.every(t => ['Completed', 'Skipped'].includes(t.status));
-      } else {
-        // No tasks defined: fall back to WO status
-        orgaComplete = orgaWOs.every(wo => wo.status === 'Completed');
-      }
-    }
-
-    // Source 2: PreparationTask entity
-    const jobPrepTasks = preparationTasks.filter(t => t.job_id === job.id && t.required !== false);
-    const openPrepTasks = jobPrepTasks.filter(t => !t.completed);
-
-    const hasAnyChecklist = orgaWOs.length > 0 || jobPrepTasks.length > 0;
-    const hasOpenItems = (orgaWOs.length > 0 && !orgaComplete) || openPrepTasks.length > 0;
-
-    if (!hasAnyChecklist && ['Scheduled', 'In Progress'].includes(job.status)) {
-      return { status: 'yellow', label: 'No Checklist', step: 'No preparation checklist defined' };
-    }
-    if (hasOpenItems && daysUntilStart <= 7) {
-      return { status: 'red', label: 'Prep Overdue', step: 'Required preparation not complete' };
-    }
-    if (hasOpenItems && daysUntilStart <= 14) {
-      return { status: 'yellow', label: 'Prep Needed', step: 'Preparation tasks still open' };
-    }
-    return { status: 'green', label: null, step: null };
-  };
-
+  // PROJECT HEALTH
+  const activeJobs = jobs.filter(j => !['Completed', 'Invoiced', 'Cancelled'].includes(j.status));
+  
   const getProjectHealth = (job) => {
     const jobWorkOrders = workOrders.filter(wo => wo.job_id === job.id);
     const activeWOs = jobWorkOrders.filter(wo => !['Completed', 'Cancelled'].includes(wo.status));
-
-    // Execution Health
+    
+    // Red: overdue WO OR no active WO OR missing planning
     const hasOverdueWO = activeWOs.some(wo => {
       if (!wo.scheduled_date) return false;
-      return isPast(parseISO(wo.scheduled_date)) && !isToday(parseISO(wo.scheduled_date));
+      const schedDate = parseISO(wo.scheduled_date);
+      return isPast(schedDate) && !isToday(schedDate);
     });
-
-    let executionHealth;
+    
     if (hasOverdueWO || activeWOs.length === 0) {
-      executionHealth = { status: 'red', label: 'Critical', step: hasOverdueWO ? 'Overdue work order' : 'No active work orders' };
-    } else {
-      const hasUnplannedWO = activeWOs.some(wo => !wo.scheduled_date || !wo.assigned_technicians || wo.assigned_technicians.length === 0);
-      if (hasUnplannedWO) {
-        executionHealth = { status: 'red', label: 'Critical', step: 'Missing planning' };
-      } else {
-        const hasDueSoonWO = activeWOs.some(wo => {
-          if (!wo.scheduled_date) return false;
-          const daysAway = differenceInDays(parseISO(wo.scheduled_date), today);
-          return daysAway > 0 && daysAway <= 7;
-        });
-        executionHealth = hasDueSoonWO
-          ? { status: 'yellow', label: 'Attention', step: 'Work order due soon' }
-          : { status: 'green', label: 'Healthy', step: 'On track' };
-      }
+      return { status: 'red', label: 'Critical', step: hasOverdueWO ? 'Overdue work order' : 'No active work orders' };
     }
-
-    // Readiness Health — task-level check
-    const readinessHealth = getReadinessHealth(job);
-
-    // Composite: worst wins
-    const rank = { red: 2, yellow: 1, green: 0 };
-    return rank[executionHealth.status] >= rank[readinessHealth.status] ? executionHealth : readinessHealth;
+    
+    const hasUnplannedWO = activeWOs.some(wo => !wo.scheduled_date || !wo.assigned_technicians || wo.assigned_technicians.length === 0);
+    if (hasUnplannedWO) {
+      return { status: 'red', label: 'Critical', step: 'Missing planning' };
+    }
+    
+    // Yellow: WO due soon
+    const hasDueSoonWO = activeWOs.some(wo => {
+      if (!wo.scheduled_date) return false;
+      const schedDate = parseISO(wo.scheduled_date);
+      const daysAway = differenceInDays(schedDate, today);
+      return daysAway > 0 && daysAway <= 7;
+    });
+    
+    if (hasDueSoonWO) {
+      return { status: 'yellow', label: 'Attention', step: 'Work order due soon' };
+    }
+    
+    // Green: all good
+    return { status: 'green', label: 'Healthy', step: 'On track' };
   };
   
   const getProjectProgress = (job) => {
@@ -456,7 +411,15 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button 
+            size="sm" 
+            onClick={() => setShowCaptureModal(true)}
+            className="bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            <Zap className="h-4 w-4 mr-1" />
+            Quick Capture
+          </Button>
           <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
@@ -464,22 +427,6 @@ export default function Dashboard() {
           >
             <Calendar className="h-4 w-4 mr-1" />
             Dispatch
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowProjectDialog(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Project
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowWorkOrderDialog(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Work Order
           </Button>
           <Button 
             size="sm" 
@@ -1165,6 +1112,14 @@ export default function Dashboard() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Quick Capture Modal */}
+      <QuickCaptureModal
+        open={showCaptureModal}
+        onOpenChange={setShowCaptureModal}
+        customers={customers}
+        boats={boats}
+      />
 
       {/* Capacity Modal */}
       <CapacityModal 
