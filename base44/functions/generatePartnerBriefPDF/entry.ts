@@ -232,6 +232,7 @@ Deno.serve(async (req) => {
     if (customer?.phone) y = kvRow('Phone:', customer.phone, y);
     if (boat) {
       y = kvRow('Vessel:', boat.vessel_name, y);
+      if (boat.berth_number) y = kvRow('Berth / Stecknr.:', boat.berth_number, y);
       y = kvRow('Type:', boat.vessel_type || '—', y);
       if (boat.length_m) y = kvRow('Length:', boat.length_m + ' m', y);
       if (boat.manufacturer) y = kvRow('Make/Model:', `${boat.manufacturer || ''} ${boat.model || ''}`.trim(), y);
