@@ -50,6 +50,7 @@ import PDFDocumentTemplate from '@/components/pdf/PDFDocumentTemplate';
 import { computeOfferTotals } from '@/components/offers/offerTotals';
 import FiraExportButton from '@/components/fira/FiraExportButton';
 import OfferFollowUpDraft from '@/components/offers/OfferFollowUpDraft';
+import CreateProjectDialog from '@/components/offers/CreateProjectDialog';
 
 export default function OfferDetail() {
   const navigate = useNavigate();
@@ -922,32 +923,63 @@ Requirements:
     }
   };
 
+  const handleSendMarinaEmail = () => {
+    const boat = boats.find(b => b.id === formData.boat_id);
+    const location = locations.find(l => l.id === formData.location_id);
+    const customer = customers.find(c => c.id === formData.customer_id);
+
+    const marinaEmail = location?.email || location?.contact_email || '';
+    const marinaName = location?.name || '[Marina Name]';
+    const boatName = boat?.vessel_name || '[Vessel Name]';
+    const boatDetails = [boat?.manufacturer, boat?.model, boat?.year, boat?.length_m ? `${boat.length_m}m` : null].filter(Boolean).join(', ');
+    const ownerName = customer ? (customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim()) : '[Owner Name]';
+    const offerRef = formData.offer_number ? ` (Ref: ${formData.offer_number})` : '';
+
+    const taskLines = tasks
+      .filter(t => t.item_type !== 'Chapter')
+      .map(t => `  - ${t.title}${t.description ? ': ' + t.description : ''}`)
+      .join('\n');
+
+    const subject = encodeURIComponent(`Work Notification – ${boatName} – ${formData.title || 'Service Works'}${offerRef}`);
+    const body = encodeURIComponent(
+`Dear ${marinaName} Team,
+
+We would like to inform you that Alpha Yachting will be carrying out service works on the following vessel at your marina:
+
+Vessel: ${boatName}${boatDetails ? '\nDetails: ' + boatDetails : ''}
+Owner: ${ownerName}
+Location: ${marinaName}
+
+Planned Works:
+${taskLines || '  - See attached offer for details'}
+
+Start Date:              [                    ]
+End Date:                [                    ]
+Number of Technicians:   [                    ]
+Special Requirements:    [                    ]
+
+Please confirm access arrangements and any marina-specific requirements.
+
+Kind regards,
+Alpha Yachting Service Team`);
+
+    window.open(`mailto:${marinaEmail}?subject=${subject}&body=${body}`, '_self');
+  };
+
   const handleSendEmail = () => {
     const customer = customers.find(c => c.id === formData.customer_id);
     if (!customer?.email) {
       toast.error('Kein E-Mail-Adresse für diesen Kunden gefunden.');
       return;
     }
-
-    // Build salutation from available data
     const lastName = customer.last_name || '';
     const firstName = customer.first_name || '';
     const isCompany = customer.customer_type !== 'Private' || !!customer.company_name;
-    const salutationLine = isCompany
-      ? `Sehr geehrte Damen und Herren`
-      : `Sehr geehrte/r ${firstName} ${lastName}`.trim();
-
+    const salutationLine = isCompany ? `Sehr geehrte Damen und Herren` : `Sehr geehrte/r ${firstName} ${lastName}`.trim();
     const offerNumber = formData.offer_number ? ` (${formData.offer_number})` : '';
     const subject = encodeURIComponent(`Angebot: ${formData.title || ''}${offerNumber}`);
-
-    // Include the AI-generated description if available, otherwise generic text
-    const descriptionPart = formData.description
-      ? `${formData.description}\n\n`
-      : `anbei erhalten Sie unser Angebot für die besprochenen Leistungen.\n\n`;
-
-    const body = encodeURIComponent(
-      `${salutationLine},\n\n${descriptionPart}Bitte prüfen Sie das Angebot in Ruhe und melden Sie sich bei Fragen.\n\nMit freundlichen Grüßen,\nIhr Team`
-    );
+    const descriptionPart = formData.description ? `${formData.description}\n\n` : `anbei erhalten Sie unser Angebot für die besprochenen Leistungen.\n\n`;
+    const body = encodeURIComponent(`${salutationLine},\n\n${descriptionPart}Bitte prüfen Sie das Angebot in Ruhe und melden Sie sich bei Fragen.\n\nMit freundlichen Grüßen,\nIhr Team`);
     window.open(`mailto:${customer.email}?subject=${subject}&body=${body}`, '_self');
   };
 
@@ -1099,13 +1131,15 @@ Requirements:
               />
             )}
             {formData.customer_id && customers.find(c => c.id === formData.customer_id)?.email && (
-              <Button
-                onClick={handleSendEmail}
-                variant="outline"
-                className="border-sky-500 text-sky-600 hover:bg-sky-50"
-              >
+              <Button onClick={handleSendEmail} variant="outline" className="border-sky-500 text-sky-600 hover:bg-sky-50">
                 <Mail className="h-4 w-4 mr-2" />
                 E-Mail senden
+              </Button>
+            )}
+            {formData.title && (
+              <Button onClick={handleSendMarinaEmail} variant="outline" className="border-teal-500 text-teal-600 hover:bg-teal-50">
+                <Mail className="h-4 w-4 mr-2" />
+                Marina E-Mail
               </Button>
             )}
             {!isNewOffer && formData.status === 'Sent' && formData.customer_id && (
@@ -1851,116 +1885,21 @@ Requirements:
         </DialogContent>
       </Dialog>
 
-      {/* Create Project Confirmation Dialog */}
-      <Dialog open={showCreateProjectDialog} onOpenChange={(open) => { setShowCreateProjectDialog(open); if (open) { if (!projectStartDate) setProjectStartDate(new Date().toISOString().split('T')[0]); setConvertMode('new'); setSelectedExistingJobId(''); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Angebot in Projekt umwandeln</DialogTitle>
-            <DialogDescription>
-              Work Orders aus diesem Angebot werden erstellt und einem Projekt zugeordnet.
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Mode selection */}
-          <div className="flex gap-2 my-3">
-            <button
-              onClick={() => setConvertMode('new')}
-              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                convertMode === 'new' ? 'bg-green-600 text-white border-green-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              Neues Projekt erstellen
-            </button>
-            <button
-              onClick={() => setConvertMode('existing')}
-              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                convertMode === 'existing' ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              Zu bestehendem Projekt
-            </button>
-          </div>
-
-          {convertMode === 'existing' && (
-            <div className="space-y-2 mb-3">
-              <Label>Bestehendes Projekt auswählen</Label>
-              <Select value={selectedExistingJobId} onValueChange={setSelectedExistingJobId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Projekt auswählen..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredJobs.map(j => (
-                    <SelectItem key={j.id} value={j.id}>
-                      {j.title} {j.job_number ? `(${j.job_number})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {filteredJobs.length === 0 && (
-                <p className="text-xs text-amber-600">Keine bestehenden Projekte für diesen Kunden gefunden.</p>
-              )}
-            </div>
-          )}
-
-          <div className="space-y-2 my-2">
-            <Label>Projektstart-Datum</Label>
-            <Input
-              type="date"
-              value={projectStartDate}
-              onChange={(e) => setProjectStartDate(e.target.value)}
-            />
-            <p className="text-xs text-slate-500">Wird als geplantes Datum für alle Work Orders verwendet.</p>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-4">
-            <p className="text-sm text-blue-800">
-              <strong>Wird erstellt:</strong>
-            </p>
-            <ul className="text-sm text-blue-700 mt-2 space-y-1 ml-4 list-disc">
-              <li>1 Projekt: <strong>{formData.title}</strong></li>
-              <li>1 Organisations-WO mit allen Materialien & Org-Tasks</li>
-              {(() => {
-                const chapters = [];
-                let cur = { title: null, hasLabor: false };
-                for (const t of tasks) {
-                  if (t.item_type === 'Chapter') { if (cur.hasLabor) chapters.push(cur); cur = { title: t.title, hasLabor: false }; }
-                  else if (t.item_type !== 'Material' && !t.is_optional) cur.hasLabor = true;
-                }
-                if (cur.hasLabor) chapters.push(cur);
-                const hasChapters = chapters.some(c => c.title !== null);
-                if (hasChapters) {
-                  return chapters.filter(c => c.hasLabor).map((c, i) => (
-                    <li key={i}>Execution-WO: <strong>{c.title || formData.title}</strong></li>
-                  ));
-                }
-                return <li>1 Execution-WO mit allen Arbeitsschritten</li>;
-              })()}
-              <li className="text-slate-500 italic">Material-Tasks nur in Orga-WO, nicht in Execution-WOs</li>
-            </ul>
-          </div>
-          <div className="flex justify-end gap-3 mt-4">
-            <Button variant="outline" onClick={() => setShowCreateProjectDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateProject}
-              disabled={saving || (convertMode === 'existing' && !selectedExistingJobId)}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Briefcase className="h-4 w-4 mr-2" />
-                  Create Project
-                </>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CreateProjectDialog
+        open={showCreateProjectDialog}
+        onOpenChange={setShowCreateProjectDialog}
+        formData={formData}
+        tasks={tasks}
+        filteredJobs={filteredJobs}
+        projectStartDate={projectStartDate}
+        setProjectStartDate={setProjectStartDate}
+        convertMode={convertMode}
+        setConvertMode={setConvertMode}
+        selectedExistingJobId={selectedExistingJobId}
+        setSelectedExistingJobId={setSelectedExistingJobId}
+        saving={saving}
+        onConfirm={handleCreateProject}
+      />
     </div>
     </>
   );
