@@ -58,6 +58,11 @@ export default function PlanningAgent() {
     return m;
   }, [tasks, workOrders]);
 
+  // Set of job IDs that have at least one ORGANIZATION-type WorkOrder
+  const jobsWithOrgWO = useMemo(() =>
+    new Set(workOrders.filter(wo => wo.workorder_type === 'ORGANIZATION' && wo.job_id).map(wo => wo.job_id)),
+  [workOrders]);
+
   // C: build technician workload map from currently active WOs
   const workloadMap = useMemo(() => {
     const map = {};
@@ -86,7 +91,8 @@ export default function PlanningAgent() {
         if (job && !ACTIVE_JOB_STATUSES.includes(job.status)) return null;
 
         const jobOrgTaskCount = job ? (jobOrgTaskCountMap[job.id] ?? 0) : null;
-        return evaluateWorkOrder({ workOrder: wo, job, customer, location, tasks: woTasks, technicians, today, workloadMap, jobOrgTaskCount }); // C: pass load signal
+        const hasOrgWorkOrder = wo.job_id ? jobsWithOrgWO.has(wo.job_id) : false;
+        return evaluateWorkOrder({ workOrder: wo, job, customer, location, tasks: woTasks, technicians, today, workloadMap, jobOrgTaskCount, hasOrgWorkOrder }); // C: pass load signal
       })
       .filter(Boolean);
   }, [workOrders, maps, tasksByWO, isLoading, technicians, workloadMap, jobOrgTaskCountMap]);

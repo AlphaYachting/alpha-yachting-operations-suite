@@ -224,7 +224,7 @@ export function suggestNextAction(blocker, workOrder, job, confidence, resourceP
 }
 
 // ─── Main Evaluator ───────────────────────────────────────────────────────────
-export function evaluateWorkOrder({ workOrder, job, customer, boat, location, tasks, technicians, today, workloadMap = {}, jobOrgTaskCount = null }) {
+export function evaluateWorkOrder({ workOrder, job, customer, boat, location, tasks, technicians, today, workloadMap = {}, jobOrgTaskCount = null, hasOrgWorkOrder = false }) {
   if (!today) today = new Date();
   if (!technicians) technicians = [];
 
@@ -251,7 +251,8 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
 
   // Org task detection — must be before confidence
   const orgTasks = (tasks || []).filter(t => t.task_stream === 'ORGANIZATION');
-  const orgTasksMissing = orgTasks.length === 0 && !workOrder.org_tasks_not_needed;
+  // orgTasksMissing: suppress if job already has a dedicated ORG-type WorkOrder
+  const orgTasksMissing = orgTasks.length === 0 && !workOrder.org_tasks_not_needed && !hasOrgWorkOrder;
   const orgOwnerSet = orgTasks.some(t => !!t.assigned_user_id);
   // Job-level org gap: no org tasks exist anywhere across the entire job's WOs
   // jobOrgTaskCount is the total ORGANIZATION tasks across ALL WOs of this job (passed from caller)
