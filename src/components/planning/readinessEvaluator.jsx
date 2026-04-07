@@ -46,7 +46,7 @@ export const NEXT_ACTIONS = {
 
 // ─── CORE EVALUATOR ────────────────────────────────────────────────────────
 
-export function evaluateWorkOrder({ workOrder, job, customer, boat, location, taskCount, taskEstimatedMinutesSum, orgTaskCount = 0 }) {
+export function evaluateWorkOrder({ workOrder, job, customer, boat, location, taskCount, taskEstimatedMinutesSum, orgTaskCount = 0, hasOrgWorkOrder = false }) {
   const blockers = [];
   const now = today();
 
@@ -78,11 +78,12 @@ export function evaluateWorkOrder({ workOrder, job, customer, boat, location, ta
   if (!boat?.access_details) addBlocker('BOAT_ACCESS_UNKNOWN');
   if (!location?.access_notes) addBlocker('NO_LOCATION_NOTES');
   // Org gap: non-trivial WOs with no organization tasks defined
-  // Suppress if: this IS an org WO, already has a linked org WO, or explicitly marked not needed
+  // Suppress if: this IS an org WO, job has any ORG WO, linked_workorder_id set, or explicitly marked not needed
   const durationHours = workOrder.estimated_duration_hours || (taskEstimatedMinutesSum / 60);
   const hasOrgCoverage = 
     workOrder.workorder_type === 'ORGANIZATION' ||
-    workOrder.workorder_type === 'EXECUTION' && !!workOrder.linked_workorder_id ||
+    !!workOrder.linked_workorder_id ||
+    hasOrgWorkOrder ||
     workOrder.org_tasks_not_needed === true ||
     orgTaskCount > 0;
   if (!hasOrgCoverage && durationHours > 2) addBlocker('ORG_TASKS_MISSING');

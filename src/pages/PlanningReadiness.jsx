@@ -86,6 +86,11 @@ export default function PlanningReadiness() {
     return m;
   }, [tasks, workOrders]);
 
+  // Set of job IDs that have at least one ORGANIZATION-type work order
+  const jobsWithOrgWO = useMemo(() =>
+    new Set(workOrders.filter(wo => wo.workorder_type === 'ORGANIZATION' && wo.job_id).map(wo => wo.job_id)),
+  [workOrders]);
+
   const activeJobIds = useMemo(() =>
     new Set(jobs.filter(j => !EXCLUDED_JOB_STATUSES.includes(j.status)).map(j => j.id)),
   [jobs]);
@@ -104,7 +109,8 @@ export default function PlanningReadiness() {
       const location = job?.location_id ? maps.locations[job.location_id] : null;
       const tData    = tasksByWO[wo.id] || { count: 0, minutesSum: 0, orgCount: 0 };
       const jobOrgTaskCount = job ? (jobOrgTaskCountMap[job.id] ?? 0) : null;
-      const evaluation = evaluateWorkOrder({ workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum, orgTaskCount: tData.orgCount });
+      const hasOrgWorkOrder = wo.job_id ? jobsWithOrgWO.has(wo.job_id) : false;
+      const evaluation = evaluateWorkOrder({ workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum, orgTaskCount: tData.orgCount, hasOrgWorkOrder });
       return { workOrder: wo, job, customer, boat, location, taskCount: tData.count, taskEstimatedMinutesSum: tData.minutesSum, evaluation };
     });
   }, [workOrders, activeJobIds, maps, tasksByWO]);
