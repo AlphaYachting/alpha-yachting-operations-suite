@@ -211,16 +211,37 @@ export default function PlanningAgent() {
               <h2 className="text-base font-semibold text-slate-700">Filtered: {activeFilter.replace(/_/g, ' ')}</h2>
               <Button variant="ghost" size="sm" onClick={() => setActiveFilter(null)}>Clear filter</Button>
             </div>
-            <div className="space-y-2">
-              {filteredView.length === 0
-                ? <p className="text-sm text-slate-400 py-6 text-center">No items in this category.</p>
-                : filteredView.map((item, idx) => (
-                    <div key={item.workOrder.id}>
-                      <AgentSectionItem item={item} rank={idx + 1} technicians={technicians} allWorkOrders={workOrders} jobs={maps.jobs} locations={maps.locations} onRefresh={handleRefresh} />
+            {filteredView.length === 0
+              ? <p className="text-sm text-slate-400 py-6 text-center">No items in this category.</p>
+              : (() => {
+                  const clusterKey = (item) => `${item.job?.boat_id || 'no-boat'}|${item.job?.id || 'no-job'}|${item.job?.location_id || 'no-loc'}`;
+                  const clusterMap = {};
+                  filteredView.forEach(item => {
+                    const key = clusterKey(item);
+                    if (!clusterMap[key]) clusterMap[key] = { boat: item.job?.boat_id ? maps.boats[item.job.boat_id] : null, job: item.job, location: item.location, items: [] };
+                    clusterMap[key].items.push(item);
+                  });
+                  return (
+                    <div className="space-y-3">
+                      {Object.values(clusterMap).map((cluster) => (
+                        <ClusterGroup
+                          key={`${cluster.boat?.id}-${cluster.job?.id}-${cluster.location?.id}`}
+                          boat={cluster.boat}
+                          job={cluster.job}
+                          location={cluster.location}
+                          items={cluster.items}
+                          ranked
+                          technicians={technicians}
+                          allWorkOrders={workOrders}
+                          jobs={maps.jobs}
+                          locations={maps.locations}
+                          onRefresh={handleRefresh}
+                        />
+                      ))}
                     </div>
-                  ))
-              }
-            </div>
+                  );
+                })()
+            }
           </div>
         ) : (
           <>
