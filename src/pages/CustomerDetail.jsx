@@ -204,19 +204,14 @@ export default function CustomerDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="space-y-3">
+        {/* Row 1: Back + Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           <Link to={createPageUrl('Customers')}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">{getDisplayName(customer)}</h1>
-            <p className="text-slate-500 mt-1">Customer Details</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
           <SendInviteButton
             email={customer.email}
             role="CUSTOMER"
@@ -250,6 +245,11 @@ export default function CustomerDetail() {
             <Edit className="h-4 w-4 mr-2" />
             Edit Customer
           </Button>
+        </div>
+        {/* Row 2: Customer Name */}
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 break-words">{getDisplayName(customer)}</h1>
+          <p className="text-slate-500 mt-1">Customer Details</p>
         </div>
       </div>
 
