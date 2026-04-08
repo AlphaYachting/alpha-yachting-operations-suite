@@ -5,7 +5,7 @@ import QuickResolutionForm from './QuickResolutionForm';
 import { findBundleCandidates, getBundleSummary } from '@/utils/bundleAnalyzer';
 import BundleRecommendation from './BundleRecommendation';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks, Calendar, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks, Calendar, Loader2, KeyRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import PlannerActionPanel from './PlannerActionPanel';
 
@@ -189,6 +189,15 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
             {d.mainUncertainty && <span className="text-slate-400 italic">· {d.mainUncertainty}</span>}
           </div>
         )}
+
+        {/* Access not confirmed — always visible warning */}
+        {!workOrder.access_confirmed && (
+          <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium bg-amber-50 border border-amber-200 rounded px-2 py-1">
+            <KeyRound className="h-3 w-3 flex-shrink-0" />
+            <span>Boat / site access not confirmed</span>
+          </div>
+        )}
+
         {/* Bundling badge */}
         {bundleSummary && (
         <div className="flex items-center gap-1.5 text-xs text-cyan-600 font-medium">
