@@ -83,8 +83,8 @@ export default function QuickCaptureReview() {
     setLoading(true);
     const [entriesData, customersData, boatsData] = await Promise.all([
       base44.entities.QuickCaptureEntry.list('-created_date', 200),
-      base44.entities.Customer.list('-created_date', 200),
-      base44.entities.Boat.list('-created_date', 200),
+      base44.entities.Customer.list('-created_date', 1000),
+      base44.entities.Boat.list('-created_date', 1000),
     ]);
     setEntries(entriesData);
     setCustomers(customersData);
