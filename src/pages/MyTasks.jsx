@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, parseISO, isPast, isToday, differenceInDays, startOfDay } from 'date-fns';
-import UserSimulator from '@/components/admin/UserSimulator';
+
 
 // FIELD MAPPING (Task entity):
 // - status values: "Not Started", "In Progress", "Completed", "Not Possible", "Needs Approval", "Skipped"
@@ -111,8 +111,6 @@ const statusColors = {
   'Skipped': 'bg-slate-100 text-slate-500'
 };
 
-const SIMULATION_KEY = 'admin_simulate_user_id';
-
 export default function MyTasks() {
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
@@ -140,22 +138,7 @@ export default function MyTasks() {
       const user = await base44.auth.me();
       setCurrentUser(user);
       
-      // Check for simulation (admin only)
-      let effectiveUserId = user.id;
-      if (user.role === 'admin') {
-        const simulatedId = localStorage.getItem(SIMULATION_KEY);
-        if (simulatedId) {
-          effectiveUserId = simulatedId;
-        }
-      }
-      
-      // Load effective user
-      if (effectiveUserId !== user.id) {
-        const [simulatedUser] = await base44.entities.User.filter({ id: effectiveUserId });
-        setEffectiveUser(simulatedUser || user);
-      } else {
-        setEffectiveUser(user);
-      }
+      setEffectiveUser(user);
       
       // Load all tasks and related data (no limit to ensure we get all user's tasks)
       const [allTasks, allWorkOrders, allJobs, allBoats, allCustomers, allLocations, allTechnicians] = await Promise.all([
@@ -200,25 +183,7 @@ export default function MyTasks() {
     return isMyTask(task, workOrders, technicians, effectiveUser);
   });
 
-  // Debug info (admin only)
-  const isSimulating = currentUser?.role === 'admin' && effectiveUser?.id !== currentUser?.id;
-  if (currentUser?.role === 'admin') {
-    console.log('My Tasks Debug:', {
-      realUserId: currentUser?.id,
-      realUserEmail: currentUser?.email,
-      effectiveUserId: effectiveUser?.id,
-      effectiveUserEmail: effectiveUser?.email,
-      simulation: isSimulating ? 'ON' : 'OFF',
-      myTechnicianProfile,
-      totalTasks: tasks.length,
-      totalWorkOrders: workOrders.length,
-      myTasksFound: myTasks.length,
-      workOrdersWithMyTech: workOrders.filter(wo => 
-        wo.lead_technician_id === myTechnicianProfile?.id || 
-        wo.assigned_technicians?.includes(myTechnicianProfile?.id)
-      ).length
-    });
-  }
+
 
   // Apply mode filter (open vs all)
   const filteredTasks = myTasks.filter(task => {
@@ -319,13 +284,6 @@ export default function MyTasks() {
 
   return (
     <div className="space-y-6">
-      {/* User Simulator (Admin Only) */}
-      {currentUser?.role === 'admin' && (
-        <div className="mb-6">
-          <UserSimulator currentUser={currentUser} />
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-start justify-between gap-6">
         <div className="flex-1">
@@ -361,8 +319,8 @@ export default function MyTasks() {
                   onChange={e => setSimulatedTechnicianId(e.target.value)}
                   className="text-xs border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 >
-                  <option value="">Eigene Ansicht</option>
-                  <optgroup label="── Technician simulieren ──">
+                  <option value="">My own view</option>
+                  <optgroup label="── View as technician ──">
                     {[...technicians]
                       .filter(t => t.status !== 'Inactive')
                       .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`))
@@ -376,7 +334,7 @@ export default function MyTasks() {
                 </select>
                 {simulatedTechnicianId && (
                   <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                    Simulation aktiv
+                    Viewing as technician
                   </span>
                 )}
               </div>
