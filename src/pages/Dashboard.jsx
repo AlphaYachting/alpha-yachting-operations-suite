@@ -20,7 +20,9 @@ import {
   Plus,
   StickyNote,
   X,
-  BarChart2
+  BarChart2,
+  Zap,
+  Mail
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,7 +54,8 @@ import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
 import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
-import { Zap } from 'lucide-react';
+import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
+import LeadFormV2 from '@/components/leadsV2/LeadForm';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -79,6 +82,8 @@ export default function Dashboard() {
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showCaptureModal, setShowCaptureModal] = useState(false);
+  const [showEmailToLeadModal, setShowEmailToLeadModal] = useState(false);
+  const [emailParsedLeadData, setEmailParsedLeadData] = useState(null);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -411,7 +416,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button 
             size="sm" 
             onClick={() => setShowCaptureModal(true)}
@@ -422,50 +427,36 @@ export default function Dashboard() {
           </Button>
           <Button 
             size="sm" 
-            onClick={() => setShowDispatchModal(true)}
-            className="hidden sm:inline-flex bg-indigo-600 hover:bg-indigo-700 text-white"
+            asChild
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            <Calendar className="h-4 w-4 mr-1" />
-            Dispatch
+            <Link to={createPageUrl('NewCaseWizard')}>
+              <Briefcase className="h-4 w-4 mr-1" />
+              New Case
+            </Link>
           </Button>
           <Button 
             size="sm" 
-            onClick={() => setShowProjectDialog(true)}
-            className="hidden sm:inline-flex bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => setShowEmailToLeadModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            <Plus className="h-4 w-4 mr-1" />
-            Project
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowWorkOrderDialog(true)}
-            className="hidden sm:inline-flex bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Work Order
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowLeadDialog(true)}
-            className="hidden sm:inline-flex bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Lead
+            <Mail className="h-4 w-4 mr-1" />
+            Email to Lead
           </Button>
           <Button 
             size="sm" 
             asChild
-            className="hidden sm:inline-flex bg-cyan-600 hover:bg-cyan-700 text-white"
+            className="bg-cyan-600 hover:bg-cyan-700 text-white"
           >
-            <Link to={createPageUrl('Offers') + '?new=true'}>
-              <Plus className="h-4 w-4 mr-1" />
-              Offer
+            <Link to={createPageUrl('OfferDetail') + '?new=true'}>
+              <FileText className="h-4 w-4 mr-1" />
+              New Offer
             </Link>
           </Button>
           <Button 
             size="sm" 
             onClick={() => setShowNoteDialog(true)}
-            className="hidden sm:inline-flex bg-yellow-600 hover:bg-yellow-700 text-white"
+            className="bg-yellow-600 hover:bg-yellow-700 text-white"
           >
             <StickyNote className="h-4 w-4 mr-1" />
             Note
@@ -1136,6 +1127,34 @@ export default function Dashboard() {
         customers={customers}
         boats={boats}
       />
+
+      {/* Email to Lead Modal */}
+      <Dialog open={showEmailToLeadModal} onOpenChange={(open) => { setShowEmailToLeadModal(open); if (!open) setEmailParsedLeadData(null); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Email to Lead</DialogTitle>
+          </DialogHeader>
+          {!emailParsedLeadData ? (
+            <EmailToLeadParser
+              onLeadParsed={(data) => setEmailParsedLeadData(data)}
+              onCancel={() => setShowEmailToLeadModal(false)}
+            />
+          ) : (
+            <LeadFormV2
+              lead={emailParsedLeadData}
+              locations={locations}
+              onSave={async (leadData) => {
+                const newLead = await base44.entities.Lead.create(leadData);
+                setLeads([newLead, ...leads]);
+                setShowEmailToLeadModal(false);
+                setEmailParsedLeadData(null);
+                toast.success('Lead created from email');
+              }}
+              onCancel={() => setEmailParsedLeadData(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Capacity Modal */}
       <CapacityModal 

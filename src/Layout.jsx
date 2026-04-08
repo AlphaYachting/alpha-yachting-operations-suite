@@ -60,7 +60,7 @@ import { Toaster } from '@/components/ui/sonner';
 const navItems = [
   // OPERATIONS
   { header: 'OPERATIONS', technicianAllowed: true },
-  { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard', primary: true, leadTechAllowed: true },
+  { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard', leadTechAllowed: true },
   { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', leadTechAllowed: true },
   { name: 'My Tasks', icon: ClipboardList, page: 'MyTasks', technicianAllowed: true },
   { name: 'Schedule', icon: Clock, page: 'Schedule', technicianAllowed: true },
