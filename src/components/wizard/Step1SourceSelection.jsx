@@ -70,9 +70,9 @@ export function Step1SourceSelection() {
                 <Label htmlFor="source-price-inquiry" className="flex-1 cursor-pointer">
                   <div className="flex items-center gap-2 mb-1">
                     <Calculator className="h-4 w-4 text-emerald-600" />
-                    <span className="font-medium">Preisauskunft Trockenmarina</span>
+                    <span className="font-medium">Price Inquiry – Dry Marina</span>
                   </div>
-                  <p className="text-sm text-slate-500">Sofort zur Preiskalkulation ohne Kundenanlage — nur Bootsgröße & Konfiguration</p>
+                  <p className="text-sm text-slate-500">Jump directly to the storage configurator – no customer required, just boat size & options</p>
                 </Label>
               </div>
             </div>
