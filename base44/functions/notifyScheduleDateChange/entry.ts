@@ -42,7 +42,11 @@ Deno.serve(async (req) => {
     }
 
     const appDomain = Deno.env.get('APP_DOMAIN') || 'https://app26.base44.app';
-    const woUrl = `${appDomain}/WorkOrderDetail?id=${data.id}`;
+    const woUrl = `${appDomain}/WorkOrderDetail?id=${event?.entity_id || data.id}`;
+
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    const FROM_ADDRESS = Deno.env.get('CUSTOM_EMAIL_FROM') || 'info@alpha-yachting.hr';
+    const FROM_NAME = Deno.env.get('EMAIL_ENGINE_FROM_NAME') || 'Alpha Yachting';
 
     const emailBody = `
       <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
@@ -79,13 +83,17 @@ Deno.serve(async (req) => {
         email_sent: false
       });
 
-      // Email
+      // Email via Resend
       try {
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          from_name: 'Alpha Yachting',
-          to: tech.email,
-          subject: `[Terminänderung] ${data.title}`,
-          body: emailBody
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: `${FROM_NAME} <${FROM_ADDRESS}>`,
+            to: [tech.email],
+            subject: `[Terminänderung] ${data.title}`,
+            html: emailBody
+          })
         });
         results.push({ email: tech.email, sent: true });
       } catch (e) {

@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
     try {
@@ -90,13 +90,21 @@ Deno.serve(async (req) => {
             </div>
         `;
 
-        // Send email to all assigned technicians
+        const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+        const FROM_ADDRESS = Deno.env.get('CUSTOM_EMAIL_FROM') || 'info@alpha-yachting.hr';
+        const FROM_NAME = Deno.env.get('EMAIL_ENGINE_FROM_NAME') || 'Alpha Yachting';
+
+        // Send email to all assigned technicians via Resend
         const emailPromises = validTechnicians.map(tech =>
-            base44.asServiceRole.integrations.Core.SendEmail({
-                from_name: 'Alpha Yachting',
-                to: tech.email,
-                subject: emailSubject,
-                body: emailBody
+            fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    from: `${FROM_NAME} <${FROM_ADDRESS}>`,
+                    to: [tech.email],
+                    subject: emailSubject,
+                    html: emailBody
+                })
             })
         );
 
