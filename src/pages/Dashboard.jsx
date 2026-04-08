@@ -411,7 +411,7 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <Button 
             size="sm" 
             onClick={() => setShowCaptureModal(true)}
@@ -423,15 +423,31 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="hidden sm:inline-flex bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Calendar className="h-4 w-4 mr-1" />
             Dispatch
           </Button>
           <Button 
             size="sm" 
+            onClick={() => setShowProjectDialog(true)}
+            className="hidden sm:inline-flex bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Project
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={() => setShowWorkOrderDialog(true)}
+            className="hidden sm:inline-flex bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Work Order
+          </Button>
+          <Button 
+            size="sm" 
             onClick={() => setShowLeadDialog(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="hidden sm:inline-flex bg-purple-600 hover:bg-purple-700 text-white"
           >
             <Plus className="h-4 w-4 mr-1" />
             Lead
@@ -439,7 +455,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             asChild
-            className="bg-cyan-600 hover:bg-cyan-700 text-white"
+            className="hidden sm:inline-flex bg-cyan-600 hover:bg-cyan-700 text-white"
           >
             <Link to={createPageUrl('Offers') + '?new=true'}>
               <Plus className="h-4 w-4 mr-1" />
@@ -449,7 +465,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             onClick={() => setShowNoteDialog(true)}
-            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+            className="hidden sm:inline-flex bg-yellow-600 hover:bg-yellow-700 text-white"
           >
             <StickyNote className="h-4 w-4 mr-1" />
             Note
