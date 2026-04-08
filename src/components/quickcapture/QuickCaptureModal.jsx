@@ -43,7 +43,7 @@ function CustomerPicker({ customers, value, onChange, label = 'Customer', confid
       (c.first_name || '').toLowerCase().includes(q) ||
       displayName(c).toLowerCase().includes(q)
     );
-  }).slice(0, 30);
+  });
 
   // Close on outside click
   useEffect(() => {
