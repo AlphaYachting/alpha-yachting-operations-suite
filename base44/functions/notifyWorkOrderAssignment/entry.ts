@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
   try {
@@ -19,6 +19,21 @@ Deno.serve(async (req) => {
     if (addedTechIds.length === 0) {
       return Response.json({ success: true, message: 'No new technicians added' });
     }
+
+    // Deduplizierung: Prüfe ob in den letzten 10 Minuten bereits Notifications für diese WO existieren
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const recentNotifications = await base44.asServiceRole.entities.Notification.filter({
+      related_work_order_id: data.id,
+      type: 'work_order_assignment'
+    });
+    const recentlySentTechIds = new Set(
+      recentNotifications
+        .filter(n => n.created_date > tenMinutesAgo)
+        .map(n => {
+          // Extrahiere tech email aus der Notification und matche zurück
+          return n.user_email;
+        })
+    );
 
     // Load necessary data
     const [workOrder, technicians, job, boat, customer, location] = await Promise.all([
@@ -61,10 +76,21 @@ Deno.serve(async (req) => {
       : 'Not scheduled';
 
     // Send notifications to newly added technicians
+    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+    const FROM_ADDRESS = Deno.env.get('CUSTOM_EMAIL_FROM') || 'info@alpha-yachting.hr';
+    const FROM_NAME = Deno.env.get('EMAIL_ENGINE_FROM_NAME') || 'Alpha Yachting';
+    const APP_DOMAIN = Deno.env.get('APP_DOMAIN') || 'https://alpha-yachting.base44.app';
+
     const notifications = [];
     for (const techId of addedTechIds) {
       const tech = technicians.find(t => t.id === techId);
       if (!tech?.email) continue;
+
+      // Deduplizierung: Überspringe wenn in letzten 10 Minuten bereits gesendet
+      if (recentlySentTechIds.has(tech.email)) {
+        console.log(`Skipping duplicate notification for ${tech.email}`);
+        continue;
+      }
 
       const message = `
         <div style="font-family: Arial, sans-serif; color: #333;">
@@ -94,27 +120,43 @@ Deno.serve(async (req) => {
 
       notifications.push(notification);
 
-      // Send email
+      // Send email via Resend
       try {
-        await base44.asServiceRole.integrations.Core.SendEmail({
-          to: tech.email,
-          subject: `New Work Order Assignment: ${data.title}`,
-          body: `
-            <h2>You have been assigned to a work order</h2>
-            ${message}
-            <p style="margin-top: 20px;">
-              <a href="${Deno.env.get('APP_DOMAIN')}" 
-                 style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                View Work Order
-              </a>
-            </p>
-          `
+        const emailRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: `${FROM_NAME} <${FROM_ADDRESS}>`,
+            to: [tech.email],
+            subject: `Neue Aufgabenzuteilung: ${data.title}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px;">
+                <h2 style="color: #1e40af;">Du wurdest einem Work Order zugewiesen</h2>
+                ${message}
+                <p style="margin-top: 20px;">
+                  <a href="${APP_DOMAIN}" 
+                     style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                    Work Order öffnen
+                  </a>
+                </p>
+                <hr style="margin-top: 30px; border: none; border-top: 1px solid #eee;" />
+                <p style="font-size: 12px; color: #888;">Alpha Yachting Service System</p>
+              </div>
+            `
+          })
         });
 
-        // Mark email as sent
-        await base44.asServiceRole.entities.Notification.update(notification.id, {
-          email_sent: true
-        });
+        const emailBody = await emailRes.json();
+        console.log('Resend response:', emailRes.status, JSON.stringify(emailBody));
+
+        if (emailRes.ok) {
+          await base44.asServiceRole.entities.Notification.update(notification.id, {
+            email_sent: true
+          });
+        }
       } catch (emailError) {
         console.error('Email send error:', emailError);
       }
