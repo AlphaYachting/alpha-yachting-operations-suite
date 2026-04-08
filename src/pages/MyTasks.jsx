@@ -124,6 +124,7 @@ export default function MyTasks() {
   const [effectiveUser, setEffectiveUser] = useState(null);
   const [mode, setMode] = useState('open'); // 'open' or 'all'
   const [expandedBoats, setExpandedBoats] = useState({});
+  const [simulatedTechnicianId, setSimulatedTechnicianId] = useState('');
 
 
   useEffect(() => {
@@ -168,6 +169,12 @@ export default function MyTasks() {
   const myTechnicianProfile = technicians.find(tech => tech.user_id === effectiveUser?.id || tech.email === effectiveUser?.email);
 
   const myTasks = tasks.filter(task => {
+    if (simulatedTechnicianId) {
+      const workOrder = workOrders.find(wo => wo.id === task.work_order_id);
+      if (!workOrder) return false;
+      return workOrder.lead_technician_id === simulatedTechnicianId ||
+        (workOrder.assigned_technicians && workOrder.assigned_technicians.includes(simulatedTechnicianId));
+    }
     if (!effectiveUser) return false;
     return isMyTask(task, workOrders, technicians, effectiveUser);
   });
@@ -299,6 +306,27 @@ export default function MyTasks() {
           </Tabs>
 
           <div className="flex items-center gap-3">
+            {technicians.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-slate-400" />
+                <select
+                  value={simulatedTechnicianId}
+                  onChange={e => setSimulatedTechnicianId(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                >
+                  <option value="">Eigene Ansicht</option>
+                  {[...technicians]
+                    .filter(t => t.status !== 'Inactive')
+                    .sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`))
+                    .map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.first_name} {t.last_name}{t.role ? ` (${t.role})` : ''}
+                      </option>
+                    ))
+                  }
+                </select>
+              </div>
+            )}
             <div className="text-xs text-slate-500">
               {myTasks.length} total tasks assigned
             </div>
