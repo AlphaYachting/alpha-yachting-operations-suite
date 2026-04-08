@@ -36,6 +36,12 @@ function WizardContent() {
   };
 
   const isStepVisible = (step) => {
+    // Price inquiry: only steps 1 and 6 (StorageTransportFlow) are visible
+    if (wizardData.source === 'price_inquiry_storage') {
+      if (step === 1 || step === 6) return true;
+      return false;
+    }
+
     // Always show steps 1-5
     if (step <= 5) return true;
 

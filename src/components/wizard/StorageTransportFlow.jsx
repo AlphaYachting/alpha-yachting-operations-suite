@@ -82,7 +82,11 @@ export function StorageTransportFlow() {
 
     const handleBack = () => {
         if (subStep === 1) {
-            setMainStep(5); // Back to Intent selection in main wizard
+            if (wizardData.source === 'price_inquiry_storage') {
+                setMainStep(1);
+            } else {
+                setMainStep(5);
+            }
         } else {
             setSubStep(s => s - 1);
         }
@@ -142,10 +146,6 @@ export function StorageTransportFlow() {
 
     const handleGenerate = async () => {
         const customerId = getCustomerId();
-        if (!customerId) {
-            setError("No existing customer found. Storage & Transport offers require an existing customer selected in Step 2.");
-            return;
-        }
         if (!activeRateCard) {
             setError("No active rate card found.");
             return;
@@ -175,8 +175,8 @@ export function StorageTransportFlow() {
 
             // Create Offer
             const offer = await base44.entities.Offer.create({
-                customer_id: customerId,
-                boat_id: boatId,
+                ...(customerId ? { customer_id: customerId } : {}),
+                    boat_id: boatId,
                 location_id: locationId,
                 title: formData.title,
                 offer_number: offerNumber,
@@ -548,14 +548,7 @@ export function StorageTransportFlow() {
                                     <AlertDescription>{error}</AlertDescription>
                                 </Alert>
                             )}
-                            {!getCustomerId() && (
-                                <Alert variant="destructive">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertDescription>
-                                        No existing customer found. Please go back to Step 1 and select an existing customer.
-                                    </AlertDescription>
-                                </Alert>
-                            )}
+
 
                             {/* Summary grid */}
                             <div className="grid grid-cols-2 gap-3 text-sm">
@@ -622,7 +615,7 @@ export function StorageTransportFlow() {
                     ) : (
                         <Button
                             onClick={handleGenerate}
-                            disabled={isSubmitting || !getCustomerId()}
+                            disabled={isSubmitting}
                             className="bg-blue-600 hover:bg-blue-700"
                         >
                             {isSubmitting ? (

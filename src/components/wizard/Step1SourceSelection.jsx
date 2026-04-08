@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Phone, Users, UserPlus } from 'lucide-react';
+import { Phone, Users, UserPlus, Calculator } from 'lucide-react';
 import { useWizard } from './WizardContext';
 
 export function Step1SourceSelection() {
@@ -12,6 +12,12 @@ export function Step1SourceSelection() {
   const handleNext = () => {
     if (!wizardData.source) {
       alert('Please select a source');
+      return;
+    }
+    // Price inquiry: skip all contact/vessel/location steps, go directly to configurator
+    if (wizardData.source === 'price_inquiry_storage') {
+      updateWizardData('intent', 'storage_transport');
+      setStep(6);
       return;
     }
     setStep(2);
@@ -56,6 +62,17 @@ export function Step1SourceSelection() {
                     <span className="font-medium">Create New Contact</span>
                   </div>
                   <p className="text-sm text-slate-500">Add a new customer and immediately create offer/job/boat</p>
+                </Label>
+              </div>
+
+              <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-emerald-50 border-emerald-200 cursor-pointer">
+                <RadioGroupItem value="price_inquiry_storage" id="source-price-inquiry" />
+                <Label htmlFor="source-price-inquiry" className="flex-1 cursor-pointer">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Calculator className="h-4 w-4 text-emerald-600" />
+                    <span className="font-medium">Preisauskunft Trockenmarina</span>
+                  </div>
+                  <p className="text-sm text-slate-500">Sofort zur Preiskalkulation ohne Kundenanlage — nur Bootsgröße & Konfiguration</p>
                 </Label>
               </div>
             </div>
