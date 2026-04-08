@@ -9,15 +9,8 @@ import { RotateCcw, Eye, AlertCircle } from 'lucide-react';
 const SIMULATION_KEY = 'admin_simulate_user_id';
 
 export default function UserSimulator({ currentUser }) {
-  const [users, setUsers] = useState([]);
-  const [simulatedUserId, setSimulatedUserId] = useState(null);
-
-  useEffect(() => {
-    loadUsers();
-    const saved = localStorage.getItem(SIMULATION_KEY);
-    if (saved) {
-      setSimulatedUserId(saved);
-    }
+  return null;
+}
   }, []);
 
   const loadUsers = async () => {
