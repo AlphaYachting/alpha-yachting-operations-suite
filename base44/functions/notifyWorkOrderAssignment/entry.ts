@@ -4,6 +4,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const { event, data, old_data } = await req.json();
+    const workOrderId = event?.entity_id;
 
     // Only process update events
     if (event?.type !== 'update' || !data || !old_data) {
@@ -23,7 +24,7 @@ Deno.serve(async (req) => {
     // Deduplizierung: Prüfe ob in den letzten 10 Minuten bereits Notifications für diese WO existieren
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const recentNotifications = await base44.asServiceRole.entities.Notification.filter({
-      related_work_order_id: data.id,
+      related_work_order_id: workOrderId,
       type: 'work_order_assignment'
     });
     const recentlySentTechIds = new Set(
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
 
     // Load necessary data
     const [workOrder, technicians, job, boat, customer, location] = await Promise.all([
-      base44.asServiceRole.entities.WorkOrder.get(data.id),
+      base44.asServiceRole.entities.WorkOrder.get(workOrderId),
       base44.asServiceRole.entities.Technician.list(),
       data.job_id ? base44.asServiceRole.entities.Job.get(data.job_id) : null,
       null, // Will load via job
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
     }
 
     // Get tasks for this work order
-    const tasks = await base44.asServiceRole.entities.Task.filter({ work_order_id: data.id });
+    const tasks = await base44.asServiceRole.entities.Task.filter({ work_order_id: workOrderId });
 
     // Build task list
     const taskList = tasks.length > 0
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
         type: 'work_order_assignment',
         title: 'New Work Order Assignment',
         message: message,
-        related_work_order_id: data.id,
+        related_work_order_id: workOrderId,
         is_read: false,
         email_sent: false
       });
