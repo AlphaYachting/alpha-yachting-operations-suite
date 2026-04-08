@@ -595,13 +595,30 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
 }
 
 // ── MAIN MODAL ─────────────────────────────────────────────────────────────
-export default function QuickCaptureModal({ open, onClose, onOpenChange, customers = [], boats = [] }) {
+export default function QuickCaptureModal({ open, onClose, onOpenChange, customers: customersProp = [], boats: boatsProp = [] }) {
   const handleClose = onOpenChange || onClose;
   const [step, setStep] = useState('input');
   const [parsed, setParsed] = useState(null);
+  const [customers, setCustomers] = useState(customersProp);
+  const [boats, setBoats] = useState(boatsProp);
 
   useEffect(() => {
-    if (open) { setStep('input'); setParsed(null); }
+    if (open) {
+      setStep('input');
+      setParsed(null);
+      // Always fetch fresh full customer/boat list when modal opens
+      Promise.all([
+        base44.entities.Customer.list('-last_name', 2000),
+        base44.entities.Boat.list('-created_date', 2000),
+      ]).then(([c, b]) => {
+        setCustomers(c || []);
+        setBoats(b || []);
+      }).catch(() => {
+        // fallback to props if fetch fails
+        setCustomers(customersProp);
+        setBoats(boatsProp);
+      });
+    }
   }, [open]);
 
   return (
