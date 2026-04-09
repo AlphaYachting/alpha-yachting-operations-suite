@@ -48,12 +48,12 @@ import LeadFormV2 from '@/components/leadsV2/LeadForm';
 import LeadIntelligencePanel from '@/components/leads/LeadIntelligencePanel';
 
 const statusColors = {
-  Pending: 'bg-slate-100 text-slate-700',
-  Contacted: 'bg-blue-100 text-blue-700',
-  Converted: 'bg-emerald-100 text-emerald-700',
-  Rejected: 'bg-red-100 text-red-700',
-  Lost: 'bg-slate-100 text-slate-500',
-  Won: 'bg-emerald-100 text-emerald-800'
+  'New Incoming': 'bg-amber-100 text-amber-700',
+  'Needs Clarification': 'bg-orange-100 text-orange-700',
+  'Ready to Offer': 'bg-blue-100 text-blue-700',
+  'Offered': 'bg-indigo-100 text-indigo-700',
+  'Ordered / Confirmed': 'bg-emerald-100 text-emerald-800',
+  'Rejected': 'bg-red-100 text-red-700'
 };
 
 const taskStatusColors = {

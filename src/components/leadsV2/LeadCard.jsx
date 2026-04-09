@@ -15,12 +15,12 @@ import {
 } from '@/components/ui/tooltip';
 
 const statusColors = {
-  'Pending': 'bg-amber-100 text-amber-700',
-  'Contacted': 'bg-blue-100 text-blue-700',
-  'Converted': 'bg-emerald-100 text-emerald-700',
-  'Rejected': 'bg-red-100 text-red-700',
-  'Lost': 'bg-slate-100 text-slate-700',
-  'Won': 'bg-emerald-100 text-emerald-800'
+  'New Incoming': 'bg-amber-100 text-amber-700',
+  'Needs Clarification': 'bg-orange-100 text-orange-700',
+  'Ready to Offer': 'bg-blue-100 text-blue-700',
+  'Offered': 'bg-indigo-100 text-indigo-700',
+  'Ordered / Confirmed': 'bg-emerald-100 text-emerald-800',
+  'Rejected': 'bg-red-100 text-red-700'
 };
 
 const priorityColors = {
@@ -68,24 +68,26 @@ export default function LeadCard({
   onViewDetail,
 }) {
   const iconBgColor = {
-    'Pending': 'bg-amber-50',
-    'Contacted': 'bg-blue-50',
-    'Converted': 'bg-emerald-50',
-    'Rejected': 'bg-red-50',
-    'Lost': 'bg-slate-50'
+    'New Incoming': 'bg-amber-50',
+    'Needs Clarification': 'bg-orange-50',
+    'Ready to Offer': 'bg-blue-50',
+    'Offered': 'bg-indigo-50',
+    'Ordered / Confirmed': 'bg-emerald-50',
+    'Rejected': 'bg-red-50'
   }[lead.status] || 'bg-slate-50';
 
   const iconColor = {
-    'Pending': 'text-amber-600',
-    'Contacted': 'text-blue-600',
-    'Converted': 'text-emerald-600',
-    'Rejected': 'text-red-600',
-    'Lost': 'text-slate-400'
+    'New Incoming': 'text-amber-600',
+    'Needs Clarification': 'text-orange-600',
+    'Ready to Offer': 'text-blue-600',
+    'Offered': 'text-indigo-600',
+    'Ordered / Confirmed': 'text-emerald-600',
+    'Rejected': 'text-red-600'
   }[lead.status] || 'text-slate-400';
 
-  // Aging border classes — Won gets green, open leads get red/yellow aging
+  // Aging border classes — Confirmed gets green, open leads get red/yellow aging
   const agingBorderClass =
-    lead.status === 'Won' ? 'border-emerald-400 border-2' :
+    lead.status === 'Ordered / Confirmed' ? 'border-emerald-400 border-2' :
     agingLevel === 'danger' ? 'border-red-300 border-2' : 
     agingLevel === 'warn' ? 'border-yellow-300 border-2' : '';
 

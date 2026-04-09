@@ -1,0 +1,137 @@
+{
+  "name": "Lead",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Reference to existing Customer (optional - for leads from existing customers)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Contact person name"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Phone number"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email address"
+    },
+    "boat_name": {
+      "type": "string",
+      "description": "Boat/vessel name"
+    },
+    "boat_details": {
+      "type": "string",
+      "description": "Type, length, engine, etc."
+    },
+    "location": {
+      "type": "string",
+      "description": "Marina or anchorage location"
+    },
+    "location_id": {
+      "type": "string",
+      "description": "Reference to Location entity if known"
+    },
+    "contact_method": {
+      "type": "string",
+      "enum": [
+        "Phone",
+        "Email",
+        "Website",
+        "Referral",
+        "Other"
+      ],
+      "default": "Phone",
+      "description": "How they contacted us"
+    },
+    "inquiry_type": {
+      "type": "string",
+      "enum": [
+        "Service Inquiry",
+        "Parts Request",
+        "Maintenance",
+        "Emergency",
+        "Other"
+      ],
+      "default": "Service Inquiry",
+      "description": "Type of inquiry"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Initial notes or requirements"
+    },
+    "description": {
+      "type": "string",
+      "description": "Email, transcript, or detailed customer inquiry (used for task generation)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "New Incoming",
+        "Needs Clarification",
+        "Ready to Offer",
+        "Offered",
+        "Ordered / Confirmed",
+        "Rejected"
+      ],
+      "default": "New Incoming",
+      "description": "Lead status in the inquiry-to-order pipeline"
+    },
+    "converted_customer_id": {
+      "type": "string",
+      "description": "Reference to Customer if auto-created or converted"
+    },
+    "converted_boat_id": {
+      "type": "string",
+      "description": "Reference to Boat if auto-created or converted"
+    },
+    "converted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When customer/boat was created from this lead"
+    },
+    "last_contacted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When we last contacted them"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High",
+        "Urgent"
+      ],
+      "default": "Medium",
+      "description": "Lead priority"
+    },
+    "created_offer_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "References to Offers created from this lead"
+    },
+    "assigned_to_user_id": {
+      "type": "string",
+      "description": "Reference to User entity - who is responsible for this lead"
+    },
+    "accepted_by_assignee": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the assigned user has confirmed they are working on this lead"
+    },
+    "auto_offer_error": {
+      "type": "string",
+      "description": "Error message if Ready-to-Offer automation failed"
+    }
+  },
+  "required": [
+    "name",
+    "phone"
+  ]
+}

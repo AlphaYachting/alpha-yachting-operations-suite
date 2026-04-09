@@ -72,11 +72,11 @@ export default function LeadsV2() {
 
   // Stats
   const stats = {
-    pending: leads.filter((l) => l.status === 'Pending').length,
-    contacted: leads.filter((l) => l.status === 'Contacted').length,
-    converted: leads.filter((l) => l.status === 'Converted').length,
-    lost: leads.filter((l) => l.status === 'Lost').length,
-    won: leads.filter((l) => l.status === 'Won').length,
+    newIncoming: leads.filter((l) => l.status === 'New Incoming').length,
+    needsClarification: leads.filter((l) => l.status === 'Needs Clarification').length,
+    offered: leads.filter((l) => l.status === 'Offered').length,
+    confirmed: leads.filter((l) => l.status === 'Ordered / Confirmed').length,
+    rejected: leads.filter((l) => l.status === 'Rejected').length,
   };
 
   return (
@@ -110,28 +110,30 @@ export default function LeadsV2() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {[
-          { label: 'Pending', value: stats.pending, icon: Clock, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
-          { label: 'Contacted', value: stats.contacted, icon: PhoneCall, iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
-          { label: 'Converted', value: stats.converted, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-          { label: 'Lost', value: stats.lost, icon: XCircle, iconBg: 'bg-slate-50', iconColor: 'text-slate-400' },
-          { label: 'Won', value: stats.won, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-700' },
-        ].map((stat) => (
-          <Card key={stat.label} className="shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600 mb-1">{stat.label}</p>
-                  <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {
+          [
+            { label: 'New Incoming', value: stats.newIncoming, icon: Clock, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
+            { label: 'Needs Clarification', value: stats.needsClarification, icon: PhoneCall, iconBg: 'bg-orange-50', iconColor: 'text-orange-600' },
+            { label: 'Offered', value: stats.offered, icon: CheckCircle2, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
+            { label: 'Confirmed', value: stats.confirmed, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-700' },
+            { label: 'Rejected', value: stats.rejected, icon: XCircle, iconBg: 'bg-red-50', iconColor: 'text-red-400' },
+          ].map((stat) => (
+            <Card key={stat.label} className="shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-slate-600 mb-1">{stat.label}</p>
+                    <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
+                  </div>
+                  <div className={`${stat.iconBg} rounded-full p-3`}>
+                    <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
+                  </div>
                 </div>
-                <div className={`${stat.iconBg} rounded-full p-3`}>
-                  <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        }
       </div>
 
       {/* Filters */}
@@ -153,11 +155,12 @@ export default function LeadsV2() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="All">All Statuses</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Contacted">Contacted</SelectItem>
-                <SelectItem value="Converted">Converted</SelectItem>
+                <SelectItem value="New Incoming">New Incoming</SelectItem>
+                <SelectItem value="Needs Clarification">Needs Clarification</SelectItem>
+                <SelectItem value="Ready to Offer">Ready to Offer</SelectItem>
+                <SelectItem value="Offered">Offered</SelectItem>
+                <SelectItem value="Ordered / Confirmed">Ordered / Confirmed</SelectItem>
                 <SelectItem value="Rejected">Rejected</SelectItem>
-                <SelectItem value="Lost">Lost</SelectItem>
               </SelectContent>
             </Select>
           </div>

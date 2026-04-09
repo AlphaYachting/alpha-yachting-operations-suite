@@ -34,13 +34,13 @@ Deno.serve(async (req) => {
 
   const lead = leads[0];
 
-  // 5. Already Won → skip
-  if (lead.status === 'Won') {
+  // 5. Already Ordered / Confirmed → skip
+  if (lead.status === 'Ordered / Confirmed') {
     return Response.json({ skipped: true, reason: 'lead_already_won', lead_id: lead.id });
   }
 
-  // 6. Update Lead to Won
-  await base44.asServiceRole.entities.Lead.update(lead.id, { status: 'Won' });
+  // 6. Update Lead to Ordered / Confirmed
+  await base44.asServiceRole.entities.Lead.update(lead.id, { status: 'Ordered / Confirmed' });
 
   return Response.json({
     success: true,

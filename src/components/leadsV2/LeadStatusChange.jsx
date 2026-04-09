@@ -8,12 +8,12 @@ import {
 } from '@/components/ui/select';
 
 const statusOptions = [
-  { value: 'Pending', label: 'Pending' },
-  { value: 'Contacted', label: 'Contacted' },
-  { value: 'Converted', label: 'Converted' },
+  { value: 'New Incoming', label: 'New Incoming' },
+  { value: 'Needs Clarification', label: 'Needs Clarification' },
+  { value: 'Ready to Offer', label: 'Ready to Offer' },
+  { value: 'Offered', label: 'Offered' },
+  { value: 'Ordered / Confirmed', label: 'Ordered / Confirmed' },
   { value: 'Rejected', label: 'Rejected' },
-  { value: 'Lost', label: 'Lost' },
-  { value: 'Won', label: 'Won' },
 ];
 
 export default function LeadStatusChange({ lead, onStatusChange }) {
