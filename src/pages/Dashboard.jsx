@@ -93,8 +93,8 @@ export default function Dashboard() {
       const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
-        base44.entities.Customer.list('-created_date', 2000),
-        base44.entities.Boat.list('-created_date', 1000),
+        base44.entities.Customer.list('-created_date', 50),
+        base44.entities.Boat.list('-created_date', 50),
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
@@ -403,24 +403,34 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header with Quick Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 flex-nowrap">
           <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white flex-shrink-0"
           >
             <Calendar className="h-4 w-4 mr-1" />
             Dispatch
           </Button>
           <Button 
+            size="sm"
+            asChild
+            className="bg-amber-500 hover:bg-amber-600 text-white flex-shrink-0"
+          >
+            <Link to={createPageUrl('QuickCaptureReview')}>
+              <Activity className="h-4 w-4 mr-1" />
+              Quick Capture
+            </Link>
+          </Button>
+          <Button 
             size="sm" 
             onClick={() => setShowProjectDialog(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
           >
             <Plus className="h-4 w-4 mr-1" />
             Project
@@ -428,7 +438,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             onClick={() => setShowWorkOrderDialog(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white flex-shrink-0"
           >
             <Plus className="h-4 w-4 mr-1" />
             Work Order
@@ -436,7 +446,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             onClick={() => setShowLeadDialog(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
           >
             <Plus className="h-4 w-4 mr-1" />
             Lead
@@ -444,7 +454,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             asChild
-            className="bg-cyan-600 hover:bg-cyan-700 text-white"
+            className="bg-cyan-600 hover:bg-cyan-700 text-white flex-shrink-0"
           >
             <Link to={createPageUrl('Offers') + '?new=true'}>
               <Plus className="h-4 w-4 mr-1" />
@@ -454,7 +464,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             onClick={() => setShowNoteDialog(true)}
-            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+            className="bg-yellow-600 hover:bg-yellow-700 text-white flex-shrink-0"
           >
             <StickyNote className="h-4 w-4 mr-1" />
             Note
