@@ -230,6 +230,7 @@ Return a JSON object with these exact fields:
   "lines": [{ "item_title": "string", "item_description": "string or null", "quantity": number or null, "unit": "string or null", "unit_purchase_price": number or null, "total_purchase_price": number or null, "sku": "string or null" }]
 }
 Rules:
+- CRITICAL: Preserve the EXACT order of line items as they appear in the document from top to bottom. Do NOT reorder, group, or sort the lines.
 - Leave fields null if not clearly visible in the document
 - Do not invent or guess values
 - Extract all line items you can identify
@@ -571,24 +572,28 @@ Rules:
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-500">
-                <th className="text-left pb-2 pr-2 font-medium w-[180px]">Title</th>
-                <th className="text-left pb-2 pr-2 font-medium w-[120px]">Description</th>
-                <th className="text-left pb-2 pr-2 font-medium w-[55px]">Qty</th>
-                <th className="text-left pb-2 pr-2 font-medium w-[50px]">Unit</th>
-                <th className="text-left pb-2 pr-2 font-medium w-[80px]">Unit Price</th>
-                <th className="text-left pb-2 pr-2 font-medium w-[80px]">Total</th>
-                <th className="text-left pb-2 pr-2 font-medium w-[70px]">SKU</th>
-                {bookingMode === 'customer' && <th className="text-left pb-2 pr-2 font-medium w-[155px]">Kunde</th>}
-                <th className="pb-2 w-[28px]" />
-              </tr>
+             <tr className="border-b border-slate-200 text-slate-500">
+               <th className="text-center pb-2 pr-1 font-medium w-[36px]">#</th>
+               <th className="text-left pb-2 pr-2 font-medium w-[180px]">Title</th>
+               <th className="text-left pb-2 pr-2 font-medium w-[120px]">Description</th>
+               <th className="text-left pb-2 pr-2 font-medium w-[55px]">Qty</th>
+               <th className="text-left pb-2 pr-2 font-medium w-[50px]">Unit</th>
+               <th className="text-left pb-2 pr-2 font-medium w-[80px]">Unit Price</th>
+               <th className="text-left pb-2 pr-2 font-medium w-[80px]">Total</th>
+               <th className="text-left pb-2 pr-2 font-medium w-[70px]">SKU</th>
+               {bookingMode === 'customer' && <th className="text-left pb-2 pr-2 font-medium w-[155px]">Kunde</th>}
+               <th className="pb-2 w-[28px]" />
+             </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {lines.map(line => {
+              {lines.map((line, lineIndex) => {
                 const effectiveCustomer = line.assigned_customer_id || defaultCustomerId;
                 const hasNoCustomer = line.item_title && !effectiveCustomer;
                 return (
                   <tr key={line._key} className={hasNoCustomer ? 'bg-amber-50' : ''}>
+                    <td className="py-1 pr-1 text-center">
+                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-slate-100 text-slate-500 text-[10px] font-semibold">{lineIndex + 1}</span>
+                    </td>
                     <td className="py-1 pr-2"><Input value={line.item_title} onChange={e => updateLine(line._key, 'item_title', e.target.value)} className="h-7 text-xs" /></td>
                     <td className="py-1 pr-2"><Input value={line.item_description} onChange={e => updateLine(line._key, 'item_description', e.target.value)} className="h-7 text-xs" /></td>
                     <td className="py-1 pr-2"><Input type="number" value={line.quantity} onChange={e => updateLine(line._key, 'quantity', e.target.value)} className="h-7 text-xs" /></td>
