@@ -39,6 +39,7 @@ import {
   Edit,
   Trash2,
   ArrowUpDown,
+  Download,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -461,7 +462,7 @@ export default function Offers() {
                           )}
                         </div>
 
-                        {/* Row 3: Total Amount + Created By */}
+                        {/* Row 3: Total Amount + Created By + FIRA Export Badge */}
                         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
                           {offer.total_amount !== undefined && offer.total_amount !== null && (
                             <span>Total: <span className="font-semibold text-slate-900">€{offer.total_amount.toFixed(2)}</span></span>
@@ -470,6 +471,12 @@ export default function Offers() {
                               <Users className="h-3 w-3" />
                               Erstellt von: <span className="font-medium text-slate-700">{offer.created_by || '—'}</span>
                             </span>
+                          {offer.fira_export_status === 'exported' && offer.fira_exported_at && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium border border-emerald-200">
+                              <Download className="h-3 w-3" />
+                              FIRA exportiert: {format(new Date(offer.fira_exported_at), 'dd.MM.yyyy')}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
