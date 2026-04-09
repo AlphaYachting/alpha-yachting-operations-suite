@@ -119,7 +119,26 @@ export default function CustomerBillingBlock({
 
   const canCreate = selectedWOIds.size > 0 || selectedUnlinkedCMEIds.size > 0;
 
-  const activeLinkedCME = linkedCME.filter(c => !c.billed_offer_id && !c.staged_offer_id);
+  const activeLinkedCME = useMemo(() => {
+    const sorted = linkedCME.filter(c => !c.billed_offer_id && !c.staged_offer_id);
+    return sorted.sort((a, b) => {
+      const sup = (a.supplier_name || '').localeCompare(b.supplier_name || '');
+      if (sup !== 0) return sup;
+      const dateA = a.document_date || a.created_date || '';
+      const dateB = b.document_date || b.created_date || '';
+      return dateA.localeCompare(dateB);
+    });
+  }, [linkedCME]);
+
+  const sortedUnlinkedCME = useMemo(() => {
+    return [...unlinkedCME].sort((a, b) => {
+      const sup = (a.supplier_name || '').localeCompare(b.supplier_name || '');
+      if (sup !== 0) return sup;
+      const dateA = a.document_date || a.created_date || '';
+      const dateB = b.document_date || b.created_date || '';
+      return dateA.localeCompare(dateB);
+    });
+  }, [unlinkedCME]);
 
   return (
     <Card className="border-slate-200">
@@ -315,7 +334,7 @@ export default function CustomerBillingBlock({
               <p className="text-xs text-amber-700">
                 Not linked to any WorkOrder or Project. Select items to include them in the billing offer (<em>Material mit abrechnen</em>).
               </p>
-              {unlinkedCME.map(cme => {
+              {sortedUnlinkedCME.map(cme => {
                 const isChecked = selectedUnlinkedCMEIds.has(cme.id);
                 return (
                   <div
