@@ -193,8 +193,10 @@ export default function OfferDetail() {
   }, [offer]);
 
   useEffect(() => {
-    // Mark loaded once the query has settled (even if empty = no tasks exist)
-    if (offerId) {
+    // Only sync tasks from server on INITIAL load.
+    // After that, local state is the source of truth.
+    // Syncing on every refetch causes auto-save → invalidate → setTasks → auto-save loop → duplication.
+    if (offerId && !tasksLoaded) {
       setTasks(offerTasks);
       setTasksLoaded(true);
     }
