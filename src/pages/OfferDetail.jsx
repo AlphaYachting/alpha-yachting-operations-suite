@@ -117,7 +117,7 @@ export default function OfferDetail() {
     enabled: !!offerId,
   });
 
-  const { data: offerTasks = [] } = useQuery({
+  const { data: offerTasks = [], isFetched: offerTasksFetched } = useQuery({
     queryKey: ['offerTasks', offerId],
     queryFn: () => base44.entities.OfferTask.filter({ offer_id: offerId }, 'sequence_order'),
     enabled: !!offerId,
@@ -193,14 +193,14 @@ export default function OfferDetail() {
   }, [offer]);
 
   useEffect(() => {
-    // Only sync tasks from server on INITIAL load.
-    // After that, local state is the source of truth.
-    // Syncing on every refetch causes auto-save → invalidate → setTasks → auto-save loop → duplication.
-    if (offerId && !tasksLoaded) {
+    // Only sync tasks from server on INITIAL load, once the query has actually completed.
+    // offerTasksFetched ensures we don't set [] prematurely while the query is still loading.
+    // After the first real load, local state is the source of truth to prevent auto-save loops.
+    if (offerId && offerTasksFetched && !tasksLoaded) {
       setTasks(offerTasks);
       setTasksLoaded(true);
     }
-  }, [offerTasks]);
+  }, [offerTasks, offerTasksFetched]);
 
   // Auto-save: debounced 30s after any formData or tasks change (existing offers only)
   useEffect(() => {
