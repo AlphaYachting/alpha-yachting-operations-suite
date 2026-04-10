@@ -391,7 +391,7 @@ function extractLeadPayload(record) {
     contact_method: 'Website',
     inquiry_type:   inquiryType,
     priority:       priority,
-    status:         'Pending',
+    status:         'New Incoming',
     description:    description,
     notes:          structuredNotes,
   };
