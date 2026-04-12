@@ -40,16 +40,13 @@ export default function HeaderSearch({ compact = false }) {
   const performSearch = (searchQuery) => {
     const lowerQuery = searchQuery.toLowerCase();
     
-    const filtered = searchIndex
-      .filter(item => {
-        // Use searchText if available, otherwise fall back to name + secondary
-        const searchTarget = item.searchText || 
-          `${item.name} ${item.secondary || ''}`.toLowerCase();
-        return searchTarget.includes(lowerQuery);
-      })
-      .slice(0, 10);
+    const filtered = searchIndex.filter(item => {
+      const searchTarget = item.searchText || 
+        `${item.name} ${item.secondary || ''}`.toLowerCase();
+      return searchTarget.includes(lowerQuery);
+    });
 
-    // Group by type and limit per type
+    // Group by type and limit per type (scan ALL matches before capping)
     const grouped = {};
     filtered.forEach(item => {
       if (!grouped[item.type]) grouped[item.type] = [];
