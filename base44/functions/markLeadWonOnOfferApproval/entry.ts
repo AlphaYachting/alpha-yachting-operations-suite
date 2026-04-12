@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
@@ -22,17 +22,15 @@ Deno.serve(async (req) => {
   }
 
   // 4. Fetch the lead
-  let leads;
+  let lead;
   try {
-    leads = await base44.asServiceRole.entities.Lead.filter({ id: offer.lead_id });
+    lead = await base44.asServiceRole.entities.Lead.get(offer.lead_id);
   } catch (_) {
     return Response.json({ skipped: true, reason: 'lead_fetch_error', lead_id: offer.lead_id });
   }
-  if (!leads || leads.length === 0) {
+  if (!lead) {
     return Response.json({ skipped: true, reason: 'lead_not_found', lead_id: offer.lead_id });
   }
-
-  const lead = leads[0];
 
   // 5. Already Ordered / Confirmed → skip
   if (lead.status === 'Ordered / Confirmed') {
