@@ -117,7 +117,7 @@ export default function OfferDetail() {
     enabled: !!offerId,
   });
 
-  const { data: offerTasks = [], isFetched: offerTasksFetched } = useQuery({
+  const { data: offerTasks = [], isSuccess: offerTasksSuccess, isFetching: offerTasksFetching } = useQuery({
     queryKey: ['offerTasks', offerId],
     queryFn: () => base44.entities.OfferTask.filter({ offer_id: offerId }, 'sequence_order'),
     enabled: !!offerId,
@@ -193,14 +193,15 @@ export default function OfferDetail() {
   }, [offer]);
 
   useEffect(() => {
-    // Only sync tasks from server on INITIAL load, once the query has actually completed.
-    // offerTasksFetched ensures we don't set [] prematurely while the query is still loading.
+    // Only sync tasks from server on INITIAL load.
+    // CRITICAL: Wait for isFetching=false (fresh network response) — NOT just isFetched (which is
+    // true even for stale cache hits that may still have empty [] before real data arrives).
     // After the first real load, local state is the source of truth to prevent auto-save loops.
-    if (offerId && offerTasksFetched && !tasksLoaded) {
+    if (offerId && offerTasksSuccess && !offerTasksFetching && !tasksLoaded) {
       setTasks(offerTasks);
       setTasksLoaded(true);
     }
-  }, [offerTasks, offerTasksFetched]);
+  }, [offerTasks, offerTasksSuccess, offerTasksFetching]);
 
   // Auto-save: debounced 30s after any formData or tasks change (existing offers only)
   useEffect(() => {
