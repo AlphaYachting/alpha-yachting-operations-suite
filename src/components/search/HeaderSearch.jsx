@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useSearchIndex } from './SearchIndexManager';
+import { ClipboardList as WOIcon, FileText as OfferIcon } from 'lucide-react';
 import { Search, User, Ship, Briefcase, ClipboardList, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -147,6 +148,43 @@ export default function HeaderSearch({ compact = false }) {
                   <div className="font-medium text-slate-900 truncate">{item.name}</div>
                   {item.secondary && (
                     <div className="text-sm text-slate-500 truncate">{item.secondary}</div>
+                  )}
+                  {/* Project context block */}
+                  {item.type === 'Project' && (item.relatedWorkOrders?.length > 0 || item.recentOffers?.length > 0) && (
+                    <div className="mt-1.5 space-y-1" onClick={e => e.stopPropagation()}>
+                      {item.relatedWorkOrders?.length > 0 && (
+                        <div>
+                          <div className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Work Orders</div>
+                          {item.relatedWorkOrders.map(wo => (
+                            <button
+                              key={wo.id}
+                              onClick={e => { e.stopPropagation(); navigate(createPageUrl(`WorkOrderDetail?id=${wo.id}`)); setQuery(''); setShowResults(false); }}
+                              className="flex items-center gap-1.5 w-full text-left px-1.5 py-0.5 rounded hover:bg-slate-100 transition-colors"
+                            >
+                              <WOIcon className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                              <span className="text-xs text-slate-700 truncate">{wo.title}</span>
+                              {wo.number && <span className="text-xs text-slate-400 flex-shrink-0">&middot; {wo.number}</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {item.recentOffers?.length > 0 && (
+                        <div>
+                          <div className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Recent Offers</div>
+                          {item.recentOffers.map(o => (
+                            <button
+                              key={o.id}
+                              onClick={e => { e.stopPropagation(); navigate(createPageUrl(`OfferDetail?id=${o.id}`)); setQuery(''); setShowResults(false); }}
+                              className="flex items-center gap-1.5 w-full text-left px-1.5 py-0.5 rounded hover:bg-slate-100 transition-colors"
+                            >
+                              <OfferIcon className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                              <span className="text-xs text-slate-700 truncate">{o.title}</span>
+                              {o.number && <span className="text-xs text-slate-400 flex-shrink-0">&middot; {o.number}</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </button>

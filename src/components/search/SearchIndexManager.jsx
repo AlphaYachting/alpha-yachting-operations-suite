@@ -93,19 +93,42 @@ export default function SearchIndexManager({ children }) {
           route: 'BoatDetail',
           icon: 'ship'
         })),
-        ...jobs.map(j => ({
-          id: j.id,
-          type: 'Project',
-          name: j.title || 'Untitled Project',
-          secondary: [j.job_number, customerMap[j.customer_id]].filter(Boolean).join(' • '),
-          searchText: [
-            j.title,
-            j.job_number,
-            customerMap[j.customer_id]
-          ].filter(Boolean).join(' ').toLowerCase(),
-          route: 'JobDetail',
-          icon: 'briefcase'
-        })),
+        ...jobs.map(j => {
+          // Build related WOs (sort by sort_index asc, fallback to scheduled_date asc)
+          const relatedWOs = workOrders
+            .filter(wo => wo.job_id === j.id)
+            .sort((a, b) => {
+              if (a.sort_index != null && b.sort_index != null) return a.sort_index - b.sort_index;
+              if (a.scheduled_date && b.scheduled_date) return new Date(a.scheduled_date) - new Date(b.scheduled_date);
+              return 0;
+            })
+            .slice(0, 2)
+            .map(wo => ({ id: wo.id, title: wo.title || 'Untitled', number: wo.work_order_number || '' }));
+
+          // Build recent offers for this job's customer (offers already sorted -updated_date)
+          const recentOffers = j.customer_id
+            ? offers
+                .filter(o => o.customer_id === j.customer_id)
+                .slice(0, 3)
+                .map(o => ({ id: o.id, title: o.title || 'Untitled', number: o.offer_number || '' }))
+            : [];
+
+          return {
+            id: j.id,
+            type: 'Project',
+            name: j.title || 'Untitled Project',
+            secondary: [j.job_number, customerMap[j.customer_id]].filter(Boolean).join(' · '),
+            searchText: [
+              j.title,
+              j.job_number,
+              customerMap[j.customer_id]
+            ].filter(Boolean).join(' ').toLowerCase(),
+            route: 'JobDetail',
+            icon: 'briefcase',
+            relatedWorkOrders: relatedWOs,
+            recentOffers,
+          };
+        }),
         ...workOrders.map(wo => ({
           id: wo.id,
           type: 'Work Order',
