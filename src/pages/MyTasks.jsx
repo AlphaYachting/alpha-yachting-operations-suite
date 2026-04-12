@@ -34,6 +34,9 @@ import { format, parseISO, isPast, isToday, differenceInDays, startOfDay } from 
  * A task belongs to user if the parent WorkOrder has user's technician in assigned_technicians or as lead_technician_id
  */
 function isMyTask(task, workOrders, technicians, currentUser) {
+  // Check task-level direct user assignment first
+  if (task.assigned_user_id && task.assigned_user_id === currentUser.id) return true;
+
   const workOrder = workOrders.find(wo => wo.id === task.work_order_id);
   if (!workOrder) return false;
   
