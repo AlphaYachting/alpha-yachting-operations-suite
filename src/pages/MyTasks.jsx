@@ -86,6 +86,12 @@ function getTaskTimeStatus(workOrder) {
  */
 function sortMyTasks(tasks, workOrders) {
   return tasks.sort((a, b) => {
+    // Completed tasks always go to the bottom
+    const aCompleted = a.status === 'Completed';
+    const bCompleted = b.status === 'Completed';
+    if (aCompleted && !bCompleted) return 1;
+    if (!aCompleted && bCompleted) return -1;
+
     const woA = workOrders.find(wo => wo.id === a.work_order_id);
     const woB = workOrders.find(wo => wo.id === b.work_order_id);
     
