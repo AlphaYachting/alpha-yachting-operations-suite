@@ -129,15 +129,26 @@ export default function SearchIndexManager({ children }) {
             recentOffers,
           };
         }),
-        ...workOrders.map(wo => ({
-          id: wo.id,
-          type: 'Work Order',
-          name: wo.title || 'Untitled Work Order',
-          secondary: wo.work_order_number || '',
-          searchText: [wo.title, wo.work_order_number].filter(Boolean).join(' ').toLowerCase(),
-          route: 'WorkOrderDetail',
-          icon: 'clipboard'
-        })),
+        ...workOrders.map(wo => {
+          const woJob = wo.job_id ? jobs.find(j => j.id === wo.job_id) : null;
+          const woCustomer = woJob?.customer_id ? customerMap[woJob.customer_id] : null;
+          const woBoat = woJob?.boat_id ? boats.find(b => b.id === woJob.boat_id) : null;
+          const woSecondary = [wo.work_order_number, woCustomer, woBoat?.vessel_name].filter(Boolean).join(' · ');
+          return {
+            id: wo.id,
+            type: 'Work Order',
+            name: wo.title || 'Untitled Work Order',
+            secondary: woSecondary,
+            searchText: [
+              wo.title,
+              wo.work_order_number,
+              woCustomer,
+              woBoat?.vessel_name
+            ].filter(Boolean).join(' ').toLowerCase(),
+            route: 'WorkOrderDetail',
+            icon: 'clipboard'
+          };
+        }),
         ...offers.map(o => ({
           id: o.id,
           type: 'Offer',
