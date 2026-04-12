@@ -403,34 +403,24 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header with Quick Actions */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 flex-nowrap">
+        <div className="flex items-center gap-2">
           <Button 
             size="sm" 
             onClick={() => setShowDispatchModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white flex-shrink-0"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Calendar className="h-4 w-4 mr-1" />
             Dispatch
           </Button>
           <Button 
-            size="sm"
-            asChild
-            className="bg-amber-500 hover:bg-amber-600 text-white flex-shrink-0"
-          >
-            <Link to={createPageUrl('QuickCaptureReview')}>
-              <Activity className="h-4 w-4 mr-1" />
-              Quick Capture
-            </Link>
-          </Button>
-          <Button 
             size="sm" 
             onClick={() => setShowProjectDialog(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white flex-shrink-0"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             <Plus className="h-4 w-4 mr-1" />
             Project
@@ -438,7 +428,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             onClick={() => setShowWorkOrderDialog(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white flex-shrink-0"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Plus className="h-4 w-4 mr-1" />
             Work Order
@@ -446,7 +436,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             onClick={() => setShowLeadDialog(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white flex-shrink-0"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
             <Plus className="h-4 w-4 mr-1" />
             Lead
@@ -454,7 +444,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             asChild
-            className="bg-cyan-600 hover:bg-cyan-700 text-white flex-shrink-0"
+            className="bg-cyan-600 hover:bg-cyan-700 text-white"
           >
             <Link to={createPageUrl('Offers') + '?new=true'}>
               <Plus className="h-4 w-4 mr-1" />
@@ -464,7 +454,7 @@ export default function Dashboard() {
           <Button 
             size="sm" 
             onClick={() => setShowNoteDialog(true)}
-            className="bg-yellow-600 hover:bg-yellow-700 text-white flex-shrink-0"
+            className="bg-yellow-600 hover:bg-yellow-700 text-white"
           >
             <StickyNote className="h-4 w-4 mr-1" />
             Note
@@ -874,88 +864,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* 3) PROJECT HEALTH */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-emerald-600" />
-            Project Health
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {activeJobs.length === 0 ? (
-            <p className="text-sm text-slate-500">No active projects</p>
-          ) : (
-            <div className="space-y-3">
-              {activeJobs.map(job => {
-                const health = getProjectHealth(job);
-                const progress = getProjectProgress(job);
-                const boat = boats.find(b => b.id === job.boat_id);
-                const location = locations.find(l => l.id === job.location_id);
-                
-                return (
-                  <Link 
-                    key={job.id} 
-                    to={createPageUrl('JobDetail') + `?id=${job.id}`}
-                    className="block p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className={`h-3 w-3 rounded-full ${
-                            health.status === 'red' ? 'bg-red-500' : 
-                            health.status === 'yellow' ? 'bg-yellow-500' : 
-                            'bg-green-500'
-                          }`} />
-                          <p className="font-medium text-slate-900">{job.title}</p>
-                          <Badge variant="outline" className={
-                            health.status === 'red' ? 'bg-red-50 text-red-700 border-red-200' :
-                            health.status === 'yellow' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                            'bg-green-50 text-green-700 border-green-200'
-                          }>
-                            {health.label}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Ship className="h-3.5 w-3.5" />
-                            {boat?.vessel_name || 'Unknown'}
-                          </div>
-                          {location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5" />
-                              {location.name}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mt-3 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-600">Progress: {progress}%</span>
-                            <span className="text-slate-500 italic">{health.step}</span>
-                          </div>
-                          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all rounded-full ${
-                                health.status === 'red' ? 'bg-red-500' :
-                                health.status === 'yellow' ? 'bg-yellow-500' :
-                                'bg-green-500'
-                              }`}
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* 4) SALES & ORGANISATION */}
       <div className="grid md:grid-cols-2 gap-6">

@@ -37,6 +37,7 @@ import {
                     Brain,
                     Mail,
                     Zap,
+                    Activity,
                     Calendar as CalendarIcon
                   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -95,6 +96,7 @@ const navItems = [
   { name: 'Quick Capture', icon: Zap, page: 'QuickCaptureReview', leadTechAllowed: true },
   { name: 'Planning Agent', icon: Brain, page: 'PlanningAgent', leadTechAllowed: true },
   { name: 'Planning Readiness', icon: LayoutDashboard, page: 'PlanningReadiness', leadTechAllowed: true },
+  { name: 'Project Health', icon: Activity, page: 'ProjectHealth', leadTechAllowed: true },
 
   // INTELLIGENCE
   { header: 'INTELLIGENCE' },
