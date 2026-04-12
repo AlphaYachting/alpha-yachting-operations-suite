@@ -125,6 +125,7 @@ export default function MyTasks() {
   const [mode, setMode] = useState('open'); // 'open' or 'all'
   const [expandedBoats, setExpandedBoats] = useState({});
   const [simulatedTechnicianId, setSimulatedTechnicianId] = useState('');
+  const [updatingTaskId, setUpdatingTaskId] = useState(null);
 
 
   useEffect(() => {
@@ -166,6 +167,18 @@ export default function MyTasks() {
     }
   };
 
+  const handleTaskStatusChange = async (taskId, newStatus) => {
+    setUpdatingTaskId(taskId);
+    try {
+      await base44.entities.Task.update(taskId, { status: newStatus });
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    } catch (error) {
+      console.error('Error updating task status:', error);
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
   const myTechnicianProfile = technicians.find(tech => tech.user_id === effectiveUser?.id || tech.email === effectiveUser?.email);
 
   const myTasks = tasks.filter(task => {
@@ -182,9 +195,10 @@ export default function MyTasks() {
 
 
   // Apply mode filter (open vs all)
+  // In 'open' mode: show all non-Skipped tasks (Completed stays visible until project is done)
   const filteredTasks = myTasks.filter(task => {
     if (mode === 'open') {
-      return task.status !== 'Completed' && task.status !== 'Skipped';
+      return task.status !== 'Skipped';
     }
     return true; // 'all' mode
   });
@@ -406,22 +420,19 @@ export default function MyTasks() {
                         return (
                           <div 
                             key={task.id} 
-                            className={`p-4 hover:bg-slate-50 transition-colors ${idx < boatTasks.length - 1 ? 'border-b border-slate-100' : ''}`}
+                            className={`p-4 transition-colors ${task.status === 'Completed' ? 'bg-green-50/50' : 'hover:bg-slate-50'} ${idx < boatTasks.length - 1 ? 'border-b border-slate-100' : ''}`}
                           >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Link
                                     to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}
-                                    className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                                    className={`font-semibold hover:text-blue-600 transition-colors ${task.status === 'Completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}
                                   >
                                     {task.title}
                                   </Link>
-                                  <Badge className={statusColors[task.status]} variant="outline">
-                                    {task.status}
-                                  </Badge>
                                 </div>
-                                
+
                                 {(workOrder || job) && (
                                   <p className="text-sm text-slate-600 mb-2">
                                     {workOrder && <span>{workOrder.title || workOrder.work_order_number}</span>}
@@ -430,8 +441,22 @@ export default function MyTasks() {
                                   </p>
                                 )}
                               </div>
-                              
+
                               <div className="flex flex-col items-end gap-2">
+                                <select
+                                  value={task.status}
+                                  onChange={e => handleTaskStatusChange(task.id, e.target.value)}
+                                  disabled={updatingTaskId === task.id}
+                                  className={`text-xs border rounded-md px-2 py-1 font-medium focus:outline-none focus:ring-1 focus:ring-blue-400 ${statusColors[task.status]} border-transparent`}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <option value="Not Started">Not Started</option>
+                                  <option value="In Progress">In Progress</option>
+                                  <option value="Completed">Completed</option>
+                                  <option value="Not Possible">Not Possible</option>
+                                  <option value="Needs Approval">Needs Approval</option>
+                                  <option value="Skipped">Skipped</option>
+                                </select>
                                 <Badge 
                                   variant={timeStatus.variant === 'destructive' ? 'destructive' : 'secondary'}
                                   className={timeStatus.variant === 'destructive' ? '' : timeStatus.color}
@@ -448,14 +473,14 @@ export default function MyTasks() {
                             </div>
                           </div>
                         );
-                      })}
-                    </CardContent>
-                  )}
-                </Card>
-              );
-            }
-            
-            // Regular boat group
+                        })}
+                        </CardContent>
+                        )}
+                        </Card>
+                        );
+                        }
+
+                        // Regular boat group
             const customerName = customer?.company_name || 
               `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 
               'Unknown Customer';
@@ -513,7 +538,7 @@ export default function MyTasks() {
                       return (
                         <div 
                           key={task.id} 
-                          className={`p-4 hover:bg-slate-50 transition-colors ${idx < boatTasks.length - 1 ? 'border-b border-slate-100' : ''}`}
+                          className={`p-4 transition-colors ${task.status === 'Completed' ? 'bg-green-50/50' : 'hover:bg-slate-50'} ${idx < boatTasks.length - 1 ? 'border-b border-slate-100' : ''}`}
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
@@ -521,13 +546,10 @@ export default function MyTasks() {
                               <div className="flex items-center gap-2 mb-1">
                                 <Link
                                   to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}
-                                  className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                                  className={`font-semibold hover:text-blue-600 transition-colors ${task.status === 'Completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}
                                 >
                                   {task.title}
                                 </Link>
-                                <Badge className={statusColors[task.status]} variant="outline">
-                                  {task.status}
-                                </Badge>
                               </div>
                               
                               {/* Work order / project reference */}
@@ -552,36 +574,24 @@ export default function MyTasks() {
                                   {task.description}
                                 </p>
                               )}
-                              
-                              {/* Assigned technicians */}
-                              {workOrder && (workOrder.assigned_technicians?.length > 0 || workOrder.lead_technician_id) && (
-                                <div className="flex items-center gap-1 text-xs text-slate-500 mt-2">
-                                  <Users className="h-3 w-3" />
-                                  <span>
-                                    {workOrder.lead_technician_id && (() => {
-                                      const leadTech = technicians.find(t => t.id === workOrder.lead_technician_id);
-                                      return leadTech ? `${leadTech.first_name} ${leadTech.last_name} (Lead)` : '';
-                                    })()}
-                                    {workOrder.assigned_technicians && workOrder.assigned_technicians.length > 0 && (
-                                      <>
-                                        {workOrder.lead_technician_id && ', '}
-                                        {workOrder.assigned_technicians
-                                          .filter(techId => techId !== workOrder.lead_technician_id)
-                                          .map(techId => {
-                                            const tech = technicians.find(t => t.id === techId);
-                                            return tech ? `${tech.first_name} ${tech.last_name}` : null;
-                                          })
-                                          .filter(Boolean)
-                                          .join(', ')}
-                                      </>
-                                    )}
-                                  </span>
-                                </div>
-                              )}
                             </div>
                             
-                            {/* Right side: due date + actions */}
+                            {/* Right side: status selector + due date + actions */}
                             <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                              <select
+                                value={task.status}
+                                onChange={e => handleTaskStatusChange(task.id, e.target.value)}
+                                disabled={updatingTaskId === task.id}
+                                className={`text-xs border rounded-md px-2 py-1 font-medium focus:outline-none focus:ring-1 focus:ring-blue-400 ${statusColors[task.status]} border-transparent cursor-pointer`}
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <option value="Not Started">Not Started</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Not Possible">Not Possible</option>
+                                <option value="Needs Approval">Needs Approval</option>
+                                <option value="Skipped">Skipped</option>
+                              </select>
                               <Badge 
                                 variant={timeStatus.variant === 'destructive' ? 'destructive' : 'secondary'}
                                 className={timeStatus.variant === 'destructive' ? '' : timeStatus.color}
