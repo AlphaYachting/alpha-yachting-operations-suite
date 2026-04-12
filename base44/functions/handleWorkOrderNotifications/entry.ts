@@ -24,11 +24,15 @@ Deno.serve(async (req) => {
 
         // Fetch related data for context
         const job = workOrder.job_id 
-            ? await base44.asServiceRole.entities.Job.get(workOrder.job_id) 
+            ? await base44.asServiceRole.entities.Job.get(workOrder.job_id).catch(() => null)
             : null;
 
         const boat = job?.boat_id
-            ? await base44.asServiceRole.entities.Boat.get(job.boat_id)
+            ? await base44.asServiceRole.entities.Boat.get(job.boat_id).catch(() => null)
+            : null;
+
+        const location = (workOrder.location_id || job?.location_id)
+            ? await base44.asServiceRole.entities.Location.get(workOrder.location_id || job.location_id).catch(() => null)
             : null;
 
         // Fetch assigned technicians
@@ -76,11 +80,13 @@ Deno.serve(async (req) => {
                 
                 <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
                     <h3 style="margin-top: 0; color: #374151;">Work Order Details</h3>
-                    <p><strong>Title:</strong> ${workOrder.title}</p>
-                    ${boat ? `<p><strong>Vessel:</strong> ${boat.vessel_name}</p>` : ''}
-                    ${workOrder.scheduled_date ? `<p><strong>Scheduled Date:</strong> ${workOrder.scheduled_date}</p>` : ''}
-                    <p><strong>Current Status:</strong> <span style="color: #1e40af; font-weight: bold;">${workOrder.status}</span></p>
-                    ${workOrder.description ? `<p><strong>Description:</strong> ${workOrder.description}</p>` : ''}
+                    <p><strong>Work Order:</strong> ${workOrder.title}</p>
+                    ${boat ? `<p><strong>Boot / Schiff:</strong> ${boat.vessel_name}${boat.manufacturer ? ' (' + boat.manufacturer + (boat.model ? ' ' + boat.model : '') + ')' : ''}</p>` : ''}
+                    ${job ? `<p><strong>Projekt:</strong> ${job.title}</p>` : ''}
+                    ${location ? `<p><strong>Ort:</strong> ${location.name}</p>` : ''}
+                    ${workOrder.scheduled_date ? `<p><strong>Termin:</strong> ${new Date(workOrder.scheduled_date).toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>` : ''}
+                    <p><strong>Status:</strong> <span style="color: #1e40af; font-weight: bold;">${workOrder.status}</span></p>
+                    ${workOrder.description ? `<p><strong>Beschreibung:</strong> ${workOrder.description}</p>` : ''}
                 </div>
                 
                 <p style="color: #6b7280; font-size: 14px;">
@@ -111,12 +117,14 @@ Deno.serve(async (req) => {
         await Promise.all(emailPromises);
 
         // Create in-app notifications for technicians
+        const contextParts = [boat?.vessel_name, job?.title, location?.name].filter(Boolean);
+        const contextStr = contextParts.length ? ` | ${contextParts.join(' · ')}` : '';
         const notificationPromises = validTechnicians.map(tech =>
             base44.asServiceRole.entities.Notification.create({
                 user_email: tech.email,
                 type: 'work_order_status_change',
                 title: `Work Order ${workOrder.status}`,
-                message: `Work order ${workOrder.work_order_number || '#' + workOrder.id.slice(0, 8)} ${statusMessage}`,
+                message: `${workOrder.work_order_number || '#' + workOrder.id.slice(0, 8)} – ${workOrder.title}${contextStr} → ${workOrder.status}`,
                 related_work_order_id: workOrder.id,
                 email_sent: true
             })

@@ -22,6 +22,17 @@ Deno.serve(async (req) => {
       return new Date(d).toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     };
 
+    // Fetch job, boat, location for context
+    const job = data.job_id
+      ? await base44.asServiceRole.entities.Job.get(data.job_id).catch(() => null)
+      : null;
+    const boat = job?.boat_id
+      ? await base44.asServiceRole.entities.Boat.get(job.boat_id).catch(() => null)
+      : null;
+    const location = (data.location_id || job?.location_id)
+      ? await base44.asServiceRole.entities.Location.get(data.location_id || job.location_id).catch(() => null)
+      : null;
+
     // Get all technician IDs to notify
     const techIds = [...new Set([
       ...(data.assigned_technicians || []),
@@ -55,6 +66,9 @@ Deno.serve(async (req) => {
         </h2>
         <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 4px; margin: 20px 0;">
           <p style="margin: 6px 0;"><strong>Work Order:</strong> ${data.title}</p>
+          ${boat ? `<p style="margin: 6px 0;"><strong>Boot / Schiff:</strong> ${boat.vessel_name}${boat.manufacturer ? ' (' + boat.manufacturer + (boat.model ? ' ' + boat.model : '') + ')' : ''}</p>` : ''}
+          ${job ? `<p style="margin: 6px 0;"><strong>Projekt:</strong> ${job.title}</p>` : ''}
+          ${location ? `<p style="margin: 6px 0;"><strong>Ort:</strong> ${location.name}</p>` : ''}
           <p style="margin: 6px 0;"><strong>Alter Termin:</strong> <span style="color: #dc2626;">${formatDate(oldDate)}</span></p>
           <p style="margin: 6px 0;"><strong>Neuer Termin:</strong> <span style="color: #16a34a; font-weight: bold;">${formatDate(newDate)}</span></p>
         </div>
@@ -73,11 +87,13 @@ Deno.serve(async (req) => {
     const results = [];
     for (const tech of validTechs) {
       // In-app notification
+      const contextParts = [boat?.vessel_name, job?.title, location?.name].filter(Boolean);
+      const contextStr = contextParts.length ? ` | ${contextParts.join(' · ')}` : '';
       await base44.asServiceRole.entities.Notification.create({
         user_email: tech.email,
         type: 'work_order_assignment',
         title: 'Terminänderung',
-        message: `Work Order "${data.title}" wurde auf ${formatDate(newDate)} verschoben (war: ${formatDate(oldDate)})`,
+        message: `Work Order "${data.title}"${contextStr} – verschoben auf ${formatDate(newDate)} (war: ${formatDate(oldDate)})`,
         related_work_order_id: data.id,
         is_read: false,
         email_sent: false
