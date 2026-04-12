@@ -189,9 +189,15 @@ export default function Offers() {
 
   const sortedAndFilteredOffers = offers
     .filter(offer => {
+    const customer = getCustomer(offer.customer_id);
+    const customerName = customer?.company_name ||
+      `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || '';
+    const boat = getBoat(offer.boat_id);
     const matchesSearch = !searchTerm || 
       offer.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      offer.offer_number?.toLowerCase().includes(searchTerm.toLowerCase());
+      offer.offer_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      boat?.vessel_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || offer.status === statusFilter;
     
