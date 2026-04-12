@@ -101,7 +101,8 @@ export default function RequirementsSection({ workOrderId, workOrder, currentUse
       }
     } catch (error) {
       console.error('Error generating requirements:', error);
-      alert('Error generating requirements');
+      const msg = error?.response?.data?.error || error?.message || 'Error generating requirements';
+      alert(msg);
     } finally {
       setGenerating(false);
     }
