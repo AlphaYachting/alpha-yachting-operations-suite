@@ -23,15 +23,6 @@ Deno.serve(async (req) => {
 
     const workOrder = workOrders[0];
 
-    // Validate description length (minimum 5 words)
-    const descriptionWordCount = (workOrder.description || '').trim().split(/\s+/).filter(w => w.length > 0).length;
-    if (descriptionWordCount < 5) {
-      return Response.json({ 
-        error: 'Please add more detail to enable accurate AI requirements. Description must be at least 5 words.',
-        insufficient_detail: true
-      }, { status: 400 });
-    }
-
     // Load related data
     const [tasks, job, boat] = await Promise.all([
       base44.entities.Task.filter({ work_order_id }),
