@@ -86,6 +86,7 @@ export default function LeadDetail() {
   const [assignedUser, setAssignedUser] = useState(null);
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [savingAcceptance, setSavingAcceptance] = useState(false);
+  const [savingStatus, setSavingStatus] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [selectedTaskForComment, setSelectedTaskForComment] = useState(null);
@@ -319,6 +320,19 @@ export default function LeadDetail() {
     }
   };
 
+  const handleStatusChange = async (newStatus) => {
+    if (!lead || newStatus === lead.status) return;
+    try {
+      setSavingStatus(true);
+      await base44.entities.Lead.update(lead.id, { status: newStatus });
+      await loadLeadDetails();
+    } catch (error) {
+      console.error('Error updating status:', error);
+    } finally {
+      setSavingStatus(false);
+    }
+  };
+
   const handleAssignmentChange = async (newUserId) => {
     if (!lead) return;
     
@@ -509,8 +523,25 @@ export default function LeadDetail() {
           <CardTitle className="text-lg font-semibold">Lead Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Assignee Section */}
-          <div className="pb-4 border-b border-slate-200">
+          {/* Status + Assignee Section */}
+          <div className="pb-4 border-b border-slate-200 space-y-4">
+            {/* Lead Status */}
+            <div>
+              <Label className="text-sm font-medium text-slate-700 mb-2 block">Lead Status</Label>
+              <Select value={lead.status} onValueChange={handleStatusChange} disabled={savingStatus}>
+                <SelectTrigger className="w-full max-w-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="New Incoming">New Incoming</SelectItem>
+                  <SelectItem value="Needs Clarification">Needs Clarification</SelectItem>
+                  <SelectItem value="Ready to Offer">Ready to Offer</SelectItem>
+                  <SelectItem value="Offered">Offered</SelectItem>
+                  <SelectItem value="Ordered / Confirmed">Ordered / Confirmed</SelectItem>
+                  <SelectItem value="Rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="flex-1 min-w-[200px]">
                 <Label className="text-sm font-medium text-slate-700 mb-2 block">Assigned To</Label>
