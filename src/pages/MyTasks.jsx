@@ -240,12 +240,18 @@ export default function MyTasks() {
     return groups;
   }, [filteredTasks, workOrders, jobMap]);
 
-  // Sort boat groups by earliest due date
+  // Sort boat groups by earliest due date (completed-only groups go to bottom)
   const sortedBoatGroups = useMemo(() => {
     return Object.entries(groupedByBoat).sort(([boatIdA, tasksA], [boatIdB, tasksB]) => {
-      // Find earliest due date in each group
+      const allCompletedA = tasksA.every(t => t.status === 'Completed');
+      const allCompletedB = tasksB.every(t => t.status === 'Completed');
+      if (allCompletedA && !allCompletedB) return 1;
+      if (!allCompletedA && allCompletedB) return -1;
+
+      // Find earliest due date using only non-completed tasks
       const getEarliestDate = (tasks) => {
         const dates = tasks
+          .filter(t => t.status !== 'Completed')
           .map(t => {
             const wo = workOrders.find(wo => wo.id === t.work_order_id);
             return wo?.scheduled_date ? parseISO(wo.scheduled_date) : null;
