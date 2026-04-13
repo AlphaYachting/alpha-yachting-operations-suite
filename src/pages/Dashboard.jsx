@@ -51,6 +51,7 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
+import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -403,63 +404,21 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header with Quick Actions */}
-      <div className="flex items-center justify-between">
+      {/* ================================================================
+          FROZEN QUICK ACTIONS — rendered via DashboardQuickActions component
+          DO NOT inline buttons here. DO NOT edit when reordering sections below.
+          Approved order: Dispatch | E-Mail to Lead | Quick Capture | Note
+          ================================================================ */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            size="sm" 
-            onClick={() => setShowDispatchModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Calendar className="h-4 w-4 mr-1" />
-            Dispatch
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowProjectDialog(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Project
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowWorkOrderDialog(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Work Order
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowLeadDialog(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Lead
-          </Button>
-          <Button 
-            size="sm" 
-            asChild
-            className="bg-cyan-600 hover:bg-cyan-700 text-white"
-          >
-            <Link to={createPageUrl('Offers') + '?new=true'}>
-              <Plus className="h-4 w-4 mr-1" />
-              Offer
-            </Link>
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowNoteDialog(true)}
-            className="bg-yellow-600 hover:bg-yellow-700 text-white"
-          >
-            <StickyNote className="h-4 w-4 mr-1" />
-            Note
-          </Button>
-        </div>
+        <DashboardQuickActions
+          onDispatch={() => setShowDispatchModal(true)}
+          onEmailToLead={() => setShowLeadDialog(true)}
+          onNote={() => setShowNoteDialog(true)}
+        />
       </div>
 
       {/* KPI Block */}
@@ -537,7 +496,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 2) TODAY / THIS WEEK */}
+      {/* ================================================================
+          DASHBOARD SECTIONS — edit order here freely, Quick Actions above are frozen
+          Approved order: KPI → Today → This Week → Action Required → Notes → Open Leads → Open Offers
+          Project Health: logic retained in code, hidden from render (see below)
+          ================================================================ */}
+
+      {/* TODAY / THIS WEEK */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -631,7 +596,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* 1) ACTION REQUIRED */}
+      {/* ACTION REQUIRED */}
       {hasActionItems && (
         <Card className="border-red-200 bg-red-50/30">
           <CardHeader>
@@ -802,7 +767,7 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Notes Section */}
+      {/* NOTES & REMINDERS */}
       {activeNotes.length > 0 && (
         <Card>
           <CardHeader>
@@ -864,10 +829,9 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Project Health — retained in code, hidden from Dashboard render */}
-      {/* getProjectHealth, getProjectProgress, activeJobs helpers preserved above */}
+      {/* PROJECT HEALTH — logic retained (getProjectHealth, getProjectProgress, activeJobs), hidden from Dashboard render */}
 
-      {/* 4) SALES & ORGANISATION */}
+      {/* OPEN LEADS / OPEN OFFERS */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
