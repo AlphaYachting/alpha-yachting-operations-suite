@@ -51,6 +51,9 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
+import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
+import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
+import { Mail, Zap } from 'lucide-react';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -76,6 +79,8 @@ export default function Dashboard() {
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [showQuickCapture, setShowQuickCapture] = useState(false);
+  const [showEmailParser, setShowEmailParser] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -408,54 +413,20 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            size="sm" 
-            onClick={() => setShowDispatchModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => setShowDispatchModal(true)}>
             <Calendar className="h-4 w-4 mr-1" />
             Dispatch
           </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowProjectDialog(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Project
+          <Button size="sm" variant="outline" onClick={() => setShowEmailParser(true)} className="border-purple-300 text-purple-700 hover:bg-purple-50">
+            <Mail className="h-4 w-4 mr-1" />
+            E-Mail to Lead
           </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowWorkOrderDialog(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Work Order
+          <Button size="sm" variant="outline" onClick={() => setShowQuickCapture(true)} className="border-amber-300 text-amber-700 hover:bg-amber-50">
+            <Zap className="h-4 w-4 mr-1" />
+            Quick Capture
           </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowLeadDialog(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Lead
-          </Button>
-          <Button 
-            size="sm" 
-            asChild
-            className="bg-cyan-600 hover:bg-cyan-700 text-white"
-          >
-            <Link to={createPageUrl('Offers') + '?new=true'}>
-              <Plus className="h-4 w-4 mr-1" />
-              Offer
-            </Link>
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowNoteDialog(true)}
-            className="bg-yellow-600 hover:bg-yellow-700 text-white"
-          >
+          <Button size="sm" variant="outline" onClick={() => setShowNoteDialog(true)}>
             <StickyNote className="h-4 w-4 mr-1" />
             Note
           </Button>
@@ -537,6 +508,239 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* 1) ACTION REQUIRED */}
+      {hasActionItems && (
+        <Card className="border-red-200 bg-red-50/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-900">
+              <AlertTriangle className="h-5 w-5" />
+              Action Required
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {overdueWorkOrders.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">Overdue Work Orders ({overdueWorkOrders.length})</h3>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={createPageUrl('WorkOrders') + '?filter=overdue'}>View All</Link>
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {overdueWorkOrders.slice(0, 3).map(wo => {
+                    const jobInfo = getJobInfo(wo.job_id);
+                    return (
+                      <Link 
+                        key={wo.id} 
+                        to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                        className="block p-3 bg-white rounded-lg border border-red-200 hover:border-red-300 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{wo.title}</p>
+                            <p className="text-sm text-slate-600 mt-1">
+                              {jobInfo?.boat} • {jobInfo?.customer}
+                            </p>
+                            <div className="flex items-center gap-2 mt-2 text-xs text-red-700">
+                              <Calendar className="h-3 w-3" />
+                              Due: {format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
+                            </div>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-400" />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {unplannedWorkOrders.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">Unplanned Work Orders ({unplannedWorkOrders.length})</h3>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={createPageUrl('WorkOrders') + '?filter=pending'}>View All</Link>
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {unplannedWorkOrders.slice(0, 3).map(wo => {
+                    const jobInfo = getJobInfo(wo.job_id);
+                    return (
+                      <Link 
+                        key={wo.id} 
+                        to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                        className="block p-3 bg-white rounded-lg border border-amber-200 hover:border-amber-300 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{wo.title}</p>
+                            <p className="text-sm text-slate-600 mt-1">
+                              {jobInfo?.boat} • {jobInfo?.customer}
+                            </p>
+                            <div className="flex items-center gap-2 mt-2">
+                              {!wo.scheduled_date && (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                  No date
+                                </Badge>
+                              )}
+                              {(!wo.assigned_technicians || wo.assigned_technicians.length === 0) && (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                  No technician
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="h-5 w-5 text-slate-400" />
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {openOffers.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">Open Offers ({openOffers.length})</h3>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={createPageUrl('Offers')}>View All</Link>
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {openOffers.slice(0, 3).map(offer => (
+                    <Link 
+                      key={offer.id} 
+                      to={createPageUrl('OfferDetail') + `?id=${offer.id}`}
+                      className="block p-3 bg-white rounded-lg border border-blue-200 hover:border-blue-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{offer.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {getCustomerName(offer.customer_id)}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {offer.status}
+                            </Badge>
+                            <span className="text-xs text-slate-500">
+                              {getAge(offer.created_date)} old
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-400" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {staleLeads.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">Stale Leads ({staleLeads.length})</h3>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={createPageUrl('Leads')}>View All</Link>
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {staleLeads.slice(0, 3).map(lead => (
+                    <Link 
+                      key={lead.id} 
+                      to={createPageUrl('LeadDetail') + `?id=${lead.id}`}
+                      className="block p-3 bg-white rounded-lg border border-orange-200 hover:border-orange-300 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{lead.name}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {lead.boat_name || 'No boat specified'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                              {lead.status}
+                            </Badge>
+                            <span className="text-xs text-slate-500">
+                              No contact for {lead.last_contacted_at ? getAge(lead.last_contacted_at) : 'unknown time'}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-400" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Notes Section */}
+      {activeNotes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <StickyNote className="h-5 w-5 text-yellow-600" />
+              Notes & Reminders ({activeNotes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {activeNotes.slice(0, 5).map(note => (
+                <div 
+                  key={note.id}
+                  className="p-3 bg-yellow-50 rounded-lg border border-yellow-200"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-900">{note.text}</p>
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {getReferenceName(note) && (
+                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">
+                            {note.reference_type}: {getReferenceName(note)}
+                          </Badge>
+                        )}
+                        {note.due_date && (
+                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {format(parseISO(note.due_date), 'MMM d')}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-slate-500">
+                          {getAge(note.created_date)} ago
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleToggleNoteComplete(note)}
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handleDeleteNote(note.id)}
+                      >
+                        <X className="h-4 w-4 text-slate-400" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 2) TODAY / THIS WEEK */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
@@ -562,12 +766,18 @@ export default function Dashboard() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="font-medium text-slate-900">{wo.title}</p>
-                          <p className="text-sm text-slate-600 mt-1">{jobInfo?.boat} • {jobInfo?.location}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {jobInfo?.boat} • {jobInfo?.location}
+                          </p>
                           {wo.scheduled_start_time && (
-                            <p className="text-xs text-slate-500 mt-1">{wo.scheduled_start_time}</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                              {wo.scheduled_start_time}
+                            </p>
                           )}
                         </div>
-                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>{wo.status}</Badge>
+                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                          {wo.status}
+                        </Badge>
                       </div>
                     </Link>
                   );
@@ -600,10 +810,16 @@ export default function Dashboard() {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="font-medium text-slate-900">{wo.title}</p>
-                          <p className="text-sm text-slate-600 mt-1">{jobInfo?.boat} • {jobInfo?.location}</p>
-                          <p className="text-xs text-slate-500 mt-1">{format(parseISO(wo.scheduled_date), 'EEE, MMM d')}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {jobInfo?.boat} • {jobInfo?.location}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {format(parseISO(wo.scheduled_date), 'EEE, MMM d')}
+                          </p>
                         </div>
-                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>{wo.status}</Badge>
+                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                          {wo.status}
+                        </Badge>
                       </div>
                     </Link>
                   );
@@ -619,180 +835,90 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* 1) ACTION REQUIRED */}
-      {hasActionItems && (
-        <Card className="border-red-200 bg-red-50/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-900">
-              <AlertTriangle className="h-5 w-5" />
-              Action Required
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {overdueWorkOrders.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-900">Overdue Work Orders ({overdueWorkOrders.length})</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('WorkOrders') + '?filter=overdue'}>View All</Link>
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {overdueWorkOrders.slice(0, 3).map(wo => {
-                    const jobInfo = getJobInfo(wo.job_id);
-                    return (
-                      <Link key={wo.id} to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`} className="block p-3 bg-white rounded-lg border border-red-200 hover:border-red-300 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-900">{wo.title}</p>
-                            <p className="text-sm text-slate-600 mt-1">{jobInfo?.boat} • {jobInfo?.customer}</p>
-                            <div className="flex items-center gap-2 mt-2 text-xs text-red-700">
-                              <Calendar className="h-3 w-3" />
-                              Due: {format(parseISO(wo.scheduled_date), 'MMM d, yyyy')}
-                            </div>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-slate-400" />
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {unplannedWorkOrders.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-900">Unplanned Work Orders ({unplannedWorkOrders.length})</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('WorkOrders') + '?filter=pending'}>View All</Link>
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {unplannedWorkOrders.slice(0, 3).map(wo => {
-                    const jobInfo = getJobInfo(wo.job_id);
-                    return (
-                      <Link key={wo.id} to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`} className="block p-3 bg-white rounded-lg border border-amber-200 hover:border-amber-300 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-900">{wo.title}</p>
-                            <p className="text-sm text-slate-600 mt-1">{jobInfo?.boat} • {jobInfo?.customer}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              {!wo.scheduled_date && <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">No date</Badge>}
-                              {(!wo.assigned_technicians || wo.assigned_technicians.length === 0) && <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">No technician</Badge>}
-                            </div>
-                          </div>
-                          <ChevronRight className="h-5 w-5 text-slate-400" />
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {openOffers.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-900">Open Offers ({openOffers.length})</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('Offers')}>View All</Link>
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {openOffers.slice(0, 3).map(offer => (
-                    <Link key={offer.id} to={createPageUrl('OfferDetail') + `?id=${offer.id}`} className="block p-3 bg-white rounded-lg border border-blue-200 hover:border-blue-300 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900">{offer.title}</p>
-                          <p className="text-sm text-slate-600 mt-1">{getCustomerName(offer.customer_id)}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">{offer.status}</Badge>
-                            <span className="text-xs text-slate-500">{getAge(offer.created_date)} old</span>
-                          </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-slate-400" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-            {staleLeads.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-medium text-red-900">Stale Leads ({staleLeads.length})</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={createPageUrl('Leads')}>View All</Link>
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {staleLeads.slice(0, 3).map(lead => (
-                    <Link key={lead.id} to={createPageUrl('LeadDetail') + `?id=${lead.id}`} className="block p-3 bg-white rounded-lg border border-orange-200 hover:border-orange-300 transition-colors">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900">{lead.name}</p>
-                          <p className="text-sm text-slate-600 mt-1">{lead.boat_name || 'No boat specified'}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">{lead.status}</Badge>
-                            <span className="text-xs text-slate-500">No contact for {lead.last_contacted_at ? getAge(lead.last_contacted_at) : 'unknown time'}</span>
-                          </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-slate-400" />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Notes Section */}
-      {activeNotes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <StickyNote className="h-5 w-5 text-yellow-600" />
-              Notes & Reminders ({activeNotes.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {activeNotes.slice(0, 5).map(note => (
-                <div key={note.id} className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <p className="text-sm text-slate-900">{note.text}</p>
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        {getReferenceName(note) && (
-                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">{note.reference_type}: {getReferenceName(note)}</Badge>
-                        )}
-                        {note.due_date && (
-                          <Badge variant="outline" className="bg-white text-slate-700 border-slate-300 text-xs">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {format(parseISO(note.due_date), 'MMM d')}
+      {/* 3) PROJECT HEALTH */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-emerald-600" />
+            Project Health
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activeJobs.length === 0 ? (
+            <p className="text-sm text-slate-500">No active projects</p>
+          ) : (
+            <div className="space-y-3">
+              {activeJobs.map(job => {
+                const health = getProjectHealth(job);
+                const progress = getProjectProgress(job);
+                const boat = boats.find(b => b.id === job.boat_id);
+                const location = locations.find(l => l.id === job.location_id);
+                
+                return (
+                  <Link 
+                    key={job.id} 
+                    to={createPageUrl('JobDetail') + `?id=${job.id}`}
+                    className="block p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className={`h-3 w-3 rounded-full ${
+                            health.status === 'red' ? 'bg-red-500' : 
+                            health.status === 'yellow' ? 'bg-yellow-500' : 
+                            'bg-green-500'
+                          }`} />
+                          <p className="font-medium text-slate-900">{job.title}</p>
+                          <Badge variant="outline" className={
+                            health.status === 'red' ? 'bg-red-50 text-red-700 border-red-200' :
+                            health.status === 'yellow' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            'bg-green-50 text-green-700 border-green-200'
+                          }>
+                            {health.label}
                           </Badge>
-                        )}
-                        <span className="text-xs text-slate-500">{getAge(note.created_date)} ago</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleToggleNoteComplete(note)}>
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteNote(note.id)}>
-                        <X className="h-4 w-4 text-slate-400" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
+                          <div className="flex items-center gap-1">
+                            <Ship className="h-3.5 w-3.5" />
+                            {boat?.vessel_name || 'Unknown'}
+                          </div>
+                          {location && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3.5 w-3.5" />
+                              {location.name}
+                            </div>
+                          )}
+                        </div>
 
-      {/* SALES & ORGANISATION */}
+                        <div className="mt-3 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-slate-600">Progress: {progress}%</span>
+                            <span className="text-slate-500 italic">{health.step}</span>
+                          </div>
+                          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all rounded-full ${
+                                health.status === 'red' ? 'bg-red-500' :
+                                health.status === 'yellow' ? 'bg-yellow-500' :
+                                'bg-green-500'
+                              }`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 4) SALES & ORGANISATION */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -974,6 +1100,22 @@ export default function Dashboard() {
         open={showDispatchModal} 
         onClose={() => setShowDispatchModal(false)} 
       />
+
+      {/* Quick Capture Modal */}
+      <QuickCaptureModal open={showQuickCapture} onOpenChange={setShowQuickCapture} onClose={() => setShowQuickCapture(false)} />
+
+      {/* E-Mail to Lead Dialog */}
+      <Dialog open={showEmailParser} onOpenChange={setShowEmailParser}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>E-Mail → Lead</DialogTitle>
+          </DialogHeader>
+          <EmailToLeadParser
+            onLeadParsed={() => setShowEmailParser(false)}
+            onCancel={() => setShowEmailParser(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Note Dialog */}
       <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
