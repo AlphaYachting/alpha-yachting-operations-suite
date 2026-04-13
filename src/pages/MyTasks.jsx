@@ -246,39 +246,30 @@ export default function MyTasks() {
   // Sort boat groups by earliest due date (completed-only groups go to bottom)
   const sortedBoatGroups = useMemo(() => {
     return Object.entries(groupedByBoat).sort(([boatIdA, tasksA], [boatIdB, tasksB]) => {
-      const allCompletedA = tasksA.every(t => t.status === 'Completed');
-      const allCompletedB = tasksB.every(t => t.status === 'Completed');
+      const allCompletedA = tasksA.every(t => t.status === 'Completed' || t.status === 'Skipped');
+      const allCompletedB = tasksB.every(t => t.status === 'Completed' || t.status === 'Skipped');
       if (allCompletedA && !allCompletedB) return 1;
       if (!allCompletedA && allCompletedB) return -1;
 
-      // Find earliest due date using only non-completed tasks
       const getEarliestDate = (tasks) => {
         const dates = tasks
-          .filter(t => t.status !== 'Completed')
+          .filter(t => t.status !== 'Completed' && t.status !== 'Skipped')
           .map(t => {
             const wo = workOrders.find(wo => wo.id === t.work_order_id);
             return wo?.scheduled_date ? parseISO(wo.scheduled_date) : null;
           })
           .filter(Boolean);
-        
         if (dates.length === 0) return null;
         return dates.reduce((earliest, date) => date < earliest ? date : earliest);
       };
       
       const dateA = getEarliestDate(tasksA);
       const dateB = getEarliestDate(tasksB);
-      
-      // Boats with due dates come first
       if (dateA && !dateB) return -1;
       if (!dateA && dateB) return 1;
-      
-      // Unknown boat always last
       if (boatIdA === 'unknown' && boatIdB !== 'unknown') return 1;
       if (boatIdA !== 'unknown' && boatIdB === 'unknown') return -1;
-      
-      // Both have dates, sort by earliest
       if (dateA && dateB) return dateA - dateB;
-      
       return 0;
     });
   }, [groupedByBoat, workOrders]);
@@ -391,26 +382,114 @@ export default function MyTasks() {
         <div className="space-y-4">
           {sortedBoatGroups.map(([boatId, boatTasks]) => {
             const boat = boatMap[boatId];
-            const isExpanded = expandedBoats[boatId] === true; // Default collapsed
+            const isExpanded = expandedBoats[boatId] === true;
             
-            // Get boat context
             const firstTask = boatTasks[0];
-            const { workOrder, job } = getTaskContext(firstTask);
-            const customer = job ? customerMap[job.customer_id] : null;
-            const location = job ? locationMap[job.location_id] : null;
+            const { workOrder: firstWO, job: firstJob } = getTaskContext(firstTask);
+            const customer = firstJob ? customerMap[firstJob.customer_id] : null;
+            const location = firstJob ? locationMap[firstJob.location_id] : null;
             
-            // Calculate next due date
             const nextDueTask = boatTasks.find(t => {
               const wo = workOrders.find(wo => wo.id === t.work_order_id);
               return wo?.scheduled_date;
             });
             const nextDueWo = nextDueTask ? workOrders.find(wo => wo.id === nextDueTask.work_order_id) : null;
-            
-            // Unknown boat fallback
+
+            const completedCount = boatTasks.filter(t => t.status === 'Completed' || t.status === 'Skipped').length;
+            const totalCount = boatTasks.length;
+            const allDone = completedCount === totalCount;
+            const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+            const customerName = customer?.company_name || 
+              `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 
+              'Unknown Customer';
+
+            // Shared task renderer
+            const renderTask = (task, idx) => {
+              const { workOrder, job } = getTaskContext(task);
+              const timeStatus = getTaskTimeStatus(workOrder);
+              const isCompleted = task.status === 'Completed';
+              const isSkipped = task.status === 'Skipped';
+              return (
+                <div
+                  key={task.id}
+                  className={`p-4 transition-colors ${
+                    isCompleted ? 'bg-green-50 border-l-4 border-l-green-400' :
+                    isSkipped ? 'bg-slate-50 opacity-60' :
+                    'hover:bg-slate-50'
+                  } ${idx < boatTasks.length - 1 ? 'border-b border-slate-100' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {isCompleted && <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />}
+                        <Link
+                          to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}
+                          className={`font-semibold hover:text-blue-600 transition-colors ${
+                            isCompleted || isSkipped ? 'text-slate-400 line-through' : 'text-slate-900'
+                          }`}
+                        >
+                          {task.title}
+                        </Link>
+                      </div>
+                      {(workOrder || job) && (
+                        <p className="text-sm text-slate-600 mb-2">
+                          {workOrder && <span>{workOrder.title || workOrder.work_order_number}</span>}
+                          {job && workOrder && <span> • </span>}
+                          {job && (
+                            <Link to={createPageUrl('JobDetail') + `?id=${job.id}`} className="text-blue-600 hover:underline">
+                              {job.title}
+                            </Link>
+                          )}
+                        </p>
+                      )}
+                      {task.description && (
+                        <p className="text-sm text-slate-600 line-clamp-1 mb-2">{task.description}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <select
+                        value={task.status}
+                        onChange={e => handleTaskStatusChange(task.id, e.target.value)}
+                        disabled={updatingTaskId === task.id}
+                        className={`text-xs border rounded-md px-2 py-1 font-medium focus:outline-none focus:ring-1 focus:ring-blue-400 ${statusColors[task.status]} border-transparent cursor-pointer`}
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <option value="Not Started">Not Started</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Not Possible">Not Possible</option>
+                        <option value="Needs Approval">Needs Approval</option>
+                        <option value="Skipped">Skipped</option>
+                      </select>
+                      {!isCompleted && (
+                        <Badge
+                          variant={timeStatus.variant === 'destructive' ? 'destructive' : 'secondary'}
+                          className={timeStatus.variant === 'destructive' ? '' : timeStatus.color}
+                        >
+                          <Clock className="h-3 w-3 mr-1" />
+                          {timeStatus.label}
+                        </Badge>
+                      )}
+                      {workOrder?.scheduled_date && (
+                        <div className="flex items-center gap-1 text-xs text-slate-500">
+                          <Calendar className="h-3 w-3" />
+                          {format(parseISO(workOrder.scheduled_date), 'MMM d, yyyy')}
+                        </div>
+                      )}
+                      <Button size="sm" variant="ghost" className="mt-1" asChild>
+                        <Link to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}>View WO →</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            };
+
             if (boatId === 'unknown') {
               return (
                 <Card key={boatId} className="overflow-hidden">
-                  <div 
+                  <div
                     className="bg-slate-50 border-b border-slate-200 p-4 cursor-pointer hover:bg-slate-100 transition-colors"
                     onClick={() => toggleBoatExpand(boatId)}
                   >
@@ -420,112 +499,70 @@ export default function MyTasks() {
                         <AlertCircle className="h-5 w-5 text-amber-600" />
                         <div>
                           <h3 className="font-semibold text-slate-900">No Boat / Unassigned</h3>
-                          <p className="text-sm text-slate-600">{boatTasks.length} tasks</p>
+                          <p className="text-sm text-slate-600">{totalCount} tasks</p>
                         </div>
                       </div>
                     </div>
                   </div>
-                  
                   {isExpanded && (
                     <CardContent className="p-0">
-                      {boatTasks.map((task, idx) => {
-                        const { workOrder, job } = getTaskContext(task);
-                        const timeStatus = getTaskTimeStatus(workOrder);
-                        
-                        return (
-                          <div 
-                            key={task.id} 
-                            className={`p-4 transition-colors ${task.status === 'Completed' ? 'bg-green-50/50' : 'hover:bg-slate-50'} ${idx < boatTasks.length - 1 ? 'border-b border-slate-100' : ''}`}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Link
-                                    to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}
-                                    className={`font-semibold hover:text-blue-600 transition-colors ${task.status === 'Completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}
-                                  >
-                                    {task.title}
-                                  </Link>
-                                </div>
+                      {boatTasks.map((task, idx) => renderTask(task, idx))}
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            }
 
-                                {(workOrder || job) && (
-                                  <p className="text-sm text-slate-600 mb-2">
-                                    {workOrder && <span>{workOrder.title || workOrder.work_order_number}</span>}
-                                    {job && workOrder && <span> • </span>}
-                                    {job && <span>{job.title}</span>}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="flex flex-col items-end gap-2">
-                                <select
-                                  value={task.status}
-                                  onChange={e => handleTaskStatusChange(task.id, e.target.value)}
-                                  disabled={updatingTaskId === task.id}
-                                  className={`text-xs border rounded-md px-2 py-1 font-medium focus:outline-none focus:ring-1 focus:ring-blue-400 ${statusColors[task.status]} border-transparent`}
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <option value="Not Started">Not Started</option>
-                                  <option value="In Progress">In Progress</option>
-                                  <option value="Completed">Completed</option>
-                                  <option value="Not Possible">Not Possible</option>
-                                  <option value="Needs Approval">Needs Approval</option>
-                                  <option value="Skipped">Skipped</option>
-                                </select>
-                                <Badge 
-                                  variant={timeStatus.variant === 'destructive' ? 'destructive' : 'secondary'}
-                                  className={timeStatus.variant === 'destructive' ? '' : timeStatus.color}
-                                >
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  {timeStatus.label}
-                                </Badge>
-                                <Button size="sm" variant="ghost" asChild>
-                                  <Link to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}>
-                                    View WO →
-                                  </Link>
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                        })}
-                        </CardContent>
-                        )}
-                        </Card>
-                        );
-                        }
-
-                        // Regular boat group
-            const customerName = customer?.company_name || 
-              `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 
-              'Unknown Customer';
-            
             return (
-              <Card key={boatId} className="overflow-hidden">
+              <Card key={boatId} className={`overflow-hidden ${allDone ? 'border-green-300' : ''}`}>
                 {/* Boat Header */}
-                <div 
-                  className="bg-slate-50 border-b border-slate-200 p-4 cursor-pointer hover:bg-slate-100 transition-colors"
+                <div
+                  className={`border-b p-4 cursor-pointer transition-colors ${
+                    allDone
+                      ? 'bg-green-50 border-green-200 hover:bg-green-100'
+                      : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                  }`}
                   onClick={() => toggleBoatExpand(boatId)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                      <Ship className="h-5 w-5 text-blue-600" />
+                      <ChevronRight className={`h-5 w-5 transition-transform ${allDone ? 'text-green-500' : 'text-slate-400'} ${isExpanded ? 'rotate-90' : ''}`} />
+                      {allDone
+                        ? <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        : <Ship className="h-5 w-5 text-blue-600" />
+                      }
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-slate-900">{boat?.vessel_name || 'Unknown Boat'}</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className={`font-semibold ${allDone ? 'text-green-800' : 'text-slate-900'}`}>
+                            {boat?.vessel_name || 'Unknown Boat'}
+                          </h3>
                           {boat?.manufacturer && boat?.model && (
-                            <span className="text-sm text-slate-500">
-                              {boat.manufacturer} {boat.model}
-                            </span>
+                            <span className="text-sm text-slate-500">{boat.manufacturer} {boat.model}</span>
+                          )}
+                          {allDone && (
+                            <Badge className="bg-green-600 text-white border-0 text-xs">All Done ✓</Badge>
                           )}
                         </div>
                         <p className="text-sm text-slate-600">{customerName}</p>
+                        {/* Progress bar */}
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                allDone ? 'bg-green-500' : progressPct > 50 ? 'bg-blue-500' : 'bg-amber-500'
+                              }`}
+                              style={{ width: `${progressPct}%` }}
+                            />
+                          </div>
+                          <span className={`text-xs font-medium ${allDone ? 'text-green-700' : 'text-slate-500'}`}>
+                            {completedCount}/{totalCount}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="bg-white">
-                        {boatTasks.length} {boatTasks.length === 1 ? 'task' : 'tasks'}
+                      <Badge variant="outline" className={allDone ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white'}>
+                        {totalCount} {totalCount === 1 ? 'task' : 'tasks'}
                       </Badge>
                       {nextDueWo?.scheduled_date && (
                         <div className="flex items-center gap-1 text-sm font-medium text-slate-700">
@@ -546,92 +583,7 @@ export default function MyTasks() {
                 {/* Tasks for this boat */}
                 {isExpanded && (
                   <CardContent className="p-0">
-                    {boatTasks.map((task, idx) => {
-                      const { workOrder, job } = getTaskContext(task);
-                      const timeStatus = getTaskTimeStatus(workOrder);
-                      
-                      return (
-                        <div 
-                          key={task.id} 
-                          className={`p-4 transition-colors ${task.status === 'Completed' ? 'bg-green-50/50' : 'hover:bg-slate-50'} ${idx < boatTasks.length - 1 ? 'border-b border-slate-100' : ''}`}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              {/* Task title */}
-                              <div className="flex items-center gap-2 mb-1">
-                                <Link
-                                  to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}
-                                  className={`font-semibold hover:text-blue-600 transition-colors ${task.status === 'Completed' ? 'text-slate-400 line-through' : 'text-slate-900'}`}
-                                >
-                                  {task.title}
-                                </Link>
-                              </div>
-                              
-                              {/* Work order / project reference */}
-                              {(workOrder || job) && (
-                                <p className="text-sm text-slate-600 mb-2">
-                                  {workOrder && <span>{workOrder.title || workOrder.work_order_number}</span>}
-                                  {job && workOrder && <span> • </span>}
-                                  {job && (
-                                    <Link 
-                                      to={createPageUrl('JobDetail') + `?id=${job.id}`}
-                                      className="text-blue-600 hover:underline"
-                                    >
-                                      {job.title}
-                                    </Link>
-                                  )}
-                                </p>
-                              )}
-                              
-                              {/* Task description */}
-                              {task.description && (
-                                <p className="text-sm text-slate-600 line-clamp-1 mb-2">
-                                  {task.description}
-                                </p>
-                              )}
-                            </div>
-                            
-                            {/* Right side: status selector + due date + actions */}
-                            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                              <select
-                                value={task.status}
-                                onChange={e => handleTaskStatusChange(task.id, e.target.value)}
-                                disabled={updatingTaskId === task.id}
-                                className={`text-xs border rounded-md px-2 py-1 font-medium focus:outline-none focus:ring-1 focus:ring-blue-400 ${statusColors[task.status]} border-transparent cursor-pointer`}
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <option value="Not Started">Not Started</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Not Possible">Not Possible</option>
-                                <option value="Needs Approval">Needs Approval</option>
-                                <option value="Skipped">Skipped</option>
-                              </select>
-                              <Badge 
-                                variant={timeStatus.variant === 'destructive' ? 'destructive' : 'secondary'}
-                                className={timeStatus.variant === 'destructive' ? '' : timeStatus.color}
-                              >
-                                <Clock className="h-3 w-3 mr-1" />
-                                {timeStatus.label}
-                              </Badge>
-                              
-                              {workOrder?.scheduled_date && (
-                                <div className="flex items-center gap-1 text-xs text-slate-500">
-                                  <Calendar className="h-3 w-3" />
-                                  {format(parseISO(workOrder.scheduled_date), 'MMM d, yyyy')}
-                                </div>
-                              )}
-                              
-                              <Button size="sm" variant="ghost" className="mt-1" asChild>
-                                <Link to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}>
-                                  View WO →
-                                </Link>
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {boatTasks.map((task, idx) => renderTask(task, idx))}
                   </CardContent>
                 )}
               </Card>
