@@ -171,6 +171,9 @@ function InputStep({ onParsed, customers, boats }) {
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
   const committedTextRef = useRef('');
+  const voiceUsedRef = useRef(false);
+  const fileInputRef = useRef(null);
+  const committedTextRef = useRef('');
 
   const voiceSupported = typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
@@ -183,7 +186,7 @@ function InputStep({ onParsed, customers, boats }) {
     r.continuous = true;          // keep open as long as possible
     r.interimResults = true;      // show partial results live
 
-    r.onstart = () => { setVoiceState('listening'); setInterim(''); };
+    r.onstart = () => { setVoiceState('listening'); setInterim(''); voiceUsedRef.current = true; };
 
     r.onresult = (e) => {
       let finalChunk = '';
@@ -304,7 +307,7 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
       onParsed({
         rawText: text,
         photoUrls,
-        inputMethod: 'text',
+        inputMethod: voiceUsedRef.current ? 'voice' : 'text',
         aiResult,
         customerMatch,
         boatMatch,

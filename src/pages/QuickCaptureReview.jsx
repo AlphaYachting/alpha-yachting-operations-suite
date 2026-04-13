@@ -36,6 +36,7 @@ function getRoutedLink(recordType, recordId) {
     Offer: 'OfferDetail',
     CustomerMaterialEntry: null,
     Note: null,
+    Task: null, // navigated via WorkOrder — show label only
   };
   const page = map[recordType];
   if (!page) return null;
@@ -47,6 +48,7 @@ const CONVERSION_LABEL = {
   Lead:  'Lead',
   Note:  'Customer Note',
   Offer: 'Offer Draft',
+  Task:  'Task',
 };
 
 export default function QuickCaptureReview() {
@@ -354,6 +356,14 @@ export default function QuickCaptureReview() {
                   {(entry.review_status === 'new' || entry.review_status === 'reviewed') && (
                     <div className="pt-2 border-t space-y-2">
                       <div className="flex items-center flex-wrap gap-1.5">
+
+                        {/* Create Task — task_candidate */}
+                        {entry.suggested_type === 'task_candidate' && (
+                          <Button size="sm" onClick={() => openConvert(entry, 'Task')}
+                            className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Create Task
+                          </Button>
+                        )}
 
                         {/* Material Entry */}
                         {entry.suggested_type === 'material_entry' && (

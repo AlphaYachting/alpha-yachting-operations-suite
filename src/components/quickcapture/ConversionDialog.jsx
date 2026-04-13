@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,12 +12,12 @@ import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 
 // forcedTarget overrides the default mapping for the entry type
-// Supported forcedTargets: 'CustomerMaterialEntry' | 'Note' | 'Lead' | 'Offer'
+// Supported forcedTargets: 'CustomerMaterialEntry' | 'Note' | 'Lead' | 'Offer' | 'Task'
 const DEFAULT_TARGET = {
   material_entry:   'CustomerMaterialEntry',
   tool_tracking:    'Note',
   internal_note:    'Note',
-  task_candidate:   'Note',
+  task_candidate:   'Task',
   customer_request: 'Lead',
   project_intake:   'Lead',
 };
@@ -27,6 +27,7 @@ const TARGET_LABELS = {
   Note:  'Customer Note',
   Lead:  'Lead',
   Offer: 'Offer Draft',
+  Task:  'Task',
 };
 
 function displayName(c) {
@@ -48,7 +49,18 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
   const [quantity, setQuantity]     = useState('1');
   const [unitPrice, setUnitPrice]   = useState('');
   const [noteType, setNoteType]     = useState('internal');
+  const [workOrders, setWorkOrders] = useState([]);
+  const [workOrderId, setWorkOrderId] = useState('');
   const [saving, setSaving]         = useState(false);
+
+  // Load WorkOrders when target is Task
+  useEffect(() => {
+    if (target === 'Task') {
+      base44.entities.WorkOrder.list('-scheduled_date', 200)
+        .then(wos => setWorkOrders(wos.filter(wo => !['Completed', 'Cancelled'].includes(wo.status))))
+        .catch(() => {});
+    }
+  }, [target]);
 
   const selectedCustomer = useMemo(() => customers.find(c => c.id === customerId), [customers, customerId]);
   const availableBoats   = customerId ? boats.filter(b => b.customer_id === customerId) : boats;
@@ -133,18 +145,20 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
         recordId = record.id;
       }
 
-      // ── Update QuickCaptureEntry ─────────────────────────────────────────
-      await base44.entities.QuickCaptureEntry.update(entry.id, {
-        review_status:      'routed',
-        routed_record_type: recordType,
-        routed_record_id:   recordId,
-        routed_at:          new Date().toISOString(),
-        routed_by:          user?.email || null,
-        reviewed_by:        user?.email || null,
-        reviewed_at:        new Date().toISOString(),
-      });
+      // ── E. Task ─────────────────────────────────────────────────────────
+      else if (target === 'Task') {
+        if (!workOrderId) { toast.error('Please select a Work Order to attach this task to'); setSaving(false); return; }
+        const record = await base44.entities.Task.create({
+          work_order_id: workOrderId,
+          title:         title.trim(),
+          description:   content.trim() || null,
+          status:        'Not Started',
+          notes:         notes.trim() || null,
+        });
+        recordId = record.id;
+      }
 
-      toast.success(`Created ${targetLabel} successfully`);
+      // ── Update QuickCaptureEntry ─────────────────────────────────────────
 
       // Navigate to Offer immediately after creation
       if (target === 'Offer' && recordId) {
@@ -208,6 +222,30 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {/* WorkOrder selector — Task target only */}
+          {target === 'Task' && (
+            <div>
+              <Label>Work Order <span className="text-red-500">*</span></Label>
+              <p className="text-xs text-slate-500 mb-1">Select the work order this task should belong to</p>
+              <Select value={workOrderId || '__none__'} onValueChange={v => setWorkOrderId(v === '__none__' ? '' : v)}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select Work Order..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Select Work Order —</SelectItem>
+                  {workOrders.map(wo => (
+                    <SelectItem key={wo.id} value={wo.id}>
+                      {wo.work_order_number ? `${wo.work_order_number} — ` : ''}{wo.title} ({wo.status})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {workOrders.length === 0 && (
+                <p className="text-xs text-amber-600 mt-1">No active work orders found. Create a work order first.</p>
+              )}
             </div>
           )}
 
