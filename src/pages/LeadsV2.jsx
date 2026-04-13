@@ -10,7 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Clock, PhoneCall, CheckCircle2, XCircle, Search, Mail } from 'lucide-react';
+import { Plus, Clock, PhoneCall, CheckCircle2, XCircle, Search, Mail, Truck, Zap, StickyNote } from 'lucide-react';
+import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
+import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
+import { base44 } from '@/api/base44Client';
 import { useLeadData, getAgingLevel } from '@/components/leadsV2/useLeadData';
 import LeadsList from '@/components/leadsV2/LeadsList';
 import LeadForm from '@/components/leadsV2/LeadForm';
@@ -25,6 +28,25 @@ export default function LeadsV2() {
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
   const [showEmailParser, setShowEmailParser] = useState(urlParams.get('emailParser') === 'true');
+  const [showDispatch, setShowDispatch] = useState(false);
+  const [showQuickCapture, setShowQuickCapture] = useState(false);
+  const [showNoteDialog, setShowNoteDialog] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+
+  const handleSaveNote = async () => {
+    if (!noteText.trim()) return;
+    setSavingNote(true);
+    try {
+      await base44.entities.Note.create({ content: noteText.trim(), context: 'leads' });
+      setNoteText('');
+      setShowNoteDialog(false);
+    } catch (e) {
+      console.error('Error saving note:', e);
+    } finally {
+      setSavingNote(false);
+    }
+  };
 
   const handleEditLead = (lead) => {
     setEditingLead(lead);
@@ -87,24 +109,22 @@ export default function LeadsV2() {
           <h1 className="text-3xl font-bold text-slate-900">Leads</h1>
           <p className="text-slate-500 text-sm mt-1">Manage customer inquiries and opportunities</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowEmailParser(true)}
-            className="border-purple-300 text-purple-700 hover:bg-purple-50"
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            E-Mail → Lead
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setShowDispatch(true)}>
+            <Truck className="h-4 w-4 mr-2" />
+            Dispatch
           </Button>
-          <Button
-            onClick={() => {
-              setEditingLead(null);
-              setShowForm(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700 shadow-sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Lead
+          <Button variant="outline" onClick={() => setShowEmailParser(true)} className="border-purple-300 text-purple-700 hover:bg-purple-50">
+            <Mail className="h-4 w-4 mr-2" />
+            E-Mail to Lead
+          </Button>
+          <Button variant="outline" onClick={() => setShowQuickCapture(true)} className="border-amber-300 text-amber-700 hover:bg-amber-50">
+            <Zap className="h-4 w-4 mr-2" />
+            Quick Capture
+          </Button>
+          <Button variant="outline" onClick={() => setShowNoteDialog(true)}>
+            <StickyNote className="h-4 w-4 mr-2" />
+            Note
           </Button>
         </div>
       </div>
@@ -180,6 +200,36 @@ export default function LeadsV2() {
         onViewDetail={() => {}}
         getAgingLevel={getAgingLevel}
       />
+
+      {/* Dispatch Modal */}
+      <DispatchFullscreenModal open={showDispatch} onOpenChange={setShowDispatch} />
+
+      {/* Quick Capture Modal */}
+      <QuickCaptureModal open={showQuickCapture} onOpenChange={setShowQuickCapture} onClose={() => setShowQuickCapture(false)} />
+
+      {/* Note Dialog */}
+      <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Note</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <textarea
+              className="w-full border rounded-md p-3 text-sm min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-slate-300"
+              placeholder="Write your note..."
+              value={noteText}
+              onChange={e => setNoteText(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowNoteDialog(false)}>Cancel</Button>
+              <Button onClick={handleSaveNote} disabled={savingNote || !noteText.trim()}>
+                {savingNote ? 'Saving...' : 'Save Note'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Email to Lead Parser Dialog */}
       <Dialog open={showEmailParser} onOpenChange={setShowEmailParser}>
