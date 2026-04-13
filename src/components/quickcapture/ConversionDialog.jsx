@@ -51,16 +51,54 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
   const [noteType, setNoteType]     = useState('internal');
   const [workOrders, setWorkOrders] = useState([]);
   const [workOrderId, setWorkOrderId] = useState('');
+  const [attachMode, setAttachMode] = useState(null); // 'existing' | 'new' | null (auto-set after load)
+  const [newWOTitle, setNewWOTitle] = useState('');
+  const [newWONotes, setNewWONotes] = useState('');
   const [saving, setSaving]         = useState(false);
 
-  // Load WorkOrders when target is Task
+  // Load relevant WorkOrders when target is Task
   useEffect(() => {
-    if (target === 'Task') {
-      base44.entities.WorkOrder.list('-scheduled_date', 200)
-        .then(wos => setWorkOrders(wos.filter(wo => !['Completed', 'Cancelled'].includes(wo.status))))
-        .catch(() => {});
-    }
-  }, [target]);
+    if (target !== 'Task') return;
+    base44.entities.WorkOrder.list('-scheduled_date', 500)
+      .then(allWOs => {
+        const active = allWOs.filter(wo => !['Completed', 'Cancelled'].includes(wo.status));
+        // Filter by customer and/or boat context
+        const custId = entry.customer_id;
+        const bId    = entry.boat_id;
+        let relevant = [];
+        if (custId && bId) {
+          relevant = active.filter(wo => wo.job_id && true); // will refine below
+          // Priority 1: same customer job + boat — need Job entity to cross-ref;
+          // fallback: filter Jobs by customer then match WOs
+          // Since WO doesn't directly store customer_id, filter by job_id from Jobs
+          // We'll load Jobs for this customer separately
+          base44.entities.Job.filter({ customer_id: custId }).then(jobs => {
+            const jobIds = new Set(jobs.map(j => j.id));
+            const byCustomer = active.filter(wo => jobIds.has(wo.job_id));
+            setWorkOrders(byCustomer);
+            setAttachMode(byCustomer.length > 0 ? 'existing' : 'new');
+          }).catch(() => {
+            setWorkOrders(active.slice(0, 50));
+            setAttachMode(active.length > 0 ? 'existing' : 'new');
+          });
+        } else if (custId) {
+          base44.entities.Job.filter({ customer_id: custId }).then(jobs => {
+            const jobIds = new Set(jobs.map(j => j.id));
+            const byCustomer = active.filter(wo => jobIds.has(wo.job_id));
+            setWorkOrders(byCustomer);
+            setAttachMode(byCustomer.length > 0 ? 'existing' : 'new');
+          }).catch(() => {
+            setWorkOrders(active.slice(0, 50));
+            setAttachMode(active.length > 0 ? 'existing' : 'new');
+          });
+        } else {
+          // No customer context — show recent active WOs
+          setWorkOrders(active.slice(0, 50));
+          setAttachMode(active.length > 0 ? 'existing' : 'new');
+        }
+      })
+      .catch(() => {});
+  }, [target, entry.customer_id, entry.boat_id]);
 
   const selectedCustomer = useMemo(() => customers.find(c => c.id === customerId), [customers, customerId]);
   const availableBoats   = customerId ? boats.filter(b => b.customer_id === customerId) : boats;
@@ -147,15 +185,53 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
 
       // ── E. Task ─────────────────────────────────────────────────────────
       else if (target === 'Task') {
-        if (!workOrderId) { toast.error('Please select a Work Order to attach this task to'); setSaving(false); return; }
-        const record = await base44.entities.Task.create({
-          work_order_id: workOrderId,
+        let targetWorkOrderId = workOrderId;
+
+        if (attachMode === 'new') {
+          if (!newWOTitle.trim()) { toast.error('Work Order title is required'); setSaving(false); return; }
+          // Find or create a Job for the customer first
+          let jobId = null;
+          if (customerId) {
+            const existingJobs = await base44.entities.Job.filter({ customer_id: customerId });
+            if (existingJobs.length > 0) {
+              jobId = existingJobs[0].id;
+            } else {
+              const selectedCust = customers.find(c => c.id === customerId);
+              const newJob = await base44.entities.Job.create({
+                customer_id: customerId,
+                boat_id: boatId || null,
+                title: newWOTitle.trim(),
+                status: 'New',
+              });
+              jobId = newJob.id;
+            }
+          }
+          if (!jobId) { toast.error('A customer must be selected to create a new Work Order'); setSaving(false); return; }
+          const newWO = await base44.entities.WorkOrder.create({
+            job_id:         jobId,
+            title:          newWOTitle.trim(),
+            description:    newWONotes.trim() || null,
+            status:         'Draft',
+            scheduled_date: new Date().toISOString().split('T')[0],
+          });
+          targetWorkOrderId = newWO.id;
+          recordType = 'WorkOrder'; // navigate to WO for better UX
+          recordId = newWO.id;
+        } else {
+          if (!targetWorkOrderId) { toast.error('Please select a Work Order'); setSaving(false); return; }
+        }
+
+        const taskRecord = await base44.entities.Task.create({
+          work_order_id: targetWorkOrderId,
           title:         title.trim(),
           description:   content.trim() || null,
           status:        'Not Started',
           notes:         notes.trim() || null,
         });
-        recordId = record.id;
+        if (attachMode !== 'new') {
+          recordType = 'Task';
+          recordId = taskRecord.id;
+        }
       }
 
       // ── Update QuickCaptureEntry ─────────────────────────────────────────
@@ -225,26 +301,96 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
             </div>
           )}
 
-          {/* WorkOrder selector — Task target only */}
-          {target === 'Task' && (
-            <div>
-              <Label>Work Order <span className="text-red-500">*</span></Label>
-              <p className="text-xs text-slate-500 mb-1">Select the work order this task should belong to</p>
-              <Select value={workOrderId || '__none__'} onValueChange={v => setWorkOrderId(v === '__none__' ? '' : v)}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select Work Order..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— Select Work Order —</SelectItem>
-                  {workOrders.map(wo => (
-                    <SelectItem key={wo.id} value={wo.id}>
-                      {wo.work_order_number ? `${wo.work_order_number} — ` : ''}{wo.title} ({wo.status})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {workOrders.length === 0 && (
-                <p className="text-xs text-amber-600 mt-1">No active work orders found. Create a work order first.</p>
+          {/* Task target: explicit mode choice + context-filtered WOs */}
+          {target === 'Task' && attachMode !== null && (
+            <div className="space-y-3">
+              {/* Mode toggle */}
+              <div>
+                <Label>Where should this task go?</Label>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setAttachMode('existing')}
+                    className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                      attachMode === 'existing'
+                        ? 'bg-orange-500 text-white border-orange-500'
+                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    Existing Work Order
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAttachMode('new')}
+                    className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                      attachMode === 'new'
+                        ? 'bg-orange-500 text-white border-orange-500'
+                        : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    Create New Work Order
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing WO path */}
+              {attachMode === 'existing' && (
+                <div>
+                  {workOrders.length === 0 ? (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                      No matching Work Orders found for this customer/boat.
+                      <button type="button" onClick={() => setAttachMode('new')} className="ml-2 underline font-medium">Create a new one.</button>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-slate-500 mb-1">Showing Work Orders for this customer/boat context</p>
+                      <Select value={workOrderId || '__none__'} onValueChange={v => setWorkOrderId(v === '__none__' ? '' : v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Work Order..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— Select Work Order —</SelectItem>
+                          {workOrders.map(wo => (
+                            <SelectItem key={wo.id} value={wo.id}>
+                              {wo.work_order_number ? `${wo.work_order_number} — ` : ''}{wo.title}
+                              {wo.scheduled_date ? ` · ${wo.scheduled_date}` : ''}
+                              {` (${wo.status})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* New WO path */}
+              {attachMode === 'new' && (
+                <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-600">New Work Order</p>
+                  <div>
+                    <Label>Work Order Title <span className="text-red-500">*</span></Label>
+                    <Input
+                      value={newWOTitle}
+                      onChange={e => setNewWOTitle(e.target.value)}
+                      className="mt-1"
+                      placeholder="e.g. Engine Inspection — Blümel"
+                    />
+                  </div>
+                  <div>
+                    <Label>Notes (optional)</Label>
+                    <Textarea
+                      value={newWONotes}
+                      onChange={e => setNewWONotes(e.target.value)}
+                      rows={2}
+                      className="mt-1"
+                      placeholder="Any context for the technician..."
+                    />
+                  </div>
+                  {!customerId && (
+                    <p className="text-xs text-red-600">⚠ A customer must be selected above to create a new Work Order.</p>
+                  )}
+                </div>
               )}
             </div>
           )}
