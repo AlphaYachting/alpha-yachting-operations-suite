@@ -172,8 +172,6 @@ function InputStep({ onParsed, customers, boats }) {
   const fileInputRef = useRef(null);
   const committedTextRef = useRef('');
   const voiceUsedRef = useRef(false);
-  const fileInputRef = useRef(null);
-  const committedTextRef = useRef('');
 
   const voiceSupported = typeof window !== 'undefined' &&
     ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
