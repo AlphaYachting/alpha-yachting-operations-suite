@@ -51,9 +51,6 @@ import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
-import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
-import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
-import { Mail, Zap } from 'lucide-react';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -79,8 +76,6 @@ export default function Dashboard() {
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [showQuickCapture, setShowQuickCapture] = useState(false);
-  const [showEmailParser, setShowEmailParser] = useState(false);
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -413,20 +408,54 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button size="sm" variant="outline" onClick={() => setShowDispatchModal(true)}>
+        <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            onClick={() => setShowDispatchModal(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
             <Calendar className="h-4 w-4 mr-1" />
             Dispatch
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setShowEmailParser(true)} className="border-purple-300 text-purple-700 hover:bg-purple-50">
-            <Mail className="h-4 w-4 mr-1" />
-            E-Mail to Lead
+          <Button 
+            size="sm" 
+            onClick={() => setShowProjectDialog(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Project
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setShowQuickCapture(true)} className="border-amber-300 text-amber-700 hover:bg-amber-50">
-            <Zap className="h-4 w-4 mr-1" />
-            Quick Capture
+          <Button 
+            size="sm" 
+            onClick={() => setShowWorkOrderDialog(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Work Order
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setShowNoteDialog(true)}>
+          <Button 
+            size="sm" 
+            onClick={() => setShowLeadDialog(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Lead
+          </Button>
+          <Button 
+            size="sm" 
+            asChild
+            className="bg-cyan-600 hover:bg-cyan-700 text-white"
+          >
+            <Link to={createPageUrl('Offers') + '?new=true'}>
+              <Plus className="h-4 w-4 mr-1" />
+              Offer
+            </Link>
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={() => setShowNoteDialog(true)}
+            className="bg-yellow-600 hover:bg-yellow-700 text-white"
+          >
             <StickyNote className="h-4 w-4 mr-1" />
             Note
           </Button>
@@ -507,6 +536,100 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* 2) TODAY / THIS WEEK */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Today
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {todayWorkOrders.length === 0 ? (
+              <p className="text-sm text-slate-500">No work orders scheduled for today</p>
+            ) : (
+              <div className="space-y-2">
+                {todayWorkOrders.map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  return (
+                    <Link 
+                      key={wo.id} 
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{wo.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {jobInfo?.boat} • {jobInfo?.location}
+                          </p>
+                          {wo.scheduled_start_time && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              {wo.scheduled_start_time}
+                            </p>
+                          )}
+                        </div>
+                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                          {wo.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+              This Week
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {thisWeekWorkOrders.length === 0 ? (
+              <p className="text-sm text-slate-500">No work orders scheduled this week</p>
+            ) : (
+              <div className="space-y-2">
+                {thisWeekWorkOrders.slice(0, 5).map(wo => {
+                  const jobInfo = getJobInfo(wo.job_id);
+                  return (
+                    <Link 
+                      key={wo.id} 
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-slate-900">{wo.title}</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            {jobInfo?.boat} • {jobInfo?.location}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {format(parseISO(wo.scheduled_date), 'EEE, MMM d')}
+                          </p>
+                        </div>
+                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
+                          {wo.status}
+                        </Badge>
+                      </div>
+                    </Link>
+                  );
+                })}
+                {thisWeekWorkOrders.length > 5 && (
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <Link to={createPageUrl('WorkOrders')}>View All ({thisWeekWorkOrders.length})</Link>
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* 1) ACTION REQUIRED */}
       {hasActionItems && (
@@ -741,182 +864,8 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* 2) TODAY / THIS WEEK */}
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600" />
-              Today
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todayWorkOrders.length === 0 ? (
-              <p className="text-sm text-slate-500">No work orders scheduled for today</p>
-            ) : (
-              <div className="space-y-2">
-                {todayWorkOrders.map(wo => {
-                  const jobInfo = getJobInfo(wo.job_id);
-                  return (
-                    <Link 
-                      key={wo.id} 
-                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900">{wo.title}</p>
-                          <p className="text-sm text-slate-600 mt-1">
-                            {jobInfo?.boat} • {jobInfo?.location}
-                          </p>
-                          {wo.scheduled_start_time && (
-                            <p className="text-xs text-slate-500 mt-1">
-                              {wo.scheduled_start_time}
-                            </p>
-                          )}
-                        </div>
-                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
-                          {wo.status}
-                        </Badge>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              This Week
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {thisWeekWorkOrders.length === 0 ? (
-              <p className="text-sm text-slate-500">No work orders scheduled this week</p>
-            ) : (
-              <div className="space-y-2">
-                {thisWeekWorkOrders.slice(0, 5).map(wo => {
-                  const jobInfo = getJobInfo(wo.job_id);
-                  return (
-                    <Link 
-                      key={wo.id} 
-                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                      className="block p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-900">{wo.title}</p>
-                          <p className="text-sm text-slate-600 mt-1">
-                            {jobInfo?.boat} • {jobInfo?.location}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {format(parseISO(wo.scheduled_date), 'EEE, MMM d')}
-                          </p>
-                        </div>
-                        <Badge className={statusColors[wo.status] || 'bg-slate-100 text-slate-700'}>
-                          {wo.status}
-                        </Badge>
-                      </div>
-                    </Link>
-                  );
-                })}
-                {thisWeekWorkOrders.length > 5 && (
-                  <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link to={createPageUrl('WorkOrders')}>View All ({thisWeekWorkOrders.length})</Link>
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 3) PROJECT HEALTH */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-emerald-600" />
-            Project Health
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {activeJobs.length === 0 ? (
-            <p className="text-sm text-slate-500">No active projects</p>
-          ) : (
-            <div className="space-y-3">
-              {activeJobs.map(job => {
-                const health = getProjectHealth(job);
-                const progress = getProjectProgress(job);
-                const boat = boats.find(b => b.id === job.boat_id);
-                const location = locations.find(l => l.id === job.location_id);
-                
-                return (
-                  <Link 
-                    key={job.id} 
-                    to={createPageUrl('JobDetail') + `?id=${job.id}`}
-                    className="block p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className={`h-3 w-3 rounded-full ${
-                            health.status === 'red' ? 'bg-red-500' : 
-                            health.status === 'yellow' ? 'bg-yellow-500' : 
-                            'bg-green-500'
-                          }`} />
-                          <p className="font-medium text-slate-900">{job.title}</p>
-                          <Badge variant="outline" className={
-                            health.status === 'red' ? 'bg-red-50 text-red-700 border-red-200' :
-                            health.status === 'yellow' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                            'bg-green-50 text-green-700 border-green-200'
-                          }>
-                            {health.label}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Ship className="h-3.5 w-3.5" />
-                            {boat?.vessel_name || 'Unknown'}
-                          </div>
-                          {location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5" />
-                              {location.name}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mt-3 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-600">Progress: {progress}%</span>
-                            <span className="text-slate-500 italic">{health.step}</span>
-                          </div>
-                          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all rounded-full ${
-                                health.status === 'red' ? 'bg-red-500' :
-                                health.status === 'yellow' ? 'bg-yellow-500' :
-                                'bg-green-500'
-                              }`}
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Project Health — retained in code, hidden from Dashboard render */}
+      {/* getProjectHealth, getProjectProgress, activeJobs helpers preserved above */}
 
       {/* 4) SALES & ORGANISATION */}
       <div className="grid md:grid-cols-2 gap-6">
@@ -1100,22 +1049,6 @@ export default function Dashboard() {
         open={showDispatchModal} 
         onClose={() => setShowDispatchModal(false)} 
       />
-
-      {/* Quick Capture Modal */}
-      <QuickCaptureModal open={showQuickCapture} onOpenChange={setShowQuickCapture} onClose={() => setShowQuickCapture(false)} />
-
-      {/* E-Mail to Lead Dialog */}
-      <Dialog open={showEmailParser} onOpenChange={setShowEmailParser}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>E-Mail → Lead</DialogTitle>
-          </DialogHeader>
-          <EmailToLeadParser
-            onLeadParsed={() => setShowEmailParser(false)}
-            onCancel={() => setShowEmailParser(false)}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Note Dialog */}
       <Dialog open={showNoteDialog} onOpenChange={setShowNoteDialog}>
