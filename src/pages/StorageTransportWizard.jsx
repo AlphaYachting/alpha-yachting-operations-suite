@@ -633,7 +633,6 @@ export default function StorageTransportWizard() {
                                     </div>
                                 </div>
                             </div>
-                            )()}
                             
                             <div className="bg-slate-800 text-white p-4 rounded-lg">
                                 <h3 className="font-medium mb-2 opacity-80">Pricing Engine Output</h3>

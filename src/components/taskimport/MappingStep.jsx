@@ -12,10 +12,6 @@ export default function MappingStep({ headers = [], mapping = {}, onMappingChang
    const [autoMapping, setAutoMapping] = useState(null);
    const [debugMode, setDebugMode] = useState(false);
 
-   if (!headers || !Array.isArray(headers) || headers.length === 0) {
-     return <div className="p-4 text-slate-600">No headers to map. Please upload a file first.</div>;
-   }
-
    // Auto-map on component mount or when headers change
    useEffect(() => {
      if (headers.length > 0 && Object.keys(mapping).length === 0) {
@@ -32,6 +28,10 @@ export default function MappingStep({ headers = [], mapping = {}, onMappingChang
       }
     }
   }, [headers]);
+
+  if (!headers || !Array.isArray(headers) || headers.length === 0) {
+    return <div className="p-4 text-slate-600">No headers to map. Please upload a file first.</div>;
+  }
 
   const handleMappingChange = (header, targetField) => {
     const newMapping = { ...mapping };
