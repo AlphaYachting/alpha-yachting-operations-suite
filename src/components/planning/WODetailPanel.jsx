@@ -35,9 +35,10 @@ const QUICK_ACTION_LABEL = {
 };
 
 export default function WODetailPanel({ item, onClose, onRefresh, technicians = [], locations = [] }) {
+  const [activeEditor, setActiveEditor] = useState(null);
+
   if (!item) return null;
   const { workOrder, job, customer, boat, location, evaluation, taskCount, taskEstimatedMinutesSum } = item;
-  const [activeEditor, setActiveEditor] = useState(null);
 
   const hardB = evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'hard');
   const softB = evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'soft');

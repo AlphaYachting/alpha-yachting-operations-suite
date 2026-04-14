@@ -21,9 +21,7 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
    const [checkingAvailability, setCheckingAvailability] = useState(false);
    const [conflicts, setConflicts] = useState([]);
 
-   if (!workOrder) return null;
-
-   const hasSchedule = !!(workOrder.scheduled_date && workOrder.scheduled_start_time && workOrder.scheduled_end_time);
+   const hasSchedule = !!(workOrder?.scheduled_date && workOrder?.scheduled_start_time && workOrder?.scheduled_end_time);
 
   const getPlannedWindow = () => {
     if (!workOrder?.scheduled_date || !workOrder?.scheduled_start_time || !workOrder?.scheduled_end_time) return null;
@@ -183,6 +181,8 @@ export default function VehicleReservation({ workOrder, onReservationChange }) {
     const vehicle = vehicles.find(v => v.id === vehicleId);
     return vehicle ? `${vehicle.name} ${vehicle.license_plate ? `(${vehicle.license_plate})` : ''}` : 'Unknown';
   };
+
+  if (!workOrder) return null;
 
   if (loading) {
     return (
