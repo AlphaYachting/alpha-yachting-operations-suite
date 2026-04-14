@@ -9,11 +9,9 @@
 import React, { useState } from 'react';
 import { Calendar, Mail, Zap, StickyNote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
 import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 
-export default function DashboardQuickActions({ onDispatch, onNote }) {
+export default function DashboardQuickActions({ onDispatch, onEmailToLead, onNote }) {
   const [showQuickCapture, setShowQuickCapture] = useState(false);
 
   return (
@@ -33,16 +31,14 @@ export default function DashboardQuickActions({ onDispatch, onNote }) {
           Dispatch
         </Button>
 
-        {/* 2. E-Mail to Lead */}
+        {/* 2. E-Mail to Lead — opens parser dialog in Dashboard, NOT navigation */}
         <Button
           size="sm"
-          asChild
+          onClick={onEmailToLead}
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
-          <Link to={createPageUrl('LeadsV2')}>
-            <Mail className="h-4 w-4 mr-1" />
-            E-Mail to Lead
-          </Link>
+          <Mail className="h-4 w-4 mr-1" />
+          E-Mail to Lead
         </Button>
 
         {/* 3. Quick Capture */}
