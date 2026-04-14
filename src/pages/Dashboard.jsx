@@ -71,13 +71,13 @@ export default function Dashboard() {
   const [offers, setOffers] = useState([]);
   const [notes, setNotes] = useState([]);
   const [kpis, setKpis] = useState(null);
-  const [quickCaptureCounts, setQuickCaptureCounts] = useState({ new: 0, reviewed: 0 });
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
   const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [quickCaptureCounts, setQuickCaptureCounts] = useState({ new: 0, reviewed: 0 });
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -101,7 +101,7 @@ export default function Dashboard() {
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
         base44.entities.Note.list('-created_date', 50),
-        base44.entities.QuickCaptureEntry.list('-created_date', 500),
+        base44.entities.QuickCaptureEntry.list('-created_date', 200)
       ]);
 
       setWorkOrders(woData);
@@ -113,10 +113,10 @@ export default function Dashboard() {
       setOffers(offersData);
       setNotes(notesData);
 
-      // Quick Capture open counts (live — always fresh)
-      const qcNew = qcData.filter(e => e.review_status === 'new').length;
-      const qcReviewed = qcData.filter(e => e.review_status === 'reviewed').length;
-      setQuickCaptureCounts({ new: qcNew, reviewed: qcReviewed });
+      setQuickCaptureCounts({
+        new: qcData.filter(e => e.review_status === 'new').length,
+        reviewed: qcData.filter(e => e.review_status === 'reviewed').length,
+      });
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
@@ -472,7 +472,7 @@ export default function Dashboard() {
 
       {/* KPI Block */}
       {kpis && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Link to={createPageUrl('Jobs')} className="block">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4">
@@ -542,40 +542,27 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
-
-          <Link to={createPageUrl('QuickCaptureReview')} className="block">
-            <Card className={`hover:shadow-md transition-shadow cursor-pointer ${
-              (quickCaptureCounts.new + quickCaptureCounts.reviewed) > 0
-                ? 'border-amber-300 bg-amber-50/40'
-                : ''
-            }`}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide">Open Captures</p>
-                    <p className={`text-2xl font-bold mt-1 ${
-                      (quickCaptureCounts.new + quickCaptureCounts.reviewed) > 0
-                        ? 'text-amber-600'
-                        : 'text-slate-900'
-                    }`}>
-                      {quickCaptureCounts.new + quickCaptureCounts.reviewed}
-                    </p>
-                    {(quickCaptureCounts.new + quickCaptureCounts.reviewed) > 0 && (
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {quickCaptureCounts.new} new · {quickCaptureCounts.reviewed} reviewed
-                      </p>
-                    )}
-                  </div>
-                  <Zap className={`h-8 w-8 opacity-50 ${
-                    (quickCaptureCounts.new + quickCaptureCounts.reviewed) > 0
-                      ? 'text-amber-500'
-                      : 'text-slate-400'
-                  }`} />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
         </div>
+      )}
+
+      {/* Quick Capture pending banner — shown only when there are open items */}
+      {(quickCaptureCounts.new + quickCaptureCounts.reviewed) > 0 && (
+        <Link to={createPageUrl('QuickCaptureReview')} className="block">
+          <Card className="border-amber-300 bg-amber-50/40 hover:shadow-md transition-shadow cursor-pointer">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Zap className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                <span className="text-sm font-medium text-amber-800">
+                  {quickCaptureCounts.new + quickCaptureCounts.reviewed} Quick Capture{(quickCaptureCounts.new + quickCaptureCounts.reviewed) > 1 ? 's' : ''} pending review
+                </span>
+                <span className="text-xs text-amber-600">
+                  ({quickCaptureCounts.new} new · {quickCaptureCounts.reviewed} reviewed)
+                </span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
       )}
 
       {/* 1) ACTION REQUIRED */}
