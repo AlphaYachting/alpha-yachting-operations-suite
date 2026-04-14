@@ -1,0 +1,50 @@
+{
+  "name": "ProductCatalogImport",
+  "type": "object",
+  "properties": {
+    "manufacturer_id": {
+      "type": "string",
+      "description": "Reference to Manufacturer"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "imported_by": {
+      "type": "string",
+      "description": "User email"
+    },
+    "row_count": {
+      "type": "number",
+      "default": 0
+    },
+    "created_count": {
+      "type": "number",
+      "default": 0
+    },
+    "updated_count": {
+      "type": "number",
+      "default": 0
+    },
+    "skipped_count": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "running",
+        "completed",
+        "failed"
+      ],
+      "default": "running"
+    },
+    "import_log_json": {
+      "type": "object",
+      "description": "Detailed per-row log"
+    }
+  },
+  "required": [
+    "manufacturer_id",
+    "file_name"
+  ]
+}

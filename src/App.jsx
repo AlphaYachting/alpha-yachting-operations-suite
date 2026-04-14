@@ -20,6 +20,8 @@ import InviteAccept from './pages/InviteAccept';
 import MaterialImport from './pages/MaterialImport';
 import BillingReview from './pages/BillingReview';
 import MaterialImportDetail from './pages/MaterialImportDetail';
+import ProductCatalog from './pages/ProductCatalog';
+import ProductCatalogImport from './pages/ProductCatalogImport';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -175,6 +177,8 @@ const AuthenticatedApp = () => {
         <Route path="/PlanningReadiness" element={<LayoutWrapper currentPageName="PlanningReadiness"><PlanningReadiness /></LayoutWrapper>} />
         <Route path="/QuickCaptureReview" element={<LayoutWrapper currentPageName="QuickCaptureReview"><QuickCaptureReview /></LayoutWrapper>} />
         <Route path="/ProjectHealth" element={<LayoutWrapper currentPageName="ProjectHealth"><ProjectHealth /></LayoutWrapper>} />
+        <Route path="/ProductCatalog" element={<LayoutWrapper currentPageName="ProductCatalog"><ProductCatalog /></LayoutWrapper>} />
+        <Route path="/ProductCatalogImport" element={<LayoutWrapper currentPageName="ProductCatalogImport"><ProductCatalogImport /></LayoutWrapper>} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </>

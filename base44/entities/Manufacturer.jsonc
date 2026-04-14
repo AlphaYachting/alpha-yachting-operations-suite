@@ -1,0 +1,29 @@
+{
+  "name": "Manufacturer",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Manufacturer display name (e.g. Victron Energy)"
+    },
+    "code": {
+      "type": "string",
+      "description": "Short slug / code (e.g. VICTRON, GARMIN)"
+    },
+    "default_tax_rate": {
+      "type": "number",
+      "default": 20,
+      "description": "Default VAT rate percentage"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "name": "ProductCatalogItem",
+  "type": "object",
+  "properties": {
+    "manufacturer_id": {
+      "type": "string",
+      "description": "Reference to Manufacturer"
+    },
+    "source_import_id": {
+      "type": "string",
+      "description": "Reference to ProductCatalogImport"
+    },
+    "product_code": {
+      "type": "string",
+      "description": "Manufacturer product code (e.g. BPC000100400)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Product name / description"
+    },
+    "gross_price": {
+      "type": "number",
+      "description": "Bruttobetrag"
+    },
+    "net_price": {
+      "type": "number",
+      "description": "Nettobetrag"
+    },
+    "purchase_price": {
+      "type": "number",
+      "description": "Einkaufspreis"
+    },
+    "tax_rate": {
+      "type": "number",
+      "default": 20,
+      "description": "USt (%)"
+    },
+    "external_category_code": {
+      "type": "string",
+      "description": "KPD or equivalent category code"
+    },
+    "currency": {
+      "type": "string",
+      "default": "EUR"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "searchable_text": {
+      "type": "string",
+      "description": "Denormalized search field: manufacturer + code + name + category"
+    },
+    "source_row_hash": {
+      "type": "string",
+      "description": "Hash of the source row for change detection"
+    },
+    "last_imported_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "manufacturer_id",
+    "product_code",
+    "product_name"
+  ]
+}

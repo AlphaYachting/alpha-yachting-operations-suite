@@ -80,6 +80,11 @@ const navItems = [
   { name: 'Billing Review', icon: Receipt, page: 'BillingReview', leadTechAllowed: true },
   { name: 'Invoices', icon: Receipt, page: 'Invoices' },
   
+  // PRODUCT CATALOG
+  { header: 'PRODUCT CATALOG' },
+  { name: 'Product Catalog', icon: Package, page: 'ProductCatalog', leadTechAllowed: true },
+  { name: 'Catalog Import', icon: Upload, page: 'ProductCatalogImport' },
+
   // RESOURCES
   { header: 'RESOURCES' },
   { name: 'Material Import', icon: Truck, page: 'MaterialImport' },
