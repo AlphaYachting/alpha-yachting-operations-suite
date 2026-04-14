@@ -121,6 +121,7 @@ import Vehicles from './pages/Vehicles';
 import WorkOrderDetail from './pages/WorkOrderDetail';
 import WorkOrders from './pages/WorkOrders';
 import WorkshopDisplay from './pages/WorkshopDisplay';
+import DashboardV2 from './pages/DashboardV2';
 import __Layout from './Layout.jsx';
 
 
@@ -144,6 +145,7 @@ export const PAGES = {
     "CustomerProjectDetailSimulate": CustomerProjectDetailSimulate,
     "Customers": Customers,
     "Dashboard": Dashboard,
+    "DashboardV2": DashboardV2,
     "DatabaseBackup": DatabaseBackup,
     "EmailConfiguration": EmailConfiguration,
     "EmailEngineSandbox": EmailEngineSandbox,
@@ -202,7 +204,7 @@ export const PAGES = {
 }
 
 export const pagesConfig = {
-    mainPage: "Dashboard",
+    mainPage: "DashboardV2",
     Pages: PAGES,
     Layout: __Layout,
 };
