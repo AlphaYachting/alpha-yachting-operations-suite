@@ -65,21 +65,25 @@ export default function ProductCatalog() {
     }
     setSearching(true);
     try {
-      let results;
-      if (mfgId && !query.trim()) {
-        results = await base44.entities.ProductCatalogItem.filter({ manufacturer_id: mfgId, active: true }, 'product_name', 100);
-      } else if (mfgId && query.trim()) {
-        // Filter locally after fetching by manufacturer
-        const all = await base44.entities.ProductCatalogItem.filter({ manufacturer_id: mfgId, active: true }, 'product_name', 500);
-        const q = query.toLowerCase();
-        results = all.filter(p => p.searchable_text?.includes(q) || p.product_code?.toLowerCase().includes(q) || p.product_name?.toLowerCase().includes(q));
+      const q = query.trim().toLowerCase();
+      let results = [];
+
+      if (mfgId && !q) {
+        // No query, just manufacturer filter — load all for that manufacturer
+        results = await base44.entities.ProductCatalogItem.filter({ manufacturer_id: mfgId, active: true }, 'product_name', 2000);
       } else {
-        // Search all — filter by searchable_text contains query
-        const all = await base44.entities.ProductCatalogItem.filter({ active: true }, 'product_name', 500);
-        const q = query.toLowerCase();
-        results = all.filter(p => p.searchable_text?.includes(q) || p.product_code?.toLowerCase().includes(q) || p.product_name?.toLowerCase().includes(q));
+        // Load ALL active products — limit 2000 covers large catalogs (Victron has ~919)
+        const filterObj = mfgId ? { manufacturer_id: mfgId, active: true } : { active: true };
+        const all = await base44.entities.ProductCatalogItem.filter(filterObj, 'product_name', 2000);
+
+        results = all.filter(p =>
+          p.searchable_text?.includes(q) ||
+          p.product_code?.toLowerCase().includes(q) ||
+          p.product_name?.toLowerCase().includes(q)
+        );
       }
-      setSearchResults(results.slice(0, 100));
+
+      setSearchResults(results.slice(0, 200));
     } catch (err) {
       console.error('Search error:', err);
     } finally {
