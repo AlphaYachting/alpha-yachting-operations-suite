@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ErrorBoundary from '@/components/ErrorBoundary';
 // Add page imports here
+import DashboardV2 from './pages/DashboardV2';
 import PlanningAgent from './pages/PlanningAgent';
 import ProjectHealth from './pages/ProjectHealth';
 import QuickCaptureReview from './pages/QuickCaptureReview';
@@ -139,7 +140,7 @@ const AuthenticatedApp = () => {
     const role = user.role;
     if (role === 'technician') return 'TeamMobileHome';
     if (role === 'customer') return 'CustomerPortal';
-    return 'Dashboard';
+    return 'DashboardV2';
   };
 
   const landingPageName = getRoleLandingPage();
@@ -169,6 +170,7 @@ const AuthenticatedApp = () => {
         <Route path="/MaterialImport" element={<LayoutWrapper currentPageName="MaterialImport"><MaterialImport /></LayoutWrapper>} />
         <Route path="/BillingReview" element={<LayoutWrapper currentPageName="BillingReview"><BillingReview /></LayoutWrapper>} />
         <Route path="/MaterialImportDetail" element={<LayoutWrapper currentPageName="MaterialImportDetail"><MaterialImportDetail /></LayoutWrapper>} />
+        <Route path="/DashboardV2" element={<LayoutWrapper currentPageName="DashboardV2"><DashboardV2 /></LayoutWrapper>} />
         <Route path="/PlanningAgent" element={<LayoutWrapper currentPageName="PlanningAgent"><PlanningAgent /></LayoutWrapper>} />
         <Route path="/PlanningReadiness" element={<LayoutWrapper currentPageName="PlanningReadiness"><PlanningReadiness /></LayoutWrapper>} />
         <Route path="/QuickCaptureReview" element={<LayoutWrapper currentPageName="QuickCaptureReview"><QuickCaptureReview /></LayoutWrapper>} />

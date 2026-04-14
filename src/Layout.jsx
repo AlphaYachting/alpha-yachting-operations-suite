@@ -62,7 +62,7 @@ const navItems = [
   // OPERATIONS
   { header: 'OPERATIONS', technicianAllowed: true },
   { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard', leadTechAllowed: true },
-  { name: 'Dashboard', icon: LayoutDashboard, page: 'Dashboard', leadTechAllowed: true },
+  { name: 'Dashboard', icon: LayoutDashboard, page: 'DashboardV2', leadTechAllowed: true },
   { name: 'My Tasks', icon: ClipboardList, page: 'MyTasks', technicianAllowed: true },
   { name: 'Schedule', icon: Clock, page: 'Schedule', technicianAllowed: true },
   { name: 'Projects', icon: Briefcase, page: 'Jobs', leadTechAllowed: true },
