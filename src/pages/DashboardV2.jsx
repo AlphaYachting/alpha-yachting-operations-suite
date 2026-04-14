@@ -114,9 +114,9 @@ export default function DashboardV2() {
       // Quick Capture pending count
       try {
         const qcData = await base44.entities.QuickCaptureEntry.filter(
-          { status: 'pending_review' },
+          { review_status: 'new' },
           '-created_date',
-          50
+          200
         );
         setQuickCaptureCount(qcData.length);
       } catch {
