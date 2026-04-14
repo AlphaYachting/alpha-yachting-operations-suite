@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
-import ConversionDialog from '@/components/quickcapture/ConversionDialog';
+import ConversionDialog from '@/components/quickcapture/ConversionDialog.jsx';
 
 const TYPE_CONFIG = {
   material_entry:   { label: 'Material / Parts',   color: 'bg-amber-100 text-amber-800',   border: 'border-amber-200' },
@@ -32,11 +32,12 @@ const STATUS_CONFIG = {
 function getRoutedLink(recordType, recordId) {
   if (!recordType || !recordId) return null;
   const map = {
-    Lead:  'LeadDetail',
-    Offer: 'OfferDetail',
+    Lead:       'LeadDetail',
+    Offer:      'OfferDetail',
+    WorkOrder:  'WorkOrderDetail',
     CustomerMaterialEntry: null,
-    Note: null,
-    Task: null, // navigated via WorkOrder — show label only
+    Note:       null,
+    Task:       null, // no standalone Task detail page — label only
   };
   const page = map[recordType];
   if (!page) return null;
@@ -124,6 +125,8 @@ export default function QuickCaptureReview() {
   };
 
   const handleConversionSuccess = ({ recordType, recordId }) => {
+    // DB write already happened inside ConversionDialog.writeTraceability()
+    // Update local state to reflect the routed status immediately
     setEntries(prev => prev.map(e =>
       e.id === convertingEntry.id
         ? { ...e, review_status: 'routed', routed_record_type: recordType, routed_record_id: recordId, routed_at: new Date().toISOString() }
@@ -352,20 +355,24 @@ export default function QuickCaptureReview() {
                     </div>
                   )}
 
-                  {/* Type-specific conversion actions */}
+                  {/* Type-specific conversion actions — spec-correct mapping */}
                   {(entry.review_status === 'new' || entry.review_status === 'reviewed') && (
                     <div className="pt-2 border-t space-y-2">
                       <div className="flex items-center flex-wrap gap-1.5">
 
-                        {/* Create Task — task_candidate */}
-                        {entry.suggested_type === 'task_candidate' && (
+                        {/* task_candidate → Task under WO, OR new WorkOrder */}
+                        {entry.suggested_type === 'task_candidate' && (<>
                           <Button size="sm" onClick={() => openConvert(entry, 'Task')}
                             className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
-                            <ArrowRight className="h-3 w-3 mr-1" />Create Task
+                            <ArrowRight className="h-3 w-3 mr-1" />Add Task to WO
                           </Button>
-                        )}
+                          <Button size="sm" onClick={() => openConvert(entry, 'Note')}
+                            className="bg-slate-600 hover:bg-slate-700 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Note
+                          </Button>
+                        </>)}
 
-                        {/* Material Entry */}
+                        {/* material_entry → Customer Material Entry */}
                         {entry.suggested_type === 'material_entry' && (
                           <Button size="sm" onClick={() => openConvert(entry, 'CustomerMaterialEntry')}
                             className="bg-amber-500 hover:bg-amber-600 text-white text-xs">
@@ -373,31 +380,55 @@ export default function QuickCaptureReview() {
                           </Button>
                         )}
 
-                        {/* Customer Note — tool_tracking, internal_note, task_candidate */}
-                        {['tool_tracking', 'internal_note', 'task_candidate'].includes(entry.suggested_type) && (
+                        {/* customer_request → Lead, Offer Draft */}
+                        {entry.suggested_type === 'customer_request' && (<>
+                          <Button size="sm" onClick={() => openConvert(entry, 'Lead')}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Lead
+                          </Button>
+                          <Button size="sm" onClick={() => openConvert(entry, 'Offer')}
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Offer Draft
+                          </Button>
+                        </>)}
+
+                        {/* project_intake → Lead, Offer Draft */}
+                        {entry.suggested_type === 'project_intake' && (<>
+                          <Button size="sm" onClick={() => openConvert(entry, 'Lead')}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Lead
+                          </Button>
+                          <Button size="sm" onClick={() => openConvert(entry, 'Offer')}
+                            className="bg-green-600 hover:bg-green-700 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Offer Draft
+                          </Button>
+                        </>)}
+
+                        {/* internal_note → Customer Note */}
+                        {entry.suggested_type === 'internal_note' && (
                           <Button size="sm" onClick={() => openConvert(entry, 'Note')}
                             className="bg-slate-700 hover:bg-slate-800 text-white text-xs">
                             <ArrowRight className="h-3 w-3 mr-1" />Customer Note
                           </Button>
                         )}
 
-                        {/* Lead — project_intake, customer_request */}
-                        {['project_intake', 'customer_request'].includes(entry.suggested_type) && (
-                          <Button size="sm" onClick={() => openConvert(entry, 'Lead')}
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                            <ArrowRight className="h-3 w-3 mr-1" />Lead
+                        {/* tool_tracking → Customer Note */}
+                        {entry.suggested_type === 'tool_tracking' && (
+                          <Button size="sm" onClick={() => openConvert(entry, 'Note')}
+                            className="bg-slate-700 hover:bg-slate-800 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Customer Note
                           </Button>
                         )}
 
-                        {/* Offer Draft — customer_request or any type */}
-                        {['customer_request', 'project_intake'].includes(entry.suggested_type) && (
-                          <Button size="sm" onClick={() => openConvert(entry, 'Offer')}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs">
-                            <ArrowRight className="h-3 w-3 mr-1" />Offer Draft
+                        {/* Fallback for unclassified entries */}
+                        {!entry.suggested_type && (
+                          <Button size="sm" onClick={() => openConvert(entry, 'Note')}
+                            className="bg-slate-700 hover:bg-slate-800 text-white text-xs">
+                            <ArrowRight className="h-3 w-3 mr-1" />Save as Note
                           </Button>
                         )}
 
-                        {/* Mark Reviewed (secondary action) */}
+                        {/* Mark Reviewed (secondary) */}
                         {entry.review_status === 'new' && (
                           <Button size="sm" variant="outline" onClick={() => updateStatus(entry, 'reviewed')}
                             disabled={isActing} className="text-blue-700 border-blue-200 text-xs">
