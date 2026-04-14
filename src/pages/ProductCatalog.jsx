@@ -7,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Search, ShoppingCart, AlertCircle, Package, CheckCircle2, X, ChevronRight } from 'lucide-react';
+import { Search, ShoppingCart, AlertCircle, Package, CheckCircle2, X, ChevronRight, FileText, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import CatalogPDFDialog from '@/components/catalog/CatalogPDFDialog';
+import CreateOfferFromCatalogDialog from '@/components/catalog/CreateOfferFromCatalogDialog';
 
 export default function ProductCatalog() {
   const [manufacturers, setManufacturers] = useState([]);
@@ -31,6 +33,8 @@ export default function ProductCatalog() {
 
   const [adding, setAdding] = useState(false);
   const [addSuccess, setAddSuccess] = useState(false);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [createOfferDialogOpen, setCreateOfferDialogOpen] = useState(false);
 
   const searchTimerRef = useRef(null);
 
@@ -446,12 +450,49 @@ export default function ProductCatalog() {
                   {!selectedOfferId && (
                     <p className="text-xs text-amber-600 text-center">Select an offer first</p>
                   )}
+
+                  <div className="border-t pt-3 space-y-2">
+                    <Button
+                      variant="outline"
+                      className="w-full border-violet-300 text-violet-700 hover:bg-violet-50"
+                      onClick={() => setCreateOfferDialogOpen(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create New Offer
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full border-slate-300 text-slate-600 hover:bg-slate-50"
+                      onClick={() => setPdfDialogOpen(true)}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generate PDF (Order/RFQ)
+                    </Button>
+                  </div>
                 </>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <CatalogPDFDialog
+        open={pdfDialogOpen}
+        onOpenChange={setPdfDialogOpen}
+        selectedItems={selectedItems}
+        manufacturerName={(() => {
+          const mfgIds = [...new Set(Object.values(selectedItems).map(({ item }) => item.manufacturer_id))];
+          return mfgIds.length === 1 ? getMfgName(mfgIds[0]) : mfgIds.map(getMfgName).join(', ');
+        })()}
+      />
+
+      <CreateOfferFromCatalogDialog
+        open={createOfferDialogOpen}
+        onOpenChange={setCreateOfferDialogOpen}
+        selectedItems={selectedItems}
+        getMfgName={getMfgName}
+        onOfferCreated={() => { setSelectedItems({}); setAddSuccess(false); }}
+      />
     </div>
   );
 }
