@@ -53,6 +53,8 @@ import { toast } from 'sonner';
 import JobForm from '@/components/jobs/JobForm';
 import WorkOrderForm from '@/components/workorders/WorkOrderForm';
 import { notifyWorkOrderAssignment } from '@/components/notifications/notificationUtils';
+import { buildMarinaEmailUrl } from '@/utils/marinaEmail';
+import { Mail } from 'lucide-react';
 
 const statusColors = {
   New: 'bg-slate-100 text-slate-700',
@@ -531,7 +533,23 @@ export default function ProjectDetail() {
           </div>
           <p className="text-slate-500 mt-1">{project.service_category} • {project.job_type}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {location && (
+            <Button
+              variant="outline"
+              onClick={() => window.open(buildMarinaEmailUrl({
+                location,
+                boat,
+                customer,
+                tasks,
+                refNumber: project.job_number
+              }), '_self')}
+              className="border-teal-500 text-teal-600 hover:bg-teal-50 gap-2"
+            >
+              <Mail className="h-4 w-4" />
+              Marina E-Mail
+            </Button>
+          )}
           <Button 
             variant="outline" 
             onClick={() => setShowPrintDialog(true)}

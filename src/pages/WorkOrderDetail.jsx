@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { buildMarinaEmailUrl } from '@/utils/marinaEmail';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -23,6 +24,7 @@ import {
   FileText as FileTextIcon,
   Send,
   Eye,
+  Mail,
   Trash2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -683,7 +685,24 @@ export default function WorkOrderDetail() {
             WO #{workOrder.work_order_number || workOrder.id.slice(-6)}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+           {location && (
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={() => window.open(buildMarinaEmailUrl({
+                 location,
+                 boat,
+                 customer,
+                 tasks,
+                 refNumber: workOrder.work_order_number
+               }), '_self')}
+               className="border-teal-500 text-teal-600 hover:bg-teal-50"
+             >
+               <Mail className="h-4 w-4 mr-2" />
+               Marina E-Mail
+             </Button>
+           )}
            <Button 
              asChild
              variant="outline"
