@@ -10,18 +10,13 @@ import {
   MapPin,
   Users,
   ChevronRight,
-  AlertCircle,
   CheckCircle2,
   Phone,
   FileText,
   Briefcase,
-  TrendingUp,
   Activity,
-  Plus,
   StickyNote,
-  X,
-  BarChart2,
-  Zap
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,11 +42,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, parseISO, isPast, isToday, differenceInDays, startOfDay, endOfDay, addDays, startOfWeek } from 'date-fns';
 import { toast } from 'sonner';
-import JobForm from '@/components/jobs/JobForm';
-import WorkOrderForm from '@/components/workorders/WorkOrderForm';
-import LeadForm from '@/components/leads/LeadForm';
 import CapacityModal from '@/components/dashboard/CapacityModal';
 import DispatchFullscreenModal from '@/components/dispatch/DispatchFullscreenModal';
+import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -72,12 +65,8 @@ export default function Dashboard() {
   const [notes, setNotes] = useState([]);
   const [kpis, setKpis] = useState(null);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
-  const [showProjectDialog, setShowProjectDialog] = useState(false);
-  const [showWorkOrderDialog, setShowWorkOrderDialog] = useState(false);
-  const [showLeadDialog, setShowLeadDialog] = useState(false);
   const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [quickCaptureCounts, setQuickCaptureCounts] = useState({ new: 0, reviewed: 0 });
   const [noteForm, setNoteForm] = useState({
     text: '',
     reference_type: 'None',
@@ -92,7 +81,7 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData, qcData] = await Promise.all([
+      const [woData, jobsData, custData, boatsData, locData, leadsData, offersData, notesData] = await Promise.all([
         base44.entities.WorkOrder.list('-scheduled_date', 100),
         base44.entities.Job.list('-created_date', 50),
         base44.entities.Customer.list('-created_date', 50),
@@ -100,8 +89,7 @@ export default function Dashboard() {
         base44.entities.Location.list(),
         base44.entities.Lead.list('-created_date', 30),
         base44.entities.Offer.list('-created_date', 30),
-        base44.entities.Note.list('-created_date', 50),
-        base44.entities.QuickCaptureEntry.list('-created_date', 200)
+        base44.entities.Note.list('-created_date', 50)
       ]);
 
       setWorkOrders(woData);
@@ -112,11 +100,6 @@ export default function Dashboard() {
       setLeads(leadsData);
       setOffers(offersData);
       setNotes(notesData);
-
-      setQuickCaptureCounts({
-        new: qcData.filter(e => e.review_status === 'new').length,
-        reviewed: qcData.filter(e => e.review_status === 'reviewed').length,
-      });
 
       // Load or calculate KPIs (max 2x per day)
       await loadKPIs();
@@ -416,58 +399,10 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-500 mt-1">Operational overview</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            size="sm" 
-            onClick={() => setShowDispatchModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Calendar className="h-4 w-4 mr-1" />
-            Dispatch
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowProjectDialog(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Project
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowWorkOrderDialog(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Work Order
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowLeadDialog(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Lead
-          </Button>
-          <Button 
-            size="sm" 
-            asChild
-            className="bg-cyan-600 hover:bg-cyan-700 text-white"
-          >
-            <Link to={createPageUrl('Offers') + '?new=true'}>
-              <Plus className="h-4 w-4 mr-1" />
-              Offer
-            </Link>
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={() => setShowNoteDialog(true)}
-            className="bg-yellow-600 hover:bg-yellow-700 text-white"
-          >
-            <StickyNote className="h-4 w-4 mr-1" />
-            Note
-          </Button>
-        </div>
+        <DashboardQuickActions
+          onDispatch={() => setShowDispatchModal(true)}
+          onNote={() => setShowNoteDialog(true)}
+        />
       </div>
 
       {/* KPI Block */}
@@ -543,26 +478,6 @@ export default function Dashboard() {
             </Card>
           </div>
         </div>
-      )}
-
-      {/* Quick Capture pending banner — shown only when there are open items */}
-      {(quickCaptureCounts.new + quickCaptureCounts.reviewed) > 0 && (
-        <Link to={createPageUrl('QuickCaptureReview')} className="block">
-          <Card className="border-amber-300 bg-amber-50/40 hover:shadow-md transition-shadow cursor-pointer">
-            <CardContent className="p-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Zap className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                <span className="text-sm font-medium text-amber-800">
-                  {quickCaptureCounts.new + quickCaptureCounts.reviewed} Quick Capture{(quickCaptureCounts.new + quickCaptureCounts.reviewed) > 1 ? 's' : ''} pending review
-                </span>
-                <span className="text-xs text-amber-600">
-                  ({quickCaptureCounts.new} new · {quickCaptureCounts.reviewed} reviewed)
-                </span>
-              </div>
-              <ChevronRight className="h-4 w-4 text-amber-500 flex-shrink-0" />
-            </CardContent>
-          </Card>
-        </Link>
       )}
 
       {/* 1) ACTION REQUIRED */}
@@ -892,89 +807,6 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* 3) PROJECT HEALTH */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-emerald-600" />
-            Project Health
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {activeJobs.length === 0 ? (
-            <p className="text-sm text-slate-500">No active projects</p>
-          ) : (
-            <div className="space-y-3">
-              {activeJobs.map(job => {
-                const health = getProjectHealth(job);
-                const progress = getProjectProgress(job);
-                const boat = boats.find(b => b.id === job.boat_id);
-                const location = locations.find(l => l.id === job.location_id);
-                
-                return (
-                  <Link 
-                    key={job.id} 
-                    to={createPageUrl('JobDetail') + `?id=${job.id}`}
-                    className="block p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className={`h-3 w-3 rounded-full ${
-                            health.status === 'red' ? 'bg-red-500' : 
-                            health.status === 'yellow' ? 'bg-yellow-500' : 
-                            'bg-green-500'
-                          }`} />
-                          <p className="font-medium text-slate-900">{job.title}</p>
-                          <Badge variant="outline" className={
-                            health.status === 'red' ? 'bg-red-50 text-red-700 border-red-200' :
-                            health.status === 'yellow' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                            'bg-green-50 text-green-700 border-green-200'
-                          }>
-                            {health.label}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 mt-2 text-sm text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Ship className="h-3.5 w-3.5" />
-                            {boat?.vessel_name || 'Unknown'}
-                          </div>
-                          {location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3.5 w-3.5" />
-                              {location.name}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="mt-3 space-y-1.5">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-600">Progress: {progress}%</span>
-                            <span className="text-slate-500 italic">{health.step}</span>
-                          </div>
-                          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all rounded-full ${
-                                health.status === 'red' ? 'bg-red-500' :
-                                health.status === 'yellow' ? 'bg-yellow-500' :
-                                'bg-green-500'
-                              }`}
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* 4) SALES & ORGANISATION */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
@@ -1071,80 +903,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Project Dialog */}
-      <Dialog open={showProjectDialog} onOpenChange={setShowProjectDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
-          </DialogHeader>
-          <JobForm
-            customers={customers}
-            boats={boats}
-            locations={locations}
-            onSave={async (projectData) => {
-              const woNumber = `P${Date.now().toString().slice(-6)}`;
-              const newJob = await base44.entities.Job.create({ 
-                ...projectData, 
-                job_number: woNumber, 
-                intake_date: new Date().toISOString() 
-              });
-              setJobs([newJob, ...jobs]);
-              setShowProjectDialog(false);
-              toast.success('Project created');
-              await loadDashboardData();
-            }}
-            onCancel={() => setShowProjectDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Work Order Dialog */}
-      <Dialog open={showWorkOrderDialog} onOpenChange={setShowWorkOrderDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create Work Order</DialogTitle>
-          </DialogHeader>
-          <WorkOrderForm
-            jobs={jobs}
-            technicians={[]}
-            customers={customers}
-            boats={boats}
-            onSave={async (workOrderData) => {
-              const woNumber = `WO${Date.now().toString().slice(-6)}`;
-              const newWo = await base44.entities.WorkOrder.create({ 
-                ...workOrderData, 
-                work_order_number: woNumber 
-              });
-              setWorkOrders([newWo, ...workOrders]);
-              setShowWorkOrderDialog(false);
-              toast.success('Work order created');
-              await loadDashboardData();
-            }}
-            onCancel={() => setShowWorkOrderDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Lead Dialog */}
-      <Dialog open={showLeadDialog} onOpenChange={setShowLeadDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Create New Lead</DialogTitle>
-          </DialogHeader>
-          <LeadForm
-            locations={locations}
-            onSave={async (leadData) => {
-              const newLead = await base44.entities.Lead.create(leadData);
-              setLeads([newLead, ...leads]);
-              setShowLeadDialog(false);
-              toast.success('Lead created');
-              await loadDashboardData();
-            }}
-            onCancel={() => setShowLeadDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Capacity Modal */}
       <CapacityModal 
