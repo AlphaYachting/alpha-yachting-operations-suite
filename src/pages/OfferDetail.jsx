@@ -210,6 +210,10 @@ export default function OfferDetail() {
 
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     autoSaveTimerRef.current = setTimeout(async () => {
+      // GUARD: Verify the URL still matches the offerId this timer was created for.
+      // If the user navigated to a different offer, abort — do NOT write to the new offer.
+      const currentUrlId = new URLSearchParams(window.location.search).get('id');
+      if (currentUrlId !== offerId) return;
       if (!formData.customer_id || !formData.title) return;
       setAutoSaveStatus('saving');
       try {
