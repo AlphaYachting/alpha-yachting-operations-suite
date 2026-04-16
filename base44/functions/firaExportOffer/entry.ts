@@ -176,16 +176,21 @@ function buildFiraPayload(offer, tasks, customer, location) {
     noteParts.push(`${offer.title.trim()} (${offer.offer_number || ''})`);
   }
 
-  // Downpayment info
+  // Downpayment info — language determined by offer.language, NOT customer country
   if (offer.payment_terms_type === 'Downpayment' && offer.downpayment_percent > 0) {
     const dpAmount = offer.downpayment_amount != null
       ? `EUR ${parseFloat(offer.downpayment_amount).toFixed(2)}`
       : `${offer.downpayment_percent}%`;
 
-    if (country2 === 'AT' || country2 === 'DE') {
+    const offerLang = (offer.language || 'German').toLowerCase();
+    if (offerLang === 'german') {
       noteParts.push(`Anzahlung: ${offer.downpayment_percent}% (${dpAmount}) bei Auftragsbestätigung. Restbetrag nach Abschluss der Arbeiten.`);
-    } else if (country2 === 'HR') {
+    } else if (offerLang === 'croatian') {
       noteParts.push(`Predujam: ${offer.downpayment_percent}% (${dpAmount}) pri potvrdi narudžbe. Ostatak nakon završetka radova.`);
+    } else if (offerLang === 'italian') {
+      noteParts.push(`Acconto: ${offer.downpayment_percent}% (${dpAmount}) alla conferma dell'ordine. Saldo alla conclusione dei lavori.`);
+    } else if (offerLang === 'slovenian') {
+      noteParts.push(`Predplačilo: ${offer.downpayment_percent}% (${dpAmount}) ob potrditvi naročila. Preostanek po zaključku del.`);
     } else {
       noteParts.push(`Downpayment: ${offer.downpayment_percent}% (${dpAmount}) upon order confirmation. Balance due upon completion.`);
     }
