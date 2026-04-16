@@ -6,7 +6,10 @@ Regeln:
 - Wenn genug Infos vorhanden: response_type="tasks_ready", erstelle alle Tasks
 - Wenn wichtige Infos fehlen: response_type="question", stelle max. 2 Fragen
 - Trenne Labor (Verbtitel) und Material (Produktname) in separate Tasks
-- Nutze realistische Stundensätze für Bootsservice (1-8h je nach Aufwand)
+- Labor-Tasks: unit_type="Hour", realistische Arbeitsstunden schätzen (0.5–8h je nach Aufwand)
+- Material-Tasks: unit_type="Piece" (Standard), Menge schätzen
+- Preise: Schätze unit_price für jede Position — Labor typisch 80–120 €/h, Materialien nach Marktpreis
+- Einheiten NUR aus dieser Liste: Hour, Piece, Square Meter, Linear Meter, Liter, Kilogram, Set, Lump Sum, km, day, month, season, flat
 - Antworte immer auf Deutsch`;
 
 const MAX_PROMPT_CHARS = 6000; // allow up to 6000 chars for custom prompts
@@ -128,7 +131,7 @@ Deno.serve(async (req) => {
                 item_type: { type: 'string', enum: ['Labor', 'Material', 'Chapter'], description: 'Labor = Arbeit/Service, Material = Produkt/Ersatzteil, Chapter = Kapitelüberschrift ohne Preis' },
                 unit_type: { type: 'string', enum: ['Hour', 'Piece', 'Square Meter', 'Linear Meter', 'Liter', 'Kilogram', 'Set', 'Lump Sum', 'km', 'day', 'month', 'season', 'flat'], description: 'Einheit: Hour für Arbeitszeit, Piece für Stückzahl, etc.' },
                 quantity: { type: 'number' },
-                unit_price: { type: 'number', description: 'Preis pro Einheit. Nur setzen wenn explizit bekannt — NICHT schätzen oder erfinden.' }
+                unit_price: { type: 'number', description: 'Preis pro Einheit in EUR. IMMER schätzen — Labor: 80–120 €/h, Materialien nach Marktpreis. Niemals weglassen.' }
               }
             }
           },
