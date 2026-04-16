@@ -22,6 +22,7 @@ import BillingReview from './pages/BillingReview';
 import MaterialImportDetail from './pages/MaterialImportDetail';
 import ProductCatalog from './pages/ProductCatalog';
 import ProductCatalogImport from './pages/ProductCatalogImport';
+import LeadsV3 from './pages/LeadsV3';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -179,6 +180,7 @@ const AuthenticatedApp = () => {
         <Route path="/ProjectHealth" element={<LayoutWrapper currentPageName="ProjectHealth"><ProjectHealth /></LayoutWrapper>} />
         <Route path="/ProductCatalog" element={<LayoutWrapper currentPageName="ProductCatalog"><ProductCatalog /></LayoutWrapper>} />
         <Route path="/ProductCatalogImport" element={<LayoutWrapper currentPageName="ProductCatalogImport"><ProductCatalogImport /></LayoutWrapper>} />
+        <Route path="/LeadsV3" element={<LayoutWrapper currentPageName="LeadsV3"><LeadsV3 /></LayoutWrapper>} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </>
