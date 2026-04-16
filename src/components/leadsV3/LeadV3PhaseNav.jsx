@@ -57,7 +57,7 @@ export default function LeadV3PhaseNav({ leads, activePhase, onPhaseSelect }) {
               {/* Count */}
               <div
                 className={cn(
-                  'text-xl font-bold tabular-nums transition-colors',
+                  'text-lg font-bold tabular-nums transition-colors',
                   isActive ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-600'
                 )}
               >
@@ -67,7 +67,7 @@ export default function LeadV3PhaseNav({ leads, activePhase, onPhaseSelect }) {
               {/* Label */}
               <div
                 className={cn(
-                  'text-[10px] font-medium uppercase tracking-wide text-center leading-tight transition-colors',
+                  'text-xs font-medium uppercase tracking-wide text-center leading-tight transition-colors',
                   isActive ? phase.text : 'text-slate-400 group-hover:text-slate-500'
                 )}
               >

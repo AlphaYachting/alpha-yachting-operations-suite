@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import LeadV3Card from './LeadV3Card';
 import { sortLeadsV3, V3_PHASES, getPhaseConfig } from '@/hooks/useLeadV3Data';
 import { cn } from '@/lib/utils';
@@ -8,15 +8,25 @@ function EmptyPhase({ phase }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div
-        className="w-12 h-12 rounded-full flex items-center justify-center mb-3 opacity-20"
+        className="w-10 h-10 rounded-full mb-3 opacity-20"
         style={{ backgroundColor: cfg.color }}
       />
-      <p className="text-slate-400 text-sm font-medium">No leads in {cfg.label}</p>
+      <p className="text-sm text-slate-400 font-medium">No leads in {cfg.label}</p>
     </div>
   );
 }
 
-export default function LeadV3List({ leads, users, activePhase, searchTerm }) {
+export default function LeadV3List({ leads: initialLeads, users, activePhase, searchTerm }) {
+  // Local state copy so quick-status updates reflect immediately without full reload
+  const [leads, setLeads] = useState(initialLeads);
+
+  // Sync when parent data changes
+  useEffect(() => { setLeads(initialLeads); }, [initialLeads]);
+
+  const handleStatusChange = (leadId, newStatus) => {
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+  };
+
   // Filter by phase
   const phaseFiltered = activePhase === 'All'
     ? leads
@@ -36,17 +46,14 @@ export default function LeadV3List({ leads, users, activePhase, searchTerm }) {
       })
     : phaseFiltered;
 
-  // V3 sort
   const sorted = sortLeadsV3(searchFiltered);
-
-  // User lookup map
   const userMap = Object.fromEntries(users.map(u => [u.id, u]));
 
   if (sorted.length === 0) {
     return <EmptyPhase phase={activePhase === 'All' ? 'New Incoming' : activePhase} />;
   }
 
-  // In "All" mode, group by phase for visual structure
+  // In "All" mode, group by phase
   if (activePhase === 'All') {
     return (
       <div className="space-y-8">
@@ -56,7 +63,7 @@ export default function LeadV3List({ leads, users, activePhase, searchTerm }) {
           return (
             <div key={phase.status}>
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: phase.color }} />
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: phase.color }} />
                 <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
                   {phase.label}
                 </span>
@@ -70,6 +77,7 @@ export default function LeadV3List({ leads, users, activePhase, searchTerm }) {
                     key={lead.id}
                     lead={lead}
                     assignedUser={userMap[lead.assigned_to_user_id] || null}
+                    onStatusChange={handleStatusChange}
                   />
                 ))}
               </div>
@@ -87,6 +95,7 @@ export default function LeadV3List({ leads, users, activePhase, searchTerm }) {
           key={lead.id}
           lead={lead}
           assignedUser={userMap[lead.assigned_to_user_id] || null}
+          onStatusChange={handleStatusChange}
         />
       ))}
     </div>
