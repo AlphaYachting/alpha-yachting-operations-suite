@@ -121,7 +121,7 @@ function QuickStatusDropdown({ lead, onStatusChange }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px]">
+        <div className="absolute right-0 top-full mt-1 z-[200] bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px]">
           {V3_PHASES.map(p => (
             <button
               key={p.status}
@@ -207,7 +207,7 @@ function AssignPopover({ lead, assignedUser, users, onAssigned }) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[180px]">
+        <div className="absolute left-0 top-full mt-1 z-[200] bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[180px]">
           <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
             Assign to
           </div>
@@ -265,7 +265,7 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
     <div className="group relative">
       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}&from=v3`} className="block">
         <div className={cn(
-          'bg-white rounded-lg border shadow-sm overflow-hidden transition-all duration-150',
+          'bg-white rounded-lg border shadow-sm transition-all duration-150',
           'hover:shadow-md hover:border-slate-300',
           lead.accepted_by_assignee === false && assignedUser ? 'border-amber-200' : 'border-slate-200',
         )}>
