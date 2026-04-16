@@ -27,6 +27,10 @@ export default function LeadV3List({ leads: initialLeads, users, activePhase, se
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
   };
 
+  const handleAssigned = (leadId, userId) => {
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, assigned_to_user_id: userId, accepted_by_assignee: false } : l));
+  };
+
   // Filter by phase
   const phaseFiltered = activePhase === 'All'
     ? leads
@@ -77,7 +81,9 @@ export default function LeadV3List({ leads: initialLeads, users, activePhase, se
                     key={lead.id}
                     lead={lead}
                     assignedUser={userMap[lead.assigned_to_user_id] || null}
+                    users={users}
                     onStatusChange={handleStatusChange}
+                    onAssigned={handleAssigned}
                   />
                 ))}
               </div>
@@ -95,7 +101,9 @@ export default function LeadV3List({ leads: initialLeads, users, activePhase, se
           key={lead.id}
           lead={lead}
           assignedUser={userMap[lead.assigned_to_user_id] || null}
+          users={users}
           onStatusChange={handleStatusChange}
+          onAssigned={handleAssigned}
         />
       ))}
     </div>
