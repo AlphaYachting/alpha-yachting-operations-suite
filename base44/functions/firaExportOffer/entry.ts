@@ -197,6 +197,33 @@ function buildFiraPayload(offer, tasks, customer, location) {
   else if (country2 === 'HR') payload.termsHR = termsHR;
   else payload.termsEN = termsEN;
 
+  // Remark / Bemerkung — Downpayment-Info + customer_notes
+  const remarkParts = [];
+
+  if (offer.payment_terms_type === 'Downpayment' && offer.downpayment_percent > 0) {
+    const dpAmount = offer.downpayment_amount != null
+      ? `EUR ${parseFloat(offer.downpayment_amount).toFixed(2)}`
+      : `${offer.downpayment_percent}%`;
+
+    if (country2 === 'AT' || country2 === 'DE') {
+      remarkParts.push(`Anzahlung: ${offer.downpayment_percent}% (${dpAmount}) bei Auftragsbestätigung. Restbetrag nach Abschluss der Arbeiten.`);
+    } else if (country2 === 'HR') {
+      remarkParts.push(`Predujam: ${offer.downpayment_percent}% (${dpAmount}) pri potvrdi narudžbe. Ostatak nakon završetka radova.`);
+    } else {
+      remarkParts.push(`Downpayment: ${offer.downpayment_percent}% (${dpAmount}) upon order confirmation. Balance due upon completion.`);
+    }
+  } else if (offer.payment_terms_type === 'Installments' && offer.payment_schedule) {
+    remarkParts.push(offer.payment_schedule);
+  }
+
+  if (offer.customer_notes && offer.customer_notes.trim()) {
+    remarkParts.push(offer.customer_notes.trim());
+  }
+
+  if (remarkParts.length > 0) {
+    payload.remark = remarkParts.join('\n\n');
+  }
+
   return payload;
 }
 
