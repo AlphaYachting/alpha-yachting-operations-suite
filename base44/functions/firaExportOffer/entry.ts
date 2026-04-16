@@ -171,12 +171,7 @@ function buildFiraPayload(offer, tasks, customer, location) {
   // Build the visible note content — this goes into internalNote (what FIRA displays as "Notiz")
   const noteParts = [];
 
-  // Offer title + reference
-  if (offer.title) {
-    noteParts.push(`${offer.title.trim()} (${offer.offer_number || ''})`);
-  }
-
-  // Downpayment info — language determined by offer.language, NOT customer country
+  // Downpayment info FIRST — language determined by offer.language, NOT customer country
   if (offer.payment_terms_type === 'Downpayment' && offer.downpayment_percent > 0) {
     const dpAmount = offer.downpayment_amount != null
       ? `EUR ${parseFloat(offer.downpayment_amount).toFixed(2)}`
@@ -196,6 +191,11 @@ function buildFiraPayload(offer, tasks, customer, location) {
     }
   } else if (offer.payment_terms_type === 'Installments' && offer.payment_schedule) {
     noteParts.push(offer.payment_schedule);
+  }
+
+  // Offer title + reference (after payment info)
+  if (offer.title) {
+    noteParts.push(`${offer.title.trim()} (${offer.offer_number || ''})`);
   }
 
   // Customer-visible notes
