@@ -4,11 +4,15 @@ import LeadV3PhaseNav from '@/components/leadsV3/LeadV3PhaseNav';
 import LeadV3List from '@/components/leadsV3/LeadV3List';
 import { Input } from '@/components/ui/input';
 import { Search, Layers } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function LeadsV3() {
   const { leads, users, isLoading } = useLeadV3Data();
+  const { user: currentUser } = useAuth();
   const [activePhase, setActivePhase] = useState('New Incoming');
   const [searchTerm, setSearchTerm] = useState('');
+  // 'me' | 'all' | '<userId>'
+  const [ownerFilter, setOwnerFilter] = useState('me');
 
   if (isLoading) {
     return (
@@ -21,11 +25,18 @@ export default function LeadsV3() {
     );
   }
 
+  // Apply owner filter
+  const ownerFilteredLeads = leads.filter(l => {
+    if (ownerFilter === 'all') return true;
+    if (ownerFilter === 'me') return l.assigned_to_user_id === currentUser?.id;
+    return l.assigned_to_user_id === ownerFilter;
+  });
+
   // Active count for header
-  const activeCount = leads.filter(l => !['Ordered / Confirmed', 'Rejected'].includes(l.status)).length;
+  const activeCount = ownerFilteredLeads.filter(l => !['Ordered / Confirmed', 'Rejected'].includes(l.status)).length;
   const phaseCount = activePhase === 'All'
-    ? leads.length
-    : leads.filter(l => l.status === activePhase).length;
+    ? ownerFilteredLeads.length
+    : ownerFilteredLeads.filter(l => l.status === activePhase).length;
 
   return (
     <div className="space-y-5">
@@ -51,9 +62,9 @@ export default function LeadsV3() {
         onPhaseSelect={setActivePhase}
       />
 
-      {/* Search + count bar */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      {/* Search + owner filter + count bar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 max-w-sm min-w-[160px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="Search name, boat, location…"
@@ -62,6 +73,20 @@ export default function LeadsV3() {
             className="pl-9 bg-white border-slate-200 text-sm h-9"
           />
         </div>
+
+        {/* Owner filter */}
+        <select
+          value={ownerFilter}
+          onChange={e => setOwnerFilter(e.target.value)}
+          className="h-9 rounded-md border border-slate-200 bg-white text-sm text-slate-700 px-2.5 pr-7 focus:outline-none focus:ring-1 focus:ring-slate-300 cursor-pointer"
+        >
+          <option value="me">My Leads</option>
+          <option value="all">All Leads</option>
+          {users.filter(u => u.id !== currentUser?.id).map(u => (
+            <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
+          ))}
+        </select>
+
         <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
           {phaseCount} lead{phaseCount !== 1 ? 's' : ''}
           {searchTerm ? ' matching' : activePhase === 'All' ? ' total' : ` in ${activePhase}`}
@@ -70,7 +95,7 @@ export default function LeadsV3() {
 
       {/* Card list */}
       <LeadV3List
-        leads={leads}
+        leads={ownerFilteredLeads}
         users={users}
         activePhase={activePhase}
         searchTerm={searchTerm}
