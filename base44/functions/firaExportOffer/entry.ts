@@ -221,7 +221,7 @@ function buildFiraPayload(offer, tasks, customer, location) {
   }
 
   if (remarkParts.length > 0) {
-    payload.remark = remarkParts.join('\n\n');
+    payload.note = remarkParts.join('\n\n');
   }
 
   return payload;
