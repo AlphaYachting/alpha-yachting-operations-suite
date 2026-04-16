@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { user_input, conversation_history = [], offer_details = {}, language = 'German' } = await req.json();
+    const body = await req.json();
+    const { user_input, conversation_history = [], offer_details = {}, language = 'German' } = body;
 
     if (!user_input || !user_input.trim()) {
       return Response.json({ error: 'user_input is required' }, { status: 400 });
@@ -104,6 +105,7 @@ Deno.serve(async (req) => {
     const llmStart = Date.now();
     const response = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: fullPrompt,
+      file_urls: body.file_urls || undefined,
       response_json_schema: {
         type: 'object',
         properties: {
@@ -123,10 +125,10 @@ Deno.serve(async (req) => {
               properties: {
                 title: { type: 'string' },
                 description: { type: 'string' },
-                item_type: { type: 'string', description: 'Labor or Material' },
-                unit_type: { type: 'string', description: 'Hour, Piece, Liter, etc.' },
+                item_type: { type: 'string', enum: ['Labor', 'Material', 'Chapter'], description: 'Labor = Arbeit/Service, Material = Produkt/Ersatzteil, Chapter = Kapitelüberschrift ohne Preis' },
+                unit_type: { type: 'string', enum: ['Hour', 'Piece', 'Square Meter', 'Linear Meter', 'Liter', 'Kilogram', 'Set', 'Lump Sum', 'km', 'day', 'month', 'season', 'flat'], description: 'Einheit: Hour für Arbeitszeit, Piece für Stückzahl, etc.' },
                 quantity: { type: 'number' },
-                unit_price: { type: 'number' }
+                unit_price: { type: 'number', description: 'Preis pro Einheit. Nur setzen wenn explizit bekannt — NICHT schätzen oder erfinden.' }
               }
             }
           },

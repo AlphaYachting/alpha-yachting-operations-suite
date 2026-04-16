@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import AIAssistantChat from './AIAssistantChat';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Sparkles, AlertCircle, FileText, Upload, Trash2, Edit2, DollarSign, Percent, Bot } from 'lucide-react';
+import { Loader2, Sparkles, AlertCircle, FileText, Upload, Trash2, Edit2, DollarSign, Percent, Bot, Mic, MicOff } from 'lucide-react';
 import { processExtractedPosition } from './priceParser';
 import { calculateFinalPrice } from './markupCalculator';
 import { Switch } from '@/components/ui/switch';
@@ -36,11 +36,17 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
+const VALID_UNIT_TYPES = ['Hour', 'Piece', 'Square Meter', 'Linear Meter', 'Liter', 'Kilogram', 'Set', 'Lump Sum', 'km', 'day', 'month', 'season', 'flat'];
+
 export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated, onDescriptionGenerated, existingTasks = [] }) {
   const [mode, setMode] = useState('text'); // 'text', 'pdf', or 'assistant'
   const [prompt, setPrompt] = useState('');
-  const [defaultUnitPrice, setDefaultUnitPrice] = useState(70);
+  const [defaultUnitPrice, setDefaultUnitPrice] = useState(0);
   const [detailedExplanations, setDetailedExplanations] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [interimText, setInterimText] = useState('');
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognitionRef = useRef(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -61,6 +67,47 @@ export default function AIOfferGenerator({ formData, customers, boats, jobs, onT
   const [markupEnabled, setMarkupEnabled] = useState(false);
   const [markupPercent, setMarkupPercent] = useState(20);
   const [rounding, setRounding] = useState('None');
+
+  useEffect(() => {
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      setSpeechSupported(true);
+    }
+  }, []);
+
+  const getSpeechLang = () => {
+    const map = { German: 'de-DE', Italian: 'it-IT', Croatian: 'hr-HR', Slovenian: 'sl-SI' };
+    return map[formData?.language] || 'en-US';
+  };
+
+  const toggleVoice = () => {
+    if (!speechSupported) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      setInterimText('');
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = getSpeechLang();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => { setIsListening(false); setInterimText(''); };
+    recognition.onresult = (event) => {
+      let interim = '';
+      let final = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) final += event.results[i][0].transcript;
+        else interim += event.results[i][0].transcript;
+      }
+      if (final) { setPrompt(prev => prev + (prev ? ' ' : '') + final.trim()); setInterimText(''); }
+      else setInterimText(interim);
+    };
+    recognition.onerror = () => { setIsListening(false); setInterimText(''); setError('Sprachaufnahme fehlgeschlagen.'); };
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -183,24 +230,23 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
       if (response.tasks && Array.isArray(response.tasks)) {
         const tasksWithPrices = response.tasks.map(task => {
           if (task.item_type === 'Chapter') {
-            return {
-              title: task.title,
-              item_type: 'Chapter',
-              quantity: 0,
-              unit_price: 0,
-              total_amount: 0
-            };
+            return { title: task.title, item_type: 'Chapter', quantity: 0, unit_price: 0, total_amount: 0 };
           }
+          const isMaterial = task.item_type === 'Material';
+          // Normalize unit_type to valid enum value
+          const rawUnit = task.unit_type || '';
+          const validUnit = VALID_UNIT_TYPES.find(u => u.toLowerCase() === rawUnit.toLowerCase())
+            || (isMaterial ? 'Piece' : 'Hour');
+          // Use KI price if given, else defaultUnitPrice (user-set), else 0
           const unitPrice = (task.unit_price != null && task.unit_price > 0)
             ? task.unit_price
-            : defaultUnitPrice;
-          const isMaterial = task.item_type === 'Material';
+            : (defaultUnitPrice > 0 ? defaultUnitPrice : 0);
           return {
             ...task,
             item_type: task.item_type || 'Labor',
-            unit_type: task.unit_type || (isMaterial ? 'Piece' : 'Hour'),
+            unit_type: validUnit,
             unit_price: unitPrice,
-            total_amount: task.quantity * unitPrice
+            total_amount: (task.quantity || 1) * unitPrice
           };
         });
         
@@ -501,31 +547,57 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
       {mode === 'text' ? (
         <>
           <div className="space-y-2">
-            <Label>Describe the Work Needed</Label>
-        <Textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="e.g., Annual engine service for a 40hp Yamaha outboard, including oil change, filter replacement, spark plugs, and general inspection..."
-          rows={6}
-          disabled={generating}
-        />
+            <Label>Servicebeschreibung</Label>
+        <div className="relative">
+          <Textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="z.B. Jahresservice Yamaha 40PS Außenborder: Ölwechsel, Filter, Zündkerzen, Sichtprüfung..."
+            rows={6}
+            disabled={generating}
+            className={`pr-12 ${isListening ? 'border-red-300 bg-red-50/20' : ''}`}
+          />
+          {speechSupported && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={toggleVoice}
+              disabled={generating}
+              className={`absolute right-2 bottom-2 h-8 w-8 ${isListening ? 'text-red-500 bg-red-50' : 'text-slate-400'}`}
+              title={isListening ? 'Aufnahme stoppen' : 'Spracheingabe starten'}
+            >
+              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+        {isListening && interimText && (
+          <div className="text-xs text-slate-500 italic px-1">{interimText}</div>
+        )}
+        {isListening && !interimText && (
+          <div className="flex items-center gap-2 text-xs text-red-600 animate-pulse">
+            <div className="w-2 h-2 bg-red-500 rounded-full" />
+            Sprachaufnahme aktiv... Sprechen Sie jetzt.
+          </div>
+        )}
         <p className="text-xs text-slate-500">
-          Be specific about the type of work, equipment involved, and any special requirements
+          Möglichst genaue Beschreibung der Arbeit, Geräte und Anforderungen
         </p>
       </div>
 
       <div className="space-y-2">
-        <Label>Default Unit Price (€)</Label>
+        <Label>Fallback-Stückpreis (€) <span className="text-slate-400 font-normal">— optional, wenn KI keinen Preis liefert</span></Label>
         <Input
           type="number"
           step="1"
           min="0"
           value={defaultUnitPrice}
-          onChange={(e) => setDefaultUnitPrice(parseFloat(e.target.value) || 70)}
+          onChange={(e) => setDefaultUnitPrice(parseFloat(e.target.value) || 0)}
           disabled={generating}
+          placeholder="0 = kein Fallback"
         />
         <p className="text-xs text-slate-500">
-          This price will be applied to all generated tasks (you can adjust individual tasks later)
+          Nur anwenden wenn KI keinen Preis aus dem Text ableiten kann. Bei 0 bleibt der Preis leer.
         </p>
       </div>
 

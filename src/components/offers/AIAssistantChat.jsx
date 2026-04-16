@@ -6,8 +6,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import {
   Loader2, Send, Mic, MicOff, Sparkles, CheckCircle2,
-  AlertCircle, RotateCcw, Bot, User, Bug, ChevronDown, ChevronUp
+  AlertCircle, RotateCcw, Bot, User, Bug, ChevronDown, ChevronUp,
+  Paperclip, X, FileText, Image
 } from 'lucide-react';
+
+const VALID_UNIT_TYPES = ['Hour', 'Piece', 'Square Meter', 'Linear Meter', 'Liter', 'Kilogram', 'Set', 'Lump Sum', 'km', 'day', 'month', 'season', 'flat'];
 
 export default function AIAssistantChat({ formData, customers, boats, onTasksGenerated, onDescriptionGenerated, existingTasks = [] }) {
   const [messages, setMessages] = useState([]);
@@ -15,26 +18,26 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isListening, setIsListening] = useState(false);
+  const [interimText, setInterimText] = useState('');
   const [generatedTasks, setGeneratedTasks] = useState(null);
   const [generatedDescription, setGeneratedDescription] = useState('');
   const [speechSupported, setSpeechSupported] = useState(false);
   const [lastDebug, setLastDebug] = useState(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState([]); // [{name, url, type}]
+  const [uploading, setUploading] = useState(false);
 
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
-  const interimTranscriptRef = useRef('');
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
-    // Check Web Speech API support
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
       setSpeechSupported(true);
     }
-
-    // Welcome message
     setMessages([{
       role: 'assistant',
-      content: 'Hallo! Ich bin Ihr KI-Angebots-Assistent. Bitte beschreiben Sie die gewünschten Serviceleistungen oder fügen Sie ein Gesprächsprotokoll/Transkript ein. Ich werde gezielte Rückfragen stellen, falls Informationen fehlen.',
+      content: 'Hallo! Ich bin Ihr KI-Angebots-Assistent. Bitte beschreiben Sie die gewünschten Serviceleistungen oder fügen Sie ein Gesprächsprotokoll/Transkript ein. Sie können auch Dateien (Fotos, Dokumente) anhängen. Ich werde gezielte Rückfragen stellen, falls Informationen fehlen.',
       type: 'intro'
     }]);
   }, []);
@@ -57,27 +60,55 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
     };
   };
 
+  const handleFileAttach = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const uploaded = await Promise.all(files.map(async (file) => {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        return { name: file.name, url: file_url, type: file.type };
+      }));
+      setAttachedFiles(prev => [...prev, ...uploaded]);
+    } catch (err) {
+      setError('Datei-Upload fehlgeschlagen: ' + err.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (idx) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
   const sendMessage = async (textOverride) => {
     const text = (textOverride || inputText).trim();
-    if (!text) return;
+    if (!text && attachedFiles.length === 0) return;
 
-    const userMessage = { role: 'user', content: text };
+    const fileUrls = attachedFiles.map(f => f.url);
+    const fileNames = attachedFiles.map(f => f.name).join(', ');
+    const displayContent = text + (fileNames ? `\n📎 ${fileNames}` : '');
+
+    const userMessage = { role: 'user', content: displayContent };
     const newMessages = [...messages.filter(m => m.type !== 'intro'), userMessage];
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
+    setAttachedFiles([]);
     setIsLoading(true);
     setError(null);
     setGeneratedTasks(null);
 
     try {
-      // Build history for context (exclude intro)
       const history = newMessages.slice(0, -1).map(m => ({
         role: m.role,
         content: m.content
       }));
 
       const result = await base44.functions.invoke('processOfferAssistantInteraction', {
-        user_input: text,
+        user_input: text || '(Datei angehängt)',
+        file_urls: fileUrls.length > 0 ? fileUrls : undefined,
         conversation_history: history,
         offer_details: getOfferDetails(),
         language: formData?.language || 'German'
@@ -91,13 +122,11 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
         throw new Error('Keine Antwort vom KI-Assistenten erhalten.');
       }
 
-      const assistantMessage = {
+      setMessages(prev => [...prev, {
         role: 'assistant',
         content: data.message,
         type: data.response_type
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
+      }]);
 
       if (data.response_type === 'tasks_ready' && data.tasks?.length > 0) {
         setGeneratedTasks(data.tasks);
@@ -117,57 +146,51 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
     }
   };
 
+  const getSpeechLang = () => {
+    const map = { German: 'de-DE', Italian: 'it-IT', Croatian: 'hr-HR', Slovenian: 'sl-SI' };
+    return map[formData?.language] || 'en-US';
+  };
+
   const toggleVoice = () => {
     if (!speechSupported) return;
-
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
+      setInterimText('');
       return;
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = formData?.language === 'German' ? 'de-DE'
-      : formData?.language === 'Italian' ? 'it-IT'
-      : formData?.language === 'Croatian' ? 'hr-HR'
-      : formData?.language === 'Slovenian' ? 'sl-SI'
-      : 'en-US';
+    recognition.lang = getSpeechLang();
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    recognition.onstart = () => {
-      interimTranscriptRef.current = '';
-      setIsListening(true);
-    };
-    recognition.onend = () => {
-      interimTranscriptRef.current = '';
-      setIsListening(false);
-    };
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => { setIsListening(false); setInterimText(''); };
 
     recognition.onresult = (event) => {
-      let interimTranscript = '';
-      let finalTranscript = '';
-
+      let interim = '';
+      let final = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript;
+        if (event.results[i].isFinal) {
+          final += event.results[i][0].transcript;
         } else {
-          interimTranscript += result[0].transcript;
+          interim += event.results[i][0].transcript;
         }
       }
-
-      if (finalTranscript) {
-        setInputText(prev => prev + (prev ? ' ' : '') + finalTranscript.trim());
+      if (final) {
+        setInputText(prev => prev + (prev ? ' ' : '') + final.trim());
+        setInterimText('');
+      } else {
+        setInterimText(interim);
       }
-      // Store interim for potential display (not added to input)
-      interimTranscriptRef.current = interimTranscript;
     };
 
     recognition.onerror = () => {
       setIsListening(false);
+      setInterimText('');
       setError('Sprachaufnahme fehlgeschlagen. Bitte erneut versuchen.');
     };
 
@@ -178,18 +201,26 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
   const applyTasks = () => {
     if (!generatedTasks) return;
 
-    const tasksWithPrices = generatedTasks.map(task => ({
-      ...task,
-      unit_type: task.unit_type || (task.item_type === 'Labor' ? 'Hour' : 'Piece'),
-      unit_price: task.unit_price || 70,
-      total_amount: (task.quantity || 1) * (task.unit_price || 70)
-    }));
+    const tasksWithPrices = generatedTasks.map(task => {
+      if (task.item_type === 'Chapter') {
+        return { title: task.title, item_type: 'Chapter', quantity: 0, unit_price: 0, total_amount: 0 };
+      }
+      // Normalize unit_type to a valid enum value
+      const rawUnit = task.unit_type || '';
+      const validUnit = VALID_UNIT_TYPES.find(u => u.toLowerCase() === rawUnit.toLowerCase()) 
+        || (task.item_type === 'Labor' ? 'Hour' : 'Piece');
+      return {
+        ...task,
+        unit_type: validUnit,
+        // No fallback price — leave as 0 if KI didn't provide one, user sets it manually
+        unit_price: task.unit_price || 0,
+        total_amount: (task.quantity || 1) * (task.unit_price || 0)
+      };
+    });
 
-    const finalTasks = existingTasks?.length > 0
+    onTasksGenerated(existingTasks?.length > 0
       ? [...existingTasks, ...tasksWithPrices]
-      : tasksWithPrices;
-
-    onTasksGenerated(finalTasks);
+      : tasksWithPrices);
 
     if (generatedDescription && onDescriptionGenerated) {
       onDescriptionGenerated(generatedDescription);
@@ -208,6 +239,7 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
     setGeneratedTasks(null);
     setGeneratedDescription('');
     setError(null);
+    setAttachedFiles([]);
   };
 
   return (
@@ -219,18 +251,16 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
         </Alert>
       )}
 
-      {/* Prompt too long warning */}
       {lastDebug?.prompt_source?.includes('truncated') && (
         <Alert className="border-amber-300 bg-amber-50">
           <AlertCircle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800 text-xs">
-            <strong>Warnung:</strong> Ihr System-Prompt in den Einstellungen ist zu lang ({lastDebug.prompt_source.match(/\d+/)?.[0]} Zeichen) und wurde auf 3.000 Zeichen gekürzt. Das kann zu ungenauen Ergebnissen führen.{' '}
+            <strong>Warnung:</strong> Ihr System-Prompt ist zu lang ({lastDebug.prompt_source.match(/\d+/)?.[0]} Zeichen) und wurde gekürzt.{' '}
             <a href="/AIAssistantSettings" className="underline font-medium">→ Prompt kürzen</a>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Debug Info */}
       {lastDebug && (
         <div className="border border-slate-200 rounded-lg bg-slate-50 text-xs">
           <button
@@ -239,20 +269,17 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
           >
             <span className="flex items-center gap-1.5">
               <Bug className="h-3 w-3" />
-              Debug-Info — Letzte Antwort: {lastDebug.llm_ms}ms LLM / {lastDebug.total_ms}ms gesamt
-              {lastDebug.prompt_source?.includes('truncated') && (
-                <span className="text-amber-600 font-medium">⚠ Prompt gekürzt</span>
-              )}
+              Debug: {lastDebug.llm_ms}ms LLM / {lastDebug.total_ms}ms gesamt
+              {lastDebug.prompt_source?.includes('truncated') && <span className="text-amber-600 font-medium">⚠ gekürzt</span>}
             </span>
             {showDebug ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </button>
           {showDebug && (
             <div className="px-3 pb-3 space-y-1 font-mono text-slate-600 border-t border-slate-200 pt-2">
-              <div>Prompt-Quelle: <span className="text-slate-800">{lastDebug.prompt_source}</span></div>
-              <div>Prompt-Länge: <span className={lastDebug.prompt_length > 3000 ? 'text-red-600 font-bold' : 'text-slate-800'}>{lastDebug.prompt_length} Zeichen</span></div>
-              <div>Verlauf gesendet: <span className="text-slate-800">{lastDebug.history_used} Nachrichten</span></div>
-              <div>LLM-Zeit: <span className="text-slate-800">{lastDebug.llm_ms}ms</span></div>
-              <div>Gesamt: <span className="text-slate-800">{lastDebug.total_ms}ms</span></div>
+              <div>Quelle: <span className="text-slate-800">{lastDebug.prompt_source}</span></div>
+              <div>Länge: <span className={lastDebug.prompt_length > 3000 ? 'text-red-600 font-bold' : 'text-slate-800'}>{lastDebug.prompt_length} Zeichen</span></div>
+              <div>Verlauf: <span className="text-slate-800">{lastDebug.history_used} Nachrichten</span></div>
+              <div>LLM: <span className="text-slate-800">{lastDebug.llm_ms}ms</span></div>
             </div>
           )}
         </div>
@@ -267,7 +294,7 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
                 <Bot className="h-4 w-4 text-purple-600" />
               </div>
             )}
-            <div className={`max-w-[80%] rounded-xl px-3 py-2 text-sm leading-relaxed ${
+            <div className={`max-w-[80%] rounded-xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
               msg.role === 'user'
                 ? 'bg-slate-800 text-white rounded-br-sm'
                 : msg.type === 'tasks_ready'
@@ -306,45 +333,45 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
       {/* Generated Tasks Preview */}
       {generatedTasks && (
         <div className="border border-green-200 rounded-lg bg-green-50 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium text-green-800">
-              <Sparkles className="h-4 w-4" />
-              {generatedTasks.length} Tasks generiert
-            </div>
-            <div className="flex gap-2">
-              {generatedTasks.map((t, i) => (
-                <Badge key={i} variant="outline" className="text-xs bg-white">
-                  {t.item_type}
-                </Badge>
-              ))}
-            </div>
+          <div className="flex items-center gap-2 text-sm font-medium text-green-800">
+            <Sparkles className="h-4 w-4" />
+            {generatedTasks.length} Tasks generiert
           </div>
           <div className="space-y-1 max-h-36 overflow-y-auto">
             {generatedTasks.map((task, i) => (
               <div key={i} className="flex items-start justify-between text-xs bg-white rounded p-2 border border-green-100">
                 <div>
                   <span className="font-medium text-slate-800">{task.title}</span>
-                  {task.description && (
-                    <p className="text-slate-500 mt-0.5 line-clamp-1">{task.description}</p>
-                  )}
+                  {task.description && <p className="text-slate-500 mt-0.5 line-clamp-1">{task.description}</p>}
                 </div>
                 <div className="text-right ml-3 flex-shrink-0">
                   <span className="text-slate-600">{task.quantity} {task.unit_type || (task.item_type === 'Labor' ? 'Std.' : 'Stk.')}</span>
-                  {task.unit_price && (
+                  {task.unit_price > 0 && (
                     <div className="text-green-700 font-medium">€{task.unit_price}/Einheit</div>
                   )}
                 </div>
               </div>
             ))}
           </div>
-          <Button
-            onClick={applyTasks}
-            className="w-full bg-green-600 hover:bg-green-700"
-            size="sm"
-          >
+          <Button onClick={applyTasks} className="w-full bg-green-600 hover:bg-green-700" size="sm">
             <CheckCircle2 className="h-4 w-4 mr-2" />
             {generatedTasks.length} Tasks in Angebot übernehmen
           </Button>
+        </div>
+      )}
+
+      {/* Attached Files Preview */}
+      {attachedFiles.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {attachedFiles.map((f, i) => (
+            <div key={i} className="flex items-center gap-1 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1 text-xs text-blue-800">
+              {f.type?.startsWith('image/') ? <Image className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+              <span className="max-w-[140px] truncate">{f.name}</span>
+              <button onClick={() => removeFile(i)} className="ml-1 hover:text-red-600">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -355,26 +382,48 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Servicebeschreibung, Gesprächsnotizen oder Transkript eingeben... (Strg+Enter zum Senden)"
+            placeholder={isListening ? '🎙 Sprachaufnahme läuft...' : 'Servicebeschreibung, Gesprächsnotizen oder Transkript eingeben... (Strg+Enter zum Senden)'}
             rows={3}
             disabled={isLoading}
-            className="pr-12 resize-none"
+            className="pr-20 resize-none"
           />
-          {speechSupported && (
+          <div className="absolute right-2 bottom-2 flex gap-1">
+            {/* File Upload Button */}
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              onClick={toggleVoice}
-              className={`absolute right-2 bottom-2 h-8 w-8 ${isListening ? 'text-red-500 bg-red-50' : 'text-slate-400'}`}
-              title={isListening ? 'Aufnahme stoppen' : 'Spracheingabe starten'}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || uploading}
+              className="h-8 w-8 text-slate-400 hover:text-blue-600"
+              title="Datei anhängen"
             >
-              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
             </Button>
-          )}
+            {/* Voice Button */}
+            {speechSupported && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={toggleVoice}
+                className={`h-8 w-8 ${isListening ? 'text-red-500 bg-red-50' : 'text-slate-400'}`}
+                title={isListening ? 'Aufnahme stoppen' : 'Spracheingabe starten'}
+              >
+                {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+            )}
+          </div>
         </div>
 
-        {isListening && (
+        {/* Interim voice transcript */}
+        {isListening && interimText && (
+          <div className="text-xs text-slate-500 italic px-2">
+            {interimText}
+          </div>
+        )}
+
+        {isListening && !interimText && (
           <div className="flex items-center gap-2 text-xs text-red-600 animate-pulse">
             <div className="w-2 h-2 bg-red-500 rounded-full" />
             Sprachaufnahme aktiv... Sprechen Sie jetzt.
@@ -384,7 +433,7 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
         <div className="flex gap-2">
           <Button
             onClick={() => sendMessage()}
-            disabled={isLoading || !inputText.trim()}
+            disabled={isLoading || (!inputText.trim() && attachedFiles.length === 0)}
             className="flex-1 bg-purple-600 hover:bg-purple-700"
           >
             {isLoading ? (
@@ -393,17 +442,21 @@ export default function AIAssistantChat({ formData, customers, boats, onTasksGen
               <><Send className="h-4 w-4 mr-2" />Senden</>
             )}
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={resetConversation}
-            title="Gespräch zurücksetzen"
-          >
+          <Button variant="outline" size="icon" onClick={resetConversation} title="Gespräch zurücksetzen">
             <RotateCcw className="h-4 w-4" />
           </Button>
         </div>
-        <p className="text-xs text-slate-400 text-center">Strg+Enter zum Senden • Gespräch läuft iterativ bis alle Infos vorhanden sind</p>
+        <p className="text-xs text-slate-400 text-center">Strg+Enter zum Senden • 📎 Dateien/Fotos anhängbar</p>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*,application/pdf,.xlsx,.xls,.csv,.doc,.docx"
+        onChange={handleFileAttach}
+        className="hidden"
+      />
     </div>
   );
 }
