@@ -1476,7 +1476,7 @@ Alpha Yachting Service Team`);
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Language</Label>
                   <Select value={formData.language} onValueChange={(v) => updateField('language', v)}>
@@ -1489,21 +1489,6 @@ Alpha Yachting Service Team`);
                       <SelectItem value="Italian">Italian</SelectItem>
                       <SelectItem value="Slovenian">Slovenian</SelectItem>
                       <SelectItem value="Croatian">Croatian</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={formData.status} onValueChange={handleStatusChange}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Draft">Draft</SelectItem>
-                      <SelectItem value="Sent">Sent</SelectItem>
-                      <SelectItem value="Approved">Approved</SelectItem>
-                      <SelectItem value="Rejected">Rejected</SelectItem>
-                      <SelectItem value="Expired">Expired</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
