@@ -72,8 +72,8 @@ const navItems = [
   
   // SALES & CUSTOMER FLOW
   { header: 'SALES & CUSTOMER FLOW', leadTechAllowed: true },
-  { name: 'Leads', icon: Phone, page: 'LeadsV2', leadTechAllowed: true },
-  { name: 'Leads V3 ✦', icon: Phone, page: 'LeadsV3', leadTechAllowed: true, subLevel: true },
+  { name: 'Leads', icon: Phone, page: 'LeadsV3', leadTechAllowed: true },
+  { name: 'Leads V2', icon: Phone, page: 'LeadsV2', leadTechAllowed: true, subLevel: true },
   { name: 'Offers', icon: FileText, page: 'Offers', leadTechAllowed: true },
   { name: 'Customers', icon: Users, page: 'Customers', leadTechAllowed: true },
   { name: 'Boats', icon: Ship, page: 'Boats', leadTechAllowed: true },
