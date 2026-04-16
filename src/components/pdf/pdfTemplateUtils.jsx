@@ -846,47 +846,68 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
           ` : ''}
         </div>
 
-        <!-- Notes -->
-        ${document.public_notes ? `
-          <div class="notes"><strong>Notes:</strong>
-${document.public_notes}</div>
-        ` : ''}
-
-        <!-- Payment Terms (Offers Only) -->
-        ${!isInvoice && document.payment_terms_type ? `
+        <!-- Payment Terms (Offers Only) — shown BEFORE notes -->
+        ${!isInvoice && document.payment_terms_type ? (() => {
+          const lang = document.language || 'German';
+          const labels = {
+            paymentTermsTitle: { German: 'Zahlungsbedingungen', English: 'Payment Terms', Italian: 'Termini di pagamento', Slovenian: 'Plačilni pogoji', Croatian: 'Uvjeti plaćanja' },
+            downpayment: { German: 'Anzahlung', English: 'Downpayment', Italian: 'Acconto', Slovenian: 'Predplačilo', Croatian: 'Predujam' },
+            remaining: { German: 'Restbetrag', English: 'Remaining', Italian: 'Residuo', Slovenian: 'Preostalo', Croatian: 'Ostatak' },
+            fullPayment: { German: 'Zahlung in voller Höhe bei Rechnungsstellung', English: 'Payment in full upon invoice', Italian: 'Pagamento completo alla fattura', Slovenian: 'Plačilo v celoti ob računu', Croatian: 'Plaćanje u cijelosti po računu' },
+            installmentsDefault: { German: 'Ratenzahlung gemäß Vereinbarung', English: 'Payment in installments as agreed', Italian: 'Pagamento a rate come concordato', Slovenian: 'Plačilo v obrokih po dogovoru', Croatian: 'Plaćanje u ratama prema dogovoru' },
+          };
+          const t = (key) => (labels[key] && labels[key][lang]) || labels[key]['German'];
+          return `
           <div class="payment-terms-box">
-            <div class="payment-terms-title">Payment Terms</div>
+            <div class="payment-terms-title">${t('paymentTermsTitle')}</div>
             ${document.payment_terms_type === 'Downpayment' ? `
               <div class="downpayment-info">
-                <div><strong>Downpayment:</strong> ${document.downpayment_percent || 0}% (${document.currency || 'EUR'}${(document.downpayment_amount || 0).toFixed(2)})</div>
-                <div><strong>Remaining:</strong> ${100 - (document.downpayment_percent || 0)}% (${document.currency || 'EUR'}${((document.total || 0) - (document.downpayment_amount || 0)).toFixed(2)})</div>
+                <div><strong>${t('downpayment')}:</strong> ${document.downpayment_percent || 0}% (${document.currency || 'EUR'} ${(document.downpayment_amount || 0).toFixed(2)})</div>
+                <div><strong>${t('remaining')}:</strong> ${100 - (document.downpayment_percent || 0)}% (${document.currency || 'EUR'} ${((document.total || 0) - (document.downpayment_amount || 0)).toFixed(2)})</div>
               </div>
               ${document.payment_schedule ? `<div class="downpayment-info" style="border-bottom: none;">${document.payment_schedule}</div>` : ''}
             ` : ''}
             ${document.payment_terms_type === 'Installments' ? `
-              <div style="margin: 6px 0;">${document.payment_schedule || 'Payment in installments as agreed'}</div>
+              <div style="margin: 6px 0;">${document.payment_schedule || t('installmentsDefault')}</div>
             ` : ''}
             ${document.payment_terms_type === 'Full' ? `
-              <div style="margin: 6px 0;">Payment in full upon invoice</div>
+              <div style="margin: 6px 0;">${t('fullPayment')}</div>
             ` : ''}
           </div>
-        ` : ''}
+        `;
+        })() : ''}
+
+        <!-- Notes (after Payment Terms) -->
+        ${document.public_notes ? (() => {
+          const lang = document.language || 'German';
+          const notesLabel = { German: 'Bemerkungen', English: 'Notes', Italian: 'Note', Slovenian: 'Opombe', Croatian: 'Napomene' };
+          return `<div class="notes"><strong>${notesLabel[lang] || 'Bemerkungen'}:</strong>
+${document.public_notes}</div>`;
+        })() : ''}
 
         <!-- Retention of Title (Offers Only) -->
-        ${!isInvoice && document.retention_of_title_enabled ? `
+        ${!isInvoice && document.retention_of_title_enabled ? (() => {
+          const lang = document.language || 'German';
+          const titles = { German: 'Eigentumsvorbehalt', English: 'Retention of Title', Italian: 'Riserva di proprietà', Slovenian: 'Pridržek lastninske pravice', Croatian: 'Zadržaj prava vlasništva' };
+          return `
           <div class="ownership-notice">
-            <div class="ownership-title">Retention of Title / Eigentumsvorbehalt</div>
+            <div class="ownership-title">${titles[lang] || titles['German']}</div>
             <div class="ownership-text">${document.retention_of_title_text || 'All delivered goods and services remain the property of Alpha Yachting until full payment has been received.'}</div>
           </div>
-        ` : ''}
+        `;
+        })() : ''}
 
         <!-- Safety & Environmental Compliance (Offers Only) -->
-        ${!isInvoice && document.safety_compliance_clause ? `
+        ${!isInvoice && document.safety_compliance_clause ? (() => {
+          const lang = document.language || 'German';
+          const titles = { German: 'Sicherheits- & Umwelthinweis', English: 'Safety & Environmental Compliance', Italian: 'Conformità sicurezza e ambiente', Slovenian: 'Varnost in okolje', Croatian: 'Sigurnost i okoliš' };
+          return `
           <div class="safety-compliance">
-            <div class="safety-title">${document.language === 'English' ? 'Safety & Environmental Compliance' : 'Sicherheits- & Umwelthinweis'}</div>
+            <div class="safety-title">${titles[lang] || titles['German']}</div>
             <div class="safety-text">${document.safety_compliance_clause}</div>
           </div>
-        ` : ''}
+        `;
+        })() : ''}
 
         <!-- Payment Info -->
         ${isInvoice && template.bank_iban ? `
