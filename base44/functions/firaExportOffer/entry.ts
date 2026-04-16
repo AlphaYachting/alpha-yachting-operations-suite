@@ -168,6 +168,38 @@ function buildFiraPayload(offer, tasks, customer, location) {
   const dueDate = validTo || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
   const webshopOrderId = deriveWebshopOrderId(offer.offer_number);
 
+  // Build the visible note content — this goes into internalNote (what FIRA displays as "Notiz")
+  const noteParts = [];
+
+  // Offer title + reference
+  if (offer.title) {
+    noteParts.push(`${offer.title.trim()} (${offer.offer_number || ''})`);
+  }
+
+  // Downpayment info
+  if (offer.payment_terms_type === 'Downpayment' && offer.downpayment_percent > 0) {
+    const dpAmount = offer.downpayment_amount != null
+      ? `EUR ${parseFloat(offer.downpayment_amount).toFixed(2)}`
+      : `${offer.downpayment_percent}%`;
+
+    if (country2 === 'AT' || country2 === 'DE') {
+      noteParts.push(`Anzahlung: ${offer.downpayment_percent}% (${dpAmount}) bei Auftragsbestätigung. Restbetrag nach Abschluss der Arbeiten.`);
+    } else if (country2 === 'HR') {
+      noteParts.push(`Predujam: ${offer.downpayment_percent}% (${dpAmount}) pri potvrdi narudžbe. Ostatak nakon završetka radova.`);
+    } else {
+      noteParts.push(`Downpayment: ${offer.downpayment_percent}% (${dpAmount}) upon order confirmation. Balance due upon completion.`);
+    }
+  } else if (offer.payment_terms_type === 'Installments' && offer.payment_schedule) {
+    noteParts.push(offer.payment_schedule);
+  }
+
+  // Customer-visible notes
+  if (offer.customer_notes && offer.customer_notes.trim()) {
+    noteParts.push(offer.customer_notes.trim());
+  }
+
+  const builtNote = noteParts.join('\n\n');
+
   const payload = {
     webshopOrderId,
     webshopType: 'CUSTOM',
@@ -188,7 +220,8 @@ function buildFiraPayload(offer, tasks, customer, location) {
     netto,
     lineItems,
     totalShipping: null,
-    internalNote: `Alpha Yachting Offer ${offer.offer_number || ''} | AY CRM Export`,
+    internalNote: builtNote || `Alpha Yachting Offer ${offer.offer_number || ''} | AY CRM Export`,
+    note: builtNote || null,
     paymentType: 'TRANSAKCIJSKI',
   };
 
@@ -196,33 +229,6 @@ function buildFiraPayload(offer, tasks, customer, location) {
   if (country2 === 'AT' || country2 === 'DE') payload.termsDE = termsDE;
   else if (country2 === 'HR') payload.termsHR = termsHR;
   else payload.termsEN = termsEN;
-
-  // Remark / Bemerkung — Downpayment-Info + customer_notes
-  const remarkParts = [];
-
-  if (offer.payment_terms_type === 'Downpayment' && offer.downpayment_percent > 0) {
-    const dpAmount = offer.downpayment_amount != null
-      ? `EUR ${parseFloat(offer.downpayment_amount).toFixed(2)}`
-      : `${offer.downpayment_percent}%`;
-
-    if (country2 === 'AT' || country2 === 'DE') {
-      remarkParts.push(`Anzahlung: ${offer.downpayment_percent}% (${dpAmount}) bei Auftragsbestätigung. Restbetrag nach Abschluss der Arbeiten.`);
-    } else if (country2 === 'HR') {
-      remarkParts.push(`Predujam: ${offer.downpayment_percent}% (${dpAmount}) pri potvrdi narudžbe. Ostatak nakon završetka radova.`);
-    } else {
-      remarkParts.push(`Downpayment: ${offer.downpayment_percent}% (${dpAmount}) upon order confirmation. Balance due upon completion.`);
-    }
-  } else if (offer.payment_terms_type === 'Installments' && offer.payment_schedule) {
-    remarkParts.push(offer.payment_schedule);
-  }
-
-  if (offer.customer_notes && offer.customer_notes.trim()) {
-    remarkParts.push(offer.customer_notes.trim());
-  }
-
-  if (remarkParts.length > 0) {
-    payload.note = remarkParts.join('\n\n');
-  }
 
   return payload;
 }
