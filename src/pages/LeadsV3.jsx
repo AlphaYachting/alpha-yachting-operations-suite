@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/AuthContext';
 export default function LeadsV3() {
   const { leads, users, isLoading } = useLeadV3Data();
   const { user: currentUser } = useAuth();
-  const [activePhase, setActivePhase] = useState('New Incoming');
+  const [activePhase, setActivePhase] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   // 'me' | 'all' | '<userId>'
   const [ownerFilter, setOwnerFilter] = useState('me');
