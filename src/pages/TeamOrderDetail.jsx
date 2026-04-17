@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Loader2, AlertCircle, RefreshCw, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertCircle, RefreshCw, FileText, Download } from 'lucide-react';
 import TeamOrderForm from '@/components/teamorder/TeamOrderForm';
 import PDFExportButton from '@/components/pdf/PDFExportButton';
 import BriefingContextPreview from '@/components/teamorder/BriefingContextPreview';
-import { generateWorkerBriefPDF } from '@/components/pdf/WorkerBriefTemplate';
+import BriefingPreview from '@/components/teamorder/BriefingPreview';
+import { buildTeamOrderBriefDocument } from '@/components/pdf/buildTeamOrderBriefDocument';
+import { renderTeamOrderBriefToPDF } from '@/components/pdf/renderTeamOrderBriefToPDF';
 
 export default function TeamOrderDetail() {
   const navigate = useNavigate();
@@ -40,7 +42,8 @@ export default function TeamOrderDetail() {
   const [location, setLocation] = useState(null);
   const [jobDescriptionEn, setJobDescriptionEn] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
-  const [generatingWorkerBrief, setGeneratingWorkerBrief] = useState(false);
+  const [generatingBrief, setGeneratingBrief] = useState(false);
+  const [briefDocument, setBriefDocument] = useState(null);
   const [pdfTemplate, setPdfTemplate] = useState(null);
 
   useEffect(() => {
@@ -237,8 +240,8 @@ export default function TeamOrderDetail() {
       }));
   };
 
-  const handleGenerateWorkerBrief = async () => {
-    setGeneratingWorkerBrief(true);
+  const handleGenerateBrief = async () => {
+    setGeneratingBrief(true);
     setError(null);
     
     try {
@@ -249,7 +252,22 @@ export default function TeamOrderDetail() {
       
       const briefingContext = briefingContextResponse.data;
       
-      // Generate PDF from context
+      // Build unified brief document (used for both preview and PDF)
+      const unified = buildTeamOrderBriefDocument(briefingContext);
+      setBriefDocument(unified);
+    } catch (err) {
+      console.error('Error generating brief:', err);
+      setError(`Failed to generate brief: ${err.message}`);
+    } finally {
+      setGeneratingBrief(false);
+    }
+  };
+
+  const handleExportBriefPDF = async () => {
+    if (!briefDocument) return;
+    setError(null);
+    
+    try {
       const pdfTemplate_ = pdfTemplate || {
         company_name: 'Alpha Yachting',
         company_address: 'Novigrad, Croatia',
@@ -258,16 +276,12 @@ export default function TeamOrderDetail() {
         logo_url: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png'
       };
       
-      const pdfDoc = await generateWorkerBriefPDF(briefingContext, pdfTemplate_);
-      
-      // Download PDF
+      const pdfDoc = await renderTeamOrderBriefToPDF(briefDocument, pdfTemplate_);
       const fileName = `worker-brief-${workOrder?.work_order_number || 'WO'}-${new Date().getTime()}.pdf`;
       pdfDoc.save(fileName);
     } catch (err) {
-      console.error('Error generating worker brief:', err);
-      setError(`Failed to generate worker brief: ${err.message}`);
-    } finally {
-      setGeneratingWorkerBrief(false);
+      console.error('Error exporting PDF:', err);
+      setError(`Failed to export PDF: ${err.message}`);
     }
   };
 
@@ -306,19 +320,22 @@ export default function TeamOrderDetail() {
           {!isNew && workOrder && teamOrder.id && (
             <>
               <Button 
-                onClick={handleGenerateWorkerBrief} 
-                disabled={generatingWorkerBrief}
+                onClick={handleGenerateBrief} 
+                disabled={generatingBrief}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <FileText className="h-4 w-4 mr-2" />
-                {generatingWorkerBrief ? 'Generating...' : 'Generate Worker Brief PDF'}
+                {generatingBrief ? 'Generating...' : 'Generate Briefing'}
               </Button>
-              <PDFExportButton
-                document={getPartnerBriefPDFDocument()}
-                lineItems={getPartnerBriefPDFLineItems()}
-                templateId="PartnerBrief"
-                variant="default"
-              />
+              {briefDocument && (
+                <Button 
+                  onClick={handleExportBriefPDF}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export PDF
+                </Button>
+              )}
             </>
           )}
           <Button onClick={handleSave} disabled={saving} className="bg-purple-600 hover:bg-purple-700">
@@ -333,6 +350,11 @@ export default function TeamOrderDetail() {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
+
+      {/* Briefing Preview */}
+      {briefDocument && (
+        <BriefingPreview briefDocument={briefDocument} />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
