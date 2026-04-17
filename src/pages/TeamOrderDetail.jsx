@@ -258,16 +258,18 @@ export default function TeamOrderDetail() {
       const briefingContext = briefingContextResponse.data;
       
       // Translate project description to German via LLM
-      let translatedDE = briefingContext.external_notes?.scope_summary || '';
-      if (translatedDE) {
+      let translatedDE = '';
+      const scopeSummary = briefingContext.external_notes?.scope_summary || '';
+      if (scopeSummary) {
         try {
           const translationResponse = await base44.integrations.Core.InvokeLLM({
-            prompt: `Translate the following professional work order description to German. Maintain the same tone and format.\n\nText to translate:\n\n${translatedDE}`
+            prompt: `Translate the following professional work order description to German. Maintain the same tone and format.\n\nText to translate:\n\n${scopeSummary}`
           });
-          translatedDE = translationResponse.data || translatedDE;
+          translatedDE = translationResponse.data || '';
         } catch (translationErr) {
-          console.warn('Translation failed, using English:', translationErr);
-          // Fall back to English if translation fails
+          console.warn('German translation failed:', translationErr);
+          // Do NOT fallback to English - leave German empty instead
+          translatedDE = '';
         }
       }
       

@@ -188,41 +188,52 @@ export async function renderTeamOrderBriefToPDF(briefDocument, template) {
     yPos = drawSectionHeader('PROJECT DESCRIPTION / SCOPE OF WORK', yPos);
     
     // English section
-    doc.setFont(fontFamily, 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
-    doc.text('English:', margins.left, yPos);
-    yPos += 4;
+    if (briefDocument.projectDescription.en) {
+      doc.setFont(fontFamily, 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
+      doc.text('English:', margins.left, yPos);
+      yPos += 4;
+      
+      doc.setFont(fontFamily, 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      const enLines = doc.splitTextToSize(briefDocument.projectDescription.en, contentWidth);
+      enLines.forEach(line => {
+        checkPageBreak(5);
+        doc.text(line, margins.left, yPos);
+        yPos += 4.5;
+      });
+      yPos += 5;
+    }
     
-    doc.setFont(fontFamily, 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    const enLines = doc.splitTextToSize(briefDocument.projectDescription.en || '', contentWidth);
-    enLines.forEach(line => {
-      checkPageBreak(5);
-      doc.text(line, margins.left, yPos);
-      yPos += 4.5;
-    });
-    yPos += 5;
-    
-    // German section
-    checkPageBreak(20);
-    doc.setFont(fontFamily, 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
-    doc.text('Deutsch:', margins.left, yPos);
-    yPos += 4;
-    
-    doc.setFont(fontFamily, 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    const deLines = doc.splitTextToSize(briefDocument.projectDescription.de || '', contentWidth);
-    deLines.forEach(line => {
-      checkPageBreak(5);
-      doc.text(line, margins.left, yPos);
-      yPos += 4.5;
-    });
-    yPos += 3;
+    // German section (only render if translation exists)
+    if (briefDocument.projectDescription.de) {
+      checkPageBreak(20);
+      doc.setFont(fontFamily, 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
+      doc.text('Deutsch:', margins.left, yPos);
+      yPos += 4;
+      
+      doc.setFont(fontFamily, 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      const deLines = doc.splitTextToSize(briefDocument.projectDescription.de, contentWidth);
+      deLines.forEach(line => {
+        checkPageBreak(5);
+        doc.text(line, margins.left, yPos);
+        yPos += 4.5;
+      });
+      yPos += 3;
+    } else {
+      // Translation not available - show placeholder in German section
+      doc.setFont(fontFamily, 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text('(Deutsche Übersetzung nicht verfügbar)', margins.left, yPos);
+      yPos += 6;
+    }
   }
 
   // === TASKS ===
@@ -308,7 +319,7 @@ export async function renderTeamOrderBriefToPDF(briefDocument, template) {
     doc.setFont(fontFamily, 'bold');
     doc.setFontSize(8);
     doc.setTextColor(255, 87, 34);
-    doc.text('⚠ IMPORTANT NOTICE:', margins.left + 3, yPos);
+    doc.text('⚠ IMPORTANT NOTICE', margins.left + 3, yPos);
     yPos += 5;
     
     doc.setFont(fontFamily, 'normal');

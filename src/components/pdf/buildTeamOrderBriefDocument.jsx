@@ -71,8 +71,9 @@ export function buildTeamOrderBriefDocument(briefingContext, translatedProjectDe
       en = 'Work order scheduled. See tasks and schedule details below.';
     }
 
-    // German version: use translated version if provided, otherwise fallback to English
-    let de = translatedProjectDescriptionDE || en;
+    // German version: use translated version if provided, otherwise leave empty
+    // (Never fallback to English - that would duplicate English text under German label)
+    let de = translatedProjectDescriptionDE || '';
 
     return { 
       en: en.trim(), 
