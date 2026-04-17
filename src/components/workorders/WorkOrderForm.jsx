@@ -553,6 +553,10 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             <div className="space-y-2">
               {activeTechnicians
                 .filter(t => ['CORE_PREFERRED', 'CORE_LIMITED'].includes(t.availability_class))
+                .sort((a, b) => {
+                  const roleOrder = { 'Lead Technician': 0, 'Technician': 1, 'Assistant': 2, 'Apprentice': 3 };
+                  return (roleOrder[a.role] ?? 99) - (roleOrder[b.role] ?? 99);
+                })
                 .map(tech => (
                   <label 
                     key={tech.id}
@@ -581,6 +585,10 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             <div className="space-y-2">
               {activeTechnicians
                 .filter(t => t.availability_class === 'EXTERNAL_REGULAR')
+                .sort((a, b) => {
+                  const roleOrder = { 'Lead Technician': 0, 'Technician': 1, 'Assistant': 2, 'Apprentice': 3 };
+                  return (roleOrder[a.role] ?? 99) - (roleOrder[b.role] ?? 99);
+                })
                 .map(tech => (
                   <label 
                     key={tech.id}
@@ -609,6 +617,10 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
             <div className="space-y-2">
               {activeTechnicians
                 .filter(t => ['EXTERNAL_SPECIALIST', 'EXTERNAL_ON_REQUEST'].includes(t.availability_class))
+                .sort((a, b) => {
+                  const roleOrder = { 'Lead Technician': 0, 'Technician': 1, 'Assistant': 2, 'Apprentice': 3 };
+                  return (roleOrder[a.role] ?? 99) - (roleOrder[b.role] ?? 99);
+                })
                 .map(tech => (
                   <label 
                     key={tech.id}
