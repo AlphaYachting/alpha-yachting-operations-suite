@@ -546,26 +546,90 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
       {/* Technician Assignment */}
       <div className="space-y-3">
         <Label>Assigned Technicians</Label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {activeTechnicians.map(tech => (
-            <label 
-              key={tech.id}
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                formData.assigned_technicians?.includes(tech.id) 
-                  ? 'border-blue-500 bg-blue-50' 
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <Checkbox
-                checked={formData.assigned_technicians?.includes(tech.id)}
-                onCheckedChange={() => toggleTechnician(tech.id)}
-              />
-              <div>
-                <p className="font-medium text-sm">{tech.first_name} {tech.last_name}</p>
-                <p className="text-xs text-slate-500">{tech.role}</p>
-              </div>
-            </label>
-          ))}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Core Team Column */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-slate-600 uppercase">Core Team</h4>
+            <div className="space-y-2">
+              {activeTechnicians
+                .filter(t => ['CORE_PREFERRED', 'CORE_LIMITED'].includes(t.availability_class))
+                .map(tech => (
+                  <label 
+                    key={tech.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      formData.assigned_technicians?.includes(tech.id) 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={formData.assigned_technicians?.includes(tech.id)}
+                      onCheckedChange={() => toggleTechnician(tech.id)}
+                    />
+                    <div>
+                      <p className="font-medium text-sm">{tech.first_name} {tech.last_name}</p>
+                      <p className="text-xs text-slate-500">{tech.role}</p>
+                    </div>
+                  </label>
+                ))}
+            </div>
+          </div>
+
+          {/* Quick Available Column */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-slate-600 uppercase">Quick Available</h4>
+            <div className="space-y-2">
+              {activeTechnicians
+                .filter(t => t.availability_class === 'EXTERNAL_REGULAR')
+                .map(tech => (
+                  <label 
+                    key={tech.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      formData.assigned_technicians?.includes(tech.id) 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={formData.assigned_technicians?.includes(tech.id)}
+                      onCheckedChange={() => toggleTechnician(tech.id)}
+                    />
+                    <div>
+                      <p className="font-medium text-sm">{tech.first_name} {tech.last_name}</p>
+                      <p className="text-xs text-slate-500">{tech.role}</p>
+                    </div>
+                  </label>
+                ))}
+            </div>
+          </div>
+
+          {/* 2-3 Days Lead Time Column */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-semibold text-slate-600 uppercase">2-3 Days Lead Time</h4>
+            <div className="space-y-2">
+              {activeTechnicians
+                .filter(t => ['EXTERNAL_SPECIALIST', 'EXTERNAL_ON_REQUEST'].includes(t.availability_class))
+                .map(tech => (
+                  <label 
+                    key={tech.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      formData.assigned_technicians?.includes(tech.id) 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={formData.assigned_technicians?.includes(tech.id)}
+                      onCheckedChange={() => toggleTechnician(tech.id)}
+                    />
+                    <div>
+                      <p className="font-medium text-sm">{tech.first_name} {tech.last_name}</p>
+                      <p className="text-xs text-slate-500">{tech.role}</p>
+                    </div>
+                  </label>
+                ))}
+            </div>
+          </div>
         </div>
       </div>
 
