@@ -73,6 +73,18 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'Work order or team order not found' }, { status: 404 });
     }
 
+    // Step 1b: Build briefing context to get scope_summary
+    let briefingContext = null;
+    try {
+      const briefingResult = await base44.asServiceRole.functions.invoke('buildBriefingContext', {
+        teamOrderId
+      });
+      briefingContext = briefingResult;
+    } catch (err) {
+      console.warn('Could not load briefing context:', err.message);
+      // Continue gracefully — scope_summary will be null
+    }
+
     // Step 2: fetch related data using specific IDs (no full list() calls)
     const [jobArr, tasks] = await Promise.all([
       workOrder.job_id ? base44.asServiceRole.entities.Job.filter({ id: workOrder.job_id }) : Promise.resolve([]),
@@ -254,6 +266,23 @@ Deno.serve(async (req) => {
         doc.text(wrapped, marginLeft + 45, y);
         y += wrapped.length * 4.5 + 2;
       }
+      y += 4;
+    }
+
+    // --- SCOPE CONTEXT (from briefing context) ---
+    const scopeSummary = briefingContext?.external_notes?.scope_summary;
+    if (scopeSummary) {
+      y = checkBreak(y, 20);
+      y = sectionHeading('Scope of Work', y);
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(0, 0, 0);
+      const lines = doc.splitTextToSize(scopeSummary, contentWidth);
+      lines.forEach(line => {
+        y = checkBreak(y, 5);
+        doc.text(line, marginLeft, y);
+        y += 4.5;
+      });
       y += 4;
     }
 
