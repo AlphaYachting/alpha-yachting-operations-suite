@@ -30,6 +30,13 @@ export function buildTeamOrderBriefDocument(briefingContext, translatedProjectDe
   const budgetPolicy = briefingContext.budget_policy || {};
   const externalNotes = briefingContext.external_notes || {};
 
+  // Log for debugging: verify German translation is received
+  if (translatedProjectDescriptionDE) {
+    console.log('German translation provided to buildTeamOrderBriefDocument:', translatedProjectDescriptionDE.substring(0, 100) + '...');
+  } else {
+    console.log('No German translation provided to buildTeamOrderBriefDocument');
+  }
+
   // === PROJECT IDENTIFICATION ===
   const projectIdentification = {
     workOrderNumber: wo.number || 'N/A',

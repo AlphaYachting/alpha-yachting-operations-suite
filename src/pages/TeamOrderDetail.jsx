@@ -268,15 +268,16 @@ export default function TeamOrderDetail() {
           });
           // response is axios response: response.data contains the translated text
           translatedDE = response.data || '';
-          console.log('German translation success:', translatedDE.substring(0, 100) + '...');
+          console.log('[TeamOrderDetail] German translation received:', translatedDE.substring(0, 100) + '...');
         } catch (translationErr) {
-          console.warn('German translation failed:', translationErr);
+          console.warn('[TeamOrderDetail] German translation failed:', translationErr);
           translatedDE = '';
         }
       }
       
       // Build unified brief document with translated German description
       const unified = buildTeamOrderBriefDocument(briefingContext, translatedDE);
+      console.log('[TeamOrderDetail] Built brief document - DE present?', !!unified.projectDescription?.de);
       setBriefDocument(unified);
       
       // Persist to TeamOrder for reload stability
@@ -291,6 +292,7 @@ export default function TeamOrderDetail() {
         generated_brief_payload: unified
       };
       
+      console.log('[TeamOrderDetail] Persisting brief - German text length:', updatePayload.generated_project_description_de.length);
       await base44.entities.TeamOrder.update(teamOrderId, updatePayload);
     } catch (err) {
       console.error('Error generating brief:', err);
