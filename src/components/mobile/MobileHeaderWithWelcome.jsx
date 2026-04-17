@@ -40,7 +40,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
     logo:
     <img
       key="logo"
-      src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png"
+      src="https://media.base44.com/images/public/6972766f1bd9af32693610c1/c3c933943_alpha-yachting-logo-weiss-ohnepremiumsolutions.png"
       alt="Alpha Yachting" className="mr-1 mb-1 ml-4 object-contain flex-shrink-0"
       style={{ height: layout.logoHeight }} />,
     time:
