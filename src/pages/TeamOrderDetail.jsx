@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, AlertCircle, RefreshCw, FileText } from 'lucide-react';
 import TeamOrderForm from '@/components/teamorder/TeamOrderForm';
 import PDFExportButton from '@/components/pdf/PDFExportButton';
 import BriefingContextPreview from '@/components/teamorder/BriefingContextPreview';
+import { generateWorkerBriefPDF } from '@/components/pdf/WorkerBriefTemplate';
 
 export default function TeamOrderDetail() {
   const navigate = useNavigate();
@@ -39,10 +40,25 @@ export default function TeamOrderDetail() {
   const [location, setLocation] = useState(null);
   const [jobDescriptionEn, setJobDescriptionEn] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
+  const [generatingWorkerBrief, setGeneratingWorkerBrief] = useState(false);
+  const [pdfTemplate, setPdfTemplate] = useState(null);
 
   useEffect(() => {
     base44.auth.me().then(user => setCurrentUser(user)).catch(() => {});
+    loadPdfTemplate();
   }, []);
+  
+  const loadPdfTemplate = async () => {
+    try {
+      const templates = await base44.entities.PDFTemplate.list();
+      const defaultTemplate = templates.find(t => t.is_default) || templates[0];
+      if (defaultTemplate) {
+        setPdfTemplate(defaultTemplate);
+      }
+    } catch (err) {
+      console.error('Error loading PDF template:', err);
+    }
+  };
 
 
   useEffect(() => {
@@ -221,6 +237,40 @@ export default function TeamOrderDetail() {
       }));
   };
 
+  const handleGenerateWorkerBrief = async () => {
+    setGeneratingWorkerBrief(true);
+    setError(null);
+    
+    try {
+      // Build briefing context via backend function
+      const briefingContextResponse = await base44.functions.invoke('buildBriefingContext', {
+        teamOrderId
+      });
+      
+      const briefingContext = briefingContextResponse.data;
+      
+      // Generate PDF from context
+      const pdfTemplate_ = pdfTemplate || {
+        company_name: 'Alpha Yachting',
+        company_address: 'Novigrad, Croatia',
+        contact_email: 'info@alphayachting.com',
+        contact_phone: '+385 52 700 700',
+        logo_url: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png'
+      };
+      
+      const pdfDoc = await generateWorkerBriefPDF(briefingContext, pdfTemplate_);
+      
+      // Download PDF
+      const fileName = `worker-brief-${workOrder?.work_order_number || 'WO'}-${new Date().getTime()}.pdf`;
+      pdfDoc.save(fileName);
+    } catch (err) {
+      console.error('Error generating worker brief:', err);
+      setError(`Failed to generate worker brief: ${err.message}`);
+    } finally {
+      setGeneratingWorkerBrief(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -254,12 +304,22 @@ export default function TeamOrderDetail() {
         </div>
         <div className="flex gap-2">
           {!isNew && workOrder && teamOrder.id && (
-            <PDFExportButton
-              document={getPartnerBriefPDFDocument()}
-              lineItems={getPartnerBriefPDFLineItems()}
-              templateId="PartnerBrief"
-              variant="default"
-            />
+            <>
+              <Button 
+                onClick={handleGenerateWorkerBrief} 
+                disabled={generatingWorkerBrief}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                {generatingWorkerBrief ? 'Generating...' : 'Generate Worker Brief PDF'}
+              </Button>
+              <PDFExportButton
+                document={getPartnerBriefPDFDocument()}
+                lineItems={getPartnerBriefPDFLineItems()}
+                templateId="PartnerBrief"
+                variant="default"
+              />
+            </>
           )}
           <Button onClick={handleSave} disabled={saving} className="bg-purple-600 hover:bg-purple-700">
             <Save className="h-4 w-4 mr-2" />
