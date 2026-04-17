@@ -59,7 +59,7 @@ export function useLeadV3Data() {
     const load = async () => {
       try {
         const [allLeads, allUsers] = await Promise.all([
-          base44.entities.Lead.list('-created_date', 500),
+          base44.entities.Lead.filter({}, '-created_date', 500),
           base44.entities.User.list(),
         ]);
         if (!cancelled) {
