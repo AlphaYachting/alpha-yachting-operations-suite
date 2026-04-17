@@ -3,7 +3,7 @@ import { useLeadV3Data, V3_PHASES } from '@/hooks/useLeadV3Data';
 import LeadV3PhaseNav from '@/components/leadsV3/LeadV3PhaseNav';
 import LeadV3List from '@/components/leadsV3/LeadV3List';
 import { Input } from '@/components/ui/input';
-import { Search, Layers, Clock, PhoneCall, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, Layers, Clock, PhoneCall, CheckCircle2, XCircle, AlertCircle, Eye } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function LeadsV3() {
@@ -53,9 +53,9 @@ export default function LeadsV3() {
   // Stats with icons (like V2)
   const stats = [
     { label: 'New Incoming', value: ownerFilteredLeads.filter(l => l.status === 'New Incoming').length, icon: Clock, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', phase: 'New Incoming' },
-    { label: 'Needs Clarification', value: ownerFilteredLeads.filter(l => l.status === 'Needs Clarification').length, icon: PhoneCall, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', phase: 'Needs Clarification' },
-    { label: 'Offered', value: ownerFilteredLeads.filter(l => l.status === 'Offered').length, icon: CheckCircle2, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600', phase: 'Offered' },
-    { label: 'Ready to Offer', value: ownerFilteredLeads.filter(l => l.status === 'Ready to Offer').length, icon: CheckCircle2, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', phase: 'Ready to Offer' },
+    { label: 'Needs Clarification', value: ownerFilteredLeads.filter(l => l.status === 'Needs Clarification').length, icon: AlertCircle, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', phase: 'Needs Clarification' },
+    { label: 'Ready to Offer', value: ownerFilteredLeads.filter(l => l.status === 'Ready to Offer').length, icon: Eye, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', phase: 'Ready to Offer' },
+    { label: 'Offered', value: ownerFilteredLeads.filter(l => l.status === 'Offered').length, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', phase: 'Offered' },
     { label: 'Rejected', value: ownerFilteredLeads.filter(l => l.status === 'Rejected').length, icon: XCircle, iconBg: 'bg-red-50', iconColor: 'text-red-400', phase: 'Rejected' },
   ];
 
