@@ -20,7 +20,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
 
   const layout = config?.layout || {
     logoPosition: 'left',
-    logoHeight: 48,
+    logoHeight: 58,
     timePosition: 'center',
     tasksPosition: 'right',
     flexDirection: 'row',
@@ -73,16 +73,16 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
         }}>
 
         <div
-          style={{
-            display: 'flex',
-            flexDirection: layout.flexDirection,
-            gap: layout.gap,
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: '100%'
-          }}>
+         style={{
+           display: 'flex',
+           flexDirection: layout.flexDirection,
+           gap: layout.gap,
+           alignItems: 'center',
+           justifyContent: 'flex-start',
+           width: '100%'
+         }}>
 
-          {orderedElements}
+         {orderedElements}
         </div>
         {user?.role === 'admin' &&
         <Button
