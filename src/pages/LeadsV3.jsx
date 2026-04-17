@@ -96,13 +96,6 @@ export default function LeadsV3() {
         ))}
       </div>
 
-      {/* Phase navigation */}
-      <LeadV3PhaseNav
-        leads={ownerFilteredLeads}
-        activePhase={activePhase}
-        onPhaseSelect={setActivePhase}
-      />
-
       {/* Search + owner filter + count bar */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm min-w-[160px]">
