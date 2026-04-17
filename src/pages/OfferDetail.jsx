@@ -706,7 +706,7 @@ Requirements:
       if (convertMode === 'existing') {
         jobId = selectedExistingJobId;
       } else {
-        // Create new Job
+        // Create new Job with budget from offer
         const newJob = await base44.entities.Job.create({
           customer_id: formData.customer_id,
           boat_id: formData.boat_id || undefined,
@@ -716,6 +716,8 @@ Requirements:
           job_type: 'Mobile Service',
           status: 'Approved',
           intake_date: new Date().toISOString(),
+          estimated_cost: totals.taxable_base_excl_tax,
+          quote_amount: totals.total_incl_tax,
         });
         jobId = newJob.id;
       }
