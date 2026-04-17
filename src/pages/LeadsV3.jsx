@@ -3,14 +3,14 @@ import { useLeadV3Data, V3_PHASES } from '@/hooks/useLeadV3Data';
 import LeadV3PhaseNav from '@/components/leadsV3/LeadV3PhaseNav';
 import LeadV3List from '@/components/leadsV3/LeadV3List';
 import { Input } from '@/components/ui/input';
-import { Search, Layers } from 'lucide-react';
+import { Search, Layers, Clock, PhoneCall, CheckCircle2, XCircle } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function LeadsV3() {
   const { leads: rawLeads, users, isLoading } = useLeadV3Data();
   const { user: currentUser } = useAuth();
   const [leads, setLeads] = useState([]);
-  const [activePhase, setActivePhase] = useState('All');
+  const [activePhase, setActivePhase] = useState('New Incoming');
   const [searchTerm, setSearchTerm] = useState('');
   // 'me' | 'all' | '<userId>'
   const [ownerFilter, setOwnerFilter] = useState('all');
@@ -50,6 +50,15 @@ export default function LeadsV3() {
     ? ownerFilteredLeads.length
     : ownerFilteredLeads.filter(l => l.status === activePhase).length;
 
+  // Stats with icons (like V2)
+  const stats = [
+    { label: 'New Incoming', value: ownerFilteredLeads.filter(l => l.status === 'New Incoming').length, icon: Clock, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', phase: 'New Incoming' },
+    { label: 'Needs Clarification', value: ownerFilteredLeads.filter(l => l.status === 'Needs Clarification').length, icon: PhoneCall, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', phase: 'Needs Clarification' },
+    { label: 'Offered', value: ownerFilteredLeads.filter(l => l.status === 'Offered').length, icon: CheckCircle2, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600', phase: 'Offered' },
+    { label: 'Ready to Offer', value: ownerFilteredLeads.filter(l => l.status === 'Ready to Offer').length, icon: CheckCircle2, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', phase: 'Ready to Offer' },
+    { label: 'Rejected', value: ownerFilteredLeads.filter(l => l.status === 'Rejected').length, icon: XCircle, iconBg: 'bg-red-50', iconColor: 'text-red-400', phase: 'Rejected' },
+  ];
+
   return (
     <div className="space-y-5">
       {/* Page header — aligned with Dashboard V2 / V2 leads header style */}
@@ -60,6 +69,31 @@ export default function LeadsV3() {
             {activeCount} active lead{activeCount !== 1 ? 's' : ''} across pipeline
           </p>
         </div>
+      </div>
+
+      {/* Status icons — clickable filters */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {stats.map((stat) => (
+          <button
+            key={stat.phase}
+            onClick={() => setActivePhase(stat.phase)}
+            className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
+              activePhase === stat.phase
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-slate-200 hover:border-slate-300 bg-white'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <div className={`${stat.iconBg} rounded-full p-2`}>
+                <stat.icon className={`h-4 w-4 ${stat.iconColor}`} />
+              </div>
+              <div className="text-left">
+                <p className="text-xs text-slate-600">{stat.label}</p>
+                <p className="text-lg font-bold text-slate-900">{stat.value}</p>
+              </div>
+            </div>
+          </button>
+        ))}
       </div>
 
       {/* Phase navigation */}
