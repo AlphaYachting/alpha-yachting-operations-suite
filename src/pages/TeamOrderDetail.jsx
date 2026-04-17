@@ -262,15 +262,15 @@ export default function TeamOrderDetail() {
       const scopeSummary = briefingContext.external_notes?.scope_summary || '';
       if (scopeSummary) {
         try {
-          const translationResponse = await base44.integrations.Core.InvokeLLM({
+          // InvokeLLM response is the text string directly via the axios response.data property
+          const response = await base44.integrations.Core.InvokeLLM({
             prompt: `Translate the following professional work order description to German. Maintain the same tone and format.\n\nText to translate:\n\n${scopeSummary}`
           });
-          // InvokeLLM returns the text directly as data (not wrapped in a response object)
-          translatedDE = translationResponse.data;
-          console.log('Translation result:', { scopeSummary, translatedDE });
+          // response is axios response: response.data contains the translated text
+          translatedDE = response.data || '';
+          console.log('German translation success:', translatedDE.substring(0, 100) + '...');
         } catch (translationErr) {
           console.warn('German translation failed:', translationErr);
-          // Do NOT fallback to English - leave German empty instead
           translatedDE = '';
         }
       }
