@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import LeadV3Card from './LeadV3Card';
 import { sortLeadsV3, V3_PHASES, getPhaseConfig } from '@/hooks/useLeadV3Data';
 import { cn } from '@/lib/utils';
@@ -16,20 +16,7 @@ function EmptyPhase({ phase }) {
   );
 }
 
-export default function LeadV3List({ leads: initialLeads, users, activePhase, searchTerm }) {
-  // Local state copy so quick-status updates reflect immediately without full reload
-  const [leads, setLeads] = useState(initialLeads);
-
-  // Sync when parent data changes
-  useEffect(() => { setLeads(initialLeads); }, [initialLeads]);
-
-  const handleStatusChange = (leadId, newStatus) => {
-    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
-  };
-
-  const handleAssigned = (leadId, userId) => {
-    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, assigned_to_user_id: userId, accepted_by_assignee: false } : l));
-  };
+export default function LeadV3List({ leads, users, activePhase, searchTerm, onStatusChange, onAssigned }) {
 
   // Filter by phase
   const phaseFiltered = activePhase === 'All'
@@ -82,8 +69,8 @@ export default function LeadV3List({ leads: initialLeads, users, activePhase, se
                     lead={lead}
                     assignedUser={userMap[lead.assigned_to_user_id] || null}
                     users={users}
-                    onStatusChange={handleStatusChange}
-                    onAssigned={handleAssigned}
+                    onStatusChange={onStatusChange}
+                    onAssigned={onAssigned}
                   />
                 ))}
               </div>
@@ -102,8 +89,8 @@ export default function LeadV3List({ leads: initialLeads, users, activePhase, se
           lead={lead}
           assignedUser={userMap[lead.assigned_to_user_id] || null}
           users={users}
-          onStatusChange={handleStatusChange}
-          onAssigned={handleAssigned}
+          onStatusChange={onStatusChange}
+          onAssigned={onAssigned}
         />
       ))}
     </div>

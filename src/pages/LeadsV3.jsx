@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLeadV3Data, V3_PHASES } from '@/hooks/useLeadV3Data';
 import LeadV3PhaseNav from '@/components/leadsV3/LeadV3PhaseNav';
 import LeadV3List from '@/components/leadsV3/LeadV3List';
@@ -7,12 +7,24 @@ import { Search, Layers } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function LeadsV3() {
-  const { leads, users, isLoading } = useLeadV3Data();
+  const { leads: rawLeads, users, isLoading } = useLeadV3Data();
   const { user: currentUser } = useAuth();
+  const [leads, setLeads] = useState([]);
   const [activePhase, setActivePhase] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   // 'me' | 'all' | '<userId>'
   const [ownerFilter, setOwnerFilter] = useState('all');
+
+  // Sync from hook whenever raw data changes
+  React.useEffect(() => { setLeads(rawLeads); }, [rawLeads]);
+
+  const handleStatusChange = (leadId, newStatus) => {
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
+  };
+
+  const handleAssigned = (leadId, userId) => {
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, assigned_to_user_id: userId, accepted_by_assignee: false } : l));
+  };
 
   if (isLoading) {
     return (
@@ -99,6 +111,8 @@ export default function LeadsV3() {
         users={users}
         activePhase={activePhase}
         searchTerm={searchTerm}
+        onStatusChange={handleStatusChange}
+        onAssigned={handleAssigned}
       />
     </div>
   );
