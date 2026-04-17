@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { ChevronLeft, MapPin, Ship, Clock, AlertCircle, CheckCircle2, WifiOff, Send, ShoppingCart, Zap } from 'lucide-react';
+import { ChevronLeft, MapPin, Ship, Clock, AlertCircle, CheckCircle2, WifiOff, Send, ShoppingCart, Zap, X as XIcon } from 'lucide-react';
 import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -685,14 +685,6 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         </Button>
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
-          <button
-            onClick={() => setShowQuickCapture(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium hover:bg-amber-100 active:bg-amber-200 transition-colors"
-            title="Quick Capture for this Work Order"
-          >
-            <Zap className="h-3.5 w-3.5" />
-            Capture
-          </button>
         </div>
         <div className="flex flex-col items-end gap-0.5">
           <Button
@@ -995,6 +987,17 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
 
 
       </div>
+
+      {/* Quick Capture FAB — same position/style as TeamMobileHome */}
+      <button
+        onClick={() => setShowQuickCapture(true)}
+        className="fixed bottom-6 right-4 z-50 flex items-center gap-2 px-4 py-3.5 rounded-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white shadow-lg transition-colors"
+        style={{ boxShadow: '0 4px 20px rgba(245, 158, 11, 0.45)' }}
+        aria-label="Quick Capture"
+      >
+        <Zap className="h-5 w-5 flex-shrink-0" />
+        <span className="text-sm font-semibold pr-1">Capture</span>
+      </button>
 
       {/* Quick Capture Modal — pre-linked to this Work Order */}
       {showQuickCapture && (
