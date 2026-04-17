@@ -257,8 +257,22 @@ export default function TeamOrderDetail() {
       
       const briefingContext = briefingContextResponse.data;
       
-      // Build unified brief document (used for both preview and PDF)
-      const unified = buildTeamOrderBriefDocument(briefingContext);
+      // Translate project description to German via LLM
+      let translatedDE = briefingContext.external_notes?.scope_summary || '';
+      if (translatedDE) {
+        try {
+          const translationResponse = await base44.integrations.Core.InvokeLLM({
+            prompt: `Translate the following professional work order description to German. Maintain the same tone and format.\n\nText to translate:\n\n${translatedDE}`
+          });
+          translatedDE = translationResponse.data || translatedDE;
+        } catch (translationErr) {
+          console.warn('Translation failed, using English:', translationErr);
+          // Fall back to English if translation fails
+        }
+      }
+      
+      // Build unified brief document with translated German description
+      const unified = buildTeamOrderBriefDocument(briefingContext, translatedDE);
       setBriefDocument(unified);
       
       // Persist to TeamOrder for reload stability

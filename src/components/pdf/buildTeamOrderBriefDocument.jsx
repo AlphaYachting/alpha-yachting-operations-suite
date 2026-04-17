@@ -15,7 +15,7 @@ function formatDate(dateString) {
   return date.toLocaleDateString('de-DE', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
-export function buildTeamOrderBriefDocument(briefingContext) {
+export function buildTeamOrderBriefDocument(briefingContext, translatedProjectDescriptionDE = null) {
   if (!briefingContext) {
     return null;
   }
@@ -51,7 +51,7 @@ export function buildTeamOrderBriefDocument(briefingContext) {
 
   // === BILINGUAL PROJECT DESCRIPTION ===
   // Build one coherent worker-oriented description (no duplicates, no email language)
-  // Uses LLM to translate English to German for proper bilingual support
+  // German version is translated via LLM in the parent component (async flow)
   const buildProjectDescription = () => {
     const scope = externalNotes.scope_summary || '';
     const woDesc = stripHtmlTags(wo.description || '');
@@ -71,17 +71,12 @@ export function buildTeamOrderBriefDocument(briefingContext) {
       en = 'Work order scheduled. See tasks and schedule details below.';
     }
 
-    // German version: use LLM to translate English to German
-    let de = en; // Default: same as English if translation fails
-    
-    // Note: Full async translation would require making this function async,
-    // which would require refactoring the persistence layer.
-    // For now, we provide consistent English text.
-    // TODO: Implement async translation in v2 with generator function backend.
+    // German version: use translated version if provided, otherwise fallback to English
+    let de = translatedProjectDescriptionDE || en;
 
     return { 
       en: en.trim(), 
-      de: de.trim() // Currently same as EN; will be replaced with LLM translation in next iteration
+      de: de.trim()
     };
   };
 
