@@ -1,0 +1,177 @@
+{
+  "name": "TeamOrder",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "FK to WorkOrder - SINGLE SOURCE OF TRUTH"
+    },
+    "external_partner_id": {
+      "type": "string",
+      "description": "FK to Technician acting as external partner"
+    },
+    "partner_name": {
+      "type": "string",
+      "description": "Partner company name if not in system"
+    },
+    "partner_contact": {
+      "type": "string",
+      "description": "Partner contact details"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Sent",
+        "Accepted",
+        "In Progress",
+        "Completed",
+        "Closed",
+        "Cancelled"
+      ],
+      "default": "Draft"
+    },
+    "approved_budget_total": {
+      "type": "number",
+      "description": "Total approved budget in EUR"
+    },
+    "labor_budget": {
+      "type": "number",
+      "description": "Budget allocated for labor"
+    },
+    "travel_budget": {
+      "type": "number",
+      "description": "Budget for travel costs"
+    },
+    "accommodation_budget": {
+      "type": "number",
+      "description": "Budget for accommodation"
+    },
+    "per_diem_budget": {
+      "type": "number",
+      "description": "Budget for daily allowances"
+    },
+    "currency": {
+      "type": "string",
+      "default": "EUR"
+    },
+    "accommodation_paid": {
+      "type": "boolean",
+      "default": false
+    },
+    "accommodation_max_per_night": {
+      "type": "number"
+    },
+    "accommodation_notes": {
+      "type": "string"
+    },
+    "meals_per_diem_paid": {
+      "type": "boolean",
+      "default": false
+    },
+    "per_diem_rate_per_day": {
+      "type": "number"
+    },
+    "mileage_paid": {
+      "type": "boolean",
+      "default": false
+    },
+    "mileage_rate_per_km": {
+      "type": "number",
+      "default": 0.35
+    },
+    "mileage_cap_total": {
+      "type": "number"
+    },
+    "travel_time_paid": {
+      "type": "boolean",
+      "default": false
+    },
+    "travel_time_rate_per_hour": {
+      "type": "number"
+    },
+    "other_reimbursables_allowed": {
+      "type": "boolean",
+      "default": false
+    },
+    "other_reimbursables_notes": {
+      "type": "string"
+    },
+    "requires_preapproval_over": {
+      "type": "number",
+      "default": 500
+    },
+    "budget_exceed_requires_approval": {
+      "type": "boolean",
+      "default": true
+    },
+    "internal_notes": {
+      "type": "string",
+      "description": "Admin/organizer only"
+    },
+    "partner_notes": {
+      "type": "string",
+      "description": "Visible to external partner"
+    },
+    "last_workorder_sync_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "change_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "changed_field": {
+            "type": "string"
+          },
+          "old_value": {
+            "type": "string"
+          },
+          "new_value": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "generated_brief_version": {
+      "type": "string",
+      "description": "Version identifier for generated brief (e.g., 'v1', timestamp, or UUID)"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the worker brief was generated"
+    },
+    "generated_project_description_de": {
+      "type": "string",
+      "description": "Persisted German project description from generator"
+    },
+    "generated_project_description_en": {
+      "type": "string",
+      "description": "Persisted English project description from generator"
+    },
+    "generated_documentation_notice_de": {
+      "type": "string",
+      "description": "Persisted German documentation/payment notice"
+    },
+    "generated_documentation_notice_en": {
+      "type": "string",
+      "description": "Persisted English documentation/payment notice"
+    },
+    "generated_brief_payload": {
+      "type": "object",
+      "description": "Complete serialized brief document (JSON) for preview and PDF rendering - survives reload"
+    }
+  },
+  "required": [
+    "work_order_id"
+  ]
+}

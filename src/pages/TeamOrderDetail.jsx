@@ -82,7 +82,12 @@ export default function TeamOrderDetail() {
         const order = orders.find(o => o.id === teamOrderId);
         if (order) {
           setTeamOrder(order);
-          
+
+          // Restore persisted brief if it exists
+          if (order.generated_brief_payload) {
+            setBriefDocument(order.generated_brief_payload);
+          }
+
           // Load associated work order
           const woList = await base44.entities.WorkOrder.list();
           const wo = woList.find(w => w.id === order.work_order_id);
@@ -91,7 +96,7 @@ export default function TeamOrderDetail() {
           if (wo) {
             const taskList = await base44.entities.Task.filter({ work_order_id: wo.id }, 'sequence_order');
             setTasks(taskList);
-            
+
             // Load related data for PDF generation
             const [jobs, customers, boats, locations] = await Promise.all([
               base44.entities.Job.list(),
@@ -99,7 +104,7 @@ export default function TeamOrderDetail() {
               base44.entities.Boat.list(),
               base44.entities.Location.list()
             ]);
-            
+
             const jobData = jobs.find(j => j.id === wo.job_id);
             setJob(jobData);
             setCustomer(customers.find(c => c.id === jobData?.customer_id));
@@ -255,6 +260,20 @@ export default function TeamOrderDetail() {
       // Build unified brief document (used for both preview and PDF)
       const unified = buildTeamOrderBriefDocument(briefingContext);
       setBriefDocument(unified);
+      
+      // Persist to TeamOrder for reload stability
+      const now = new Date().toISOString();
+      const updatePayload = {
+        generated_brief_version: now,
+        generated_at: now,
+        generated_project_description_de: unified.projectDescription?.de || '',
+        generated_project_description_en: unified.projectDescription?.en || '',
+        generated_documentation_notice_de: unified.documentationNotice?.de || '',
+        generated_documentation_notice_en: unified.documentationNotice?.en || '',
+        generated_brief_payload: unified
+      };
+      
+      await base44.entities.TeamOrder.update(teamOrderId, updatePayload);
     } catch (err) {
       console.error('Error generating brief:', err);
       setError(`Failed to generate brief: ${err.message}`);
@@ -322,10 +341,10 @@ export default function TeamOrderDetail() {
               <Button 
                 onClick={handleGenerateBrief} 
                 disabled={generatingBrief}
-                className="bg-blue-600 hover:bg-blue-700"
+                className={briefDocument ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'}
               >
                 <FileText className="h-4 w-4 mr-2" />
-                {generatingBrief ? 'Generating...' : 'Generate Briefing'}
+                {generatingBrief ? 'Generating...' : (briefDocument ? 'Regenerate Briefing' : 'Generate Briefing')}
               </Button>
               {briefDocument && (
                 <Button 
@@ -353,8 +372,22 @@ export default function TeamOrderDetail() {
       )}
 
       {/* Briefing Preview */}
-      {briefDocument && (
-        <BriefingPreview briefDocument={briefDocument} />
+      {!isNew && (
+        <>
+          {briefDocument ? (
+            <BriefingPreview briefDocument={briefDocument} />
+          ) : (
+            <Card className="border-slate-200 bg-slate-50/50">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-3">
+                  <FileText className="h-12 w-12 text-slate-300 mx-auto" />
+                  <p className="text-slate-600 font-medium">No Worker Brief Generated Yet</p>
+                  <p className="text-slate-500 text-sm">Click "Generate Briefing" above to create a professional worker brief for this team order.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
