@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users, WifiOff, Wifi, Calendar, Ship } from 'lucide-react';
+import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users, WifiOff, Wifi, Calendar, Ship, Zap } from 'lucide-react';
+import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +37,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const [allSearchLocations, setAllSearchLocations] = useState([]);
   const [allSearchCustomers, setAllSearchCustomers] = useState([]);
   const [technicianLookupDone, setTechnicianLookupDone] = useState(false);
+  const [showQuickCapture, setShowQuickCapture] = useState(false);
 
   useEffect(() => {
     // Monitor connection status
@@ -620,6 +623,28 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
       {/* Sync Status Component */}
       <SyncStatus />
+
+      {/* Quick Capture FAB */}
+      <button
+        onClick={() => setShowQuickCapture(true)}
+        className="fixed bottom-6 right-4 z-50 flex items-center gap-2 px-4 py-3.5 rounded-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white shadow-lg transition-colors"
+        style={{ boxShadow: '0 4px 20px rgba(245, 158, 11, 0.45)' }}
+        aria-label="Quick Capture"
+      >
+        <Zap className="h-5 w-5 flex-shrink-0" />
+        <span className="text-sm font-semibold pr-1">Capture</span>
+      </button>
+
+      {/* Quick Capture Modal */}
+      <QuickCaptureModal
+        open={showQuickCapture}
+        onClose={() => {
+          setShowQuickCapture(false);
+          toast.success('Capture saved — visible in office review queue');
+        }}
+        customers={allSearchCustomers.length > 0 ? allSearchCustomers : customers}
+        boats={allSearchBoats.length > 0 ? allSearchBoats : boats}
+      />
     </div>);
 
 }
