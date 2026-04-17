@@ -57,7 +57,7 @@ export default function LeadsV3() {
 
       {/* Phase navigation */}
       <LeadV3PhaseNav
-        leads={leads}
+        leads={ownerFilteredLeads}
         activePhase={activePhase}
         onPhaseSelect={setActivePhase}
       />
