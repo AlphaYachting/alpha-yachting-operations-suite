@@ -75,7 +75,7 @@ export default function LeadV3List({ leads: initialLeads, users, activePhase, se
                   {phaseLeads.length}
                 </span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {phaseLeads.map(lead => (
                   <LeadV3Card
                     key={lead.id}
@@ -95,7 +95,7 @@ export default function LeadV3List({ leads: initialLeads, users, activePhase, se
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {sorted.map(lead => (
         <LeadV3Card
           key={lead.id}

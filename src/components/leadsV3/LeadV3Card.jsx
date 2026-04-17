@@ -25,6 +25,12 @@ function getUserInitials(user) {
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return name.substring(0, 2).toUpperCase();
 }
+function getUserShortName(user) {
+  if (!user) return null;
+  const name = user.full_name || user.email || '';
+  const parts = name.trim().split(/\s+/);
+  return parts[0] || name;
+}
 
 // ─── Priority config ──────────────────────────────────────────────────────────
 const PRIORITY_CONFIG = {
@@ -109,14 +115,14 @@ function QuickStatusDropdown({ lead, onStatusChange }) {
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o); }}
         disabled={saving}
         className={cn(
-          'flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all',
+          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-all',
           'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 active:scale-95',
           saving && 'opacity-50 cursor-not-allowed'
         )}
         title="Change phase"
       >
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
-        <span className="hidden sm:inline max-w-[80px] truncate">{phase.label}</span>
+        <span className="max-w-[90px] truncate">{phase.label}</span>
         <ChevronRight className={cn('w-3 h-3 text-slate-400 transition-transform flex-shrink-0', open && 'rotate-90')} />
       </button>
 
@@ -143,13 +149,10 @@ function QuickStatusDropdown({ lead, onStatusChange }) {
 }
 
 // ─── Inline Assign Popover ────────────────────────────────────────────────────
-function AssignPopover({ lead, assignedUser, users, onAssigned }) {
+function AssignPopover({ lead, assignedUser, users, onAssigned, children }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const ref = useRef(null);
-  const isAccepted = lead.accepted_by_assignee;
-  const ownerColor = getUserColor(assignedUser?.id || assignedUser?.email);
-  const ownerInitials = getUserInitials(assignedUser);
 
   useEffect(() => {
     if (!open) return;
@@ -179,31 +182,13 @@ function AssignPopover({ lead, assignedUser, users, onAssigned }) {
   };
 
   return (
-    <div ref={ref} className="relative flex-shrink-0" onClick={e => e.preventDefault()}>
+    <div ref={ref} className="relative" onClick={e => e.preventDefault()}>
       <button
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o); }}
         title={assignedUser ? `Assigned: ${assignedUser.full_name || assignedUser.email} — click to reassign` : 'Unassigned — click to assign'}
-        className={cn(
-          'rounded-full transition-all ring-offset-1 hover:ring-2 hover:ring-slate-300 active:scale-95',
-          saving && 'opacity-50'
-        )}
+        className={cn('transition-all active:scale-95', saving && 'opacity-50')}
       >
-        {assignedUser ? (
-          <div
-            className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold',
-              'ring-2',
-              isAccepted ? 'ring-emerald-400' : 'ring-amber-300'
-            )}
-            style={{ backgroundColor: ownerColor }}
-          >
-            {ownerInitials}
-          </div>
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center">
-            <User className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-        )}
+        {children}
       </button>
 
       {open && (
@@ -260,29 +245,33 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
   const agingDays = getV3AgingDays(lead);
   const offerIds = lead.created_offer_ids || [];
   const hasError = !!lead.auto_offer_error;
+  const isAccepted = lead.accepted_by_assignee;
+  const ownerColor = getUserColor(assignedUser?.id || assignedUser?.email);
+  const ownerInitials = getUserInitials(assignedUser);
+  const ownerShortName = getUserShortName(assignedUser);
 
   return (
     <div className="group relative">
       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}&from=v3`} className="block">
         <div className={cn(
-          'bg-white rounded-lg border shadow-sm transition-all duration-150',
+          'bg-white rounded-xl border shadow-sm transition-all duration-150',
           'hover:shadow-md hover:border-slate-300',
           lead.accepted_by_assignee === false && assignedUser ? 'border-amber-200' : 'border-slate-200',
         )}>
           <div className="flex">
-            {/* Priority left accent */}
-            <div className="w-1 flex-shrink-0" style={{ backgroundColor: priority.borderColor }} />
+            {/* Priority left accent — slightly thicker for better peripheral visibility */}
+            <div className="w-1.5 flex-shrink-0 rounded-l-xl" style={{ backgroundColor: priority.borderColor }} />
 
             {/* Card body */}
-            <div className="flex-1 px-4 py-4">
+            <div className="flex-1 px-5 py-5">
 
-              {/* ── ROW 1: Lead name (primary anchor) + right action cluster ── */}
-              <div className="flex items-start gap-3 mb-3">
+              {/* ── PRIMARY BLOCK: Lead name + right cluster ── */}
+              <div className="flex items-start gap-3 mb-1">
 
-                {/* Primary: Lead name */}
+                {/* Lead name — dominant primary anchor */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-base font-semibold text-slate-900 group-hover:text-blue-700 transition-colors leading-snug">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-lg font-semibold text-slate-900 group-hover:text-blue-700 transition-colors leading-tight">
                       {lead.name}
                     </span>
                     {(lead.priority === 'Urgent' || lead.priority === 'High') && (
@@ -297,34 +286,54 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
                       </span>
                     )}
                   </div>
-                  {/* Phase label — subtle, under name */}
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
-                    <span className="text-xs text-slate-400">{phase.label}</span>
-                  </div>
                 </div>
 
-                {/* Right cluster: assign avatar → offer stage → status */}
+                {/* Right cluster — offer badge + status only */}
                 <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.preventDefault()}>
-
-                  {/* Actionable avatar — opens assign popover */}
-                  <AssignPopover
-                    lead={lead}
-                    assignedUser={assignedUser}
-                    users={users}
-                    onAssigned={onAssigned}
-                  />
-
-                  {/* Offer stage */}
                   <OfferStageBadge offerIds={offerIds} />
-
-                  {/* Quick status */}
                   <QuickStatusDropdown lead={lead} onStatusChange={onStatusChange} />
                 </div>
               </div>
 
-              {/* ── ROW 2: Boat + Location ── */}
-              {(lead.boat_name || lead.location) && (
+              {/* ── OWNER ROW — left-anchored, under the name ── */}
+              <div className="flex items-center gap-2 mb-4" onClick={e => e.preventDefault()}>
+                <AssignPopover lead={lead} assignedUser={assignedUser} users={users} onAssigned={onAssigned}>
+                  {assignedUser ? (
+                    <div className="flex items-center gap-1.5 group/owner">
+                      <div
+                        className={cn(
+                          'w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0',
+                          'ring-2',
+                          isAccepted ? 'ring-emerald-400' : 'ring-amber-300'
+                        )}
+                        style={{ backgroundColor: ownerColor }}
+                      >
+                        {ownerInitials}
+                      </div>
+                      <span className="text-xs font-medium text-slate-600 group-hover/owner:text-slate-900 transition-colors">
+                        {ownerShortName}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors">
+                      <div className="w-5 h-5 rounded-full bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
+                        <User className="w-3 h-3" />
+                      </div>
+                      <span className="text-xs text-slate-400">Unassigned</span>
+                    </div>
+                  )}
+                </AssignPopover>
+
+                {/* Phase dot + label — secondary, after owner */}
+                <span className="text-slate-300 text-xs">·</span>
+                <div className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
+                  <span className="text-xs text-slate-400">{phase.label}</span>
+                </div>
+              </div>
+
+              {/* ── SECONDARY BLOCK: Boat + Location ── */}
+              {(lead.boat_name || lead.location || lead.inquiry_type) && (
                 <div className="flex items-center gap-4 text-xs text-slate-500 mb-3 flex-wrap">
                   {lead.boat_name && (
                     <span className="flex items-center gap-1">
@@ -347,15 +356,15 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
                 </div>
               )}
 
-              {/* ── ROW 3: Description (2 lines, readable) ── */}
+              {/* ── TERTIARY BLOCK: Description ── */}
               {lead.description && (
-                <p className="text-sm text-slate-500 line-clamp-2 mb-3 leading-relaxed">
+                <p className="text-sm text-slate-500 line-clamp-2 mb-4 leading-relaxed">
                   {lead.description}
                 </p>
               )}
 
-              {/* ── ROW 4: Footer — aging + inline email + date ── */}
-              <div className="flex items-center justify-between gap-2">
+              {/* ── FOOTER BLOCK: aging + email + date ── */}
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
                 <div className="flex items-center gap-2">
                   {agingDays !== null && (
                     <span className={cn(
@@ -376,14 +385,13 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
                   )}
                 </div>
 
-                <div className="flex items-center gap-2" onClick={e => e.preventDefault()}>
-                  {/* Direct email action */}
+                <div className="flex items-center gap-3" onClick={e => e.preventDefault()}>
                   {lead.email && (
                     <a
                       href={`mailto:${lead.email}`}
                       onClick={e => e.stopPropagation()}
                       title={`Email: ${lead.email}`}
-                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors px-1.5 py-0.5 rounded hover:bg-blue-50"
+                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors"
                     >
                       <Mail className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">{lead.email}</span>
