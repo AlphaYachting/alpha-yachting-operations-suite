@@ -10,19 +10,19 @@ import { Mic, MicOff, Send, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertC
 import { toast } from 'sonner';
 
 const TYPE_CONFIG = {
-  material_entry:   { label: 'Material / Parts',   color: 'bg-amber-100 text-amber-800' },
-  tool_tracking:    { label: 'Tool / Equipment',   color: 'bg-blue-100 text-blue-800' },
-  task_candidate:   { label: 'Task Candidate',     color: 'bg-orange-100 text-orange-800' },
-  customer_request: { label: 'Customer Request',   color: 'bg-purple-100 text-purple-800' },
-  project_intake:   { label: 'Project Intake',     color: 'bg-green-100 text-green-800' },
-  internal_note:    { label: 'Internal Note',      color: 'bg-slate-100 text-slate-700' },
+  material_entry: { label: 'Material / Parts', color: 'bg-amber-100 text-amber-800' },
+  tool_tracking: { label: 'Tool / Equipment', color: 'bg-blue-100 text-blue-800' },
+  task_candidate: { label: 'Task Candidate', color: 'bg-orange-100 text-orange-800' },
+  customer_request: { label: 'Customer Request', color: 'bg-purple-100 text-purple-800' },
+  project_intake: { label: 'Project Intake', color: 'bg-green-100 text-green-800' },
+  internal_note: { label: 'Internal Note', color: 'bg-slate-100 text-slate-700' }
 };
 
 const VOICE_STATES = {
   idle: null,
   listening: 'Listening... speak now',
   ended: 'Voice ended — continue typing or restart',
-  error: 'Voice error — type or try again',
+  error: 'Voice error — type or try again'
 };
 
 // ── Searchable Customer Picker ─────────────────────────────────────────────
@@ -31,18 +31,18 @@ function CustomerPicker({ customers, value, onChange, label = 'Customer', confid
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
 
-  const selected = customers.find(c => c.id === value);
+  const selected = customers.find((c) => c.id === value);
   const displayName = (c) =>
-    c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
+  c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
 
-  const filtered = customers.filter(c => {
+  const filtered = customers.filter((c) => {
     const q = search.toLowerCase();
     return (
       (c.company_name || '').toLowerCase().includes(q) ||
       (c.last_name || '').toLowerCase().includes(q) ||
       (c.first_name || '').toLowerCase().includes(q) ||
-      displayName(c).toLowerCase().includes(q)
-    );
+      displayName(c).toLowerCase().includes(q));
+
   });
 
   // Close on outside click
@@ -74,53 +74,53 @@ function CustomerPicker({ customers, value, onChange, label = 'Customer', confid
         {/* Current selection / trigger */}
         <button
           type="button"
-          onClick={() => setOpen(o => !o)}
-          className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm border rounded-md bg-white hover:bg-slate-50 text-left"
-        >
+          onClick={() => setOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm border rounded-md bg-white hover:bg-slate-50 text-left">
+          
           <span className={selected ? 'text-slate-900' : 'text-slate-400'}>
             {selected ? displayName(selected) : 'None — tap to search'}
           </span>
           <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
         </button>
 
-        {open && (
-          <div className="absolute z-50 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
+        {open &&
+        <div className="absolute z-50 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
             <div className="p-2 border-b">
               <Input
-                autoFocus
-                placeholder="Search customer..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-8 text-sm"
-              />
+              autoFocus
+              placeholder="Search customer..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-sm" />
+            
             </div>
             <div className="max-h-56 overflow-y-auto">
               <button
-                type="button"
-                onClick={() => handleSelect(null)}
-                className="w-full px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 text-left"
-              >
+              type="button"
+              onClick={() => handleSelect(null)}
+              className="w-full px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 text-left">
+              
                 — Clear / None
               </button>
-              {filtered.length === 0 && (
-                <p className="px-3 py-2 text-sm text-slate-400">No results</p>
-              )}
-              {filtered.map(c => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => handleSelect(c)}
-                  className={`w-full px-3 py-3 text-sm text-left hover:bg-amber-50 ${value === c.id ? 'bg-amber-50 font-medium' : ''}`}
-                >
+              {filtered.length === 0 &&
+            <p className="px-3 py-2 text-sm text-slate-400">No results</p>
+            }
+              {filtered.map((c) =>
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => handleSelect(c)}
+              className={`w-full px-3 py-3 text-sm text-left hover:bg-amber-50 ${value === c.id ? 'bg-amber-50 font-medium' : ''}`}>
+              
                   {displayName(c)}
                 </button>
-              ))}
+            )}
             </div>
           </div>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 // ── Fuzzy matching helpers ─────────────────────────────────────────────────
@@ -131,16 +131,16 @@ function matchCustomer(customers, extractedName) {
   let bestScore = 0;
   for (const c of customers) {
     const names = [
-      c.company_name,
-      c.last_name,
-      c.first_name,
-      `${c.first_name || ''} ${c.last_name || ''}`.trim(),
-    ].filter(Boolean).map(n => n.toLowerCase());
+    c.company_name,
+    c.last_name,
+    c.first_name,
+    `${c.first_name || ''} ${c.last_name || ''}`.trim()].
+    filter(Boolean).map((n) => n.toLowerCase());
     for (const name of names) {
       if (name === needle) return { customer: c, confidence: 'high' };
       if (name.includes(needle) || needle.includes(name)) {
         const score = Math.min(name.length, needle.length) / Math.max(name.length, needle.length);
-        if (score > bestScore) { bestScore = score; best = c; }
+        if (score > bestScore) {bestScore = score;best = c;}
       }
     }
   }
@@ -151,7 +151,7 @@ function matchCustomer(customers, extractedName) {
 function matchBoat(boats, extractedName, customerId) {
   if (!extractedName) return null;
   const needle = extractedName.toLowerCase().trim();
-  const pool = customerId ? boats.filter(b => b.customer_id === customerId) : boats;
+  const pool = customerId ? boats.filter((b) => b.customer_id === customerId) : boats;
   for (const b of pool) {
     const name = (b.vessel_name || '').toLowerCase();
     if (name === needle) return { boat: b, confidence: 'high' };
@@ -173,18 +173,18 @@ function InputStep({ onParsed, customers, boats }) {
   const committedTextRef = useRef('');
   const voiceUsedRef = useRef(false);
 
-  const voiceSupported = typeof window !== 'undefined' &&
-    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+  const voiceSupported = typeof window !== 'undefined' && (
+  'SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
   const startRecording = () => {
-    if (!voiceSupported) { toast.error('Voice not supported in this browser'); return; }
+    if (!voiceSupported) {toast.error('Voice not supported in this browser');return;}
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const r = new SR();
     r.lang = 'de-DE';
-    r.continuous = true;          // keep open as long as possible
-    r.interimResults = true;      // show partial results live
+    r.continuous = true; // keep open as long as possible
+    r.interimResults = true; // show partial results live
 
-    r.onstart = () => { setVoiceState('listening'); setInterim(''); voiceUsedRef.current = true; };
+    r.onstart = () => {setVoiceState('listening');setInterim('');voiceUsedRef.current = true;};
 
     r.onresult = (e) => {
       let finalChunk = '';
@@ -197,9 +197,9 @@ function InputStep({ onParsed, customers, boats }) {
         }
       }
       if (finalChunk) {
-        committedTextRef.current = committedTextRef.current
-          ? committedTextRef.current + ' ' + finalChunk.trim()
-          : finalChunk.trim();
+        committedTextRef.current = committedTextRef.current ?
+        committedTextRef.current + ' ' + finalChunk.trim() :
+        finalChunk.trim();
         setText(committedTextRef.current);
         setInterim('');
       } else {
@@ -217,11 +217,11 @@ function InputStep({ onParsed, customers, boats }) {
 
     r.onend = () => {
       // Flush any remaining interim into committed text
-      setInterim(prev => {
+      setInterim((prev) => {
         if (prev.trim()) {
-          committedTextRef.current = committedTextRef.current
-            ? committedTextRef.current + ' ' + prev.trim()
-            : prev.trim();
+          committedTextRef.current = committedTextRef.current ?
+          committedTextRef.current + ' ' + prev.trim() :
+          prev.trim();
           setText(committedTextRef.current);
         }
         return '';
@@ -246,13 +246,13 @@ function InputStep({ onParsed, customers, boats }) {
     setUploading(true);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setPhotoUrls(prev => [...prev, file_url]);
-    } catch { toast.error('Photo upload failed'); }
-    finally { setUploading(false); }
+      setPhotoUrls((prev) => [...prev, file_url]);
+    } catch {toast.error('Photo upload failed');} finally
+    {setUploading(false);}
   };
 
   const handleProcess = async () => {
-    if (!text.trim()) { toast.error('Please enter some text first'); return; }
+    if (!text.trim()) {toast.error('Please enter some text first');return;}
     // Stop voice if still running
     recognitionRef.current?.stop();
     setProcessing(true);
@@ -289,18 +289,18 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
               work_hints: { type: 'array', items: { type: 'string' } },
               urgency: { type: 'string' },
               billable: { type: 'boolean' },
-              secondary_signals: { type: 'array', items: { type: 'string' } },
+              secondary_signals: { type: 'array', items: { type: 'string' } }
             }
           }
         });
-      } catch { /* AI unavailable */ }
+      } catch {/* AI unavailable */}
 
-      const customerMatch = aiResult?.customer_name
-        ? matchCustomer(customers, aiResult.customer_name)
-        : null;
-      const boatMatch = aiResult?.boat_name
-        ? matchBoat(boats, aiResult.boat_name, customerMatch?.customer?.id)
-        : null;
+      const customerMatch = aiResult?.customer_name ?
+      matchCustomer(customers, aiResult.customer_name) :
+      null;
+      const boatMatch = aiResult?.boat_name ?
+      matchBoat(boats, aiResult.boat_name, customerMatch?.customer?.id) :
+      null;
 
       onParsed({
         rawText: text,
@@ -308,7 +308,7 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
         inputMethod: voiceUsedRef.current ? 'voice' : 'text',
         aiResult,
         customerMatch,
-        boatMatch,
+        boatMatch
       });
     } finally {
       setProcessing(false);
@@ -330,81 +330,81 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
           }}
           rows={5}
           className="resize-none text-base min-h-[120px]"
-          autoFocus
-        />
-        {interim && (
-          <div className="absolute bottom-2 right-2 text-xs text-slate-400 bg-white/80 px-1 rounded">
+          autoFocus />
+        
+        {interim &&
+        <div className="absolute bottom-2 right-2 text-xs text-slate-400 bg-white/80 px-1 rounded">
             …
           </div>
-        )}
+        }
       </div>
 
       {/* Voice state hint */}
-      {voiceMsg && (
-        <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded border ${
-          voiceState === 'listening' ? 'bg-red-50 border-red-200 text-red-700' :
-          voiceState === 'error' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-          'bg-slate-50 border-slate-200 text-slate-600'
-        }`}>
+      {voiceMsg &&
+      <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded border ${
+      voiceState === 'listening' ? 'bg-red-50 border-red-200 text-red-700' :
+      voiceState === 'error' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+      'bg-slate-50 border-slate-200 text-slate-600'}`
+      }>
           {voiceState === 'listening' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
           {voiceMsg}
         </div>
-      )}
+      }
 
       <div className="flex items-center gap-3">
-        {voiceSupported && (
-          <button
-            type="button"
-            onClick={voiceState === 'listening' ? stopRecording : startRecording}
-            className={`flex-1 flex flex-col items-center justify-center gap-1 py-4 rounded-xl border-2 text-sm font-medium transition-colors ${
-              voiceState === 'listening'
-                ? 'border-red-400 bg-red-50 text-red-600 animate-pulse'
-                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {voiceState === 'listening'
-              ? <><MicOff className="h-6 w-6" /><span>Stop</span></>
-              : <><Mic className="h-6 w-6" /><span>{voiceState === 'ended' || voiceState === 'error' ? 'Nochmal' : 'Sprache'}</span></>
-            }
+        {voiceSupported &&
+        <button
+          type="button"
+          onClick={voiceState === 'listening' ? stopRecording : startRecording}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 py-4 rounded-xl border-2 text-sm font-medium transition-colors ${
+          voiceState === 'listening' ?
+          'border-red-400 bg-red-50 text-red-600 animate-pulse' :
+          'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'}`
+          }>
+          
+            {voiceState === 'listening' ?
+          <><MicOff className="h-6 w-6" /><span>Stop</span></> :
+          <><Mic className="h-6 w-6" /><span>{voiceState === 'ended' || voiceState === 'error' ? 'Nochmal' : 'Sprache'}</span></>
+          }
           </button>
-        )}
+        }
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-4 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 text-sm font-medium"
-        >
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-4 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 text-sm font-medium">
+          
           {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
           <span>Foto{photoUrls.length > 0 ? ` (${photoUrls.length})` : ''}</span>
         </button>
         <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
-        {photoUrls.length > 0 && (
-          <span className="text-xs text-slate-500">{photoUrls.length} photo(s) attached</span>
-        )}
+        {photoUrls.length > 0 &&
+        <span className="text-xs text-slate-500">{photoUrls.length} photo(s) attached</span>
+        }
       </div>
 
-      {photoUrls.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {photoUrls.map((url, i) => (
-            <div key={i} className="relative">
+      {photoUrls.length > 0 &&
+      <div className="flex flex-wrap gap-2">
+          {photoUrls.map((url, i) =>
+        <div key={i} className="relative">
               <img src={url} alt="" className="h-14 w-14 object-cover rounded border" />
-              <button onClick={() => setPhotoUrls(p => p.filter((_, j) => j !== i))}
-                className="absolute -top-1 -right-1 bg-white rounded-full border p-0.5">
+              <button onClick={() => setPhotoUrls((p) => p.filter((_, j) => j !== i))}
+          className="absolute -top-1 -right-1 bg-white rounded-full border p-0.5">
                 <X className="h-3 w-3 text-slate-500" />
               </button>
             </div>
-          ))}
+        )}
         </div>
-      )}
+      }
 
       <Button onClick={handleProcess} disabled={processing || !text.trim()}
-        className="bg-amber-500 hover:bg-amber-600 text-white w-full h-12 text-base">
-        {processing
-          ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Analysieren...</>
-          : <><Zap className="h-5 w-5 mr-2" />Analysieren &amp; Prüfen</>}
+      className="bg-amber-500 hover:bg-amber-600 text-white w-full h-12 text-base">
+        {processing ?
+        <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Analysieren...</> :
+        <><Zap className="h-5 w-5 mr-2" />Analysieren &amp; Prüfen</>}
       </Button>
-    </div>
-  );
+    </div>);
+
 }
 
 // ── STEP 2: Result Card ────────────────────────────────────────────────────
@@ -415,9 +415,9 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
   const [overrideType, setOverrideType] = useState(aiResult?.entry_type || '');
   const [saving, setSaving] = useState(false);
 
-  const availableBoats = overrideCustomerId
-    ? boats.filter(b => b.customer_id === overrideCustomerId)
-    : boats;
+  const availableBoats = overrideCustomerId ?
+  boats.filter((b) => b.customer_id === overrideCustomerId) :
+  boats;
 
   const handleConfirm = async () => {
     setSaving(true);
@@ -437,9 +437,9 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
         ai_urgency_hint: aiResult?.urgency || null,
         ai_billable_hint: aiResult?.billable ?? null,
         review_status: 'new',
-        review_notes: aiResult?.secondary_signals?.length > 0
-          ? `Secondary signals: ${aiResult.secondary_signals.join(', ')}`
-          : null,
+        review_notes: aiResult?.secondary_signals?.length > 0 ?
+        `Secondary signals: ${aiResult.secondary_signals.join(', ')}` :
+        null
       };
       await base44.entities.QuickCaptureEntry.create(entry);
       onConfirm();
@@ -453,11 +453,11 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
 
   const typeConf = TYPE_CONFIG[overrideType] || TYPE_CONFIG.internal_note;
 
-  const confidenceBadge = customerMatch ? (
-    <Badge className={customerMatch.confidence === 'high' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+  const confidenceBadge = customerMatch ?
+  <Badge className={customerMatch.confidence === 'high' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
       {customerMatch.confidence} match
-    </Badge>
-  ) : null;
+    </Badge> :
+  null;
 
   return (
     <div className="space-y-4">
@@ -471,32 +471,32 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
           <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Parsed Result</span>
           <div className="flex items-center gap-2 flex-wrap">
             {overrideType && <Badge className={typeConf.color}>{typeConf.label}</Badge>}
-            {aiResult?.urgency && aiResult.urgency !== 'normal' && (
-              <Badge className="bg-red-100 text-red-700">{aiResult.urgency}</Badge>
-            )}
+            {aiResult?.urgency && aiResult.urgency !== 'normal' &&
+            <Badge className="bg-red-100 text-red-700">{aiResult.urgency}</Badge>
+            }
           </div>
         </div>
 
-        {aiResult?.short_summary && (
-          <div className="p-3">
+        {aiResult?.short_summary &&
+        <div className="p-3">
             <p className="text-sm text-slate-800">{aiResult.short_summary}</p>
           </div>
-        )}
+        }
 
         {/* Customer — searchable */}
         <div className="p-3 bg-white">
           <CustomerPicker
             customers={customers}
             value={overrideCustomerId}
-            onChange={(id) => { setOverrideCustomerId(id); setOverrideBoatId(''); }}
+            onChange={(id) => {setOverrideCustomerId(id);setOverrideBoatId('');}}
             label="Customer"
-            confidenceBadge={confidenceBadge}
-          />
-          {customerMatch && (
-            <p className="text-xs text-slate-400 mt-1 ml-6">
+            confidenceBadge={confidenceBadge} />
+          
+          {customerMatch &&
+          <p className="text-xs text-slate-400 mt-1 ml-6">
               Auto-detected: "{aiResult?.customer_name}" → {customerMatch.confidence} confidence
             </p>
-          )}
+          }
         </div>
 
         {/* Boat */}
@@ -504,11 +504,11 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
           <div className="flex items-center gap-2 mb-1">
             <Ship className="h-4 w-4 text-slate-400" />
             <span className="text-sm font-medium text-slate-700">Boat</span>
-            {boatMatch && (
-              <Badge className={boatMatch.confidence === 'high' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+            {boatMatch &&
+            <Badge className={boatMatch.confidence === 'high' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
                 {boatMatch.confidence} match
               </Badge>
-            )}
+            }
           </div>
           <Select value={overrideBoatId} onValueChange={setOverrideBoatId}>
             <SelectTrigger className="h-8 text-sm bg-white">
@@ -516,32 +516,32 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={null}>None / Not matched</SelectItem>
-              {availableBoats.map(b => (
-                <SelectItem key={b.id} value={b.id}>{b.vessel_name}</SelectItem>
-              ))}
+              {availableBoats.map((b) =>
+              <SelectItem key={b.id} value={b.id}>{b.vessel_name}</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
 
         {/* Location */}
-        {aiResult?.location && (
-          <div className="p-3 flex items-center gap-2">
+        {aiResult?.location &&
+        <div className="p-3 flex items-center gap-2">
             <MapPin className="h-4 w-4 text-slate-400" />
             <span className="text-sm text-slate-700">{aiResult.location}</span>
           </div>
-        )}
+        }
 
         {/* Secondary signals */}
-        {aiResult?.secondary_signals?.length > 0 && (
-          <div className="p-3">
+        {aiResult?.secondary_signals?.length > 0 &&
+        <div className="p-3">
             <p className="text-xs font-semibold text-amber-700 mb-1">⚡ Multiple signals detected:</p>
             <div className="flex flex-wrap gap-1">
-              {aiResult.secondary_signals.map((s, i) => (
-                <Badge key={i} className="bg-slate-100 text-slate-600 text-xs">{s}</Badge>
-              ))}
+              {aiResult.secondary_signals.map((s, i) =>
+            <Badge key={i} className="bg-slate-100 text-slate-600 text-xs">{s}</Badge>
+            )}
             </div>
           </div>
-        )}
+        }
 
         {/* Classification */}
         <div className="p-3">
@@ -551,48 +551,48 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
               <SelectValue placeholder="Select type..." />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(TYPE_CONFIG).map(([key, conf]) => (
-                <SelectItem key={key} value={key}>{conf.label}</SelectItem>
-              ))}
+              {Object.entries(TYPE_CONFIG).map(([key, conf]) =>
+              <SelectItem key={key} value={key}>{conf.label}</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
 
-        {aiResult?.suggested_target && (
-          <div className="p-3">
+        {aiResult?.suggested_target &&
+        <div className="p-3">
             <p className="text-xs text-amber-700">→ Suggested destination: {aiResult.suggested_target}</p>
           </div>
-        )}
+        }
       </div>
 
-      {!aiResult && (
-        <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+      {!aiResult &&
+      <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
           AI unavailable — entry saved unclassified for manual review.
         </div>
-      )}
+      }
 
-      {photoUrls?.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {photoUrls.map((url, i) => (
-            <img key={i} src={url} alt="" className="h-14 w-14 object-cover rounded border" />
-          ))}
+      {photoUrls?.length > 0 &&
+      <div className="flex flex-wrap gap-2">
+          {photoUrls.map((url, i) =>
+        <img key={i} src={url} alt="" className="h-14 w-14 object-cover rounded border" />
+        )}
         </div>
-      )}
+      }
 
       <div className="flex gap-2 pt-1">
         <Button variant="outline" onClick={onEdit} className="flex-1 h-12">
           <Edit2 className="h-4 w-4 mr-1" /> Text bearbeiten
         </Button>
         <Button onClick={handleConfirm} disabled={saving} className="flex-1 h-12 bg-amber-500 hover:bg-amber-600 text-white text-base">
-          {saving
-            ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            : <CheckCircle2 className="h-4 w-4 mr-1" />}
+          {saving ?
+          <Loader2 className="h-4 w-4 mr-1 animate-spin" /> :
+          <CheckCircle2 className="h-4 w-4 mr-1" />}
           Speichern
         </Button>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 // ── MAIN MODAL ─────────────────────────────────────────────────────────────
@@ -609,9 +609,9 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
       setParsed(null);
       // Always fetch fresh full customer/boat list when modal opens
       Promise.all([
-        base44.entities.Customer.list('-last_name', 2000),
-        base44.entities.Boat.list('-created_date', 2000),
-      ]).then(([c, b]) => {
+      base44.entities.Customer.list('-last_name', 2000),
+      base44.entities.Boat.list('-created_date', 2000)]
+      ).then(([c, b]) => {
         setCustomers(c || []);
         setBoats(b || []);
       }).catch(() => {
@@ -634,23 +634,30 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
           max-sm:rounded-b-2xl max-sm:rounded-t-none
           max-sm:max-h-[92vh] overflow-y-auto
         ">
+
+
+
+
+
+
+        
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="py-3 text-lg font-semibold tracking-tight leading-none flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-500" />
             Quick Capture
             {step === 'result' && <span className="text-sm font-normal text-slate-500 ml-1">— Review Result</span>}
           </DialogTitle>
         </DialogHeader>
 
-        {step === 'input' && (
-          <InputStep customers={customers} boats={boats}
-            onParsed={(p) => { setParsed(p); setStep('result'); }} />
-        )}
-        {step === 'result' && parsed && (
-          <ResultStep parsed={parsed} customers={customers} boats={boats}
-            onConfirm={() => handleClose(false)} onEdit={() => setStep('input')} />
-        )}
+        {step === 'input' &&
+        <InputStep customers={customers} boats={boats}
+        onParsed={(p) => {setParsed(p);setStep('result');}} />
+        }
+        {step === 'result' && parsed &&
+        <ResultStep parsed={parsed} customers={customers} boats={boats}
+        onConfirm={() => handleClose(false)} onEdit={() => setStep('input')} />
+        }
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }
