@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Save, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import TeamOrderForm from '@/components/teamorder/TeamOrderForm';
 import PDFExportButton from '@/components/pdf/PDFExportButton';
+import BriefingContextPreview from '@/components/teamorder/BriefingContextPreview';
 
 export default function TeamOrderDetail() {
   const navigate = useNavigate();
@@ -37,6 +38,11 @@ export default function TeamOrderDetail() {
   const [boat, setBoat] = useState(null);
   const [location, setLocation] = useState(null);
   const [jobDescriptionEn, setJobDescriptionEn] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    base44.auth.me().then(user => setCurrentUser(user)).catch(() => {});
+  }, []);
 
 
   useEffect(() => {
@@ -334,25 +340,33 @@ export default function TeamOrderDetail() {
             </Card>
           )}
 
-          {/* Change Log */}
-          {!isNew && teamOrder.change_log && teamOrder.change_log.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Change History</CardTitle>
-                <CardDescription>Work Order updates</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {teamOrder.change_log.map((log, idx) => (
-                    <div key={idx} className="text-xs border-l-2 border-slate-200 pl-3 py-1">
-                      <p className="font-medium text-slate-700">{log.changed_field}</p>
-                      <p className="text-slate-500">{new Date(log.timestamp).toLocaleString()}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          {/* Briefing Context Preview */}
+          {!isNew && teamOrderId && (
+            <BriefingContextPreview 
+              teamOrderId={teamOrderId}
+              isAdmin={currentUser?.role === 'admin'}
+            />
           )}
+
+          {/* Change Log */}
+           {!isNew && teamOrder.change_log && teamOrder.change_log.length > 0 && (
+             <Card>
+               <CardHeader>
+                 <CardTitle className="text-base">Change History</CardTitle>
+                 <CardDescription>Work Order updates</CardDescription>
+               </CardHeader>
+               <CardContent>
+                 <div className="space-y-2 max-h-60 overflow-y-auto">
+                   {teamOrder.change_log.map((log, idx) => (
+                     <div key={idx} className="text-xs border-l-2 border-slate-200 pl-3 py-1">
+                       <p className="font-medium text-slate-700">{log.changed_field}</p>
+                       <p className="text-slate-500">{new Date(log.timestamp).toLocaleString()}</p>
+                     </div>
+                   ))}
+                 </div>
+               </CardContent>
+             </Card>
+           )}
         </div>
       </div>
 
