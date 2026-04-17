@@ -1,5 +1,5 @@
 // EMAIL ENGINE SANDBOX - Fetch & Store Inbound Messages
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { ImapFlow } from 'npm:imapflow@1.0.167';
 import { Buffer } from 'node:buffer';
 
