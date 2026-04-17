@@ -20,7 +20,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
 
   const layout = config?.layout || {
     logoPosition: 'left',
-    logoHeight: 67,
+    logoHeight: 77,
     timePosition: 'center',
     tasksPosition: 'right',
     flexDirection: 'row',
