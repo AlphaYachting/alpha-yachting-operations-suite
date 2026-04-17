@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -633,14 +634,23 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
           max-sm:!w-full max-sm:!max-w-none
           max-sm:rounded-b-2xl max-sm:rounded-t-none
           max-sm:max-h-[92vh] overflow-y-auto
+          [&>button:last-of-type]:hidden
         ">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-amber-500" />
-            Quick Capture
-            {step === 'result' && <span className="text-sm font-normal text-slate-500 ml-1">— Review Result</span>}
-          </DialogTitle>
-        </DialogHeader>
+        {/* Custom header — full-width row with title + close button, mobile-friendly */}
+        <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-100 mb-1">
+          <div className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-amber-500 flex-shrink-0" />
+            <span className="text-lg font-semibold text-slate-900 leading-none">Quick Capture</span>
+            {step === 'result' && <span className="text-sm font-normal text-slate-500">— Review</span>}
+          </div>
+          <button
+            onClick={() => handleClose(false)}
+            className="flex items-center justify-center h-10 w-10 rounded-full bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-600 transition-colors flex-shrink-0"
+            aria-label="Schließen"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
         {step === 'input' && (
           <InputStep customers={customers} boats={boats}
