@@ -111,6 +111,25 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Extract scope summary from job description via LLM if no offer
+    let scopeSummary = offer?.description || null;
+    if (!scopeSummary && job?.description) {
+      try {
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt: `Extract a brief 2-3 sentence scope summary from this job description. Be concise and focus on what work needs to be done:\n\n${job.description}`,
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              scope_summary: { type: 'string' }
+            }
+          }
+        });
+        scopeSummary = result.scope_summary || null;
+      } catch (err) {
+        // LLM extraction failed — leave as null
+      }
+    }
+
     // Build normalized task list
     const tasks = (tasksData || []).map(task => ({
       id: task.id,
@@ -225,7 +244,7 @@ Deno.serve(async (req) => {
       external_notes: {
         partner_notes: teamOrderData.partner_notes || null,
         customer_visible_notes: offer?.customer_notes || job?.customer_notes || null,
-        scope_summary: offer?.description || null,
+        scope_summary: scopeSummary,
         communication_summary: null // no email history in current schema
       },
 
