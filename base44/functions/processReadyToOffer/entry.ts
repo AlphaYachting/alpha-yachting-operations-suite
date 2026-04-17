@@ -17,10 +17,9 @@ Deno.serve(async (req) => {
     return Response.json({ skipped: true, reason: 'already_was_ready_to_offer' });
   }
 
-  // IDEMPOTENCY CHECK — if offer already exists, just ensure status is Offered
+  // IDEMPOTENCY CHECK — if offer already exists, skip (do not change status)
   if (lead.created_offer_ids && lead.created_offer_ids.length > 0) {
-    await base44.asServiceRole.entities.Lead.update(lead.id, { status: 'Offered', auto_offer_error: null });
-    return Response.json({ skipped: true, reason: 'offer_already_exists', updated_to_offered: true });
+    return Response.json({ skipped: true, reason: 'offer_already_exists' });
   }
 
   // VALIDATION
@@ -118,10 +117,9 @@ Deno.serve(async (req) => {
 
   const newOffer = await base44.asServiceRole.entities.Offer.create(offerData);
 
-  // STEP 6 — Finalize Lead
+  // STEP 6 — Finalize Lead (stay at "Ready to Offer" — status moves to "Offered" only when Offer is set to "Sent")
   const existingOfferIds = lead.created_offer_ids || [];
   await base44.asServiceRole.entities.Lead.update(lead.id, {
-    status: 'Offered',
     auto_offer_error: null,
     created_offer_ids: [...existingOfferIds, newOffer.id]
   });
