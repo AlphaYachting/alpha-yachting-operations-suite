@@ -266,7 +266,7 @@ Deno.serve(async (req) => {
 
       quality_flags: {
         missing_job_description: !job?.description,
-        missing_scope_context: !offer?.description,
+        missing_scope_context: !scopeSummary,
         missing_customer_communication: true, // no email entity linked
         missing_task_descriptions: tasks.some(t => !t.description),
         stale_after_work_order_update: false, // would need version tracking
