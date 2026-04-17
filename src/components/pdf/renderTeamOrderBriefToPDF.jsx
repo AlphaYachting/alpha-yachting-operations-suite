@@ -184,42 +184,42 @@ export async function renderTeamOrderBriefToPDF(briefDocument, template) {
 
   // === PROJECT DESCRIPTION (Bilingual) ===
   if (briefDocument.projectDescription) {
-    checkPageBreak(30);
-    yPos = drawSectionHeader('PROJECT DESCRIPTION / PROJEKTBESCHREIBUNG', yPos);
+    checkPageBreak(35);
+    yPos = drawSectionHeader('PROJECT DESCRIPTION / SCOPE OF WORK', yPos);
     
-    // English
+    // English section
     doc.setFont(fontFamily, 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
-    doc.text('English:', margins.left + 2, yPos);
+    doc.text('English:', margins.left, yPos);
     yPos += 4;
     
     doc.setFont(fontFamily, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
-    const enLines = doc.splitTextToSize(briefDocument.projectDescription.en, contentWidth - 4);
+    const enLines = doc.splitTextToSize(briefDocument.projectDescription.en || '', contentWidth);
     enLines.forEach(line => {
       checkPageBreak(5);
-      doc.text(line, margins.left + 2, yPos);
+      doc.text(line, margins.left, yPos);
       yPos += 4.5;
     });
-    yPos += 3;
+    yPos += 5;
     
-    // German
-    checkPageBreak(15);
+    // German section
+    checkPageBreak(20);
     doc.setFont(fontFamily, 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
-    doc.text('Deutsch:', margins.left + 2, yPos);
+    doc.text('Deutsch:', margins.left, yPos);
     yPos += 4;
     
     doc.setFont(fontFamily, 'normal');
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
-    const deLines = doc.splitTextToSize(briefDocument.projectDescription.de, contentWidth - 4);
+    const deLines = doc.splitTextToSize(briefDocument.projectDescription.de || '', contentWidth);
     deLines.forEach(line => {
       checkPageBreak(5);
-      doc.text(line, margins.left + 2, yPos);
+      doc.text(line, margins.left, yPos);
       yPos += 4.5;
     });
     yPos += 3;
@@ -227,81 +227,118 @@ export async function renderTeamOrderBriefToPDF(briefDocument, template) {
 
   // === TASKS ===
   if (briefDocument.taskList && briefDocument.taskList.length > 0) {
-    checkPageBreak(20);
+    checkPageBreak(25);
     yPos = drawSectionHeader('TASKS & CHECKLIST', yPos);
-    
-    doc.setFont(fontFamily, 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(255, 255, 255);
-    doc.setFillColor(tealColor.r, tealColor.g, tealColor.b);
-    doc.rect(margins.left, yPos - 4, contentWidth, 6, 'F');
-    doc.text('#', margins.left + 2, yPos);
-    doc.text('Task', margins.left + 12, yPos);
-    doc.text('Est. Time', pageWidth - margins.right - 2, yPos, { align: 'right' });
-    yPos += 6;
     
     doc.setFont(fontFamily, 'normal');
     doc.setTextColor(0, 0, 0);
-    briefDocument.taskList.forEach(task => {
-      checkPageBreak(8);
-      doc.text(task.number.toString(), margins.left + 2, yPos);
-      const taskLines = doc.splitTextToSize(task.title, contentWidth - 40);
-      doc.text(taskLines, margins.left + 12, yPos);
-      const estTime = task.estimatedHours ? `${task.estimatedHours}h` : '-';
-      doc.text(estTime, pageWidth - margins.right - 2, yPos, { align: 'right' });
-      yPos += Math.max(taskLines.length * 4, 4.5);
-      doc.setDrawColor(220, 220, 220);
-      doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
+    doc.setFontSize(9);
+    
+    briefDocument.taskList.forEach((task, idx) => {
+      checkPageBreak(12);
+      
+      // Task number and title
+      doc.setFont(fontFamily, 'bold');
+      doc.setTextColor(tealColor.r, tealColor.g, tealColor.b);
+      doc.text(`${task.number}. ${task.title}`, margins.left, yPos);
+      yPos += 5;
+      
+      // Description if available
+      if (task.description) {
+        doc.setFont(fontFamily, 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(8);
+        const descLines = doc.splitTextToSize(task.description, contentWidth - 4);
+        descLines.forEach(line => {
+          doc.text(line, margins.left + 2, yPos);
+          yPos += 4;
+        });
+        yPos += 1;
+      }
+      
+      // Estimated time
+      if (task.estimatedHours) {
+        doc.setFont(fontFamily, 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(8);
+        doc.text(`Est. ${task.estimatedHours}h`, margins.left + 2, yPos);
+        yPos += 4;
+      }
+      
+      // Separator between tasks
+      if (idx < briefDocument.taskList.length - 1) {
+        doc.setDrawColor(220, 220, 220);
+        doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
+        yPos += 4;
+      }
     });
-    yPos += 2;
+    yPos += 3;
   }
 
   // === LOCATION & ACCESS ===
   if (briefDocument.locationAccess) {
-    checkPageBreak(20);
+    checkPageBreak(25);
     const loc = briefDocument.locationAccess;
     yPos = drawSectionHeader('LOCATION & ACCESS', yPos);
     yPos = drawTwoColGrid([
-      ['Location', loc.name, 'Address', loc.address],
-      ['City', loc.city, null, null],
+      ['Location', loc.name, 'City', loc.city],
+      ['Address', loc.address, null, null],
       ['Access Notes', loc.accessNotes, null, null]
     ], yPos);
-    yPos += 2;
+    yPos += 3;
   }
 
   // === DOCUMENTATION & PAYMENT REQUIREMENTS ===
   if (briefDocument.documentationNotice) {
-    checkPageBreak(25);
+    checkPageBreak(30);
     yPos = drawSectionHeader('DOCUMENTATION & PAYMENT REQUIREMENTS', yPos);
     
     // Highlighted notice box
     doc.setFillColor(255, 243, 224);
     doc.setDrawColor(255, 152, 0);
-    doc.setLineWidth(0.5);
-    doc.rect(margins.left - 2, yPos - 4, contentWidth + 4, 65, 'FD');
+    doc.setLineWidth(1);
+    
+    const notice = briefDocument.documentationNotice;
+    const enNoticeLines = doc.splitTextToSize(notice.en, contentWidth - 8);
+    const deNoticeLines = doc.splitTextToSize(notice.de, contentWidth - 8);
+    const boxHeight = enNoticeLines.length * 3.5 + deNoticeLines.length * 3.5 + 20;
+    
+    doc.rect(margins.left, yPos - 3, contentWidth, boxHeight, 'FD');
     
     doc.setFont(fontFamily, 'bold');
     doc.setFontSize(8);
     doc.setTextColor(255, 87, 34);
-    doc.text('IMPORTANT NOTICE:', margins.left + 2, yPos);
+    doc.text('⚠ IMPORTANT NOTICE:', margins.left + 3, yPos);
     yPos += 5;
     
     doc.setFont(fontFamily, 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(51, 51, 51);
     
-    const notice = briefDocument.documentationNotice;
-    const enNoticeLines = doc.splitTextToSize(notice.en, contentWidth - 8);
+    // English notice
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(7);
+    doc.text('English:', margins.left + 3, yPos);
+    yPos += 3;
+    
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(8);
     enNoticeLines.forEach(line => {
-      doc.text(line, margins.left + 4, yPos);
+      doc.text(line, margins.left + 3, yPos);
       yPos += 3.5;
     });
-    
     yPos += 2;
     
-    const deNoticeLines = doc.splitTextToSize(notice.de, contentWidth - 8);
+    // German notice
+    doc.setFont(fontFamily, 'bold');
+    doc.setFontSize(7);
+    doc.text('Deutsch:', margins.left + 3, yPos);
+    yPos += 3;
+    
+    doc.setFont(fontFamily, 'normal');
+    doc.setFontSize(8);
     deNoticeLines.forEach(line => {
-      doc.text(line, margins.left + 4, yPos);
+      doc.text(line, margins.left + 3, yPos);
       yPos += 3.5;
     });
     yPos += 4;
@@ -325,14 +362,14 @@ export async function renderTeamOrderBriefToPDF(briefDocument, template) {
 
   // === BUDGET ===
   if (briefDocument.budget) {
-    checkPageBreak(25);
+    checkPageBreak(28);
     yPos = drawSectionHeader('BUDGET & COST COVERAGE', yPos);
     
     doc.setFont(fontFamily, 'bold');
     doc.setFontSize(9);
     doc.setTextColor(255, 255, 255);
     doc.setFillColor(tealColor.r, tealColor.g, tealColor.b);
-    doc.rect(margins.left, yPos - 4, contentWidth, 6, 'F');
+    doc.rect(margins.left, yPos - 3.5, contentWidth, 5.5, 'F');
     doc.text('Budget Category', margins.left + 2, yPos);
     doc.text('Amount', pageWidth - margins.right - 2, yPos, { align: 'right' });
     yPos += 6;
@@ -342,19 +379,26 @@ export async function renderTeamOrderBriefToPDF(briefDocument, template) {
     doc.setFontSize(9);
     
     const budgetRows = [
-      ['Total Approved Budget', `€${briefDocument.budget.totalApproved.toFixed(2)}`],
-      ['Labor', `€${briefDocument.budget.labor.toFixed(2)}`],
-      ['Travel', `€${briefDocument.budget.travel.toFixed(2)}`],
-      ['Accommodation', `€${briefDocument.budget.accommodation.toFixed(2)}`],
-      ['Per Diem', `€${briefDocument.budget.perDiem.toFixed(2)}`]
+      ['Total Approved Budget', `€${briefDocument.budget.totalApproved.toFixed(2)}`, true],
+      ['Labor', `€${briefDocument.budget.labor.toFixed(2)}`, false],
+      ['Travel', `€${briefDocument.budget.travel.toFixed(2)}`, false],
+      ['Accommodation', `€${briefDocument.budget.accommodation.toFixed(2)}`, false],
+      ['Per Diem', `€${briefDocument.budget.perDiem.toFixed(2)}`, false]
     ];
     
-    budgetRows.forEach(([label, amount]) => {
+    budgetRows.forEach(([label, amount, isBold], idx) => {
+      if (isBold) {
+        doc.setFont(fontFamily, 'bold');
+      } else {
+        doc.setFont(fontFamily, 'normal');
+      }
       doc.text(label, margins.left + 2, yPos);
       doc.text(amount, pageWidth - margins.right - 2, yPos, { align: 'right' });
       yPos += 4.5;
-      doc.setDrawColor(220, 220, 220);
-      doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
+      if (idx < budgetRows.length - 1) {
+        doc.setDrawColor(220, 220, 220);
+        doc.line(margins.left, yPos, pageWidth - margins.right, yPos);
+      }
     });
   }
 

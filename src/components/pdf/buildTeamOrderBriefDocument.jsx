@@ -51,13 +51,15 @@ export function buildTeamOrderBriefDocument(briefingContext) {
 
   // === BILINGUAL PROJECT DESCRIPTION ===
   // Build one coherent worker-oriented description (no duplicates, no email language)
+  // NOTE: Both EN and DE use the same source content for now
+  // In a future release, this could call an LLM translation service
   const buildProjectDescription = () => {
     const scope = externalNotes.scope_summary || '';
     const woDesc = stripHtmlTags(wo.description || '');
     const jobDesc = stripHtmlTags(job.description || '');
     const partnerNotes = externalNotes.partner_notes || '';
 
-    // English version
+    // Primary content (English)
     let en = '';
     if (scope) {
       en += scope;
@@ -70,7 +72,7 @@ export function buildTeamOrderBriefDocument(briefingContext) {
       en = 'Work order scheduled. See tasks and schedule details below.';
     }
 
-    // German version
+    // German version (currently same as English; in production would use translation)
     let de = '';
     if (scope) {
       de += scope;
@@ -83,7 +85,10 @@ export function buildTeamOrderBriefDocument(briefingContext) {
       de = 'Arbeitsauftrag geplant. Weitere Details finden Sie in den Aufgaben und dem Zeitplan unten.';
     }
 
-    return { en: en.trim(), de: de.trim() };
+    return { 
+      en: en.trim(), 
+      de: de.trim()
+    };
   };
 
   const projectDescription = buildProjectDescription();
