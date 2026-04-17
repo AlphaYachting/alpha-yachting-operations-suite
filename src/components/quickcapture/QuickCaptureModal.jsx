@@ -408,7 +408,7 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
 }
 
 // ── STEP 2: Result Card ────────────────────────────────────────────────────
-function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
+function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderContext = null }) {
   const { rawText, photoUrls, inputMethod, aiResult, customerMatch, boatMatch } = parsed;
   const [overrideCustomerId, setOverrideCustomerId] = useState(customerMatch?.customer?.id || '');
   const [overrideBoatId, setOverrideBoatId] = useState(boatMatch?.boat?.id || '');
@@ -427,6 +427,9 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
         input_method: inputMethod,
         customer_id: overrideCustomerId || null,
         boat_id: overrideBoatId || null,
+        // Operational context — only set when launched from a Work Order
+        work_order_id: workOrderContext?.work_order_id || null,
+        job_id: workOrderContext?.job_id || null,
         location_text: aiResult?.location || null,
         photo_urls: photoUrls?.length > 0 ? photoUrls : null,
         suggested_type: overrideType || aiResult?.entry_type || null,
@@ -596,7 +599,8 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit }) {
 }
 
 // ── MAIN MODAL ─────────────────────────────────────────────────────────────
-export default function QuickCaptureModal({ open, onClose, onOpenChange, customers: customersProp = [], boats: boatsProp = [] }) {
+// workOrderContext: optional { work_order_id, job_id, display_label } — passed when launched from TeamWorkOrderDetail
+export default function QuickCaptureModal({ open, onClose, onOpenChange, customers: customersProp = [], boats: boatsProp = [], workOrderContext = null }) {
   const handleClose = onOpenChange || onClose;
   const [step, setStep] = useState('input');
   const [parsed, setParsed] = useState(null);
@@ -649,12 +653,21 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
           </DialogTitle>
         </DialogHeader>
 
+        {/* WO context banner — only shown when launched from a Work Order */}
+        {workOrderContext?.work_order_id && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 mb-1">
+            <Zap className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+            <span>Linked to: <strong>{workOrderContext.display_label || `WO ${workOrderContext.work_order_id.slice(-6)}`}</strong></span>
+          </div>
+        )}
+
         {step === 'input' &&
         <InputStep customers={customers} boats={boats}
         onParsed={(p) => {setParsed(p);setStep('result');}} />
         }
         {step === 'result' && parsed &&
         <ResultStep parsed={parsed} customers={customers} boats={boats}
+        workOrderContext={workOrderContext}
         onConfirm={() => handleClose(false)} onEdit={() => setStep('input')} />
         }
       </DialogContent>

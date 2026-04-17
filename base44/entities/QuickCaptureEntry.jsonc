@@ -22,6 +22,14 @@
       "type": "string",
       "description": "Optional: linked boat"
     },
+    "work_order_id": {
+      "type": "string",
+      "description": "Optional: linked Work Order (set when capture is created from within a WO)"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Optional: linked Job (set when derivable from the Work Order context)"
+    },
     "location_text": {
       "type": "string",
       "description": "Free-text location or marina"

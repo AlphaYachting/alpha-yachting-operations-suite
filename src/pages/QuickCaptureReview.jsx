@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Zap, CheckCircle2, XCircle, Clock, User, MapPin, Ship, ArrowRight, ExternalLink, Pencil, Save, X } from 'lucide-react';
+import { Zap, CheckCircle2, XCircle, Clock, User, MapPin, Ship, ArrowRight, ExternalLink, Pencil, Save, X, Wrench } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -56,6 +56,7 @@ export default function QuickCaptureReview() {
   const [entries, setEntries] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [boats, setBoats] = useState([]);
+  const [workOrders, setWorkOrders] = useState({}); // id → WO object
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('new');
   const [showCaptureModal, setShowCaptureModal] = useState(false);
@@ -92,6 +93,19 @@ export default function QuickCaptureReview() {
     setEntries(entriesData);
     setCustomers(customersData);
     setBoats(boatsData);
+
+    // Fetch Work Orders for any entries that have a work_order_id (deduplicated)
+    const woIds = [...new Set(entriesData.map(e => e.work_order_id).filter(Boolean))];
+    if (woIds.length > 0) {
+      base44.entities.WorkOrder.filter({ id: { $in: woIds } })
+        .then(wos => {
+          const map = {};
+          (wos || []).forEach(wo => { map[wo.id] = wo; });
+          setWorkOrders(map);
+        })
+        .catch(() => {}); // non-blocking, safe fallback
+    }
+
     setLoading(false);
   };
 
@@ -218,6 +232,10 @@ export default function QuickCaptureReview() {
             const customerName = getCustomerName(entry.customer_id) || entry.ai_extracted_customer_name;
             const boatName = getBoatName(entry.boat_id) || entry.ai_extracted_boat_name;
             const isActing = actionLoading?.startsWith(entry.id);
+            const linkedWO = entry.work_order_id ? workOrders[entry.work_order_id] : null;
+            const woLabel = linkedWO
+              ? `${linkedWO.work_order_number ? '#' + linkedWO.work_order_number : ''} ${linkedWO.title || ''}`.trim()
+              : entry.work_order_id ? `WO …${entry.work_order_id.slice(-6)}` : null;
 
             return (
               <Card key={entry.id} className={`border ${typeConf.border}`}>
@@ -308,6 +326,12 @@ export default function QuickCaptureReview() {
                       <div className="flex items-center gap-1 text-xs text-slate-600 bg-slate-100 rounded px-2 py-0.5">
                         <MapPin className="h-3 w-3" />
                         {entry.location_text}
+                      </div>
+                    )}
+                    {woLabel && (
+                      <div className="flex items-center gap-1 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-0.5">
+                        <Wrench className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate max-w-[180px]" title={woLabel}>{woLabel}</span>
                       </div>
                     )}
                     {entry.created_by && (

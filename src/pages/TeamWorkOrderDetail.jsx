@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { ChevronLeft, MapPin, Ship, Clock, AlertCircle, CheckCircle2, WifiOff, Send, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, MapPin, Ship, Clock, AlertCircle, CheckCircle2, WifiOff, Send, ShoppingCart, Zap } from 'lucide-react';
+import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -211,6 +212,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
   const [showRequirements, setShowRequirements] = useState(false);
   const [requirementsCount, setRequirementsCount] = useState(0);
   const [technicians, setTechnicians] = useState([]);
+  const [showQuickCapture, setShowQuickCapture] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -681,7 +683,17 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         <Button variant="outline" size="icon" onClick={handleBack} className="border-slate-300 hover:bg-slate-100">
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
+          <button
+            onClick={() => setShowQuickCapture(true)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium hover:bg-amber-100 active:bg-amber-200 transition-colors"
+            title="Quick Capture for this Work Order"
+          >
+            <Zap className="h-3.5 w-3.5" />
+            Capture
+          </button>
+        </div>
         <div className="flex flex-col items-end gap-0.5">
           <Button
             onClick={handleTimerToggle}
@@ -983,6 +995,20 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
 
 
       </div>
+
+      {/* Quick Capture Modal — pre-linked to this Work Order */}
+      {showQuickCapture && (
+        <QuickCaptureModal
+          open={showQuickCapture}
+          onClose={() => setShowQuickCapture(false)}
+          onOpenChange={(v) => setShowQuickCapture(v)}
+          workOrderContext={{
+            work_order_id: workOrder.id,
+            job_id: workOrder.job_id || null,
+            display_label: `${workOrder.work_order_number ? '#' + workOrder.work_order_number : ''} ${workOrder.title || ''}`.trim()
+          }}
+        />
+      )}
     </div>);
 
 }
