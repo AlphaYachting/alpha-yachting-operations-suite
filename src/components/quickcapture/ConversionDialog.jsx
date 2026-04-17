@@ -126,7 +126,19 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
 
       } else if (target === 'Offer') {
         if (!customerId) { toast.error('Customer is required for an Offer'); setSaving(false); return; }
+        
+        // Generate offer number (same pattern as frontend: OFF-YYYY-XXXX)
+        const currentYear = new Date().getFullYear();
+        const allOffers = await base44.entities.Offer.list('-created_date', 5000);
+        const existingNumbers = allOffers
+          .map(o => o.offer_number)
+          .filter(num => num && num.startsWith(`OFF-${currentYear}-`))
+          .map(num => parseInt(num.split('-')[2]) || 0);
+        const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+        const offerNumber = `OFF-${currentYear}-${String(maxNumber + 1).padStart(4, '0')}`;
+        
         const offer = await base44.entities.Offer.create({
+          offer_number: offerNumber,
           customer_id: customerId,
           boat_id: boatId || undefined,
           title: offerTitle.trim() || 'Offer from Quick Capture',
