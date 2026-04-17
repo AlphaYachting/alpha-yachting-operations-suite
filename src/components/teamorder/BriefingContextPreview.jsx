@@ -258,6 +258,18 @@ function BriefingContextDisplay({ context }) {
         </div>
       </div>
 
+      {/* Scope Summary */}
+      {context.external_notes?.scope_summary && (
+        <div>
+          <h4 className="font-semibold text-slate-900 mb-3">Scope of Work</h4>
+          <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+            <p className="text-sm text-purple-900">
+              {context.external_notes.scope_summary}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* External Notes */}
       {(context.external_notes.partner_notes ||
         context.external_notes.customer_visible_notes) && (
