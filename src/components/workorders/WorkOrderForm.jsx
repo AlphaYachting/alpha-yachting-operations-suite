@@ -93,7 +93,16 @@ export default function WorkOrderForm({ workOrder, jobs, technicians, customers,
     return `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown';
   };
 
-  const activeTechnicians = technicians.filter(t => t.status === 'Active');
+  const activeTechnicians = technicians.filter(t => t.status === 'Active').sort((a, b) => {
+    // Internal team (is_external === false or undefined) comes first
+    const aIsExternal = a.is_external === true;
+    const bIsExternal = b.is_external === true;
+    if (aIsExternal !== bIsExternal) {
+      return aIsExternal ? 1 : -1;
+    }
+    // Same category, sort by name
+    return `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`);
+  });
 
   const customerBoats = useMemo(() => {
     if (!selectedCustomerId) return [];
