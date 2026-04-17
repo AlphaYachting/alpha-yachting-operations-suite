@@ -1221,14 +1221,30 @@ Alpha Yachting Service Team`);
         </h1>
         
         {/* Row 3: Meta Info */}
-        {!isNewOffer && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-            {formData.offer_number && (
-              <span className="font-medium text-slate-600">#{formData.offer_number}</span>
-            )}
-            <span>Erstellt von: <span className="font-semibold text-slate-700">{offer?.created_by || '—'}</span></span>
-          </div>
-        )}
+         {!isNewOffer && (
+           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+             <div className="flex items-center gap-2">
+               <span className="font-medium text-slate-600">#{formData.offer_number || 'DRAFT'}</span>
+               <Button
+                 size="sm"
+                 variant="ghost"
+                 onClick={async () => {
+                   const newNumber = prompt('Angebotsnummer eingeben:', formData.offer_number || '');
+                   if (newNumber && newNumber.trim()) {
+                     await base44.entities.Offer.update(offerId, { offer_number: newNumber.trim() });
+                     queryClient.invalidateQueries(['offer', offerId]);
+                     queryClient.invalidateQueries(['offers']);
+                     toast.success('Angebotsnummer aktualisiert');
+                   }
+                 }}
+                 className="h-6 px-2 text-xs text-blue-600 hover:bg-blue-50"
+               >
+                 Bearbeiten
+               </Button>
+             </div>
+             <span>Erstellt von: <span className="font-semibold text-slate-700">{offer?.created_by || '—'}</span></span>
+           </div>
+         )}
       </div>
 
       {error && (
