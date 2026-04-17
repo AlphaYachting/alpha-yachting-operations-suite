@@ -37,12 +37,12 @@ export function sortLeadsV3(leads) {
 }
 
 export const V3_PHASES = [
-  { status: 'New Incoming',        label: 'New Incoming',       color: '#f59e0b', bg: 'bg-amber-500',    light: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200' },
-  { status: 'Needs Clarification', label: 'Needs Clarification',color: '#f97316', bg: 'bg-orange-500',   light: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200' },
-  { status: 'Ready to Offer',      label: 'Ready to Offer',     color: '#3b82f6', bg: 'bg-blue-500',     light: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200' },
-  { status: 'Offered',             label: 'Offered',            color: '#6366f1', bg: 'bg-indigo-500',   light: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200' },
-  { status: 'Ordered / Confirmed', label: 'Confirmed',          color: '#10b981', bg: 'bg-emerald-500',  light: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  { status: 'Rejected',            label: 'Rejected',           color: '#ef4444', bg: 'bg-red-500',      light: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200' },
+  { status: 'New Incoming',        label: 'New Incoming',       color: '#f59e0b', bg: 'bg-amber-500',    light: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   badgeCls: 'bg-amber-100 text-amber-700' },
+  { status: 'Needs Clarification', label: 'Needs Clarification',color: '#f97316', bg: 'bg-orange-500',   light: 'bg-orange-50',  text: 'text-orange-700',  border: 'border-orange-200',  badgeCls: 'bg-orange-100 text-orange-700' },
+  { status: 'Ready to Offer',      label: 'Ready to Offer',     color: '#3b82f6', bg: 'bg-blue-500',     light: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    badgeCls: 'bg-blue-100 text-blue-700' },
+  { status: 'Offered',             label: 'Offered',            color: '#6366f1', bg: 'bg-indigo-500',   light: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200',  badgeCls: 'bg-indigo-100 text-indigo-700' },
+  { status: 'Ordered / Confirmed', label: 'Confirmed',          color: '#10b981', bg: 'bg-emerald-500',  light: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', badgeCls: 'bg-emerald-100 text-emerald-700' },
+  { status: 'Rejected',            label: 'Rejected',           color: '#ef4444', bg: 'bg-red-500',      light: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',     badgeCls: 'bg-red-100 text-red-700' },
 ];
 
 export function getPhaseConfig(status) {

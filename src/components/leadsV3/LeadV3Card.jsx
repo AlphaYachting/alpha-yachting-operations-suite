@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Ship, MapPin, Calendar, AlertTriangle, Clock, ChevronRight, CheckCircle2, Mail, User } from 'lucide-react';
+import { Ship, MapPin, Calendar, AlertTriangle, Clock, ChevronDown, CheckCircle2, Mail, User, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 import { getPhaseConfig, getV3AgingLevel, getV3AgingDays, V3_PHASES } from '@/hooks/useLeadV3Data';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 // ─── User color helpers ───────────────────────────────────────────────────────
 const USER_COLORS = [
@@ -34,54 +36,51 @@ function getUserShortName(user) {
 
 // ─── Priority config ──────────────────────────────────────────────────────────
 const PRIORITY_CONFIG = {
-  Urgent: { borderColor: '#ef4444', badgeCls: 'bg-red-100 text-red-700 border-red-200', label: 'Urgent' },
-  High:   { borderColor: '#f59e0b', badgeCls: 'bg-amber-100 text-amber-700 border-amber-200', label: 'High' },
+  Urgent: { borderColor: '#ef4444', badgeCls: 'bg-red-100 text-red-700', label: 'Urgent' },
+  High:   { borderColor: '#f59e0b', badgeCls: 'bg-amber-100 text-amber-700', label: 'High' },
   Medium: { borderColor: '#3b82f6', badgeCls: null, label: 'Medium' },
   Low:    { borderColor: '#e2e8f0', badgeCls: null, label: 'Low' },
 };
 
 // ─── Offer stage derivation ───────────────────────────────────────────────────
 function deriveOfferStage(offers) {
-  if (!offers || offers.length === 0) return { label: 'No Offer', cls: 'bg-slate-100 text-slate-400 border-slate-200' };
+  if (!offers || offers.length === 0) return null;
   const statuses = offers.map(o => o.status);
-  if (statuses.includes('Approved'))  return { label: 'Approved ✓', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
-  if (statuses.includes('Sent'))      return { label: 'Sent', cls: 'bg-indigo-100 text-indigo-700 border-indigo-200' };
-  if (statuses.includes('Rejected'))  return { label: 'Rejected', cls: 'bg-red-100 text-red-600 border-red-200' };
-  if (statuses.includes('Expired'))   return { label: 'Expired', cls: 'bg-orange-100 text-orange-600 border-orange-200' };
-  if (statuses.includes('Converted')) return { label: 'Converted', cls: 'bg-teal-100 text-teal-700 border-teal-200' };
-  if (statuses.includes('Draft'))     return { label: 'Draft', cls: 'bg-slate-100 text-slate-600 border-slate-200' };
-  if (statuses.length > 1)            return { label: 'Mixed', cls: 'bg-purple-100 text-purple-700 border-purple-200' };
-  return { label: statuses[0] || '—', cls: 'bg-slate-100 text-slate-500 border-slate-200' };
+  if (statuses.includes('Approved'))  return { label: 'Approved ✓', cls: 'bg-emerald-100 text-emerald-700' };
+  if (statuses.includes('Sent'))      return { label: 'Sent', cls: 'bg-indigo-100 text-indigo-700' };
+  if (statuses.includes('Rejected'))  return { label: 'Rejected', cls: 'bg-red-100 text-red-600' };
+  if (statuses.includes('Expired'))   return { label: 'Expired', cls: 'bg-orange-100 text-orange-600' };
+  if (statuses.includes('Converted')) return { label: 'Converted', cls: 'bg-teal-100 text-teal-700' };
+  if (statuses.includes('Draft'))     return { label: 'Offer Draft', cls: 'bg-slate-100 text-slate-600' };
+  return { label: statuses[0] || '—', cls: 'bg-slate-100 text-slate-500' };
 }
 
 // ─── Offer Stage Badge (lazy load) ───────────────────────────────────────────
 function OfferStageBadge({ offerIds }) {
-  const [stage, setStage] = useState(null);
+  const [stage, setStage] = useState(undefined);
 
   useEffect(() => {
-    if (!offerIds || offerIds.length === 0) {
-      setStage({ label: 'No Offer', cls: 'bg-slate-100 text-slate-400 border-slate-200' });
-      return;
-    }
+    if (!offerIds || offerIds.length === 0) { setStage(null); return; }
     let cancelled = false;
     const load = async () => {
       try {
         const results = await Promise.all(offerIds.slice(0, 3).map(id => base44.entities.Offer.filter({ id })));
         if (!cancelled) setStage(deriveOfferStage(results.flat()));
       } catch {
-        if (!cancelled) setStage({ label: `${offerIds.length} offer${offerIds.length > 1 ? 's' : ''}`, cls: 'bg-slate-100 text-slate-500 border-slate-200' });
+        if (!cancelled) setStage({ label: `${offerIds.length} offer${offerIds.length > 1 ? 's' : ''}`, cls: 'bg-slate-100 text-slate-500' });
       }
     };
     load();
     return () => { cancelled = true; };
   }, [offerIds?.join(',')]);
 
-  if (!stage) return <span className="inline-block w-16 h-5 rounded bg-slate-100 animate-pulse" />;
+  if (stage === undefined) return <span className="inline-block w-14 h-4 rounded bg-slate-100 animate-pulse" />;
+  if (!stage) return null;
 
   return (
-    <span className={cn('inline-flex items-center text-xs font-medium px-2 py-0.5 rounded border whitespace-nowrap', stage.cls)}>
+    <Badge className={cn('text-xs font-medium px-2 py-0.5 rounded-sm', stage.cls)}>
       {stage.label}
-    </span>
+    </Badge>
   );
 }
 
@@ -111,20 +110,18 @@ function QuickStatusDropdown({ lead, onStatusChange }) {
 
   return (
     <div ref={ref} className="relative" onClick={e => e.preventDefault()}>
-      <button
+      <Button
+        size="sm"
+        variant="outline"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o); }}
         disabled={saving}
-        className={cn(
-          'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs font-medium transition-all',
-          'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 active:scale-95',
-          saving && 'opacity-50 cursor-not-allowed'
-        )}
+        className="h-7 px-2 text-xs gap-1.5 font-medium border-slate-200 text-slate-600 hover:bg-slate-50"
         title="Change phase"
       >
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
-        <span className="max-w-[90px] truncate">{phase.label}</span>
-        <ChevronRight className={cn('w-3 h-3 text-slate-400 transition-transform flex-shrink-0', open && 'rotate-90')} />
-      </button>
+        <span className="max-w-[80px] truncate hidden sm:inline">{phase.label}</span>
+        <ChevronDown className="w-3 h-3 text-slate-400 flex-shrink-0" />
+      </Button>
 
       {open && (
         <div className="absolute right-0 top-full mt-1 z-[200] bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-[190px]">
@@ -185,8 +182,8 @@ function AssignPopover({ lead, assignedUser, users, onAssigned, children }) {
     <div ref={ref} className="relative" onClick={e => e.preventDefault()}>
       <button
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(o => !o); }}
-        title={assignedUser ? `Assigned: ${assignedUser.full_name || assignedUser.email} — click to reassign` : 'Unassigned — click to assign'}
-        className={cn('transition-all active:scale-95', saving && 'opacity-50')}
+        title={assignedUser ? `Assigned: ${assignedUser.full_name || assignedUser.email}` : 'Unassigned'}
+        className={cn('transition-all active:scale-95 rounded', saving && 'opacity-50')}
       >
         {children}
       </button>
@@ -202,9 +199,7 @@ function AssignPopover({ lead, assignedUser, users, onAssigned, children }) {
               onClick={(e) => handleAssign(e, u.id)}
               className={cn(
                 'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors',
-                u.id === lead.assigned_to_user_id
-                  ? 'bg-slate-50 text-slate-900 font-medium'
-                  : 'text-slate-700 hover:bg-slate-50'
+                u.id === lead.assigned_to_user_id ? 'bg-slate-50 text-slate-900 font-medium' : 'text-slate-700 hover:bg-slate-50'
               )}
             >
               <div
@@ -250,35 +245,85 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
   const ownerInitials = getUserInitials(assignedUser);
   const ownerShortName = getUserShortName(assignedUser);
 
+  // Aging border — same pattern as V2
+  const agingBorderClass =
+    lead.status === 'Ordered / Confirmed' ? 'border-emerald-300' :
+    agingLevel === 'danger' ? 'border-red-300' :
+    agingLevel === 'warn' ? 'border-amber-300' :
+    lead.accepted_by_assignee === false && assignedUser ? 'border-amber-200' : 'border-slate-200';
+
   return (
-    <div className="group relative">
+    <div className="group">
       <Link to={createPageUrl('LeadDetail') + `?id=${lead.id}&from=v3`} className="block">
         <div className={cn(
-          'bg-white rounded-xl border shadow-sm transition-all duration-150',
-          'hover:shadow-md hover:border-slate-300',
-          lead.accepted_by_assignee === false && assignedUser ? 'border-amber-200' : 'border-slate-200',
+          'bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow',
+          agingBorderClass
         )}>
-          <div className="flex">
-            {/* Priority left accent — slightly thicker for better peripheral visibility */}
-            <div className="w-1.5 flex-shrink-0 rounded-l-xl" style={{ backgroundColor: priority.borderColor }} />
+          <div className="flex items-stretch">
+            {/* Priority accent bar */}
+            <div className="w-1 flex-shrink-0 rounded-l-lg" style={{ backgroundColor: priority.borderColor }} />
 
-            {/* Card body */}
-            <div className="flex-1 px-5 py-5">
+            {/* Card body — V2-aligned p-4 rhythm */}
+            <div className="flex-1 p-4">
+              <div className="flex items-start gap-3">
 
-              {/* ── PRIMARY BLOCK: Lead name + right cluster ── */}
-              <div className="flex items-start gap-3 mb-1">
+                {/* Status icon block — matches V2 iconBg pattern */}
+                <div
+                  className="rounded-lg p-2.5 flex-shrink-0 mt-0.5"
+                  style={{ backgroundColor: phase.color + '18' }}
+                >
+                  <Phone className="h-4 w-4" style={{ color: phase.color }} />
+                </div>
 
-                {/* Lead name — dominant primary anchor */}
+                {/* Main content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-lg font-semibold text-slate-900 group-hover:text-blue-700 transition-colors leading-tight">
+
+                  {/* Row 1: Name + badges + owner avatar */}
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    {/* Owner avatar */}
+                    <AssignPopover lead={lead} assignedUser={assignedUser} users={users} onAssigned={onAssigned}>
+                      {assignedUser ? (
+                        <div
+                          className="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer"
+                          style={{
+                            backgroundColor: ownerColor,
+                            boxShadow: isAccepted ? '0 0 0 2px #10b981' : '0 0 0 2px #fbbf24'
+                          }}
+                          title={`${ownerShortName}${isAccepted ? ' · Accepted' : ' · Pending'}`}
+                        >
+                          {ownerInitials}
+                        </div>
+                      ) : (
+                        <div
+                          className="flex-shrink-0 h-6 w-6 rounded-full bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors"
+                          title="Unassigned"
+                        >
+                          <User className="w-3 h-3 text-slate-400" />
+                        </div>
+                      )}
+                    </AssignPopover>
+
+                    {/* Name */}
+                    <span className="text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
                       {lead.name}
                     </span>
+
+                    {/* Status badge */}
+                    <Badge className={cn('text-xs', phase.badgeCls || 'bg-slate-100 text-slate-600')}>
+                      {phase.label}
+                    </Badge>
+
+                    {/* Priority badge — only urgent/high */}
                     {(lead.priority === 'Urgent' || lead.priority === 'High') && (
-                      <span className={cn('text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0', priority.badgeCls)}>
+                      <Badge className={cn('text-xs', priority.badgeCls)}>
                         {priority.label}
-                      </span>
+                      </Badge>
                     )}
+
+                    {/* Offer badge */}
+                    <OfferStageBadge offerIds={offerIds} />
+
+                    {/* Error indicator */}
                     {hasError && (
                       <span className="flex items-center gap-1 text-xs text-red-500 font-medium flex-shrink-0">
                         <AlertTriangle className="w-3 h-3" />
@@ -286,126 +331,96 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
                       </span>
                     )}
                   </div>
+
+                  {/* Row 2: Contact + boat + location + date — V2 bullet-separated pattern */}
+                  <div className="flex items-center gap-1.5 text-sm text-slate-600 mb-1.5 flex-wrap">
+                    {lead.phone && <span>{lead.phone}</span>}
+                    {lead.email && (
+                      <>
+                        {lead.phone && <span className="text-slate-300">•</span>}
+                        <span className="truncate text-slate-500">{lead.email}</span>
+                      </>
+                    )}
+                    {lead.boat_name && (
+                      <>
+                        {(lead.phone || lead.email) && <span className="text-slate-300">•</span>}
+                        <span className="flex items-center gap-1">
+                          <Ship className="h-3 w-3 text-slate-400" />
+                          {lead.boat_name}
+                        </span>
+                      </>
+                    )}
+                    {lead.location && (
+                      <>
+                        {(lead.phone || lead.email || lead.boat_name) && <span className="text-slate-300">•</span>}
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-slate-400" />
+                          {lead.location}
+                        </span>
+                      </>
+                    )}
+                    {lead.created_date && (
+                      <>
+                        {(lead.phone || lead.email || lead.boat_name || lead.location) && <span className="text-slate-300">•</span>}
+                        <span className="flex items-center gap-1 text-slate-400">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(lead.created_date), 'MMM dd')}
+                        </span>
+                      </>
+                    )}
+                    {agingDays !== null && (
+                      <>
+                        <span className="text-slate-300">•</span>
+                        <span className={cn(
+                          'flex items-center gap-1 text-xs font-medium',
+                          agingLevel === 'danger' ? 'text-red-600' :
+                          agingLevel === 'warn' ? 'text-amber-600' : 'text-slate-400'
+                        )}>
+                          <Clock className="w-3 h-3" />
+                          {agingDays === 0 ? 'Today' : `${agingDays}d`}
+                        </span>
+                      </>
+                    )}
+                    {lead.converted_at && (
+                      <>
+                        <span className="text-slate-300">•</span>
+                        <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Converted
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Row 3: Description (1 line) */}
+                  {lead.description && (
+                    <p className="text-sm text-slate-500 line-clamp-1">{lead.description}</p>
+                  )}
+
                 </div>
 
-                {/* Right cluster — offer badge + status only */}
-                <div className="flex items-center gap-2 flex-shrink-0" onClick={e => e.preventDefault()}>
-                  <OfferStageBadge offerIds={offerIds} />
+                {/* Action zone — right side, V2-style button cluster */}
+                <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.preventDefault()}>
                   <QuickStatusDropdown lead={lead} onStatusChange={onStatusChange} />
-                </div>
-              </div>
-
-              {/* ── OWNER ROW — left-anchored, under the name ── */}
-              <div className="flex items-center gap-2 mb-4" onClick={e => e.preventDefault()}>
-                <AssignPopover lead={lead} assignedUser={assignedUser} users={users} onAssigned={onAssigned}>
-                  {assignedUser ? (
-                    <div className="flex items-center gap-1.5 group/owner">
-                      <div
-                        className={cn(
-                          'w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0',
-                          'ring-2',
-                          isAccepted ? 'ring-emerald-400' : 'ring-amber-300'
-                        )}
-                        style={{ backgroundColor: ownerColor }}
-                      >
-                        {ownerInitials}
-                      </div>
-                      <span className="text-xs font-medium text-slate-600 group-hover/owner:text-slate-900 transition-colors">
-                        {ownerShortName}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors">
-                      <div className="w-5 h-5 rounded-full bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
-                        <User className="w-3 h-3" />
-                      </div>
-                      <span className="text-xs text-slate-400">Unassigned</span>
-                    </div>
-                  )}
-                </AssignPopover>
-
-                {/* Phase dot + label — secondary, after owner */}
-                <span className="text-slate-300 text-xs">·</span>
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: phase.color }} />
-                  <span className="text-xs text-slate-400">{phase.label}</span>
-                </div>
-              </div>
-
-              {/* ── SECONDARY BLOCK: Boat + Location ── */}
-              {(lead.boat_name || lead.location || lead.inquiry_type) && (
-                <div className="flex items-center gap-4 text-xs text-slate-500 mb-3 flex-wrap">
-                  {lead.boat_name && (
-                    <span className="flex items-center gap-1">
-                      <Ship className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                      <span className="font-medium text-slate-600">{lead.boat_name}</span>
-                      {lead.boat_details && (
-                        <span className="text-slate-400 hidden md:inline">· {lead.boat_details}</span>
-                      )}
-                    </span>
-                  )}
-                  {lead.location && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                      {lead.location}
-                    </span>
-                  )}
-                  {lead.inquiry_type && (
-                    <span className="text-slate-400">{lead.inquiry_type}</span>
-                  )}
-                </div>
-              )}
-
-              {/* ── TERTIARY BLOCK: Description ── */}
-              {lead.description && (
-                <p className="text-sm text-slate-500 line-clamp-2 mb-4 leading-relaxed">
-                  {lead.description}
-                </p>
-              )}
-
-              {/* ── FOOTER BLOCK: aging + email + date ── */}
-              <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
-                <div className="flex items-center gap-2">
-                  {agingDays !== null && (
-                    <span className={cn(
-                      'flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-medium',
-                      agingLevel === 'danger' ? 'bg-red-50 text-red-600 border border-red-200' :
-                      agingLevel === 'warn'   ? 'bg-amber-50 text-amber-600 border border-amber-200' :
-                      'text-slate-400'
-                    )}>
-                      <Clock className="w-3 h-3" />
-                      {agingDays === 0 ? 'Today' : `${agingDays}d ago`}
-                    </span>
-                  )}
-                  {lead.converted_at && (
-                    <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Converted
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3" onClick={e => e.preventDefault()}>
                   {lead.email && (
-                    <a
-                      href={`mailto:${lead.email}`}
-                      onClick={e => e.stopPropagation()}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.preventDefault(); e.stopPropagation();
+                        const subject = encodeURIComponent(`Anfrage${lead.boat_name ? ` – ${lead.boat_name}` : ''}${lead.name ? ` (${lead.name})` : ''}`);
+                        const body = encodeURIComponent(`${lead.description ? lead.description + '\n\n' : ''}---\nAnfrage von: ${lead.name || ''}${lead.boat_name ? '\nBoot: ' + lead.boat_name : ''}${lead.phone ? '\nTel: ' + lead.phone : ''}`);
+                        window.open(`mailto:${lead.email}?subject=${subject}&body=${body}`, '_self');
+                      }}
+                      className="h-7 w-7 p-0 text-sky-600 hover:bg-sky-50"
                       title={`Email: ${lead.email}`}
-                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors"
                     >
-                      <Mail className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">{lead.email}</span>
-                    </a>
-                  )}
-                  {lead.created_date && (
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {format(new Date(lead.created_date), 'MMM d')}
-                    </span>
+                      <Mail className="h-3 w-3" />
+                    </Button>
                   )}
                 </div>
-              </div>
 
+              </div>
             </div>
           </div>
         </div>

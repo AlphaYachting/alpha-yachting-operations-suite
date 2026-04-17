@@ -52,16 +52,11 @@ export default function LeadsV3() {
 
   return (
     <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
+      {/* Page header — aligned with Dashboard V2 / V2 leads header style */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Layers className="h-5 w-5 text-slate-400" />
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Lead Workspace</span>
-            <span className="text-xs bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">V3</span>
-          </div>
           <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
+          <p className="text-sm text-slate-500 mt-0.5">
             {activeCount} active lead{activeCount !== 1 ? 's' : ''} across pipeline
           </p>
         </div>
