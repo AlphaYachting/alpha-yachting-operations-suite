@@ -20,17 +20,7 @@ export default function LeadV3PhaseNav({ leads, activePhase, onPhaseSelect }) {
             {totalActive} active
           </span>
         </div>
-        <button
-          onClick={() => onPhaseSelect('All')}
-          className={cn(
-            'text-xs font-medium px-3 py-1 rounded-full transition-all',
-            activePhase === 'All'
-              ? 'bg-slate-800 text-white'
-              : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-          )}
-        >
-          All
-        </button>
+
       </div>
 
       {/* Phase tabs */}

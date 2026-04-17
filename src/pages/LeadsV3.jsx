@@ -12,7 +12,7 @@ export default function LeadsV3() {
   const [activePhase, setActivePhase] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   // 'me' | 'all' | '<userId>'
-  const [ownerFilter, setOwnerFilter] = useState('me');
+  const [ownerFilter, setOwnerFilter] = useState('all');
 
   if (isLoading) {
     return (
@@ -80,8 +80,8 @@ export default function LeadsV3() {
           onChange={e => setOwnerFilter(e.target.value)}
           className="h-9 rounded-md border border-slate-200 bg-white text-sm text-slate-700 px-2.5 pr-7 focus:outline-none focus:ring-1 focus:ring-slate-300 cursor-pointer"
         >
-          <option value="me">My Leads</option>
           <option value="all">All Leads</option>
+          <option value="me">My Leads</option>
           {users.filter(u => u.id !== currentUser?.id).map(u => (
             <option key={u.id} value={u.id}>{u.full_name || u.email}</option>
           ))}
