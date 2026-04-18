@@ -238,15 +238,22 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
 
   y += 5;
 
-  // Meta line — WO number + date
+  // Meta line — WO number + date + vessel name
   const { projectIdentification: id } = briefDocument;
+  const vesselNameMeta = briefDocument.vesselInfo?.name && briefDocument.vesselInfo.name !== 'N/A'
+    ? briefDocument.vesselInfo.name
+    : (id?.vesselName || null);
+
   doc.setFont(FONT, 'normal');
   doc.setFontSize(8.5);
   setC(doc, MID);
-  doc.text(
-    `Work Order ${id?.workOrderNumber || '—'}   ·   ${id?.scheduledDate || '—'}   ·   Generated: ${briefDocument.meta?.timestamp || ''}`,
-    ML, y
-  );
+  const metaParts = [
+    `Work Order ${id?.workOrderNumber || '—'}`,
+    id?.scheduledDate || '—',
+    vesselNameMeta ? `Vessel: ${vesselNameMeta}` : null,
+    `Generated: ${briefDocument.meta?.timestamp || ''}`,
+  ].filter(Boolean);
+  doc.text(metaParts.join('   ·   '), ML, y);
 
   y += 10;
 
