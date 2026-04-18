@@ -414,27 +414,9 @@ export default function TeamOrderDetail() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(createPageUrl('WorkOrderDetail') + `?id=${workOrderId}`)}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">
-              {isNew ? 'New Team Order' : 'Team Order'}
-            </h1>
-            {workOrder && (
-              <p className="text-slate-600 mt-1">
-                For Work Order: {workOrder.title}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-2">
+      <div>
+        {/* Buttons row — top right */}
+        <div className="flex justify-end gap-2 mb-4">
           {!isNew && workOrder && teamOrder.id && (
             <>
               <Button 
@@ -471,6 +453,27 @@ export default function TeamOrderDetail() {
             <Save className="h-4 w-4 mr-2" />
             {saving ? 'Saving...' : 'Save Team Order'}
           </Button>
+        </div>
+
+        {/* Title row */}
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(createPageUrl('WorkOrderDetail') + `?id=${workOrderId}`)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">
+              {isNew ? 'New Team Order' : 'Team Order'}
+            </h1>
+            {workOrder && (
+              <p className="text-slate-600 mt-1">
+                For Work Order: {workOrder.title}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
