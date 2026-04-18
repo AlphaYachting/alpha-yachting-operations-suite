@@ -213,12 +213,21 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
   const groupWorkOrdersBySection = () => {
     const today = startOfDay(new Date());
-    const sections = { overdue: [], today: [], upcoming: [], later: [] };
+    const sections = { overdue: [], today: [], upcoming: [], later: [], completed: [] };
 
-    // Exclude completed and cancelled WOs
+    // Exclude only cancelled WOs; completed go to their own bucket
     const activeWorkOrders = workOrders.filter(wo =>
       wo.status !== 'Completed' && wo.status !== 'Cancelled'
     );
+
+    // Collect completed WOs separately
+    const completedWorkOrders = workOrders.filter(wo => wo.status === 'Completed');
+    completedWorkOrders.sort((a, b) => {
+      const dateA = a.scheduled_date ? parseISO(a.scheduled_date) : new Date(0);
+      const dateB = b.scheduled_date ? parseISO(b.scheduled_date) : new Date(0);
+      return dateB - dateA; // Most recent first
+    });
+    sections.completed = completedWorkOrders;
 
     const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
     
@@ -611,8 +620,23 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           );
         })()}
 
+        {/* COMPLETED Section */}
+        {sections.completed.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <h2 className="text-lg font-bold text-green-700">Completed ({sections.completed.length})</h2>
+            </div>
+            <div className="space-y-3 opacity-80">
+              {sections.completed.map((wo) =>
+                <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Empty State */}
-        {sections.overdue.length === 0 && sections.today.length === 0 && sections.upcoming.length === 0 && sections.later.length === 0 &&
+        {sections.overdue.length === 0 && sections.today.length === 0 && sections.upcoming.length === 0 && sections.later.length === 0 && sections.completed.length === 0 &&
           <div className="text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-600 font-medium mb-1">No open work orders</p>
