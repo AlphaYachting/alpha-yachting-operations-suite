@@ -74,12 +74,23 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         ]);
 
         if (cachedData[0]?.length > 0) {
-          setWorkOrders(cachedData[0]);
-          setJobs(cachedData[1] || []);
-          setLocations(cachedData[2] || []);
-          setBoats(cachedData[3] || []);
-          setTasks(cachedData[4] || []);
-          setLoading(false); // Show immediately
+          // Pre-filter cached WOs by stored technician ID to avoid showing cross-technician data
+          const storedTechId = localStorage.getItem('last_technician_id');
+          const filteredCachedWOs = storedTechId
+            ? cachedData[0].filter(wo =>
+                (wo.assigned_technicians || []).includes(storedTechId) ||
+                wo.lead_technician_id === storedTechId
+              )
+            : []; // No known technician context — show nothing rather than wrong data
+
+          if (filteredCachedWOs.length > 0) {
+            setWorkOrders(filteredCachedWOs);
+            setJobs(cachedData[1] || []);
+            setLocations(cachedData[2] || []);
+            setBoats(cachedData[3] || []);
+            setTasks(cachedData[4] || []);
+            setLoading(false); // Show immediately
+          }
         }
       }
 
@@ -101,6 +112,11 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         }
 
         setResolvedTechnicianId(technicianId);
+
+        // Persist for cache pre-filtering on next app open
+        if (technicianId) {
+          localStorage.setItem('last_technician_id', technicianId);
+        }
 
         // Set display user: in preview mode, fetch the technician's name for welcome message
         if (previewUserId && technicianId) {
@@ -588,6 +604,18 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
             </div>
           </div>
         }
+
+        {/* LATER Section — beyond 7 days or no scheduled date */}
+        {sections.later.length > 0 && (
+          <div>
+            <h2 className="text-lg font-bold text-slate-600 mb-3">Later ({sections.later.length})</h2>
+            <div className="space-y-3">
+              {sections.later.map((wo) =>
+                <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ATTENTION Section - Admin only for assignment/location issues */}
         {user?.role === 'admin' && (() => {

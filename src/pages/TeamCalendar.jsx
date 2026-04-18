@@ -183,6 +183,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
   const getWorkOrdersForDay = (day) => {
     return workOrders.filter((wo) => {
       if (!wo.scheduled_date) return false;
+      if (wo.status === 'Cancelled') return false;
       return isSameDay(parseISO(wo.scheduled_date), day);
     });
   };
