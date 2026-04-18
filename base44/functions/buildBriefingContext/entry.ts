@@ -206,6 +206,12 @@ Deno.serve(async (req) => {
         type: boat?.vessel_type || null,
         length_m: boat?.length_m || null,
         berth: boat?.berth_number || null,
+        access_details: boat?.access_details || null,
+        engine_type: boat?.engine_type || null,
+        engine_manufacturer: boat?.engine_manufacturer || null,
+        engine_model: boat?.engine_model || null,
+        electrical_system: boat?.electrical_system || null,
+        year: boat?.year || null,
         known_context: boat?.known_issues || null
       },
 
@@ -214,31 +220,52 @@ Deno.serve(async (req) => {
         name: location?.name || null,
         address: location?.address || null,
         city: location?.city || null,
-        access_notes: location?.access_notes || null
+        country: location?.country || null,
+        access_notes: location?.access_notes || null,
+        opening_hours: location?.opening_hours || null,
+        contact_person: location?.contact_person || null,
+        contact_phone: location?.contact_phone || null,
+        marina_fee_enabled: location?.marina_fee_enabled || false,
+        marina_fee_type: location?.marina_fee_type || null,
+        marina_fee_amount: location?.marina_fee_amount || null
       },
 
       tasks: tasks,
 
       budget_policy: {
+        // Budgets
         approved_budget_total: teamOrderData.approved_budget_total || 0,
         labor_budget: teamOrderData.labor_budget || 0,
         travel_budget: teamOrderData.travel_budget || 0,
         accommodation_budget: teamOrderData.accommodation_budget || 0,
         per_diem_budget: teamOrderData.per_diem_budget || 0,
+        currency: teamOrderData.currency || 'EUR'
+      },
+
+      cost_policies: {
+        // Accommodation
         accommodation_paid: teamOrderData.accommodation_paid || false,
-        accommodation_max_per_night:
-          teamOrderData.accommodation_max_per_night || null,
+        accommodation_max_per_night: teamOrderData.accommodation_max_per_night || null,
+        accommodation_notes: teamOrderData.accommodation_notes || null,
+        // Meals / Per Diem
         meals_per_diem_paid: teamOrderData.meals_per_diem_paid || false,
         per_diem_rate_per_day: teamOrderData.per_diem_rate_per_day || null,
+        // Mileage
         mileage_paid: teamOrderData.mileage_paid || false,
         mileage_rate_per_km: teamOrderData.mileage_rate_per_km || null,
+        mileage_cap_total: teamOrderData.mileage_cap_total || null,
+        // Travel time
         travel_time_paid: teamOrderData.travel_time_paid || false,
         travel_time_rate_per_hour: teamOrderData.travel_time_rate_per_hour || null,
-        other_reimbursables_allowed:
-          teamOrderData.other_reimbursables_allowed || false,
+        // Other reimbursables
+        other_reimbursables_allowed: teamOrderData.other_reimbursables_allowed || false,
+        other_reimbursables_notes: teamOrderData.other_reimbursables_notes || null
+      },
+
+      approval_rules: {
+        budget_exceed_requires_approval: teamOrderData.budget_exceed_requires_approval !== false,
         requires_preapproval_over: teamOrderData.requires_preapproval_over || 500,
-        budget_exceed_requires_approval:
-          teamOrderData.budget_exceed_requires_approval !== false
+        currency: teamOrderData.currency || 'EUR'
       },
 
       external_notes: {

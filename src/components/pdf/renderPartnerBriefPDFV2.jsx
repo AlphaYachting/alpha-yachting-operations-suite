@@ -376,20 +376,91 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // E. LOCATION & ACCESS
+  // E. VESSEL INFO
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const vessel = briefDocument.vesselInfo;
+  if (vessel && vessel.name && vessel.name !== 'N/A') {
+    checkBreak(35);
+    y = sectionHeader(doc, 'Vessel Information', y);
+
+    const vesselRows = [
+      ['Vessel', vessel.name || '—', 'Type', vessel.type || '—'],
+      ['Length', vessel.length_m ? `${vessel.length_m} m` : '—', 'Year', vessel.year ? String(vessel.year) : '—'],
+      ['Berth', vessel.berth || '—', 'Electrical', vessel.electrical_system || '—'],
+    ];
+    if (vessel.engine_type || vessel.engine_manufacturer || vessel.engine_model) {
+      const engineStr = [vessel.engine_manufacturer, vessel.engine_model, vessel.engine_type].filter(Boolean).join(' · ');
+      vesselRows.push(['Engine', engineStr, null, null]);
+    }
+    y = infoGrid(doc, vesselRows, y);
+
+    if (vessel.access_details) {
+      y += 1;
+      doc.setFont(FONT, 'bold');
+      doc.setFontSize(8);
+      setC(doc, SUBTLE);
+      doc.text('Vessel Access / Keys', ML, y);
+      y += 5.5;
+      doc.setFont(FONT, 'normal');
+      doc.setFontSize(9);
+      setC(doc, DARK);
+      y = wrappedBlock(doc, vessel.access_details, ML + 3, y, CW - 6, 5, checkBreak);
+    }
+    if (vessel.known_issues) {
+      y += 2;
+      doc.setFont(FONT, 'bold');
+      doc.setFontSize(8);
+      setC(doc, SUBTLE);
+      doc.text('Known Issues', ML, y);
+      y += 5.5;
+      doc.setFont(FONT, 'normal');
+      doc.setFontSize(9);
+      setC(doc, DARK);
+      y = wrappedBlock(doc, vessel.known_issues, ML + 3, y, CW - 6, 5, checkBreak);
+    }
+    y += 6;
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // F. LOCATION & ACCESS
   // ───────────────────────────────────────────────────────────────────────────
 
   const loc = briefDocument.locationAccess;
   if (loc) {
-    checkBreak(30);
+    checkBreak(35);
     y = sectionHeader(doc, 'Location & Access', y);
 
-    y = infoGrid(doc, [
-      ['Marina', loc.name    || '—', 'City',    loc.city    || '—'],
+    const locRows = [
+      ['Marina', loc.name    || '—', 'City',    [loc.city, loc.country].filter(Boolean).join(', ') || '—'],
       ['Address', loc.address || '—', null,      null],
-    ], y);
+    ];
+    if (loc.contactPerson || loc.contactPhone) {
+      locRows.push(['Marina Contact', loc.contactPerson || '—', 'Phone', loc.contactPhone || '—']);
+    }
+    if (loc.openingHours) {
+      locRows.push(['Opening Hours', loc.openingHours, null, null]);
+    }
+    y = infoGrid(doc, locRows, y);
 
-    if (loc.accessNotes && loc.accessNotes !== 'No special access notes') {
+    if (loc.marinaFeeEnabled && loc.marinaFeeAmount) {
+      y += 1;
+      setF(doc, { r: 255, g: 249, b: 238 });
+      doc.rect(ML, y - 2, CW, 8, 'F');
+      doc.setFont(FONT, 'bold');
+      doc.setFontSize(8);
+      setC(doc, WARN_ACC);
+      doc.text('Marina Fee applies:', ML + 3, y + 2);
+      doc.setFont(FONT, 'normal');
+      setC(doc, DARK);
+      const feeLabel = loc.marinaFeeType === 'percent_commission'
+        ? `${loc.marinaFeeAmount}% commission`
+        : `€ ${loc.marinaFeeAmount} (${loc.marinaFeeType || 'flat'})`;
+      doc.text(feeLabel, ML + 40, y + 2);
+      y += 10;
+    }
+
+    if (loc.accessNotes) {
       y += 1;
       doc.setFont(FONT, 'bold');
       doc.setFontSize(8);
@@ -493,7 +564,80 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // H. BUDGET & COST COVERAGE
+  // H. COST POLICIES & APPROVAL RULES
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const cp = briefDocument.costPolicies;
+  const ar = briefDocument.approvalRules;
+  if (cp || ar) {
+    checkBreak(55);
+    y = sectionHeader(doc, 'Cost Policies & Approval Rules', y);
+
+    // Build policy rows — only show enabled items
+    const policyRows = [];
+    if (cp?.accommodationPaid) {
+      const val = cp.accommodationMaxPerNight ? `Ja — max. € ${cp.accommodationMaxPerNight}/Nacht` : 'Ja';
+      policyRows.push(['Unterkunft', val, null, null]);
+      if (cp.accommodationNotes) policyRows.push(['', cp.accommodationNotes, null, null]);
+    } else {
+      policyRows.push(['Unterkunft', 'Nicht gedeckt', null, null]);
+    }
+    if (cp?.perDiemPaid) {
+      policyRows.push(['Verpflegung', cp.perDiemRatePerDay ? `€ ${cp.perDiemRatePerDay}/Tag` : 'Ja', null, null]);
+    } else {
+      policyRows.push(['Verpflegung', 'Nicht gedeckt', null, null]);
+    }
+    if (cp?.mileagePaid) {
+      const val = [
+        cp.mileageRatePerKm ? `€ ${cp.mileageRatePerKm}/km` : '',
+        cp.mileageCapTotal  ? `max. € ${cp.mileageCapTotal}` : '',
+      ].filter(Boolean).join(', ') || 'Ja';
+      policyRows.push(['Kilometerentsch.', val, null, null]);
+    } else {
+      policyRows.push(['Kilometerentsch.', 'Nicht vergütet', null, null]);
+    }
+    if (cp?.travelTimePaid) {
+      policyRows.push(['Fahrtzeit', cp.travelTimeRatePerHour ? `€ ${cp.travelTimeRatePerHour}/h` : 'Ja', null, null]);
+    } else {
+      policyRows.push(['Fahrtzeit', 'Nicht vergütet', null, null]);
+    }
+    if (cp?.otherReimbursablesAllowed) {
+      policyRows.push(['Sonstige Kosten', cp.otherReimbursablesNotes || 'Nach Absprache erlaubt', null, null]);
+    } else {
+      policyRows.push(['Sonstige Kosten', 'Nicht erstattungsfähig', null, null]);
+    }
+
+    y = infoGrid(doc, policyRows, y);
+    y += 4;
+
+    // Approval rules box
+    if (ar) {
+      const currency = ar.currency || 'EUR';
+      setF(doc, { r: 240, g: 245, b: 255 });
+      setD(doc, { r: 160, g: 180, b: 220 });
+      doc.setLineWidth(0.35);
+      doc.rect(ML, y - 2, CW, 16, 'FD');
+
+      doc.setFont(FONT, 'bold');
+      doc.setFontSize(8);
+      setC(doc, { r: 50, g: 80, b: 160 });
+      doc.text('Genehmigungsregeln / Approval Rules', ML + 4, y + 2);
+
+      doc.setFont(FONT, 'normal');
+      doc.setFontSize(8.5);
+      setC(doc, DARK);
+      const rule1 = ar.budgetExceedRequiresApproval
+        ? `Budget-Überschreitung erfordert Genehmigung.`
+        : `Keine Genehmigung bei Budget-Überschreitung erforderlich.`;
+      const rule2 = `Vorabgenehmigung erforderlich für Ausgaben über ${currency} ${ar.requiresPreapprovalOver}.`;
+      doc.text(rule1, ML + 4, y + 7);
+      doc.text(rule2, ML + 4, y + 12);
+      y += 20;
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // I. BUDGET & COST COVERAGE
   // ───────────────────────────────────────────────────────────────────────────
 
   const budget = briefDocument.budget;
