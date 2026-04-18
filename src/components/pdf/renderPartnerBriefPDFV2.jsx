@@ -228,10 +228,7 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
 
   y += HEADER_BLOCK_H + 5;
 
-  // Strong teal rule separating brand from document body
-  setF(doc, TEAL);
-  doc.rect(ML, y, CW, 0.8, 'F');
-  y += 6;
+  y += 4;
 
   // Document title
   doc.setFont(FONT, 'bold');
