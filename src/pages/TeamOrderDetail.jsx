@@ -13,6 +13,7 @@ import BriefingContextPreview from '@/components/teamorder/BriefingContextPrevie
 import BriefingPreview from '@/components/teamorder/BriefingPreview';
 import { buildTeamOrderBriefDocument } from '@/components/pdf/buildTeamOrderBriefDocument';
 import { renderTeamOrderBriefToPDF } from '@/components/pdf/renderTeamOrderBriefToPDF';
+import { renderPartnerBriefPDFV2 } from '@/components/pdf/renderPartnerBriefPDFV2';
 
 export default function TeamOrderDetail() {
   const navigate = useNavigate();
@@ -302,25 +303,37 @@ export default function TeamOrderDetail() {
     }
   };
 
+  const getEffectiveTemplate = () => pdfTemplate || {
+    company_name: 'Alpha Yachting',
+    company_address: 'Novigrad, Croatia',
+    contact_email: 'info@alphayachting.com',
+    contact_phone: '+385 52 700 700',
+    logo_url: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png'
+  };
+
   const handleExportBriefPDF = async () => {
     if (!briefDocument) return;
     setError(null);
-    
     try {
-      const pdfTemplate_ = pdfTemplate || {
-        company_name: 'Alpha Yachting',
-        company_address: 'Novigrad, Croatia',
-        contact_email: 'info@alphayachting.com',
-        contact_phone: '+385 52 700 700',
-        logo_url: 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/6972766f1bd9af32693610c1/a2e80b763_Bildschirmfoto2026-01-28um222024.png'
-      };
-      
-      const pdfDoc = await renderTeamOrderBriefToPDF(briefDocument, pdfTemplate_);
+      const pdfDoc = await renderTeamOrderBriefToPDF(briefDocument, getEffectiveTemplate());
       const fileName = `worker-brief-${workOrder?.work_order_number || 'WO'}-${new Date().getTime()}.pdf`;
       pdfDoc.save(fileName);
     } catch (err) {
       console.error('Error exporting PDF:', err);
       setError(`Failed to export PDF: ${err.message}`);
+    }
+  };
+
+  const handleExportBriefPDFV2 = async () => {
+    if (!briefDocument) return;
+    setError(null);
+    try {
+      const pdfDoc = await renderPartnerBriefPDFV2(briefDocument, getEffectiveTemplate());
+      const fileName = `partner-brief-v2-${workOrder?.work_order_number || 'WO'}-${new Date().getTime()}.pdf`;
+      pdfDoc.save(fileName);
+    } catch (err) {
+      console.error('Error exporting PDF V2:', err);
+      setError(`Failed to export PDF V2: ${err.message}`);
     }
   };
 
@@ -367,13 +380,24 @@ export default function TeamOrderDetail() {
                 {generatingBrief ? 'Generating...' : (briefDocument ? 'Regenerate Briefing' : 'Generate Briefing')}
               </Button>
               {briefDocument && (
-                <Button 
-                  onClick={handleExportBriefPDF}
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export PDF
-                </Button>
+                <>
+                  <Button 
+                    onClick={handleExportBriefPDFV2}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export PDF V2
+                  </Button>
+                  <Button 
+                    onClick={handleExportBriefPDF}
+                    variant="outline"
+                    className="text-slate-500"
+                    title="Legacy PDF export"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Legacy PDF
+                  </Button>
+                </>
               )}
             </>
           )}
