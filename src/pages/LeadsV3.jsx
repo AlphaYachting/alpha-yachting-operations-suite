@@ -3,8 +3,12 @@ import { useLeadV3Data, V3_PHASES } from '@/hooks/useLeadV3Data';
 import LeadV3PhaseNav from '@/components/leadsV3/LeadV3PhaseNav';
 import LeadV3List from '@/components/leadsV3/LeadV3List';
 import { Input } from '@/components/ui/input';
-import { Search, Layers, Clock, PhoneCall, CheckCircle2, XCircle, AlertCircle, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, Layers, Clock, PhoneCall, CheckCircle2, XCircle, AlertCircle, Eye, Mail, Plus } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import EmailToLeadParser from '@/components/leadsV2/EmailToLeadParser';
+import { base44 } from '@/api/base44Client';
 
 export default function LeadsV3() {
   const { leads: rawLeads, users, isLoading } = useLeadV3Data();
@@ -14,6 +18,7 @@ export default function LeadsV3() {
   const [searchTerm, setSearchTerm] = useState('');
   // 'me' | 'all' | '<userId>'
   const [ownerFilter, setOwnerFilter] = useState('all');
+  const [showEmailToLead, setShowEmailToLead] = useState(false);
 
   // Sync from hook whenever raw data changes
   React.useEffect(() => { setLeads(rawLeads); }, [rawLeads]);
@@ -24,6 +29,13 @@ export default function LeadsV3() {
 
   const handleAssigned = (leadId, userId) => {
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, assigned_to_user_id: userId, accepted_by_assignee: false } : l));
+  };
+
+  const handleEmailLeadParsed = async (leadData) => {
+    const created = await base44.entities.Lead.create(leadData);
+    setLeads(prev => [created, ...prev]);
+    setShowEmailToLead(false);
+    setActivePhase('New Incoming');
   };
 
   if (isLoading) {
@@ -69,7 +81,27 @@ export default function LeadsV3() {
             {activeCount} active lead{activeCount !== 1 ? 's' : ''} across pipeline
           </p>
         </div>
+        <Button onClick={() => setShowEmailToLead(true)} className="bg-blue-600 hover:bg-blue-700 gap-2">
+          <Mail className="h-4 w-4" />
+          Email to Lead
+        </Button>
       </div>
+
+      {/* Email to Lead Dialog */}
+      <Dialog open={showEmailToLead} onOpenChange={setShowEmailToLead}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-blue-600" />
+              E-Mail zu Lead konvertieren
+            </DialogTitle>
+          </DialogHeader>
+          <EmailToLeadParser
+            onLeadParsed={handleEmailLeadParsed}
+            onCancel={() => setShowEmailToLead(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Status icons — clickable filters */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
