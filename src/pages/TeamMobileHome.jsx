@@ -229,27 +229,29 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
 
   const groupWorkOrdersBySection = () => {
     const today = startOfDay(new Date());
-    const sections = { overdue: [], today: [], upcoming: [], later: [], completed: [] };
+    const sections = { overdue: [], today: [], upcoming: [], later: [], readyToInvoice: [] };
 
-    // Exclude only cancelled WOs; completed go to their own bucket
+    // Exclude Completed and Cancelled entirely; Ready to Invoice goes to its own bucket
     const activeWorkOrders = workOrders.filter(wo =>
-      wo.status !== 'Completed' && wo.status !== 'Cancelled'
+      wo.status !== 'Completed' &&
+      wo.status !== 'Cancelled' &&
+      wo.status !== 'Ready to Invoice'
     );
 
-    // Collect completed WOs separately
-    const completedWorkOrders = workOrders.filter(wo => wo.status === 'Completed');
-    completedWorkOrders.sort((a, b) => {
+    // Collect Ready to Invoice WOs separately, sorted by date ascending
+    const readyToInvoiceWOs = workOrders.filter(wo => wo.status === 'Ready to Invoice');
+    readyToInvoiceWOs.sort((a, b) => {
       const dateA = a.scheduled_date ? parseISO(a.scheduled_date) : new Date(0);
       const dateB = b.scheduled_date ? parseISO(b.scheduled_date) : new Date(0);
-      return dateB - dateA; // Most recent first
+      return dateA - dateB;
     });
-    sections.completed = completedWorkOrders;
+    sections.readyToInvoice = readyToInvoiceWOs;
 
     const sevenDaysFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-    
+
     activeWorkOrders.forEach((wo) => {
       const woDate = wo.scheduled_date ? startOfDay(parseISO(wo.scheduled_date)) : null;
-      
+
       if (!woDate) {
         sections.later.push(wo);
       } else if (woDate < today) {
@@ -648,15 +650,15 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           );
         })()}
 
-        {/* COMPLETED Section */}
-        {sections.completed.length > 0 && (
+        {/* READY TO INVOICE Section */}
+        {sections.readyToInvoice.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-              <h2 className="text-lg font-bold text-green-700">Completed ({sections.completed.length})</h2>
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <h2 className="text-lg font-bold text-emerald-700">Ready to Invoice ({sections.readyToInvoice.length})</h2>
             </div>
             <div className="space-y-3 opacity-80">
-              {sections.completed.map((wo) =>
+              {sections.readyToInvoice.map((wo) =>
                 <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
               )}
             </div>
@@ -664,7 +666,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         )}
 
         {/* Empty State */}
-        {sections.overdue.length === 0 && sections.today.length === 0 && sections.upcoming.length === 0 && sections.later.length === 0 && sections.completed.length === 0 &&
+        {sections.overdue.length === 0 && sections.today.length === 0 && sections.upcoming.length === 0 && sections.later.length === 0 && sections.readyToInvoice.length === 0 &&
           <div className="text-center py-12">
             <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-600 font-medium mb-1">No open work orders</p>
