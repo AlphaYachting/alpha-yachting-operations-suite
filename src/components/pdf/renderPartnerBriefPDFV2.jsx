@@ -313,66 +313,77 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
     checkBreak(30);
     y = sectionHeader(doc, 'Main Tasks', y);
 
+    // Table header
+    const COL_NR   = ML;
+    const COL_TITLE = ML + 8;
+    const COL_TIME  = PAGE_W - MR;
+    const ROW_H    = 7;
+
+    setF(doc, { r: 40, g: 52, b: 68 });
+    doc.rect(ML, y - 4, CW, 6.5, 'F');
+    doc.setFont(FONT, 'bold');
+    doc.setFontSize(7.5);
+    setC(doc, { r: 255, g: 255, b: 255 });
+    doc.text('#', COL_NR + 1, y);
+    doc.text('Task', COL_TITLE, y);
+    doc.text('Est.', COL_TIME, y, { align: 'right' });
+    y += 5;
+
     tasks.forEach((task, idx) => {
-      const isLast = idx === tasks.length - 1;
+      const isEven = idx % 2 === 0;
 
-      // Estimate space needed for this task
-      const titleLines = doc.splitTextToSize(task.title || '', CW - 14).length;
-      const descLineCount = task.description
-        ? doc.splitTextToSize(task.description, CW - 14).length
-        : 0;
-      const needed = titleLines * 6 + descLineCount * 5 + 14;
-      checkBreak(needed);
+      // Measure title + description lines
+      const titleLines = doc.splitTextToSize(task.title || '', CW - 22);
+      const descLines  = task.description
+        ? doc.splitTextToSize(task.description, CW - 22)
+        : [];
+      const rowH = titleLines.length * 5 + (descLines.length > 0 ? descLines.length * 4.2 + 2 : 0) + 5;
+      checkBreak(rowH + 2);
 
-      // Number badge
-      setF(doc, TEAL);
-      doc.circle(ML + 3.5, y - 1, 3.5, 'F');
+      // Row background
+      setF(doc, isEven ? LIGHT_BG : { r: 255, g: 255, b: 255 });
+      doc.rect(ML, y - 3.5, CW, rowH, 'F');
+
+      // Number
       doc.setFont(FONT, 'bold');
-      doc.setFontSize(7.5);
-      setC(doc, { r: 255, g: 255, b: 255 });
-      doc.text(String(task.number), ML + 3.5, y + 0.3, { align: 'center' });
+      doc.setFontSize(8);
+      setC(doc, TEAL);
+      doc.text(String(task.number), COL_NR + 2, y, { align: 'center' });
 
-      // Task title — wrapped, bold, proper max width
-      const titleW = task.estimatedHours ? CW - 20 : CW - 10;
+      // Title
       doc.setFont(FONT, 'bold');
-      doc.setFontSize(9.5);
+      doc.setFontSize(9);
       setC(doc, DARK);
-      const titleLines2 = doc.splitTextToSize(task.title || '', titleW);
-      titleLines2.forEach((line, li) => {
-        doc.text(line, ML + 10, y + li * 5.5);
+      titleLines.forEach((line, li) => {
+        doc.text(line, COL_TITLE, y + li * 5);
       });
 
-      // Estimated time — top-right, only on first title line
+      // Est. time
       if (task.estimatedHours) {
         doc.setFont(FONT, 'normal');
         doc.setFontSize(8);
-        setC(doc, SUBTLE);
-        doc.text(`~${task.estimatedHours}h`, PAGE_W - MR, y, { align: 'right' });
-      }
-
-      y += titleLines2.length * 5.5 + 1;
-
-      // Description — subordinate, lighter, indented
-      if (task.description) {
-        doc.setFont(FONT, 'normal');
-        doc.setFontSize(8.5);
         setC(doc, MID);
-        const dlines = doc.splitTextToSize(task.description, CW - 14);
-        dlines.forEach(line => {
-          checkBreak(5);
-          doc.text(line, ML + 10, y);
-          y += 4.8;
-        });
+        doc.text(`~${task.estimatedHours}h`, COL_TIME, y, { align: 'right' });
       }
 
-      if (!isLast) {
-        y += 3;
-        hRule(doc, ML + 10, y, CW - 10, { r: 220, g: 228, b: 232 }, 0.2);
-        y += 5;
-      } else {
-        y += 6;
+      let rowY = y + titleLines.length * 5;
+
+      // Description — subtle, smaller
+      if (descLines.length > 0) {
+        doc.setFont(FONT, 'normal');
+        doc.setFontSize(7.5);
+        setC(doc, MID);
+        descLines.forEach(line => {
+          doc.text(line, COL_TITLE, rowY);
+          rowY += 4.2;
+        });
+        rowY += 1;
       }
+
+      y = rowY + 3;
     });
+
+    y += 4;
   }
 
   // ───────────────────────────────────────────────────────────────────────────

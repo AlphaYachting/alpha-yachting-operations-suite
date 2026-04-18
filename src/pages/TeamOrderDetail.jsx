@@ -322,16 +322,20 @@ export default function TeamOrderDetail() {
       
       // Translate project description to German via LLM
       let translatedDE = '';
-      const scopeSummary = briefingContext.external_notes?.scope_summary || '';
-      if (scopeSummary) {
+      // Use scope summary, or fall back to WO description or job description
+      const woData = briefingContext.work_order || {};
+      const jobData2 = briefingContext.job || {};
+      const textToTranslate = (briefingContext.external_notes?.scope_summary || '').trim()
+        || (woData.description || '').trim()
+        || (jobData2.description || '').trim();
+
+      if (textToTranslate) {
         try {
-          // InvokeLLM response is the text string directly via the axios response.data property
           const response = await base44.integrations.Core.InvokeLLM({
-            prompt: `Translate the following professional work order description to German. Maintain the same tone and format.\n\nText to translate:\n\n${scopeSummary}`
+            prompt: `Translate the following professional marine service work order description to German. Maintain the same professional tone and format. Return ONLY the translated text, no additional commentary.\n\nText:\n\n${textToTranslate}`
           });
-          // response is axios response: response.data contains the translated text
-          translatedDE = response.data || '';
-          console.log('[TeamOrderDetail] German translation received:', translatedDE.substring(0, 100) + '...');
+          translatedDE = (typeof response === 'string' ? response : response?.data) || '';
+          console.log('[TeamOrderDetail] German translation received, length:', translatedDE.length);
         } catch (translationErr) {
           console.warn('[TeamOrderDetail] German translation failed:', translationErr);
           translatedDE = '';
