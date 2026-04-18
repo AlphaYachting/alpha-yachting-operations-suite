@@ -261,10 +261,13 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
   setF(doc, LIGHT_BG);
   doc.rect(ML, y - 3, CW, 32, 'F');
 
+  const vessel0 = briefDocument.vesselInfo;
+  const berthStr = vessel0?.berth ? `Berth / Gate: ${vessel0.berth}` : null;
+
   y = infoGrid(doc, [
     ['Work Order',  id?.workOrderNumber || '—',  'Status',   id?.workOrderStatus || '—'],
     ['Title',       id?.workOrderTitle  || '—',  'Date',     id?.scheduledDate   || '—'],
-    ['Customer',    id?.customerName    || '—',  'Vessel',   id?.vesselName      || '—'],
+    ['Vessel',      id?.vesselName      || '—',  'Berth / Gate', vessel0?.berth || '—'],
     ['Location',    id?.locationName    || '—',  null,       null],
   ], y + 1);
 
