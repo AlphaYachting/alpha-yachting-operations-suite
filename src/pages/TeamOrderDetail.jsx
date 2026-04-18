@@ -88,6 +88,8 @@ export default function TeamOrderDetail() {
           if (order.generated_brief_payload) {
             setBriefDocument(order.generated_brief_payload);
           }
+          // Note: vesselInfo / costPolicies / approvalRules are patched in after
+          // related entities load (see patch below)
 
           // Load associated work order
           const woList = await base44.entities.WorkOrder.list();
@@ -107,16 +109,76 @@ export default function TeamOrderDetail() {
             ]);
 
             const jobData = jobs.find(j => j.id === wo.job_id);
+            const boatData = boats.find(b => b.id === jobData?.boat_id);
+            const locationData = locations.find(l => l.id === jobData?.location_id);
             setJob(jobData);
             setCustomer(customers.find(c => c.id === jobData?.customer_id));
-            setBoat(boats.find(b => b.id === jobData?.boat_id));
-            setLocation(locations.find(l => l.id === jobData?.location_id));
+            setBoat(boatData);
+            setLocation(locationData);
 
             // Translate job description to English for Partner Brief
             if (jobData?.description) {
               base44.integrations.Core.InvokeLLM({
                 prompt: `Translate the following German text to professional English. Return only the translated text, no additional explanation:\n\n${jobData.description}`
               }).then(translated => setJobDescriptionEn(translated)).catch(() => setJobDescriptionEn(jobData.description));
+            }
+
+            // Patch persisted brief payload with live vessel/location/cost data
+            // (handles old payloads generated before these sections were added)
+            if (order.generated_brief_payload) {
+              const payload = order.generated_brief_payload;
+              const needsPatch = !payload.vesselInfo?.type || !payload.costPolicies || !payload.approvalRules || !payload.projectDescription?.de;
+              if (needsPatch) {
+                const patchedPayload = {
+                  ...payload,
+                  projectDescription: {
+                    en: payload.projectDescription?.en || order.generated_project_description_en || '',
+                    de: payload.projectDescription?.de || order.generated_project_description_de || '',
+                  },
+                  vesselInfo: {
+                    name: boatData?.vessel_name || payload.vesselInfo?.name || 'N/A',
+                    type: boatData?.vessel_type || null,
+                    length_m: boatData?.length_m || null,
+                    year: boatData?.year || null,
+                    berth: boatData?.berth_number || null,
+                    access_details: boatData?.access_details || null,
+                    engine_type: boatData?.engine_type || null,
+                    engine_manufacturer: boatData?.engine_manufacturer || null,
+                    engine_model: boatData?.engine_model || null,
+                    electrical_system: boatData?.electrical_system || null,
+                    known_issues: boatData?.known_issues || null,
+                  },
+                  locationAccess: {
+                    ...payload.locationAccess,
+                    contactPerson: locationData?.contact_person || null,
+                    contactPhone: locationData?.contact_phone || null,
+                    openingHours: locationData?.opening_hours || null,
+                    marinaFeeEnabled: locationData?.marina_fee_enabled || false,
+                    marinaFeeType: locationData?.marina_fee_type || null,
+                    marinaFeeAmount: locationData?.marina_fee_amount || null,
+                  },
+                  costPolicies: payload.costPolicies || {
+                    accommodationPaid: order.accommodation_paid || false,
+                    accommodationMaxPerNight: order.accommodation_max_per_night || null,
+                    accommodationNotes: order.accommodation_notes || null,
+                    perDiemPaid: order.meals_per_diem_paid || false,
+                    perDiemRatePerDay: order.per_diem_rate_per_day || null,
+                    mileagePaid: order.mileage_paid || false,
+                    mileageRatePerKm: order.mileage_rate_per_km || null,
+                    mileageCapTotal: order.mileage_cap_total || null,
+                    travelTimePaid: order.travel_time_paid || false,
+                    travelTimeRatePerHour: order.travel_time_rate_per_hour || null,
+                    otherReimbursablesAllowed: order.other_reimbursables_allowed || false,
+                    otherReimbursablesNotes: order.other_reimbursables_notes || null,
+                  },
+                  approvalRules: payload.approvalRules || {
+                    budgetExceedRequiresApproval: order.budget_exceed_requires_approval !== false,
+                    requiresPreapprovalOver: order.requires_preapproval_over || 500,
+                    currency: order.currency || 'EUR',
+                  },
+                };
+                setBriefDocument(patchedPayload);
+              }
             }
           }
         }

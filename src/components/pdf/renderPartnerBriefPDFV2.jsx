@@ -460,7 +460,8 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
       y += 10;
     }
 
-    if (loc.accessNotes) {
+    const accessNotesText = loc.accessNotes && loc.accessNotes !== 'No special access notes' ? loc.accessNotes : null;
+    if (accessNotesText) {
       y += 1;
       doc.setFont(FONT, 'bold');
       doc.setFontSize(8);
@@ -470,7 +471,7 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
       doc.setFont(FONT, 'normal');
       doc.setFontSize(9);
       setC(doc, DARK);
-      y = wrappedBlock(doc, loc.accessNotes, ML + 3, y, CW - 6, 5, checkBreak);
+      y = wrappedBlock(doc, accessNotesText, ML + 3, y, CW - 6, 5, checkBreak);
     }
     y += 6;
   }
