@@ -1,154 +1,144 @@
 import { jsPDF } from 'jspdf';
 
 /**
- * Partner Briefing PDF V2
- * Clean, professional operational document for external workers / partners.
- * Rebuilt from scratch with clear typography, section hierarchy, and bilingual support.
+ * Partner Briefing PDF V2 — Clean professional operational document
+ * Rebuilt architecture: clear hierarchy, calm layout, bilingual support.
  * Reuses branding assets (logo, company info, color palette) from the template object.
  */
 
-// ─── Brand & Layout Constants ────────────────────────────────────────────────
-const TEAL  = { r: 0,   g: 160, b: 180 };  // primary accent
-const DARK  = { r: 30,  g: 40,  b: 55  };  // near-black text
-const MID   = { r: 90,  g: 100, b: 115 };  // secondary text
-const LIGHT = { r: 200, g: 210, b: 215 };  // subtle rules
-const WARN_BG  = { r: 255, g: 248, b: 235 };
-const WARN_ACC = { r: 220, g: 110, b: 20  };
+// ─── Brand & Layout Constants ─────────────────────────────────────────────────
+const TEAL     = { r: 0,   g: 155, b: 175 };
+const DARK     = { r: 28,  g: 38,  b: 52  };
+const MID      = { r: 95,  g: 108, b: 120 };
+const SUBTLE   = { r: 155, g: 165, b: 175 };
+const LIGHT_BG = { r: 247, g: 250, b: 252 };
+const WARN_BG  = { r: 255, g: 249, b: 238 };
+const WARN_ACC = { r: 195, g: 110, b: 20  };
 
-const FONT   = 'helvetica';
-const PAGE_W = 210;   // A4 mm
+const FONT = 'helvetica';
+const PAGE_W = 210;
 const PAGE_H = 297;
-const ML     = 18;    // margin left
-const MR     = 18;    // margin right
-const MT     = 18;    // margin top
-const MB     = 18;    // margin bottom
-const CW     = PAGE_W - ML - MR;  // content width
+const ML = 20;   // margin left
+const MR = 20;   // margin right
+const MT = 16;   // margin top
+const MB = 16;   // margin bottom
+const CW = PAGE_W - ML - MR;
 
-// ─── Low-level Drawing Helpers ────────────────────────────────────────────────
+// ─── Primitive Helpers ────────────────────────────────────────────────────────
 
-function setColor(doc, { r, g, b }) {
-  doc.setTextColor(r, g, b);
-}
+const setC  = (doc, { r, g, b }) => doc.setTextColor(r, g, b);
+const setF  = (doc, { r, g, b }) => doc.setFillColor(r, g, b);
+const setD  = (doc, { r, g, b }) => doc.setDrawColor(r, g, b);
 
-function setFill(doc, { r, g, b }) {
-  doc.setFillColor(r, g, b);
-}
-
-function setDraw(doc, { r, g, b }) {
-  doc.setDrawColor(r, g, b);
-}
-
-function rule(doc, x, y, w, color = LIGHT, lw = 0.3) {
+function hRule(doc, x, y, w, color, lw = 0.25) {
   doc.setLineWidth(lw);
-  setDraw(doc, color);
+  setD(doc, color);
   doc.line(x, y, x + w, y);
 }
 
-function wrappedText(doc, text, x, y, maxW, lineH, checkBreak) {
-  const lines = doc.splitTextToSize(text, maxW);
+function wrappedBlock(doc, text, x, y, maxW, lineH, checkBreak) {
+  const lines = doc.splitTextToSize(text || '', maxW);
   lines.forEach(line => {
-    if (checkBreak) checkBreak(lineH + 1);
+    checkBreak(lineH + 1);
     doc.text(line, x, y);
     y += lineH;
   });
   return y;
 }
 
-// ─── Page Footer ─────────────────────────────────────────────────────────────
+// ─── Footer ───────────────────────────────────────────────────────────────────
 
 function drawFooter(doc, template, pageNum) {
-  const fy = PAGE_H - MB + 6;
+  const fy = PAGE_H - MB + 5;
+  hRule(doc, ML, fy - 4, CW, SUBTLE, 0.2);
   doc.setFont(FONT, 'normal');
   doc.setFontSize(7);
-  setColor(doc, MID);
-
+  setC(doc, SUBTLE);
   const parts = [
     template?.company_name || 'Alpha Yachting',
     template?.company_address,
     template?.contact_email,
     template?.contact_phone,
-  ].filter(Boolean).join('  ·  ');
-
+  ].filter(Boolean).join('   ·   ');
   doc.text(parts, PAGE_W / 2, fy, { align: 'center' });
-  doc.text(`${pageNum}`, PAGE_W - MR, fy, { align: 'right' });
-
-  rule(doc, ML, fy - 3, CW, LIGHT, 0.2);
+  doc.text(String(pageNum), PAGE_W - MR, fy, { align: 'right' });
 }
 
-// ─── Section Header ───────────────────────────────────────────────────────────
+// ─── Section Header — calm, clean, not heavy ──────────────────────────────────
 
 function sectionHeader(doc, label, y) {
-  // Teal accent bar left
-  setFill(doc, TEAL);
-  doc.rect(ML, y - 3.5, 2, 6, 'F');
+  // Small teal left accent
+  setF(doc, TEAL);
+  doc.rect(ML, y - 4, 2.5, 7, 'F');
 
   doc.setFont(FONT, 'bold');
-  doc.setFontSize(8.5);
-  setColor(doc, TEAL);
-  doc.text(label.toUpperCase(), ML + 5, y);
+  doc.setFontSize(9);
+  setC(doc, TEAL);
+  doc.text(label.toUpperCase(), ML + 6, y);
 
-  rule(doc, ML + 5, y + 1.5, CW - 5, TEAL, 0.25);
+  // Light rule only — no heavy colored line
+  hRule(doc, ML + 6, y + 2, CW - 6, { r: 210, g: 225, b: 230 }, 0.25);
 
-  return y + 7;
+  return y + 9;
 }
 
-// ─── Key/Value Info Block ─────────────────────────────────────────────────────
+// ─── Info Grid — 2-column key/value ──────────────────────────────────────────
 
-/**
- * Renders a compact 2-column key/value grid.
- * rows: [[label, value], ...] or [[label, value, label2, value2], ...]
- */
 function infoGrid(doc, rows, y) {
-  const COL2_X = ML + CW / 2;
-  const LABEL_W = 28;
+  const COL2_X  = ML + CW / 2 + 2;
+  const LABEL_W = 30;
+  const VAL_MAX = CW / 2 - LABEL_W - 5;
 
   rows.forEach(([l1, v1, l2, v2]) => {
+    // Label
     doc.setFont(FONT, 'bold');
-    doc.setFontSize(8.5);
-    setColor(doc, MID);
+    doc.setFontSize(8);
+    setC(doc, SUBTLE);
     doc.text((l1 || '').toString(), ML, y);
 
+    // Value (wrap within column if long)
     doc.setFont(FONT, 'normal');
-    setColor(doc, DARK);
-    const v1str = (v1 || '—').toString();
-    // Clip long values within their column
-    const v1lines = doc.splitTextToSize(v1str, CW / 2 - LABEL_W - 4);
+    doc.setFontSize(9);
+    setC(doc, DARK);
+    const v1lines = doc.splitTextToSize((v1 || '—').toString(), VAL_MAX);
     doc.text(v1lines[0], ML + LABEL_W, y);
 
     if (l2) {
       doc.setFont(FONT, 'bold');
-      setColor(doc, MID);
+      doc.setFontSize(8);
+      setC(doc, SUBTLE);
       doc.text((l2 || '').toString(), COL2_X, y);
 
       doc.setFont(FONT, 'normal');
-      setColor(doc, DARK);
-      const v2str = (v2 || '—').toString();
-      const v2lines = doc.splitTextToSize(v2str, CW / 2 - LABEL_W - 4);
+      doc.setFontSize(9);
+      setC(doc, DARK);
+      const v2lines = doc.splitTextToSize((v2 || '—').toString(), VAL_MAX);
       doc.text(v2lines[0], COL2_X + LABEL_W, y);
     }
 
-    y += 5;
+    y += 5.5;
   });
 
   return y;
 }
 
-// ─── Narrative Text Block ─────────────────────────────────────────────────────
+// ─── Narrative Block — bilingual, paragraph-aware ────────────────────────────
 
 function narrativeBlock(doc, langLabel, text, x, y, maxW, checkBreak) {
   if (!text || !text.trim()) return y;
 
-  // Language label
+  // Language pill label
+  setF(doc, TEAL);
+  doc.roundedRect(x, y - 3.5, 20, 5, 1, 1, 'F');
   doc.setFont(FONT, 'bold');
-  doc.setFontSize(8);
-  setColor(doc, TEAL);
-  doc.text(langLabel, x, y);
-  y += 5;
+  doc.setFontSize(7.5);
+  setC(doc, { r: 255, g: 255, b: 255 });
+  doc.text(langLabel, x + 10, y, { align: 'center' });
+  y += 7;
 
-  // Body text
   doc.setFont(FONT, 'normal');
-  doc.setFontSize(9);
-  setColor(doc, DARK);
+  doc.setFontSize(9.5);
+  setC(doc, DARK);
 
   const paragraphs = text.split('\n').filter(p => p.trim());
   paragraphs.forEach((para, i) => {
@@ -156,15 +146,15 @@ function narrativeBlock(doc, langLabel, text, x, y, maxW, checkBreak) {
     lines.forEach(line => {
       checkBreak(5.5);
       doc.text(line, x, y);
-      y += 5;
+      y += 5.2;
     });
-    if (i < paragraphs.length - 1) y += 2; // inter-paragraph spacing
+    if (i < paragraphs.length - 1) y += 2.5;
   });
 
-  return y + 3;
+  return y + 5;
 }
 
-// ─── Main Export ─────────────────────────────────────────────────────────────
+// ─── Main Renderer ────────────────────────────────────────────────────────────
 
 export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
   if (!briefDocument) throw new Error('No brief document provided');
@@ -174,9 +164,8 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
   let y = MT;
   let pageNum = 1;
 
-  // ── Page break guard ──────────────────────────────────────────────────────
-  const checkBreak = (needed = 10) => {
-    if (y + needed > PAGE_H - MB - 12) {
+  const checkBreak = (needed = 12) => {
+    if (y + needed > PAGE_H - MB - 14) {
       drawFooter(doc, template, pageNum);
       doc.addPage();
       pageNum++;
@@ -184,15 +173,15 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 1. HEADER — Logo + Company identity + Document title
-  // ─────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
+  // A. HEADER — Logo dominant left, company identity right, title below
+  // ───────────────────────────────────────────────────────────────────────────
 
-  // Logo (top-left)
-  const LOGO_MAX_H = 18;
-  const LOGO_MAX_W = 55;
-  let logoRendered = false;
+  const LOGO_MAX_H = 28;   // significantly larger
+  const LOGO_MAX_W = 80;
+  const HEADER_BLOCK_H = LOGO_MAX_H + 4;
 
+  // Load logo
   if (template?.logo_url) {
     try {
       await new Promise(resolve => {
@@ -203,10 +192,9 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
           let dh = LOGO_MAX_H;
           let dw = ratio * dh;
           if (dw > LOGO_MAX_W) { dw = LOGO_MAX_W; dh = dw / ratio; }
-          try {
-            doc.addImage(img, 'PNG', ML, y, dw, dh, undefined, 'FAST');
-            logoRendered = true;
-          } catch (_) {}
+          // Vertically center logo in header block
+          const logoY = y + (HEADER_BLOCK_H - dh) / 2;
+          try { doc.addImage(img, 'PNG', ML, logoY, dw, dh, undefined, 'FAST'); } catch (_) {}
           resolve();
         };
         img.onerror = () => resolve();
@@ -215,115 +203,110 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
     } catch (_) {}
   }
 
-  // Company name & address (top-right)
+  // Company block — right side, vertically aligned with logo
+  const companyName = template?.company_name || 'Alpha Yachting';
   doc.setFont(FONT, 'bold');
-  doc.setFontSize(11);
-  setColor(doc, TEAL);
-  doc.text(template?.company_name || 'Alpha Yachting', PAGE_W - MR, y + 3, { align: 'right' });
+  doc.setFontSize(10.5);
+  setC(doc, TEAL);
+  doc.text(companyName, PAGE_W - MR, y + 6, { align: 'right' });
 
   doc.setFont(FONT, 'normal');
   doc.setFontSize(8);
-  setColor(doc, MID);
+  setC(doc, MID);
+  let companyY = y + 12;
   if (template?.company_address) {
-    doc.text(template.company_address, PAGE_W - MR, y + 8, { align: 'right' });
+    doc.text(template.company_address, PAGE_W - MR, companyY, { align: 'right' });
+    companyY += 4.5;
   }
   if (template?.contact_email) {
-    doc.text(template.contact_email, PAGE_W - MR, y + 13, { align: 'right' });
+    doc.text(template.contact_email, PAGE_W - MR, companyY, { align: 'right' });
+    companyY += 4.5;
+  }
+  if (template?.contact_phone) {
+    doc.text(template.contact_phone, PAGE_W - MR, companyY, { align: 'right' });
   }
 
-  y += LOGO_MAX_H + 10;
+  y += HEADER_BLOCK_H + 5;
 
-  // Full-width header rule
-  setFill(doc, TEAL);
-  doc.rect(ML, y, CW, 0.5, 'F');
-  y += 5;
+  // Strong teal rule separating brand from document body
+  setF(doc, TEAL);
+  doc.rect(ML, y, CW, 0.8, 'F');
+  y += 6;
 
   // Document title
   doc.setFont(FONT, 'bold');
-  doc.setFontSize(18);
-  setColor(doc, DARK);
+  doc.setFontSize(20);
+  setC(doc, DARK);
   doc.text('PARTNER BRIEFING', ML, y);
 
-  // V2 badge (right-aligned, same line)
-  doc.setFont(FONT, 'bold');
-  doc.setFontSize(7.5);
-  setColor(doc, { r: 255, g: 255, b: 255 });
-  setFill(doc, TEAL);
-  doc.roundedRect(PAGE_W - MR - 14, y - 5, 14, 6.5, 1, 1, 'F');
-  doc.text('V2', PAGE_W - MR - 7, y - 0.5, { align: 'center' });
+  y += 5;
 
-  y += 4;
-  // Subtitle line
-  doc.setFont(FONT, 'normal');
-  doc.setFontSize(8);
-  setColor(doc, MID);
+  // Meta line — WO number + date
   const { projectIdentification: id } = briefDocument;
-  doc.text(`Work Order ${id?.workOrderNumber || '—'}  ·  Generated: ${briefDocument.meta?.timestamp || ''}`, ML, y);
+  doc.setFont(FONT, 'normal');
+  doc.setFontSize(8.5);
+  setC(doc, MID);
+  doc.text(
+    `Work Order ${id?.workOrderNumber || '—'}   ·   ${id?.scheduledDate || '—'}   ·   Generated: ${briefDocument.meta?.timestamp || ''}`,
+    ML, y
+  );
 
-  y += 8;
+  y += 10;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 2. ASSIGNMENT SUMMARY — compact scannable block
-  // ─────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
+  // B. ASSIGNMENT SUMMARY
+  // ───────────────────────────────────────────────────────────────────────────
 
-  checkBreak(40);
+  checkBreak(45);
   y = sectionHeader(doc, 'Assignment Summary', y);
 
-  // Summary box background
-  setFill(doc, { r: 246, g: 250, b: 252 });
-  doc.rect(ML, y - 2, CW, 30, 'F');
-  rule(doc, ML, y - 2, CW, LIGHT, 0.3);
+  // Light background card
+  setF(doc, LIGHT_BG);
+  doc.rect(ML, y - 3, CW, 32, 'F');
 
   y = infoGrid(doc, [
-    ['Work Order',   id?.workOrderNumber  || '—',  'Status',    id?.workOrderStatus  || '—'],
-    ['Title',        id?.workOrderTitle   || '—',  'Date',      id?.scheduledDate    || '—'],
-    ['Customer',     id?.customerName     || '—',  'Vessel',    id?.vesselName       || '—'],
-    ['Location',     id?.locationName     || '—',  null,        null],
-  ], y + 2);
+    ['Work Order',  id?.workOrderNumber || '—',  'Status',   id?.workOrderStatus || '—'],
+    ['Title',       id?.workOrderTitle  || '—',  'Date',     id?.scheduledDate   || '—'],
+    ['Customer',    id?.customerName    || '—',  'Vessel',   id?.vesselName      || '—'],
+    ['Location',    id?.locationName    || '—',  null,       null],
+  ], y + 1);
 
-  // Partner info inline if available
   const partner = briefDocument.assignedPartner;
   if (partner?.name && partner.name !== 'N/A') {
-    rule(doc, ML + 5, y + 1, CW - 10, LIGHT, 0.2);
-    y += 5;
+    hRule(doc, ML + 4, y + 1, CW - 8, { r: 220, g: 230, b: 235 }, 0.2);
+    y += 6;
     y = infoGrid(doc, [
-      ['Assigned To',  partner.name  || '—',  'Role',    partner.role    || '—'],
-      ['Contact',      partner.contact || '—',  'Email',   partner.email   || '—'],
+      ['Assigned To', partner.name    || '—', 'Role',  partner.role    || '—'],
+      ['Contact',     partner.contact || '—', 'Email', partner.email   || '—'],
     ], y);
   }
 
-  y += 6;
+  y += 8;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 3. SCOPE OF WORK — bilingual narrative
-  // ─────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
+  // C. SCOPE OF WORK — main narrative, visual center of the document
+  // ───────────────────────────────────────────────────────────────────────────
 
   const desc = briefDocument.projectDescription;
-  if (desc?.en || desc?.de) {
-    checkBreak(35);
+  if (desc?.de || desc?.en) {
+    checkBreak(40);
     y = sectionHeader(doc, 'Scope of Work', y);
 
-    // German first (native language of most partners)
-    if (desc.de) {
+    // German first — primary language for this partner type
+    if (desc.de && desc.de.trim()) {
       y = narrativeBlock(doc, 'Deutsch', desc.de, ML, y, CW, checkBreak);
-    } else {
-      doc.setFont(FONT, 'italic');
-      doc.setFontSize(8);
-      setColor(doc, MID);
-      doc.text('Deutsche Übersetzung nicht verfügbar.', ML, y);
-      y += 6;
     }
 
-    // English
-    if (desc.en) {
-      checkBreak(20);
+    // English second
+    if (desc.en && desc.en.trim()) {
+      checkBreak(25);
       y = narrativeBlock(doc, 'English', desc.en, ML, y, CW, checkBreak);
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 4. MAIN TASKS — clean numbered work list
-  // ─────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
+  // D. MAIN TASKS
+  // ───────────────────────────────────────────────────────────────────────────
 
   const tasks = briefDocument.taskList || [];
   if (tasks.length > 0) {
@@ -332,64 +315,69 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
 
     tasks.forEach((task, idx) => {
       const isLast = idx === tasks.length - 1;
-      // Estimate needed space
-      const descLines = task.description
-        ? doc.splitTextToSize(task.description, CW - 12).length
+
+      // Estimate space needed for this task
+      const titleLines = doc.splitTextToSize(task.title || '', CW - 14).length;
+      const descLineCount = task.description
+        ? doc.splitTextToSize(task.description, CW - 14).length
         : 0;
-      const needed = 8 + descLines * 4.5 + (task.estimatedHours ? 4 : 0) + 5;
+      const needed = titleLines * 6 + descLineCount * 5 + 14;
       checkBreak(needed);
 
-      // Task number chip
-      setFill(doc, TEAL);
-      doc.circle(ML + 3, y - 1, 3, 'F');
+      // Number badge
+      setF(doc, TEAL);
+      doc.circle(ML + 3.5, y - 1, 3.5, 'F');
       doc.setFont(FONT, 'bold');
       doc.setFontSize(7.5);
-      setColor(doc, { r: 255, g: 255, b: 255 });
-      doc.text(String(task.number), ML + 3, y + 0.2, { align: 'center' });
+      setC(doc, { r: 255, g: 255, b: 255 });
+      doc.text(String(task.number), ML + 3.5, y + 0.3, { align: 'center' });
 
-      // Task title
+      // Task title — wrapped, bold, proper max width
+      const titleW = task.estimatedHours ? CW - 20 : CW - 10;
       doc.setFont(FONT, 'bold');
       doc.setFontSize(9.5);
-      setColor(doc, DARK);
-      doc.text(task.title, ML + 9, y);
+      setC(doc, DARK);
+      const titleLines2 = doc.splitTextToSize(task.title || '', titleW);
+      titleLines2.forEach((line, li) => {
+        doc.text(line, ML + 10, y + li * 5.5);
+      });
 
-      // Estimated time (right-aligned if available)
+      // Estimated time — top-right, only on first title line
       if (task.estimatedHours) {
         doc.setFont(FONT, 'normal');
         doc.setFontSize(8);
-        setColor(doc, MID);
+        setC(doc, SUBTLE);
         doc.text(`~${task.estimatedHours}h`, PAGE_W - MR, y, { align: 'right' });
       }
 
-      y += 5.5;
+      y += titleLines2.length * 5.5 + 1;
 
-      // Task description
+      // Description — subordinate, lighter, indented
       if (task.description) {
         doc.setFont(FONT, 'normal');
         doc.setFontSize(8.5);
-        setColor(doc, MID);
-        const dlines = doc.splitTextToSize(task.description, CW - 12);
+        setC(doc, MID);
+        const dlines = doc.splitTextToSize(task.description, CW - 14);
         dlines.forEach(line => {
-          checkBreak(4.5);
-          doc.text(line, ML + 9, y);
-          y += 4.5;
+          checkBreak(5);
+          doc.text(line, ML + 10, y);
+          y += 4.8;
         });
       }
 
-      // Separator (not after last)
       if (!isLast) {
-        y += 2;
-        rule(doc, ML + 9, y, CW - 9, LIGHT, 0.2);
-        y += 4;
+        y += 3;
+        hRule(doc, ML + 10, y, CW - 10, { r: 220, g: 228, b: 232 }, 0.2);
+        y += 5;
       } else {
-        y += 4;
+        y += 6;
       }
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 5. LOCATION & ACCESS
-  // ─────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
+  // E. LOCATION & ACCESS
+  // ───────────────────────────────────────────────────────────────────────────
 
   const loc = briefDocument.locationAccess;
   if (loc) {
@@ -397,165 +385,163 @@ export async function renderPartnerBriefPDFV2(briefDocument, template = {}) {
     y = sectionHeader(doc, 'Location & Access', y);
 
     y = infoGrid(doc, [
-      ['Marina / Location', loc.name    || '—', 'City',    loc.city    || '—'],
-      ['Address',           loc.address || '—', null,      null],
+      ['Marina', loc.name    || '—', 'City',    loc.city    || '—'],
+      ['Address', loc.address || '—', null,      null],
     ], y);
 
     if (loc.accessNotes && loc.accessNotes !== 'No special access notes') {
       y += 1;
       doc.setFont(FONT, 'bold');
-      doc.setFontSize(8.5);
-      setColor(doc, MID);
+      doc.setFontSize(8);
+      setC(doc, SUBTLE);
       doc.text('Access Notes', ML, y);
-      y += 5;
-
+      y += 5.5;
       doc.setFont(FONT, 'normal');
       doc.setFontSize(9);
-      setColor(doc, DARK);
-      y = wrappedText(doc, loc.accessNotes, ML + 3, y, CW - 6, 5, checkBreak);
+      setC(doc, DARK);
+      y = wrappedBlock(doc, loc.accessNotes, ML + 3, y, CW - 6, 5, checkBreak);
     }
-    y += 4;
+    y += 6;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 6. SAFETY NOTES
-  // ─────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
+  // F. SAFETY NOTES (if present)
+  // ───────────────────────────────────────────────────────────────────────────
 
   if (briefDocument.safetyNotes) {
     checkBreak(25);
     y = sectionHeader(doc, 'Safety Notes', y);
 
-    // Subtle red-tinted box
-    setFill(doc, { r: 255, g: 245, b: 245 });
     const safetyLines = doc.splitTextToSize(briefDocument.safetyNotes, CW - 8);
-    const safetyBoxH = safetyLines.length * 5 + 8;
-    doc.rect(ML, y - 2, CW, safetyBoxH, 'F');
-    setDraw(doc, { r: 220, g: 80, b: 80 });
-    doc.setLineWidth(0.5);
-    doc.rect(ML, y - 2, CW, safetyBoxH);
+    const safetyBoxH = safetyLines.length * 5 + 9;
+    setF(doc, { r: 255, g: 245, b: 245 });
+    setD(doc, { r: 210, g: 80, b: 80 });
+    doc.setLineWidth(0.4);
+    doc.rect(ML, y - 2, CW, safetyBoxH, 'FD');
 
     doc.setFont(FONT, 'normal');
     doc.setFontSize(9);
-    setColor(doc, DARK);
+    setC(doc, DARK);
     safetyLines.forEach(line => {
       checkBreak(5.5);
       doc.text(line, ML + 4, y);
       y += 5;
     });
-    y += 6;
+    y += 7;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 7. DOCUMENTATION REQUIREMENTS
-  // ─────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
+  // G. DOCUMENTATION REQUIREMENTS — important, but visually subordinate to scope
+  // ───────────────────────────────────────────────────────────────────────────
 
   const notice = briefDocument.documentationNotice;
   if (notice) {
-    checkBreak(45);
+    checkBreak(50);
     y = sectionHeader(doc, 'Documentation Requirements', y);
 
-    const deLines = doc.splitTextToSize(notice.de || '', CW - 10);
-    const enLines = doc.splitTextToSize(notice.en || '', CW - 10);
-    const boxH = (deLines.length + enLines.length) * 5 + 22;
+    const deLines = notice.de ? doc.splitTextToSize(notice.de, CW - 12) : [];
+    const enLines = notice.en ? doc.splitTextToSize(notice.en, CW - 12) : [];
+    const boxH = (deLines.length + enLines.length) * 5 + 24;
 
-    setFill(doc, WARN_BG);
-    setDraw(doc, WARN_ACC);
-    doc.setLineWidth(0.6);
+    // Softer warning box — amber tint, thinner border
+    setF(doc, WARN_BG);
+    setD(doc, { r: 210, g: 160, b: 70 });
+    doc.setLineWidth(0.4);
     doc.rect(ML, y - 2, CW, boxH, 'FD');
 
-    // Warning label
+    // Label — less aggressive than before
     doc.setFont(FONT, 'bold');
     doc.setFontSize(8);
-    setColor(doc, WARN_ACC);
-    doc.text('WICHTIG / IMPORTANT', ML + 5, y + 2);
-    y += 8;
+    setC(doc, WARN_ACC);
+    doc.text('Wichtig / Important', ML + 5, y + 3);
+    y += 10;
 
-    // German notice
-    if (notice.de) {
+    if (deLines.length > 0) {
       doc.setFont(FONT, 'bold');
       doc.setFontSize(7.5);
-      setColor(doc, TEAL);
-      doc.text('Deutsch:', ML + 5, y);
+      setC(doc, TEAL);
+      doc.text('Deutsch', ML + 5, y);
       y += 4.5;
 
       doc.setFont(FONT, 'normal');
       doc.setFontSize(8.5);
-      setColor(doc, DARK);
+      setC(doc, DARK);
       deLines.forEach(line => {
         doc.text(line, ML + 5, y);
-        y += 5;
+        y += 4.8;
       });
-      y += 3;
+      y += 4;
     }
 
-    // English notice
-    if (notice.en) {
-      checkBreak(enLines.length * 5 + 10);
+    if (enLines.length > 0) {
       doc.setFont(FONT, 'bold');
       doc.setFontSize(7.5);
-      setColor(doc, TEAL);
-      doc.text('English:', ML + 5, y);
+      setC(doc, TEAL);
+      doc.text('English', ML + 5, y);
       y += 4.5;
 
       doc.setFont(FONT, 'normal');
       doc.setFontSize(8.5);
-      setColor(doc, DARK);
+      setC(doc, DARK);
       enLines.forEach(line => {
         doc.text(line, ML + 5, y);
-        y += 5;
+        y += 4.8;
       });
     }
 
-    y += 8;
+    y += 10;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 8. BUDGET & COST COVERAGE (compact, at the end)
-  // ─────────────────────────────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
+  // H. BUDGET & COST COVERAGE
+  // ───────────────────────────────────────────────────────────────────────────
 
   const budget = briefDocument.budget;
   if (budget) {
     checkBreak(40);
     y = sectionHeader(doc, 'Budget & Cost Coverage', y);
 
-    // Table header
-    setFill(doc, DARK);
-    doc.rect(ML, y - 3.5, CW, 6, 'F');
+    // Subtle header row
+    setF(doc, { r: 40, g: 52, b: 68 });
+    doc.rect(ML, y - 3.5, CW, 6.5, 'F');
     doc.setFont(FONT, 'bold');
-    doc.setFontSize(8.5);
-    setColor(doc, { r: 255, g: 255, b: 255 });
-    doc.text('Category', ML + 3, y);
-    doc.text('Amount (EUR)', PAGE_W - MR - 2, y, { align: 'right' });
-    y += 6;
+    doc.setFontSize(8);
+    setC(doc, { r: 255, g: 255, b: 255 });
+    doc.text('Category', ML + 4, y);
+    doc.text('Amount (EUR)', PAGE_W - MR - 3, y, { align: 'right' });
+    y += 7;
 
     const budgetRows = [
-      { label: 'Total Approved Budget', value: budget.totalApproved, bold: true  },
+      { label: 'Total Approved Budget', value: budget.totalApproved, bold: true },
       { label: 'Labor',                 value: budget.labor,         bold: false },
       { label: 'Travel',                value: budget.travel,        bold: false },
       { label: 'Accommodation',         value: budget.accommodation, bold: false },
-      { label: 'Per Diem',              value: budget.perDiem,       bold: false },
-    ].filter(r => r.value > 0 || r.bold);
+      { label: 'Per Diem / Daily',      value: budget.perDiem,       bold: false },
+    ].filter(r => r.bold || (r.value && r.value > 0));
 
     budgetRows.forEach((row, idx) => {
-      const bg = idx % 2 === 0 ? { r: 250, g: 252, b: 254 } : { r: 255, g: 255, b: 255 };
-      setFill(doc, bg);
-      doc.rect(ML, y - 3.5, CW, 5.5, 'F');
+      const isEven = idx % 2 === 0;
+      setF(doc, isEven ? LIGHT_BG : { r: 255, g: 255, b: 255 });
+      doc.rect(ML, y - 3.5, CW, 6, 'F');
+
+      // Left accent for total row
+      if (row.bold) {
+        setF(doc, TEAL);
+        doc.rect(ML, y - 3.5, 2.5, 6, 'F');
+      }
 
       doc.setFont(FONT, row.bold ? 'bold' : 'normal');
       doc.setFontSize(9);
-      setColor(doc, row.bold ? DARK : MID);
-      doc.text(row.label, ML + 3, y);
-      doc.text(`€ ${(row.value || 0).toFixed(2)}`, PAGE_W - MR - 2, y, { align: 'right' });
-      y += 5.5;
+      setC(doc, row.bold ? DARK : MID);
+      doc.text(row.label, ML + (row.bold ? 6 : 4), y);
+      doc.text(`€ ${(row.value || 0).toFixed(2)}`, PAGE_W - MR - 3, y, { align: 'right' });
+      y += 6;
     });
 
-    y += 3;
+    y += 4;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Final footer on last page
-  // ─────────────────────────────────────────────────────────────────────────
-
+  // Final footer
   drawFooter(doc, template, pageNum);
 
   return doc;
