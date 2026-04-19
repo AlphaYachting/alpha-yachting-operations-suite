@@ -55,22 +55,23 @@ export const AuthProvider = ({ children }) => {
           try {
             const accessRes = await base44.functions.invoke('checkUserAccess', {});
             if (!accessRes.data?.allowed) {
-              // User authenticated but not authorized — log them out
+              // User authenticated but not authorized — show error and force logout
               console.warn('[AuthContext] Access denied for', currentUser.email, '— logging out');
               setUser(null);
               setIsAuthenticated(false);
               setAuthError({ type: 'user_not_registered' });
-              base44.auth.logout('/');
+              // Delay logout so the error screen renders first
+              setTimeout(() => base44.auth.logout('/'), 3000);
               return;
             }
           } catch (accessErr) {
-            // If the check itself fails (e.g. network), fail open for admins, fail closed for others
+            // If the check itself fails, fail closed for non-admins
             console.error('[AuthContext] checkUserAccess failed:', accessErr?.message);
             if (currentUser.role !== 'admin') {
               setUser(null);
               setIsAuthenticated(false);
               setAuthError({ type: 'user_not_registered' });
-              base44.auth.logout('/');
+              setTimeout(() => base44.auth.logout('/'), 3000);
               return;
             }
           }
