@@ -1156,7 +1156,7 @@ Alpha Yachting Service Team`);
       {/* Header */}
       <div className="space-y-4">
         {/* Row 1: Action Buttons */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-end gap-2 flex-wrap">
           <Button
             variant="ghost"
             size="icon"
