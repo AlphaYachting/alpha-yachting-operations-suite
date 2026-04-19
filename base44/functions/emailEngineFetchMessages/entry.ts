@@ -105,14 +105,16 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
           results.duplicates++;
           continue;
         }
+        const partInfo = findTextPartInfo(msg.bodyStructure);
         msgInfos.push({
           uid: msg.uid,
           envelope: msg.envelope,
           bodyStructure: msg.bodyStructure,
-          partInfo: findTextPartInfo(msg.bodyStructure),
+          partInfo,
+          structureDebug: JSON.stringify(msg.bodyStructure).substring(0, 500),
         });
       }
-      log.push({ step: 'envelope_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates });
+      log.push({ step: 'envelope_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates, structures: msgInfos.map(i => ({ uid: i.uid, partInfo: i.partInfo, structure: i.structureDebug })) });
 
       for (const info of msgInfos) {
         if (Date.now() - startTime > MAX_EXECUTION_TIME) {
