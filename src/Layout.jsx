@@ -28,6 +28,7 @@ import {
                     FileText,
                     Receipt,
                     Truck,
+                    Calculator,
                     Bug,
                     Phone,
                     Camera,
@@ -88,6 +89,7 @@ const navItems = [
 
   // RESOURCES
   { header: 'RESOURCES' },
+  { name: 'Partner Kalkulator', icon: Calculator, page: 'PartnerKalkulator' },
   { name: 'Material Import', icon: Truck, page: 'MaterialImport' },
   { name: 'Technicians', icon: Wrench, page: 'Technicians' },
   { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },
