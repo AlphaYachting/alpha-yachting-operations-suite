@@ -124,19 +124,32 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
           let bodyText = '';
 
           if (info.partInfo) {
-            try {
+            // Attempt 1: download the specific text part (preferred)
+            const tryDownloadPart = async (partNum) => {
               const { content } = await Promise.race([
-                client.download(info.uid, info.partInfo.num, { uid: true }),
-                new Promise((_, r) => setTimeout(() => r(new Error('body download timeout 8s')), 8000)),
+                client.download(info.uid, partNum, { uid: true }),
+                new Promise((_, r) => setTimeout(() => r(new Error('body download timeout 20s')), 20000)),
               ]);
               const chunks = [];
               for await (const chunk of content) chunks.push(chunk);
-              const rawText = Buffer.concat(chunks).toString('utf-8');
+              return Buffer.concat(chunks).toString('utf-8');
+            };
+
+            try {
+              const rawText = await tryDownloadPart(info.partInfo.num);
               bodyText = info.partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
               bodyText = bodyText.substring(0, 10000);
             } catch (dlErr) {
-              log.push({ step: 'body_download_failed', uid: info.uid, error: safeErr(dlErr) });
-              bodyText = '[body download failed: ' + safeErr(dlErr) + ']';
+              log.push({ step: 'body_download_part_failed', uid: info.uid, part: info.partInfo.num, error: safeErr(dlErr) });
+              // Attempt 2: fallback — download full message body (TEXT section)
+              try {
+                const rawText = await tryDownloadPart('TEXT');
+                bodyText = htmlToText(rawText).substring(0, 10000);
+                log.push({ step: 'body_download_fallback_ok', uid: info.uid });
+              } catch (dlErr2) {
+                log.push({ step: 'body_download_fallback_failed', uid: info.uid, error: safeErr(dlErr2) });
+                bodyText = '';  // store empty body rather than error string — lead parser handles it gracefully
+              }
             }
           }
 
