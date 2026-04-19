@@ -302,6 +302,7 @@ export default function MyTasks() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-6">
@@ -609,7 +610,6 @@ export default function MyTasks() {
       )}
     </div>
 
-    {/* Work Order Edit Dialog */}
     <WorkOrderEditDialog
       open={!!editingWorkOrder}
       workOrder={editingWorkOrder}
@@ -620,5 +620,6 @@ export default function MyTasks() {
         setEditingWorkOrder(null);
       }}
     />
+    </>
   );
 }
