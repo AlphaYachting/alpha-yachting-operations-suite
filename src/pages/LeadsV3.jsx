@@ -32,6 +32,7 @@ export default function LeadsV3() {
   };
 
   const handleEmailLeadParsed = async (leadData) => {
+    if (!leadData.phone) leadData.phone = '-';
     const created = await base44.entities.Lead.create(leadData);
     setLeads(prev => [created, ...prev]);
     setShowEmailToLead(false);
