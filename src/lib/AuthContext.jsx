@@ -48,6 +48,33 @@ export const AuthProvider = ({ children }) => {
       );
       const currentUser = await Promise.race([base44.auth.me(), timeoutPromise]);
       if (currentUser?.email) {
+        // SECURITY GATE: verify user has a valid accepted invite (or is admin)
+        // Skip check on the InviteAccept page so the flow can complete
+        const isInvitePage = window.location.pathname === '/InviteAccept';
+        if (!isInvitePage) {
+          try {
+            const accessRes = await base44.functions.invoke('checkUserAccess', {});
+            if (!accessRes.data?.allowed) {
+              // User authenticated but not authorized — log them out
+              console.warn('[AuthContext] Access denied for', currentUser.email, '— logging out');
+              setUser(null);
+              setIsAuthenticated(false);
+              setAuthError({ type: 'user_not_registered' });
+              base44.auth.logout('/');
+              return;
+            }
+          } catch (accessErr) {
+            // If the check itself fails (e.g. network), fail open for admins, fail closed for others
+            console.error('[AuthContext] checkUserAccess failed:', accessErr?.message);
+            if (currentUser.role !== 'admin') {
+              setUser(null);
+              setIsAuthenticated(false);
+              setAuthError({ type: 'user_not_registered' });
+              base44.auth.logout('/');
+              return;
+            }
+          }
+        }
         setUser(currentUser);
         setIsAuthenticated(true);
       } else {
