@@ -1156,7 +1156,7 @@ Alpha Yachting Service Team`);
       {/* Header */}
       <div className="space-y-4">
         {/* Row 1: Action Buttons */}
-        <div className="flex items-center justify-end gap-2 flex-wrap">
+        <div className="flex items-center justify-between">
           <Button
             variant="ghost"
             size="icon"
@@ -1164,7 +1164,7 @@ Alpha Yachting Service Team`);
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap justify-end">
             {!isNewOffer && (
               <FiraExportButton
                 offer={{ ...formData, id: offerId }}
