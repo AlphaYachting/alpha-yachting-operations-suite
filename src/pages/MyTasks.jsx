@@ -13,8 +13,10 @@ import {
   ChevronRight,
   MapPin,
   Users,
-  AlertCircle
+  AlertCircle,
+  Pencil
 } from 'lucide-react';
+import WorkOrderEditDialog from '@/components/workorders/WorkOrderEditDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -135,6 +137,7 @@ export default function MyTasks() {
   const [expandedBoats, setExpandedBoats] = useState({});
   const [simulatedTechnicianId, setSimulatedTechnicianId] = useState('');
   const [updatingTaskId, setUpdatingTaskId] = useState(null);
+  const [editingWorkOrder, setEditingWorkOrder] = useState(null);
 
 
   useEffect(() => {
@@ -477,9 +480,22 @@ export default function MyTasks() {
                           {format(parseISO(workOrder.scheduled_date), 'MMM d, yyyy')}
                         </div>
                       )}
-                      <Button size="sm" variant="ghost" className="mt-1" asChild>
-                        <Link to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}>View WO →</Link>
-                      </Button>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link to={createPageUrl('WorkOrderDetail') + `?id=${task.work_order_id}`}>View WO →</Link>
+                        </Button>
+                        {workOrder && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-slate-400 hover:text-blue-600"
+                            onClick={e => { e.stopPropagation(); setEditingWorkOrder(workOrder); }}
+                            title="Work Order bearbeiten"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -592,5 +608,17 @@ export default function MyTasks() {
         </div>
       )}
     </div>
+
+    {/* Work Order Edit Dialog */}
+    <WorkOrderEditDialog
+      open={!!editingWorkOrder}
+      workOrder={editingWorkOrder}
+      technicians={technicians}
+      onOpenChange={(open) => { if (!open) setEditingWorkOrder(null); }}
+      onSaved={(updated) => {
+        setWorkOrders(prev => prev.map(wo => wo.id === updated.id ? updated : wo));
+        setEditingWorkOrder(null);
+      }}
+    />
   );
 }
