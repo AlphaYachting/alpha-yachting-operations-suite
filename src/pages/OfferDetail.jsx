@@ -460,26 +460,67 @@ Requirements:
       return;
     }
 
-    // Get selected marina/location name
-    const selectedLocation = locations.find(l => l.id === formData.location_id);
-    const marinaName = selectedLocation?.name;
+    // Get selected marina/location with fee data
+    const loc = locations.find(l => l.id === formData.location_id);
+    const marinaName = loc?.name;
+    const lang = formData.language || 'German';
 
-    // Build description based on marina context
+    // Auto-fill unit_price from location fee data where possible
+    let autoPrice = 0;
+    let autoUnitType = 'Lump Sum';
+    if (loc?.marina_fee_enabled) {
+      if (loc.marina_fee_type === 'fixed_amount') {
+        autoPrice = loc.marina_fee_amount || 0;
+      } else if (loc.marina_fee_type === 'per_day') {
+        autoPrice = loc.marina_fee_amount || 0;
+        autoUnitType = 'Day';
+      } else if (loc.marina_fee_type === 'per_person_per_day') {
+        autoPrice = loc.marina_fee_amount || 0;
+        autoUnitType = 'Day';
+      }
+      // percent_commission: no fixed price — user fills manually
+    }
+
+    // Language-aware title and description
+    const marinaCommissionTitles = {
+      German: 'Marinagebühr',
+      English: 'Marina Commission',
+      Italian: 'Commissione marina',
+      Slovenian: 'Marinška pristojbina',
+      Croatian: 'Marina naknada',
+    };
+    const title = marinaCommissionTitles[lang] || 'Marinagebühr';
+
     let description = '';
-    if (marinaName) {
-      description = `Commission/fee charged by ${marinaName}. This position reflects marina-specific commission settings.`;
+    if (marinaName && loc?.marina_fee_enabled) {
+      const feeDesc = loc.marina_fee_type === 'percent_commission'
+        ? (lang === 'German' ? `${loc.marina_fee_amount || 0} % Provision` : `${loc.marina_fee_amount || 0}% commission`)
+        : loc.marina_fee_type === 'per_day'
+        ? (lang === 'German' ? `${loc.marina_fee_amount || 0} ${loc.marina_fee_currency || 'EUR'}/Tag` : `${loc.marina_fee_amount || 0} ${loc.marina_fee_currency || 'EUR'}/day`)
+        : loc.marina_fee_type === 'per_person_per_day'
+        ? (lang === 'German' ? `${loc.marina_fee_amount || 0} ${loc.marina_fee_currency || 'EUR'}/Person/Tag` : `${loc.marina_fee_amount || 0} ${loc.marina_fee_currency || 'EUR'}/person/day`)
+        : `${loc.marina_fee_amount || 0} ${loc.marina_fee_currency || 'EUR'}`;
+      description = lang === 'German'
+        ? `Gebühr der Marina ${marinaName}: ${feeDesc}.${loc.marina_fee_description ? ' ' + loc.marina_fee_description : ''}`
+        : `Fee charged by ${marinaName}: ${feeDesc}.${loc.marina_fee_description ? ' ' + loc.marina_fee_description : ''}`;
+    } else if (marinaName) {
+      description = lang === 'German'
+        ? `Gebühr der Marina ${marinaName}.`
+        : `Fee charged by ${marinaName}.`;
     } else {
-      description = 'Commission/fee charged by the selected marina. This position reflects marina-specific commission settings.';
+      description = lang === 'German'
+        ? 'Marinagebühr für den gewählten Liegeplatz.'
+        : 'Commission/fee charged by the selected marina.';
     }
 
     // Add new Marina Commission item
     const newTask = {
-      title: 'Marina Commission',
+      title,
       description,
-      unit_type: 'Lump Sum',
+      unit_type: autoUnitType,
       quantity: 1,
-      unit_price: 0,
-      total_amount: 0,
+      unit_price: autoPrice,
+      total_amount: autoPrice,
       is_optional: false,
       notes: '',
     };
@@ -994,7 +1035,7 @@ Alpha Yachting Service Team`);
 
   // Get selected location and check if marina fees apply
   const selectedLocation = locations.find(l => l.id === formData.location_id);
-  const marinaFeesApply = selectedLocation?.marina_fee_enabled && selectedLocation?.location_type === 'Marina';
+  const marinaFeesApply = selectedLocation?.marina_fee_enabled;
 
   // Prepare PDF document data
   const getPDFDocument = () => {
@@ -1746,6 +1787,7 @@ Alpha Yachting Service Team`);
             formData={formData} 
             updateField={updateField}
             totalAmount={totals.total_incl_tax}
+            language={formData.language}
           />
 
           {/* Bottom Save Button */}

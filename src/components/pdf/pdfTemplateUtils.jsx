@@ -1,9 +1,20 @@
 // Shared PDF HTML template generator for both frontend preview and backend export
 // Used by: PDFDocumentTemplate (React preview), generateOfferPDF (Puppeteer export)
 
+// Centralized PDF label translations
+const PDF_LABELS = {
+  German:    { docOffer: 'ANGEBOT', docInvoice: 'RECHNUNG', billTo: 'RECHNUNGSEMPFÄNGER', issueDate: 'Ausstellungsdatum', dueDate: 'Fälligkeitsdatum', validUntil: 'Gültig bis', paymentTerms: 'Zahlungsbedingungen', vessel: 'Fahrzeug', location: 'Standort', description: 'Beschreibung', qty: 'Menge', unit: 'Einheit', unitPrice: 'Einzelpreis', vat: 'MwSt.', total: 'Gesamt', subtotalNet: 'Zwischensumme (Netto)', discount: 'Rabatt', taxableBase: 'Steuerbasis (Netto)', totalGross: 'Gesamtbetrag (Brutto)', paid: 'Bezahlt', outstanding: 'Offen', paymentInfo: 'Zahlungsinformationen', galleryTitle: 'Fotodokumentation (Anhang)', galleryIntro: 'Beigefügte Fotos zur Dokumentation.', vat_label: 'USt.', retentionFallback: 'Alle gelieferten Waren und Leistungen bleiben bis zur vollständigen Bezahlung Eigentum von Alpha Yachting.' },
+  English:   { docOffer: 'OFFER', docInvoice: 'INVOICE', billTo: 'BILL TO', issueDate: 'Issue Date', dueDate: 'Due Date', validUntil: 'Valid Until', paymentTerms: 'Payment Terms', vessel: 'Vessel', location: 'Location', description: 'Description', qty: 'Qty', unit: 'Unit', unitPrice: 'Unit Price', vat: 'VAT %', total: 'Total', subtotalNet: 'Subtotal (Net)', discount: 'Discount', taxableBase: 'Taxable Base (Net)', totalGross: 'Total (Gross)', paid: 'Paid', outstanding: 'Outstanding', paymentInfo: 'Payment Information', galleryTitle: 'Photo Documentation (Appendix)', galleryIntro: 'Attached photos for documentation purposes.', vat_label: 'VAT', retentionFallback: 'All delivered goods and services remain the property of Alpha Yachting until full payment has been received.' },
+  Italian:   { docOffer: 'OFFERTA', docInvoice: 'FATTURA', billTo: 'DESTINATARIO', issueDate: 'Data di emissione', dueDate: 'Data di scadenza', validUntil: 'Valido fino', paymentTerms: 'Termini di pagamento', vessel: 'Imbarcazione', location: 'Posizione', description: 'Descrizione', qty: 'Qtà', unit: 'Unità', unitPrice: 'Prezzo unitario', vat: 'IVA %', total: 'Totale', subtotalNet: 'Subtotale (netto)', discount: 'Sconto', taxableBase: 'Base imponibile', totalGross: 'Totale (lordo)', paid: 'Pagato', outstanding: 'Da pagare', paymentInfo: 'Informazioni di pagamento', galleryTitle: 'Documentazione fotografica', galleryIntro: 'Foto allegate a scopo documentale.', vat_label: 'IVA', retentionFallback: 'Tutti i beni e servizi consegnati rimangono di proprietà di Alpha Yachting fino al pagamento completo.' },
+  Slovenian: { docOffer: 'PONUDBA', docInvoice: 'RAČUN', billTo: 'PREJEMNIK', issueDate: 'Datum izdaje', dueDate: 'Datum zapadlosti', validUntil: 'Veljavno do', paymentTerms: 'Plačilni pogoji', vessel: 'Plovilo', location: 'Lokacija', description: 'Opis', qty: 'Kol.', unit: 'Enota', unitPrice: 'Cena/enota', vat: 'DDV %', total: 'Skupaj', subtotalNet: 'Vmesni seštevek (brez DDV)', discount: 'Popust', taxableBase: 'Osnova za DDV', totalGross: 'Skupaj (bruto)', paid: 'Plačano', outstanding: 'Odprto', paymentInfo: 'Podatki za plačilo', galleryTitle: 'Fotodokumentacija (priloga)', galleryIntro: 'Priložene fotografije za dokumentacijo.', vat_label: 'DDV', retentionFallback: 'Vso dobavljeno blago in storitve ostanejo last podjetja Alpha Yachting do popolnega plačila.' },
+  Croatian:  { docOffer: 'PONUDA', docInvoice: 'RAČUN', billTo: 'PRIMATELJ', issueDate: 'Datum izdavanja', dueDate: 'Datum dospijeća', validUntil: 'Vrijedi do', paymentTerms: 'Uvjeti plaćanja', vessel: 'Plovilo', location: 'Lokacija', description: 'Opis', qty: 'Kol.', unit: 'Jed.', unitPrice: 'Jed. cijena', vat: 'PDV %', total: 'Ukupno', subtotalNet: 'Međuzbroj (bez PDV-a)', discount: 'Popust', taxableBase: 'Osnovica za PDV', totalGross: 'Ukupno (bruto)', paid: 'Plaćeno', outstanding: 'Za uplatu', paymentInfo: 'Podaci za plaćanje', galleryTitle: 'Fotodokumentacija (prilog)', galleryIntro: 'Priložene fotografije za dokumentaciju.', vat_label: 'PDV', retentionFallback: 'Sva isporučena roba i usluge ostaju vlasništvo tvrtke Alpha Yachting do potpune uplate.' },
+};
+
 export function buildPDFHTML(document, lineItems, template, payments = [], offerSections = []) {
   const isInvoice = document.document_type === 'Invoice';
   const currency = document.currency === 'EUR' ? '€ ' : document.currency + ' ';
+  const lang = document.language || 'German';
+  const L = PDF_LABELS[lang] || PDF_LABELS.German;
 
   // Configuration
   const margins = {
@@ -682,41 +693,41 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
 
         <!-- Document Title -->
         <div class="doc-title">
-          <h1 class="doc-type">${isInvoice ? 'INVOICE' : 'OFFER'}</h1>
+          <h1 class="doc-type">${isInvoice ? L.docInvoice : L.docOffer}</h1>
           <div class="doc-number">${document.document_number}</div>
         </div>
 
         <!-- Customer & Meta Info -->
         <div class="info-block">
           <div class="info-section">
-            <div class="info-label">BILL TO:</div>
+            <div class="info-label">${L.billTo}:</div>
             <div class="info-content">
               <strong>${document.customer_name || ''}</strong>
               ${document.customer_address ? `<div>${document.customer_address}</div>` : ''}
-              ${document.customer_vat ? `<div style="margin-top: 4px;">VAT: ${document.customer_vat}</div>` : ''}
+              ${document.customer_vat ? `<div style="margin-top: 4px;">${L.vat_label}: ${document.customer_vat}</div>` : ''}
             </div>
           </div>
           <div style="width: 45%;">
             <table class="meta-table">
               <tr>
-                <td class="meta-label">Issue Date:</td>
+                <td class="meta-label">${L.issueDate}:</td>
                 <td class="meta-value">${formatDate(document.issue_date)}</td>
               </tr>
               ${isInvoice && document.due_date ? `
                 <tr>
-                  <td class="meta-label">Due Date:</td>
+                  <td class="meta-label">${L.dueDate}:</td>
                   <td class="meta-value">${formatDate(document.due_date)}</td>
                 </tr>
               ` : ''}
               ${!isInvoice && document.valid_until ? `
                 <tr>
-                  <td class="meta-label">Valid Until:</td>
+                  <td class="meta-label">${L.validUntil}:</td>
                   <td class="meta-value">${formatDate(document.valid_until)}</td>
                 </tr>
               ` : ''}
               ${document.payment_terms ? `
                 <tr>
-                  <td class="meta-label">Payment Terms:</td>
+                  <td class="meta-label">${L.paymentTerms}:</td>
                   <td class="meta-value">${document.payment_terms}</td>
                 </tr>
               ` : ''}
@@ -727,9 +738,9 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
         <!-- Vessel & Location Info -->
         ${document.boat_name || document.location_name ? `
           <div class="vessel-info">
-            ${document.boat_name ? `<div><strong>Vessel:</strong> ${document.boat_name}</div>` : ''}
+            ${document.boat_name ? `<div><strong>${L.vessel}:</strong> ${document.boat_name}</div>` : ''}
             ${document.boat_details ? `<div class="detail">${document.boat_details}</div>` : ''}
-            ${document.location_name ? `<div style="margin-top: 3px;"><strong>Location:</strong> ${document.location_name}</div>` : ''}
+            ${document.location_name ? `<div style="margin-top: 3px;"><strong>${L.location}:</strong> ${document.location_name}</div>` : ''}
           </div>
         ` : ''}
 
@@ -758,12 +769,12 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
           <thead>
             <tr>
               <th class="col-index">#</th>
-              <th class="col-description">Description</th>
-              <th class="col-qty">Qty</th>
-              <th class="col-unit">Unit</th>
-              <th class="col-price">Unit Price</th>
-              ${template.show_vat_column ? `<th class="col-vat">VAT %</th>` : ''}
-              <th class="col-total">Total</th>
+              <th class="col-description">${L.description}</th>
+              <th class="col-qty">${L.qty}</th>
+              <th class="col-unit">${L.unit}</th>
+              <th class="col-price">${L.unitPrice}</th>
+              ${template.show_vat_column ? `<th class="col-vat">${L.vat}</th>` : ''}
+              <th class="col-total">${L.total}</th>
             </tr>
           </thead>
           <tbody>
@@ -811,36 +822,36 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
         <!-- Totals -->
         <div class="totals">
           <div class="total-row">
-            <span>Subtotal (Net):</span>
+            <span>${L.subtotalNet}:</span>
             <span>${currency}${(document.subtotal || 0).toFixed(2)}</span>
           </div>
           ${discountActive ? `
             <div class="total-row">
-              <span>Discount${discountMode === 'PERCENT' && discountPercent != null ? ` (${discountPercent.toFixed(1)}%)` : ''}:</span>
+              <span>${L.discount}${discountMode === 'PERCENT' && discountPercent != null ? ` (${discountPercent.toFixed(1)}%)` : ''}:</span>
               <span>-${currency}${discountAmount.toFixed(2)}</span>
             </div>
             <div class="total-row">
-              <span>Taxable Base (Net):</span>
+              <span>${L.taxableBase}:</span>
               <span>${currency}${taxableBase.toFixed(2)}</span>
             </div>
           ` : ''}
           ${vatRate > 0 ? `
             <div class="total-row">
-              <span>VAT ${vatRate}%:</span>
+              <span>${L.vat_label} ${vatRate}%:</span>
               <span>${currency}${taxTotal.toFixed(2)}</span>
             </div>
           ` : ''}
           <div class="total-row final">
-            <span>Total (Gross):</span>
+            <span>${L.totalGross}:</span>
             <span>${currency}${(taxableBase + taxTotal).toFixed(2)}</span>
           </div>
           ${isInvoice && document.paid_amount > 0 ? `
             <div class="total-row paid">
-              <span>Paid:</span>
+              <span>${L.paid}:</span>
               <span>-${currency}${document.paid_amount.toFixed(2)}</span>
             </div>
             <div class="total-row outstanding">
-              <span>Outstanding:</span>
+              <span>${L.outstanding}:</span>
               <span style="color: ${outstanding > 0 ? '#dc2626' : '#059669'}">${currency}${outstanding.toFixed(2)}</span>
             </div>
           ` : ''}
@@ -862,10 +873,12 @@ export function buildPDFHTML(document, lineItems, template, payments = [], offer
             <div class="payment-terms-title">${t('paymentTermsTitle')}</div>
             ${document.payment_terms_type === 'Downpayment' ? `
               <div class="downpayment-info">
-                <div><strong>${t('downpayment')}:</strong> ${document.downpayment_percent || 0}% (${document.currency || 'EUR'} ${(document.downpayment_amount || 0).toFixed(2)})</div>
-                <div><strong>${t('remaining')}:</strong> ${100 - (document.downpayment_percent || 0)}% (${document.currency || 'EUR'} ${((document.total || 0) - (document.downpayment_amount || 0)).toFixed(2)})</div>
+                ${document.payment_schedule
+                  ? `<div>${document.payment_schedule}</div>`
+                  : `<div><strong>${t('downpayment')}:</strong> ${document.downpayment_percent || 0}% &nbsp;(${document.currency || 'EUR'} ${(document.downpayment_amount || 0).toFixed(2)})</div>
+                     <div><strong>${t('remaining')}:</strong> ${100 - (document.downpayment_percent || 0)}% &nbsp;(${document.currency || 'EUR'} ${((document.total || 0) - (document.downpayment_amount || 0)).toFixed(2)})</div>`
+                }
               </div>
-              ${document.payment_schedule ? `<div class="downpayment-info" style="border-bottom: none;">${document.payment_schedule}</div>` : ''}
             ` : ''}
             ${document.payment_terms_type === 'Installments' ? `
               <div style="margin: 6px 0;">${document.payment_schedule || t('installmentsDefault')}</div>
@@ -892,7 +905,7 @@ ${document.public_notes}</div>`;
           return `
           <div class="ownership-notice">
             <div class="ownership-title">${titles[lang] || titles['German']}</div>
-            <div class="ownership-text">${document.retention_of_title_text || 'All delivered goods and services remain the property of Alpha Yachting until full payment has been received.'}</div>
+            <div class="ownership-text">${document.retention_of_title_text || L.retentionFallback}</div>
           </div>
         `;
         })() : ''}
@@ -912,7 +925,7 @@ ${document.public_notes}</div>`;
         <!-- Payment Info -->
         ${isInvoice && template.bank_iban ? `
           <div class="payment-info">
-            <div class="payment-info-title">Payment Information:</div>
+            <div class="payment-info-title">${L.paymentInfo}:</div>
             ${template.bank_name ? `<div><strong>Bank:</strong> ${template.bank_name}</div>` : ''}
             <div><strong>IBAN:</strong> ${template.bank_iban}</div>
             ${template.bank_bic ? `<div><strong>BIC:</strong> ${template.bank_bic}</div>` : ''}
@@ -934,8 +947,8 @@ ${document.public_notes}</div>`;
         <!-- Gallery Appendix (if images exist) -->
         ${document.attachments && document.attachments.length > 0 ? `
           <div class="gallery-appendix">
-            <h2 class="gallery-title">Photo Documentation (Appendix)</h2>
-            <div class="gallery-intro">Attached photos for documentation purposes.</div>
+            <h2 class="gallery-title">${L.galleryTitle}</h2>
+            <div class="gallery-intro">${L.galleryIntro}</div>
             <div class="gallery-grid">
               ${document.attachments.map((imageUrl, idx) => {
                 const meta = document.gallery_meta?.[imageUrl] || {};
