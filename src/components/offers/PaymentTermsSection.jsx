@@ -19,22 +19,96 @@ const DEFAULT_RETENTION_TEXT_BY_LANG = {
   Slovenian: `Pridržek lastninske pravice:\nVso dobavljeno blago in storitve ostanejo izključna last podjetja Alpha Yachting do popolnega plačila. Naročnik nima pravice prodajati, zastavljati ali kako drugače razpolagati z blagom, dokler ni lastninska pravica prenesena.`,
   Croatian: `Zadržaj prava vlasništva:\nSva isporučena roba i usluge ostaju isključivo vlasništvo tvrtke Alpha Yachting do potpune uplate. Kupac nema pravo prodavati, zalagati ni na drugi način raspolagati robom dok se vlasništvo ne prenese.`,
 };
-const DEFAULT_RETENTION_TEXT = DEFAULT_RETENTION_TEXT_BY_LANG.German;
 
-// All known marina commission titles (for duplicate check)
-const MARINA_COMMISSION_TITLES = new Set(['marinagebühr', 'marina commission', 'commissione marina', 'marinška pristojbina', 'marina naknada']);
+const UI_LABELS = {
+  German: {
+    cardTitle: 'Zahlungsbedingungen & Rechtliches',
+    paymentMethod: 'Zahlungsart',
+    fullPayment: 'Vollständige Zahlung',
+    downpayment: 'Anzahlung',
+    installments: 'Ratenzahlung',
+    downpaymentPct: 'Anzahlung %',
+    downpaymentAmt: 'Anzahlungsbetrag',
+    scheduleLabel: 'Zahlungsplan (Freitext)',
+    schedulePlaceholderDown: (pct) => `z. B. ${pct} % Anzahlung, ${100 - pct} % Restzahlung bei Fertigstellung`,
+    schedulePlaceholderInst: 'z. B. 33 % bei Auftrag, 33 % bei 50 % Fertigstellung, 34 % bei Ablieferung',
+    retentionToggle: 'Eigentumsvorbehalt einschließen',
+    retentionLabel: 'Rechtstext (Eigentumsvorbehalt)',
+    retentionPlaceholder: 'Rechtstext eingeben...',
+  },
+  English: {
+    cardTitle: 'Payment Terms & Legal',
+    paymentMethod: 'Payment Method',
+    fullPayment: 'Full Payment',
+    downpayment: 'Downpayment',
+    installments: 'Installments',
+    downpaymentPct: 'Downpayment %',
+    downpaymentAmt: 'Downpayment Amount',
+    scheduleLabel: 'Payment Schedule Description',
+    schedulePlaceholderDown: (pct) => `e.g., ${pct}% downpayment upon order, ${100 - pct}% upon completion`,
+    schedulePlaceholderInst: 'e.g., 33% upon order, 33% at 50% completion, 34% upon final delivery',
+    retentionToggle: 'Include Retention of Title Clause',
+    retentionLabel: 'Legal Text (Retention of Title)',
+    retentionPlaceholder: 'Enter legal text...',
+  },
+  Italian: {
+    cardTitle: 'Termini di pagamento e aspetti legali',
+    paymentMethod: 'Metodo di pagamento',
+    fullPayment: 'Pagamento completo',
+    downpayment: 'Acconto',
+    installments: 'Rate',
+    downpaymentPct: 'Acconto %',
+    downpaymentAmt: 'Importo acconto',
+    scheduleLabel: 'Descrizione piano di pagamento',
+    schedulePlaceholderDown: (pct) => `es. ${pct}% di acconto, ${100 - pct}% al completamento`,
+    schedulePlaceholderInst: 'es. 33% all\'ordine, 33% al 50% di completamento, 34% alla consegna',
+    retentionToggle: 'Includi riserva di proprietà',
+    retentionLabel: 'Testo legale (riserva di proprietà)',
+    retentionPlaceholder: 'Inserire il testo legale...',
+  },
+  Slovenian: {
+    cardTitle: 'Plačilni pogoji in pravne določbe',
+    paymentMethod: 'Način plačila',
+    fullPayment: 'Celotno plačilo',
+    downpayment: 'Predplačilo',
+    installments: 'Obroki',
+    downpaymentPct: 'Predplačilo %',
+    downpaymentAmt: 'Znesek predplačila',
+    scheduleLabel: 'Opis plačilnega načrta',
+    schedulePlaceholderDown: (pct) => `npr. ${pct} % predplačilo, ${100 - pct} % ob dokončanju`,
+    schedulePlaceholderInst: 'npr. 33 % ob naročilu, 33 % pri 50 % dokončanosti, 34 % ob dostavi',
+    retentionToggle: 'Vključi pridržek lastninske pravice',
+    retentionLabel: 'Pravno besedilo (pridržek lastninske pravice)',
+    retentionPlaceholder: 'Vnesite pravno besedilo...',
+  },
+  Croatian: {
+    cardTitle: 'Uvjeti plaćanja i pravne odredbe',
+    paymentMethod: 'Način plaćanja',
+    fullPayment: 'Plaćanje u cijelosti',
+    downpayment: 'Predujam',
+    installments: 'Rate',
+    downpaymentPct: 'Predujam %',
+    downpaymentAmt: 'Iznos predujma',
+    scheduleLabel: 'Opis plana plaćanja',
+    schedulePlaceholderDown: (pct) => `npr. ${pct} % predujam, ${100 - pct} % po završetku`,
+    schedulePlaceholderInst: 'npr. 33 % pri narudžbi, 33 % pri 50 % dovršenosti, 34 % pri isporuci',
+    retentionToggle: 'Uključi zadržaj prava vlasništva',
+    retentionLabel: 'Pravni tekst (zadržaj prava vlasništva)',
+    retentionPlaceholder: 'Unesite pravni tekst...',
+  },
+};
 
 export default function PaymentTermsSection({ formData, updateField, totalAmount, language }) {
   const lang = language || formData.language || 'German';
+  const L = UI_LABELS[lang] || UI_LABELS.German;
   const [downpaymentAmount, setDownpaymentAmount] = useState(0);
 
   // When language changes, reset retention_of_title_text to the new language default
-  // ONLY if the current text matches any known default (i.e. was auto-generated, not manually edited)
+  // ONLY if the current text matches any known default (i.e. was not manually edited)
   const prevLangRef = useRef(lang);
   useEffect(() => {
     if (prevLangRef.current === lang) return;
     prevLangRef.current = lang;
-    // Check if current text is one of the known defaults
     const currentText = (formData.retention_of_title_text || '').trim();
     const isKnownDefault = Object.values(DEFAULT_RETENTION_TEXT_BY_LANG).some(
       t => t.trim() === currentText
@@ -47,7 +121,6 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
   // Calculate downpayment amount when percentage or total changes
   useEffect(() => {
     if (formData.payment_terms_type === 'Downpayment' && formData.downpayment_percent) {
-      // totalAmount is already gross (incl. VAT) — no need to apply VAT again
       const amount = Math.round((totalAmount * formData.downpayment_percent) / 100 * 100) / 100;
       setDownpaymentAmount(amount);
       updateField('downpayment_amount', amount);
@@ -57,26 +130,28 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
     }
   }, [formData.downpayment_percent, totalAmount, formData.payment_terms_type]);
 
+  const pct = formData.downpayment_percent || 50;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Payment Terms & Legal</CardTitle>
+        <CardTitle>{L.cardTitle}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Payment Type Selection */}
         <div className="space-y-2">
-          <Label>Payment Method</Label>
-          <Select 
-            value={formData.payment_terms_type || 'Full'} 
+          <Label>{L.paymentMethod}</Label>
+          <Select
+            value={formData.payment_terms_type || 'Full'}
             onValueChange={(v) => updateField('payment_terms_type', v)}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Full">Full Payment</SelectItem>
-              <SelectItem value="Downpayment">Downpayment</SelectItem>
-              <SelectItem value="Installments">Installments</SelectItem>
+              <SelectItem value="Full">{L.fullPayment}</SelectItem>
+              <SelectItem value="Downpayment">{L.downpayment}</SelectItem>
+              <SelectItem value="Installments">{L.installments}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -86,31 +161,29 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
           <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{lang === 'German' ? 'Anzahlung %' : 'Downpayment %'}</Label>
+                <Label>{L.downpaymentPct}</Label>
                 <Input
                   type="number"
                   min="0"
                   max="100"
                   value={formData.downpayment_percent || ''}
                   onChange={(e) => updateField('downpayment_percent', parseFloat(e.target.value) || 0)}
-                  placeholder="e.g., 50"
+                  placeholder="50"
                 />
               </div>
               <div className="space-y-2">
-                <Label>{lang === 'German' ? 'Anzahlungsbetrag' : 'Downpayment Amount'}</Label>
+                <Label>{L.downpaymentAmt}</Label>
                 <div className="px-3 py-2 bg-white border border-slate-200 rounded-md">
                   <span className="font-semibold">€{downpaymentAmount.toFixed(2)}</span>
                 </div>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>{lang === 'German' ? 'Zahlungsplan (Freitext)' : 'Payment Schedule Description'}</Label>
+              <Label>{L.scheduleLabel}</Label>
               <Textarea
                 value={formData.payment_schedule || ''}
                 onChange={(e) => updateField('payment_schedule', e.target.value || '')}
-                placeholder={lang === 'German'
-                  ? `z. B. ${formData.downpayment_percent || 50} % Anzahlung, ${100 - (formData.downpayment_percent || 50)} % Restzahlung bei Fertigstellung`
-                  : `e.g., ${formData.downpayment_percent || 50}% downpayment upon order, ${100 - (formData.downpayment_percent || 50)}% upon completion`}
+                placeholder={L.schedulePlaceholderDown(pct)}
                 rows={2}
               />
             </div>
@@ -120,13 +193,11 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
         {/* Installments Section */}
         {formData.payment_terms_type === 'Installments' && (
           <div className="space-y-4 p-4 bg-green-50 rounded-lg border border-green-200">
-            <Label>{lang === 'German' ? 'Zahlungsplan' : 'Payment Schedule Description'}</Label>
+            <Label>{L.scheduleLabel}</Label>
             <Textarea
               value={formData.payment_schedule || ''}
               onChange={(e) => updateField('payment_schedule', e.target.value || '')}
-              placeholder={lang === 'German'
-                ? 'z. B. 33 % bei Auftrag, 33 % bei 50 % Fertigstellung, 34 % bei Ablieferung'
-                : 'e.g., 33% upon order, 33% at 50% completion, 34% upon final delivery'}
+              placeholder={L.schedulePlaceholderInst}
               rows={3}
             />
           </div>
@@ -135,7 +206,7 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
         {/* Retention of Title */}
         <div className="border-t pt-6 space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="font-semibold">{lang === 'German' ? 'Eigentumsvorbehalt einschließen' : 'Include Retention of Title Clause'}</Label>
+            <Label className="font-semibold">{L.retentionToggle}</Label>
             <Switch
               checked={formData.retention_of_title_enabled !== false}
               onCheckedChange={(checked) => updateField('retention_of_title_enabled', checked)}
@@ -144,11 +215,11 @@ export default function PaymentTermsSection({ formData, updateField, totalAmount
 
           {formData.retention_of_title_enabled !== false && (
             <div className="space-y-2">
-              <Label>{lang === 'German' ? 'Rechtstext (Eigentumsvorbehalt)' : 'Legal Text (Retention of Title)'}</Label>
+              <Label>{L.retentionLabel}</Label>
               <Textarea
                 value={formData.retention_of_title_text || DEFAULT_RETENTION_TEXT_BY_LANG[lang] || DEFAULT_RETENTION_TEXT_BY_LANG.German}
                 onChange={(e) => updateField('retention_of_title_text', e.target.value || '')}
-                placeholder="Enter legal text..."
+                placeholder={L.retentionPlaceholder}
                 rows={4}
                 className="font-mono text-xs"
               />
