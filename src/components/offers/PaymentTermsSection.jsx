@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -21,9 +21,28 @@ const DEFAULT_RETENTION_TEXT_BY_LANG = {
 };
 const DEFAULT_RETENTION_TEXT = DEFAULT_RETENTION_TEXT_BY_LANG.German;
 
+// All known marina commission titles (for duplicate check)
+const MARINA_COMMISSION_TITLES = new Set(['marinagebühr', 'marina commission', 'commissione marina', 'marinška pristojbina', 'marina naknada']);
+
 export default function PaymentTermsSection({ formData, updateField, totalAmount, language }) {
   const lang = language || formData.language || 'German';
   const [downpaymentAmount, setDownpaymentAmount] = useState(0);
+
+  // When language changes, reset retention_of_title_text to the new language default
+  // ONLY if the current text matches any known default (i.e. was auto-generated, not manually edited)
+  const prevLangRef = useRef(lang);
+  useEffect(() => {
+    if (prevLangRef.current === lang) return;
+    prevLangRef.current = lang;
+    // Check if current text is one of the known defaults
+    const currentText = (formData.retention_of_title_text || '').trim();
+    const isKnownDefault = Object.values(DEFAULT_RETENTION_TEXT_BY_LANG).some(
+      t => t.trim() === currentText
+    );
+    if (isKnownDefault || !currentText) {
+      updateField('retention_of_title_text', DEFAULT_RETENTION_TEXT_BY_LANG[lang] || DEFAULT_RETENTION_TEXT_BY_LANG.German);
+    }
+  }, [lang]);
 
   // Calculate downpayment amount when percentage or total changes
   useEffect(() => {

@@ -442,8 +442,9 @@ Requirements:
 
   const handleAddMarinaCommission = () => {
     // Check if Marina Commission already exists
+    const MARINA_TITLES = new Set(['marinagebühr', 'marina commission', 'commissione marina', 'marinška pristojbina', 'marina naknada']);
     const existingIndex = tasks.findIndex(t => 
-      t.title && t.title.toLowerCase() === 'marina commission'
+      t.title && MARINA_TITLES.has(t.title.toLowerCase())
     );
 
     if (existingIndex !== -1) {
