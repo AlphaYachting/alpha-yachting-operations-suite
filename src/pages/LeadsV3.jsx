@@ -104,7 +104,25 @@ export default function LeadsV3() {
       </Dialog>
 
       {/* Status icons — clickable filters */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <button
+          onClick={() => setActivePhase('All')}
+          className={`p-3 rounded-lg border-2 transition-all cursor-pointer ${
+            activePhase === 'All'
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-slate-200 hover:border-slate-300 bg-white'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <div className="bg-slate-100 rounded-full p-2">
+              <Layers className="h-4 w-4 text-slate-600" />
+            </div>
+            <div className="text-left">
+              <p className="text-xs text-slate-600">Alle</p>
+              <p className="text-lg font-bold text-slate-900">{ownerFilteredLeads.length}</p>
+            </div>
+          </div>
+        </button>
         {stats.map((stat) => (
           <button
             key={stat.phase}

@@ -71,7 +71,7 @@ ${emailText}
     }
     // Always set contact_method
     cleaned.contact_method = 'Email';
-    cleaned.status = 'Pending';
+    cleaned.status = 'New Incoming';
     cleaned.description = emailText; // always preserve original
 
     setPreview(cleaned);
