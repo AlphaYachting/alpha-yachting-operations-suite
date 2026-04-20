@@ -36,25 +36,36 @@ export default function FiraExportButton({ offer, tasks, customer, userRole, onE
   const untranslatedTasks = (tasks || []).filter(t => !t.is_optional && t.item_type !== 'Chapter' && !(t.title_hr && t.title_hr.trim()));
 
   const handleBulkTranslate = async () => {
-    if (translatingAll || untranslatedTasks.length === 0) return;
+    if (translatingAll || !offer?.id) return;
     setTranslatingAll(true);
-    setTranslateProgress({ done: 0, total: untranslatedTasks.length });
+
+    // Always fetch fresh tasks from DB to get real IDs (local state may have temp IDs)
+    const freshTasks = await base44.entities.OfferTask.filter({ offer_id: offer.id }, 'sequence_order');
+    const toTranslate = freshTasks.filter(t => !t.is_optional && t.item_type !== 'Chapter' && !(t.title_hr && t.title_hr.trim()));
+
+    if (toTranslate.length === 0) {
+      setTranslatingAll(false);
+      toast.info('Alle Positionen sind bereits übersetzt');
+      return;
+    }
+
+    setTranslateProgress({ done: 0, total: toTranslate.length });
 
     let translated = 0;
-    for (const task of untranslatedTasks) {
+    for (const task of toTranslate) {
       try {
         const result = await base44.integrations.Core.InvokeLLM({
           prompt: `Translate this yacht service/product title to Croatian. Return ONLY the Croatian translation, nothing else: "${task.title}"`,
         });
         const hrTitle = (typeof result === 'string' ? result : result?.text || '').trim().replace(/[".]/g, '');
-        if (hrTitle && task.id) {
+        if (hrTitle) {
           await base44.entities.OfferTask.update(task.id, { title_hr: hrTitle });
+          translated++;
         }
       } catch (e) {
         // skip failed individual translation silently
       }
-      translated++;
-      setTranslateProgress({ done: translated, total: untranslatedTasks.length });
+      setTranslateProgress({ done: translated, total: toTranslate.length });
     }
 
     setTranslatingAll(false);
