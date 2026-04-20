@@ -1172,34 +1172,7 @@ Alpha Yachting Service Team`);
                 customer={customers.find(c => c.id === formData.customer_id) || null}
                 userRole={currentUser?.role}
                 onExported={() => queryClient.invalidateQueries(['offer', offerId])}
-                onTasksTranslated={async (phase) => {
-                  if (phase === 'pre_save') {
-                    // Force save so all tasks get stable DB IDs before translation
-                    if (offerId && tasksLoaded && formData.customer_id && formData.title) {
-                      const currentTotals = computeOfferTotals(
-                        { vat_rate: formData.vat_rate, discount_mode: formData.discount_mode, discount_percent: formData.discount_percent, discount_target_total: formData.discount_target_total },
-                        tasks
-                      );
-                      await base44.entities.Offer.update(offerId, {
-                        ...formData,
-                        total_amount: currentTotals.taxable_base_excl_tax,
-                        discount_amount: currentTotals.discount_amount_excl_tax
-                      });
-                      const existingTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
-                      await Promise.all(existingTasks.map(t => base44.entities.OfferTask.delete(t.id)));
-                      if (tasks.length > 0) {
-                        const saved = await base44.entities.OfferTask.bulkCreate(
-                          tasks.map((task, idx) => ({ ...task, offer_id: offerId, sequence_order: idx, total_amount: task.quantity * task.unit_price }))
-                        );
-                        // Update local state with real IDs from DB
-                        setTasks(saved);
-                      }
-                    }
-                  } else {
-                    // post_translate: just refresh tasks to show translated titles
-                    queryClient.invalidateQueries(['offerTasks', offerId]);
-                  }
-                }}
+                onTasksTranslated={() => queryClient.invalidateQueries(['offerTasks', offerId])}
               />
             )}
             {formData.customer_id && formData.title && (

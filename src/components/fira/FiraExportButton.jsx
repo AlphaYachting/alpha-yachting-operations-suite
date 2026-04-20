@@ -20,6 +20,7 @@ export default function FiraExportButton({ offer, tasks, customer, userRole, onE
   const [translateProgress, setTranslateProgress] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const [translatedCount, setTranslatedCount] = useState(null);
 
   const hasLineItems = tasks && tasks.filter(t => !t.is_optional).length > 0;
   const hasCustomer = !!customer;
@@ -38,46 +39,21 @@ export default function FiraExportButton({ offer, tasks, customer, userRole, onE
   const handleBulkTranslate = async () => {
     if (translatingAll || !offer?.id) return;
     setTranslatingAll(true);
-
-    // Step 1: Save offer first to ensure all tasks have stable DB IDs
-    if (onTasksTranslated) await onTasksTranslated('pre_save');
-
-    // Small delay to let save complete before fetching
-    await new Promise(r => setTimeout(r, 1500));
-
-    // Step 2: Fetch fresh tasks from DB with real IDs
-    const freshTasks = await base44.entities.OfferTask.filter({ offer_id: offer.id }, 'sequence_order');
-    const toTranslate = freshTasks.filter(t => !t.is_optional && t.item_type !== 'Chapter' && !(t.title_hr && t.title_hr.trim()));
-
-    if (toTranslate.length === 0) {
-      setTranslatingAll(false);
-      toast.info('Alle Positionen sind bereits übersetzt');
-      return;
-    }
-
-    setTranslateProgress({ done: 0, total: toTranslate.length });
-
-    let translated = 0;
-    for (const task of toTranslate) {
-      try {
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Translate this yacht service/product title to Croatian. Return ONLY the Croatian translation, nothing else: "${task.title}"`,
-        });
-        const hrTitle = (typeof result === 'string' ? result : result?.text || '').trim().replace(/[".]/g, '');
-        if (hrTitle) {
-          await base44.entities.OfferTask.update(task.id, { title_hr: hrTitle });
-          translated++;
-        }
-      } catch (e) {
-        // skip failed individual translation silently
+    try {
+      // Backend fetches tasks directly from DB — immune to frontend state/auto-save race conditions
+      const res = await base44.functions.invoke('bulkTranslateOfferTasks', { offer_id: offer.id });
+      const data = res.data;
+      if (data?.translated === 0) {
+        toast.info(data.message || 'Alle Positionen sind bereits übersetzt');
+      } else {
+        toast.success(`${data.translated} von ${data.total} Positionen übersetzt`);
+        if (onTasksTranslated) onTasksTranslated();
       }
-      setTranslateProgress({ done: translated, total: toTranslate.length });
+    } catch (e) {
+      toast.error('Übersetzung fehlgeschlagen: ' + e.message);
+    } finally {
+      setTranslatingAll(false);
     }
-
-    setTranslatingAll(false);
-    setTranslateProgress(null);
-    toast.success(`${translated} Positionen ins Kroatische übersetzt`);
-    if (onTasksTranslated) onTasksTranslated('post_translate');
   };
 
   const handleExport = async (forceReexport = false) => {
@@ -129,7 +105,7 @@ export default function FiraExportButton({ offer, tasks, customer, userRole, onE
             {translatingAll ? (
               <>
                 <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                {translateProgress ? `${translateProgress.done}/${translateProgress.total}` : '...'}
+                Übersetze...
               </>
             ) : (
               <>
