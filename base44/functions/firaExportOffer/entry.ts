@@ -143,8 +143,12 @@ function buildFiraPayload(offer, tasks, customer, location) {
   const lineItems = tasks
     .filter(t => !t.is_optional)
     .map((task, idx) => {
-      // Use title_hr (Croatian export label) if available, otherwise fallback to clean title
-      const exportName = (task.title_hr && task.title_hr.trim()) ? task.title_hr.trim() : (task.title || '');
+      // Bilingual FIRA export name: "German Title / Hrvatski naziv" when both exist
+      const cleanTitle = (task.title || '').trim();
+      const cleanTitleHr = (task.title_hr || '').trim();
+      const exportName = cleanTitle && cleanTitleHr
+        ? `${cleanTitle} / ${cleanTitleHr}`
+        : cleanTitle || cleanTitleHr || '';
       const item = {
         lineItemId: String(task.id || `item-${idx + 1}`),
         name: exportName,
