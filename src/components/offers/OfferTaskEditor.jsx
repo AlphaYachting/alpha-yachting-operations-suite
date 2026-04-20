@@ -34,6 +34,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
 
   const [taskForm, setTaskForm] = useState({
     title: '',
+    title_hr: '',
     description: '',
     item_type: 'Labor',
     unit_type: 'Hour',
@@ -53,6 +54,7 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
   const openNewTask = () => {
     setTaskForm({
       title: '',
+      title_hr: '',
       description: '',
       item_type: 'Labor',
       unit_type: 'Hour',
@@ -102,14 +104,15 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
   };
 
   const handleTranslateTitle = async () => {
-    const baseTitle = taskForm.title.split(' / ')[0].trim();
+    const baseTitle = taskForm.title.trim();
     if (!baseTitle) return;
     setTranslating(true);
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `Translate this yacht service/product title to Croatian. Return ONLY the Croatian translation, nothing else: "${baseTitle}"`,
     });
     const hrTitle = (typeof result === 'string' ? result : result?.text || '').trim().replace(/[".]/g, '');
-    setTaskForm(prev => ({ ...prev, title: `${baseTitle} / ${hrTitle}` }));
+    // Write ONLY to title_hr — never contaminate title
+    setTaskForm(prev => ({ ...prev, title_hr: hrTitle }));
     setTranslating(false);
   };
 
@@ -396,25 +399,34 @@ export default function OfferTaskEditor({ tasks, setTasks }) {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Task Title *</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={taskForm.title}
-                  onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
-                  placeholder="e.g., Engine Service"
-                  className="flex-1"
-                />
+              <Input
+                value={taskForm.title}
+                onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                placeholder="e.g., Engine Service"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-slate-500 flex items-center gap-1">
+                  🇭🇷 Kroatischer Titel <span className="text-slate-400 font-normal">(nur für FIRA Export)</span>
+                </Label>
                 <button
                   type="button"
                   onClick={handleTranslateTitle}
                   disabled={translating || !taskForm.title}
-                  title="Kroatisch anhängen (für FIRA Export)"
-                  className="flex items-center gap-1 px-3 py-2 text-xs rounded-md border border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-40 whitespace-nowrap"
+                  title="Kroatische Übersetzung generieren (nur für FIRA Export)"
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-blue-200 text-blue-500 hover:bg-blue-50 disabled:opacity-40 whitespace-nowrap"
                 >
-                  {translating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Languages className="h-3.5 w-3.5" />}
-                  🇭🇷 HR
+                  {translating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+                  Übersetzen
                 </button>
               </div>
-              <p className="text-xs text-slate-400">Klick auf 🇭🇷 HR fügt automatisch die kroatische Übersetzung an: "Titel / Prijevod"</p>
+              <Input
+                value={taskForm.title_hr || ''}
+                onChange={(e) => setTaskForm({ ...taskForm, title_hr: e.target.value })}
+                placeholder="Kroatischer Titel (optional, nur für FIRA)"
+                className="text-sm text-slate-500"
+              />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>

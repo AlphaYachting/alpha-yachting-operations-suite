@@ -143,9 +143,11 @@ function buildFiraPayload(offer, tasks, customer, location) {
   const lineItems = tasks
     .filter(t => !t.is_optional)
     .map((task, idx) => {
+      // Use title_hr (Croatian export label) if available, otherwise fallback to clean title
+      const exportName = (task.title_hr && task.title_hr.trim()) ? task.title_hr.trim() : (task.title || '');
       const item = {
         lineItemId: String(task.id || `item-${idx + 1}`),
-        name: task.title || '',
+        name: exportName,
         description: task.description || task.title || '',
         price: parseFloat((task.unit_price || 0).toFixed(4)),
         quantity: task.quantity || 1,
