@@ -93,10 +93,10 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
       const range = `${start}:${total}`;
       log.push({ step: 'fetch_range', range, total });
 
+      // Step 1: Fetch envelope+uid only (no BODYSTRUCTURE — avoids server stall on bulk fetch)
       const msgInfos = [];
       for await (const msg of client.fetch(range, {
         envelope: true,
-        bodyStructure: true,
         uid: true,
       })) {
         results.fetched++;
@@ -105,16 +105,35 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
           results.duplicates++;
           continue;
         }
-        const partInfo = findTextPartInfo(msg.bodyStructure);
         msgInfos.push({
           uid: msg.uid,
           envelope: msg.envelope,
-          bodyStructure: msg.bodyStructure,
-          partInfo,
-          structureDebug: JSON.stringify(msg.bodyStructure).substring(0, 500),
         });
       }
-      log.push({ step: 'envelope_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates, structures: msgInfos.map(i => ({ uid: i.uid, partInfo: i.partInfo, structure: i.structureDebug })) });
+      log.push({ step: 'envelope_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates });
+
+      // Step 2: Fetch BODYSTRUCTURE individually per new message (avoids bulk stall)
+      for (const info of msgInfos) {
+        try {
+          const structData = await Promise.race([
+            (async () => {
+              const msgs = [];
+              for await (const m of client.fetch(info.uid.toString(), { bodyStructure: true, uid: true }, { uid: true })) {
+                msgs.push(m);
+              }
+              return msgs[0]?.bodyStructure || null;
+            })(),
+            new Promise((_, r) => setTimeout(() => r(new Error('bodyStructure fetch timeout 20s')), 20000)),
+          ]);
+          info.bodyStructure = structData;
+          info.partInfo = findTextPartInfo(structData);
+        } catch (structErr) {
+          log.push({ step: 'bodystructure_fetch_failed', uid: info.uid, error: safeErr(structErr) });
+          info.bodyStructure = null;
+          info.partInfo = null;
+        }
+      }
+      log.push({ step: 'bodystructure_fetch_done', new_messages: msgInfos.length });
 
       for (const info of msgInfos) {
         if (Date.now() - startTime > MAX_EXECUTION_TIME) {
@@ -309,9 +328,9 @@ Deno.serve(async (req) => {
       secure: true,
       auth: { user: imapUser, pass: imapPass },
       logger: imapLogger,
-      connectionTimeout: 10000,
-      greetingTimeout: 8000,
-      socketTimeout: 15000,
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 30000,
       disableAutoIdle: true,
     });
 
@@ -321,7 +340,7 @@ Deno.serve(async (req) => {
 
     const results = await Promise.race([
       runImapFetch(client, batchSize, existingMsgIds, convMap, base44, imapUser, startTime, log),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP hard timeout after 50s')), 50000)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP hard timeout after 80s')), 80000)),
     ]);
 
     return Response.json({
