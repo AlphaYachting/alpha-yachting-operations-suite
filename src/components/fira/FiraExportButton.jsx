@@ -39,7 +39,13 @@ export default function FiraExportButton({ offer, tasks, customer, userRole, onE
     if (translatingAll || !offer?.id) return;
     setTranslatingAll(true);
 
-    // Always fetch fresh tasks from DB to get real IDs (local state may have temp IDs)
+    // Step 1: Save offer first to ensure all tasks have stable DB IDs
+    if (onTasksTranslated) await onTasksTranslated('pre_save');
+
+    // Small delay to let save complete before fetching
+    await new Promise(r => setTimeout(r, 1500));
+
+    // Step 2: Fetch fresh tasks from DB with real IDs
     const freshTasks = await base44.entities.OfferTask.filter({ offer_id: offer.id }, 'sequence_order');
     const toTranslate = freshTasks.filter(t => !t.is_optional && t.item_type !== 'Chapter' && !(t.title_hr && t.title_hr.trim()));
 
@@ -71,7 +77,7 @@ export default function FiraExportButton({ offer, tasks, customer, userRole, onE
     setTranslatingAll(false);
     setTranslateProgress(null);
     toast.success(`${translated} Positionen ins Kroatische übersetzt`);
-    if (onTasksTranslated) onTasksTranslated();
+    if (onTasksTranslated) onTasksTranslated('post_translate');
   };
 
   const handleExport = async (forceReexport = false) => {
