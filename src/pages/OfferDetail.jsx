@@ -1172,6 +1172,7 @@ Alpha Yachting Service Team`);
                 customer={customers.find(c => c.id === formData.customer_id) || null}
                 userRole={currentUser?.role}
                 onExported={() => queryClient.invalidateQueries(['offer', offerId])}
+                onTasksTranslated={() => queryClient.invalidateQueries(['offerTasks', offerId])}
               />
             )}
             {formData.customer_id && formData.title && (

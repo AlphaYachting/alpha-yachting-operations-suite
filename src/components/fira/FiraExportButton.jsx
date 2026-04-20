@@ -10,12 +10,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Loader2, Upload, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Loader2, Upload, CheckCircle2, AlertCircle, RefreshCw, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
-export default function FiraExportButton({ offer, tasks, customer, userRole, onExported }) {
+export default function FiraExportButton({ offer, tasks, customer, userRole, onExported, onTasksTranslated }) {
   const [exporting, setExporting] = useState(false);
+  const [translatingAll, setTranslatingAll] = useState(false);
+  const [translateProgress, setTranslateProgress] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
   const [lastResult, setLastResult] = useState(null);
 
@@ -29,6 +31,37 @@ export default function FiraExportButton({ offer, tasks, customer, userRole, onE
 
   // Don't render if offer not saved, no line items, or no customer
   if (!offer?.id || !hasLineItems || !hasCustomer) return null;
+
+  // Tasks that still need Croatian translation
+  const untranslatedTasks = (tasks || []).filter(t => !t.is_optional && t.item_type !== 'Chapter' && !(t.title_hr && t.title_hr.trim()));
+
+  const handleBulkTranslate = async () => {
+    if (translatingAll || untranslatedTasks.length === 0) return;
+    setTranslatingAll(true);
+    setTranslateProgress({ done: 0, total: untranslatedTasks.length });
+
+    let translated = 0;
+    for (const task of untranslatedTasks) {
+      try {
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt: `Translate this yacht service/product title to Croatian. Return ONLY the Croatian translation, nothing else: "${task.title}"`,
+        });
+        const hrTitle = (typeof result === 'string' ? result : result?.text || '').trim().replace(/[".]/g, '');
+        if (hrTitle && task.id) {
+          await base44.entities.OfferTask.update(task.id, { title_hr: hrTitle });
+        }
+      } catch (e) {
+        // skip failed individual translation silently
+      }
+      translated++;
+      setTranslateProgress({ done: translated, total: untranslatedTasks.length });
+    }
+
+    setTranslatingAll(false);
+    setTranslateProgress(null);
+    toast.success(`${translated} Positionen ins Kroatische übersetzt`);
+    if (onTasksTranslated) onTasksTranslated();
+  };
 
   const handleExport = async (forceReexport = false) => {
     if (exporting || currentlyExporting) return;
@@ -66,6 +99,29 @@ export default function FiraExportButton({ offer, tasks, customer, userRole, onE
   return (
     <>
       <div className="flex items-center gap-1.5">
+        {/* Bulk translate button — only show when there are untranslated tasks */}
+        {untranslatedTasks.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleBulkTranslate}
+            disabled={translatingAll || exporting}
+            className="border-blue-300 text-blue-600 hover:bg-blue-50 h-8 px-2 text-xs"
+            title="Alle Positionen ins Kroatische übersetzen (für FIRA Export)"
+          >
+            {translatingAll ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                {translateProgress ? `${translateProgress.done}/${translateProgress.total}` : '...'}
+              </>
+            ) : (
+              <>
+                <Languages className="h-3 w-3 mr-1" />
+                🇭🇷 {untranslatedTasks.length} übersetzen
+              </>
+            )}
+          </Button>
+        )}
         {alreadyExported ? (
           <>
             <button
