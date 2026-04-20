@@ -52,6 +52,33 @@ import FiraExportButton from '@/components/fira/FiraExportButton';
 import OfferFollowUpDraft from '@/components/offers/OfferFollowUpDraft';
 import CreateProjectDialog from '@/components/offers/CreateProjectDialog';
 
+// Safe upsert: update existing tasks, create new ones, delete removed ones.
+// Never deletes ALL tasks first — prevents data loss on network errors.
+async function safeUpsertTasks(offerId, localTasks) {
+  const existingTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
+  const existingIds = new Set(existingTasks.map(t => t.id));
+  const localIds = new Set(localTasks.filter(t => t.id && !t.id.startsWith('temp-')).map(t => t.id));
+
+  // 1. Delete tasks that were removed locally (exist in DB but not in local state)
+  const toDelete = existingTasks.filter(t => !localIds.has(t.id));
+  await Promise.all(toDelete.map(t => base44.entities.OfferTask.delete(t.id)));
+
+  // 2. Update existing + create new
+  await Promise.all(
+    localTasks.map(async (task, idx) => {
+      const payload = { ...task, offer_id: offerId, sequence_order: idx, total_amount: (task.quantity || 0) * (task.unit_price || 0) };
+      if (task.id && existingIds.has(task.id)) {
+        // Existing task — update it
+        await base44.entities.OfferTask.update(task.id, payload);
+      } else {
+        // New task (no id or temp id) — create it
+        const { id: _id, ...createPayload } = payload;
+        await base44.entities.OfferTask.create({ ...createPayload, offer_id: offerId });
+      }
+    })
+  );
+}
+
 export default function OfferDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -226,13 +253,7 @@ export default function OfferDetail() {
           total_amount: currentTotals.taxable_base_excl_tax,
           discount_amount: currentTotals.discount_amount_excl_tax
         });
-        const existingTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
-        await Promise.all(existingTasks.map(t => base44.entities.OfferTask.delete(t.id)));
-        if (tasks.length > 0) {
-          await base44.entities.OfferTask.bulkCreate(
-            tasks.map((task, idx) => ({ ...task, offer_id: offerId, sequence_order: idx, total_amount: task.quantity * task.unit_price }))
-          );
-        }
+        await safeUpsertTasks(offerId, tasks);
         queryClient.invalidateQueries(['offer', offerId]);
         queryClient.invalidateQueries(['offerTasks', offerId]);
         setAutoSaveStatus('saved');
@@ -632,26 +653,12 @@ Requirements:
           discount_amount: totals.discount_amount_excl_tax
         });
 
-        // SAFETY: only delete/recreate once backend tasks have loaded into local state.
-        // If tasksLoaded is false, the page is still initializing — do NOT destroy backend records.
+        // SAFETY: only save tasks once backend tasks have loaded into local state.
         if (!tasksLoaded) {
           throw new Error('Offer positions are still loading — please wait a moment and save again.');
         }
 
-        // Delete existing tasks and recreate (parallel for speed)
-        const existingTasks = await base44.entities.OfferTask.filter({ offer_id: offerId });
-        await Promise.all(existingTasks.map(task => base44.entities.OfferTask.delete(task.id)));
-
-        if (tasks.length > 0) {
-          await base44.entities.OfferTask.bulkCreate(
-            tasks.map((task, idx) => ({
-              ...task,
-              offer_id: offerId,
-              sequence_order: idx,
-              total_amount: task.quantity * task.unit_price,
-            }))
-          );
-        }
+        await safeUpsertTasks(offerId, tasks);
 
         queryClient.invalidateQueries(['offer', offerId]);
         queryClient.invalidateQueries(['offerTasks', offerId]);
