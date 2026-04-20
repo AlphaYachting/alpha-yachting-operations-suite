@@ -1172,7 +1172,11 @@ Alpha Yachting Service Team`);
                 customer={customers.find(c => c.id === formData.customer_id) || null}
                 userRole={currentUser?.role}
                 onExported={() => queryClient.invalidateQueries(['offer', offerId])}
-                onTasksTranslated={() => queryClient.invalidateQueries(['offerTasks', offerId])}
+                onTasksTranslated={async () => {
+                  // Fetch fresh tasks from DB and update local state so title_hr is visible immediately
+                  const fresh = await base44.entities.OfferTask.filter({ offer_id: offerId }, 'sequence_order');
+                  setTasks(fresh);
+                }}
               />
             )}
             {formData.customer_id && formData.title && (
