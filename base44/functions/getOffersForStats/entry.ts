@@ -7,6 +7,20 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const SYSTEM_PREFIX = 'service+';
+
+    // Manual attribution overrides — these offers were triggered by a.rittler but created by system automation
+    const MANUAL_ATTRIBUTION = {
+      'OFF-2026-0071': 'a.rittler@rittler.co',
+      'OFF-2026-0073': 'a.rittler@rittler.co',
+      'OFF-2026-0060': 'a.rittler@rittler.co',
+      'OFF-2026-0055': 'a.rittler@rittler.co',
+      'OFF-2026-0040': 'a.rittler@rittler.co',
+      'BILL-20260406-6611': 'a.rittler@rittler.co',
+      'OFF-2026-0053': 'a.rittler@rittler.co',
+      'OFF-2026-0051': 'a.rittler@rittler.co',
+      'OFF-2026-0021': 'a.rittler@rittler.co',
+      'OFF-2026-0034': 'a.rittler@rittler.co',
+    };
     const isSystem = (email) => !email || email.startsWith(SYSTEM_PREFIX) || email.includes('no-reply.base44.com');
 
     // Fetch offers and leads in parallel
@@ -27,12 +41,15 @@ Deno.serve(async (req) => {
       const rootCreator = o.created_by || '';
       const rootIsSystem = isSystem(rootCreator);
 
-      // If the offer was created by the system but has a lead_id,
-      // attribute it to the lead's creator (the human who created the inquiry)
+      // Determine effective creator with priority: manual override > lead attribution > root
       let effective_created_by = rootCreator;
       let attribution_source = 'root';
 
-      if (rootIsSystem && o.lead_id && leadCreatorMap[o.lead_id]) {
+      const offerNum = (o.offer_number || '').replace(/^#/, '');
+      if (MANUAL_ATTRIBUTION[offerNum]) {
+        effective_created_by = MANUAL_ATTRIBUTION[offerNum];
+        attribution_source = 'manual_override';
+      } else if (rootIsSystem && o.lead_id && leadCreatorMap[o.lead_id]) {
         effective_created_by = leadCreatorMap[o.lead_id];
         attribution_source = 'lead';
       }
