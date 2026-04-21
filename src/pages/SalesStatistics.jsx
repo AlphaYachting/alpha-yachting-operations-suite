@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Users, FileText, Mail, TrendingUp, Download } from 'lucide-react';
+import { Users, FileText, Mail, TrendingUp, Download, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
 
@@ -80,21 +80,31 @@ function shortName(email) {
 export default function SalesStatistics() {
   const [range, setRange] = useState('last_6');
   const [userFilter, setUserFilter] = useState('all');
+  const queryClient = useQueryClient();
 
   const { data: leads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['stats-leads'],
     queryFn: () => base44.entities.Lead.list('-created_date', 500),
+    staleTime: 0,
   });
 
   const { data: offers = [], isLoading: offersLoading } = useQuery({
     queryKey: ['stats-offers'],
     queryFn: () => base44.entities.Offer.list('-created_date', 500),
+    staleTime: 0,
   });
 
   const { data: emails = [], isLoading: emailsLoading } = useQuery({
     queryKey: ['stats-emails'],
     queryFn: () => base44.entities.EmailMessageSandbox.filter({ direction: 'inbound' }, '-created_date', 500),
+    staleTime: 0,
   });
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['stats-leads'] });
+    queryClient.invalidateQueries({ queryKey: ['stats-offers'] });
+    queryClient.invalidateQueries({ queryKey: ['stats-emails'] });
+  };
 
   const months = useMemo(() => getRangeMonths(range), [range]);
   const now = new Date();
@@ -217,6 +227,15 @@ export default function SalesStatistics() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
+            Aktualisieren
+          </Button>
           <Button
             variant="outline"
             size="sm"
