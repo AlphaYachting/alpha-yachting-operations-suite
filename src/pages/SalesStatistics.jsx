@@ -82,28 +82,28 @@ export default function SalesStatistics() {
   const [userFilter, setUserFilter] = useState('all');
   const queryClient = useQueryClient();
 
-  const { data: leads = [], isLoading: leadsLoading } = useQuery({
+  const { data: leads = [], isLoading: leadsLoading, refetch: refetchLeads } = useQuery({
     queryKey: ['stats-leads'],
     queryFn: () => base44.entities.Lead.list('-created_date', 500),
     staleTime: 0,
   });
 
-  const { data: offers = [], isLoading: offersLoading } = useQuery({
+  const { data: offers = [], isLoading: offersLoading, refetch: refetchOffers } = useQuery({
     queryKey: ['stats-offers'],
     queryFn: () => base44.entities.Offer.list('-created_date', 500),
     staleTime: 0,
   });
 
-  const { data: emails = [], isLoading: emailsLoading } = useQuery({
+  const { data: emails = [], isLoading: emailsLoading, refetch: refetchEmails } = useQuery({
     queryKey: ['stats-emails'],
     queryFn: () => base44.entities.EmailMessageSandbox.filter({ direction: 'inbound' }, '-created_date', 500),
     staleTime: 0,
   });
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['stats-leads'] });
-    queryClient.invalidateQueries({ queryKey: ['stats-offers'] });
-    queryClient.invalidateQueries({ queryKey: ['stats-emails'] });
+    refetchLeads();
+    refetchOffers();
+    refetchEmails();
   };
 
   const months = useMemo(() => getRangeMonths(range), [range]);
