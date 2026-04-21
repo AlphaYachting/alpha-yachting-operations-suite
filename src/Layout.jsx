@@ -114,6 +114,7 @@ const navItems = [
   
   // ADMIN
   { header: 'ADMIN' },
+  { name: 'Sales Statistics', icon: BarChart3, page: 'SalesStatistics' },
   { name: 'Settings', icon: Settings, page: 'Settings' },
   { name: 'Product Modules', icon: Package, page: 'AdminProductModules' },
   { name: 'Storage Pricing', icon: Database, page: 'StoragePricingAdmin' },
