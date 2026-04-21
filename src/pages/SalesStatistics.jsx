@@ -64,6 +64,18 @@ function KPICard({ icon: Icon, label, value, sub, color = 'text-blue-600' }) {
   );
 }
 
+// ── Helpers (module-level so they're always available) ────────────────────────
+function isSystemAccount(email) {
+  return !email || email.startsWith('service+') || email.includes('no-reply.base44.com');
+}
+
+function shortName(email) {
+  if (!email || email === 'unknown') return 'Unbekannt';
+  if (email.startsWith('assigned:')) return 'Zugewiesen (intern)';
+  if (isSystemAccount(email)) return '⚙ System-Automation';
+  return email.split('@')[0];
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function SalesStatistics() {
   const [range, setRange] = useState('last_6');
@@ -149,18 +161,6 @@ export default function SalesStatistics() {
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [leads]);
-
-  // ── Detect system/automation accounts ────────────────────────────────────
-  const isSystemAccount = (email) =>
-    !email || email.startsWith('service+') || email.includes('no-reply.base44.com');
-
-  // ── Short display name ────────────────────────────────────────────────────
-  const shortName = (email) => {
-    if (!email || email === 'unknown') return 'Unbekannt';
-    if (email.startsWith('assigned:')) return 'Zugewiesen (intern)';
-    if (isSystemAccount(email)) return '⚙ System-Automation';
-    return email.split('@')[0];
-  };
 
   const isLoading = leadsLoading || offersLoading || emailsLoading;
 
