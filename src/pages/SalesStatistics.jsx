@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -81,6 +81,14 @@ export default function SalesStatistics() {
   const [range, setRange] = useState('last_6');
   const [userFilter, setUserFilter] = useState('all');
   const queryClient = useQueryClient();
+
+  // Clear stats cache on mount to always get fresh data
+  useEffect(() => {
+    queryClient.removeQueries({ queryKey: ['stats-offers-human'] });
+    queryClient.removeQueries({ queryKey: ['stats-offers-system'] });
+    queryClient.removeQueries({ queryKey: ['stats-leads'] });
+    queryClient.removeQueries({ queryKey: ['stats-emails'] });
+  }, []);
 
   const { data: leads = [], isLoading: leadsLoading, refetch: refetchLeads } = useQuery({
     queryKey: ['stats-leads'],
@@ -175,7 +183,9 @@ export default function SalesStatistics() {
       .filter(o => inRange(o.created_date, rangeStart, rangeEnd))
       .forEach(o => {
         // Prefer data.created_by override (set manually) over root created_by (system field)
-        const effectiveCreator = o.data?.created_by || o.created_by;
+        // o is a flat SDK object: o.created_by = root field, o.data = nested data object
+        const dataOverride = o.data && typeof o.data === 'object' ? o.data.created_by : undefined;
+        const effectiveCreator = dataOverride || o.created_by;
         ensure(effectiveCreator).offersCreated++;
       });
 
@@ -218,6 +228,12 @@ export default function SalesStatistics() {
   }, [leads]);
 
   const isLoading = leadsLoading || offersLoading || emailsLoading;
+
+  // Count how many system offers have a data.created_by override
+  const overriddenOffersCount = offers.filter(o => {
+    const dataOverride = o.data && typeof o.data === 'object' ? o.data.created_by : undefined;
+    return isSystemAccount(o.created_by) && dataOverride && !isSystemAccount(dataOverride);
+  }).length;
 
   // ── Split human vs system accounts ───────────────────────────────────────
   // Note: effectiveOfferCreator is defined above monthlyTrend
@@ -405,6 +421,9 @@ export default function SalesStatistics() {
                     <td className="py-2">
                       <div className="font-medium text-amber-700">⚙ System-Automation</div>
                       <div className="text-xs text-amber-500">service+…@no-reply.base44.com — nicht manuell</div>
+                      {overriddenOffersCount > 0 && (
+                        <div className="text-xs text-green-600 mt-0.5">✓ {overriddenOffersCount} Angebote mit manuellem Ersteller-Override erkannt und umgeleitet</div>
+                      )}
                     </td>
                     <td className="py-2 text-right">
                       <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">{systemTotals.leadsCreated}</Badge>
