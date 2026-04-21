@@ -135,7 +135,10 @@ export default function SalesStatistics() {
   const offersLastMonth = offers.filter(o => inRange(o.created_date, lastMonthStart, lastMonthEnd)).length;
   const emailsThisMonth = emails.filter(e => inRange(e.received_at || e.created_date, thisMonthStart, thisMonthEnd)).length;
   const emailsLastMonth = emails.filter(e => inRange(e.received_at || e.created_date, lastMonthStart, lastMonthEnd)).length;
-  const activeUsers = new Set([...leads.map(l => l.created_by), ...offers.map(o => o.created_by)].filter(Boolean)).size;
+  const activeUsers = new Set(
+    [...leads.map(l => l.created_by), ...offers.map(o => o.created_by)]
+      .filter(e => e && !isSystemAccount(e))
+  ).size;
 
   // ── Lead source breakdown ─────────────────────────────────────────────────
   const leadSources = useMemo(() => {
@@ -149,14 +152,31 @@ export default function SalesStatistics() {
 
   const isLoading = leadsLoading || offersLoading || emailsLoading;
 
+  // ── Split human vs system accounts ───────────────────────────────────────
+  const humanUserStats = userStats.filter(u => !isSystemAccount(u.email) && !u.email.startsWith('assigned:'));
+  const systemStats = userStats.filter(u => isSystemAccount(u.email));
+
+  // Aggregate all system activity into one row
+  const systemTotals = systemStats.reduce((acc, u) => ({
+    email: 'system',
+    leadsCreated: acc.leadsCreated + u.leadsCreated,
+    leadsAssigned: acc.leadsAssigned + u.leadsAssigned,
+    offersCreated: acc.offersCreated + u.offersCreated,
+  }), { email: 'system', leadsCreated: 0, leadsAssigned: 0, offersCreated: 0 });
+
   // ── Filtered user rows ────────────────────────────────────────────────────
-  const filteredUserStats = userFilter === 'all' ? userStats : userStats.filter(u => u.email === userFilter);
-  const uniqueUsers = [...new Set(userStats.map(u => u.email))];
+  const filteredUserStats = (userFilter === 'all' ? humanUserStats : humanUserStats.filter(u => u.email === userFilter));
+  const uniqueUsers = humanUserStats.map(u => u.email);
+
+  // ── Detect system/automation accounts ────────────────────────────────────
+  const isSystemAccount = (email) =>
+    !email || email.startsWith('service+') || email.includes('no-reply.base44.com');
 
   // ── Short display name ────────────────────────────────────────────────────
   const shortName = (email) => {
-    if (!email || email === 'unknown') return 'Unknown';
-    if (email.startsWith('assigned:')) return `Zugewiesen (intern)`;
+    if (!email || email === 'unknown') return 'Unbekannt';
+    if (email.startsWith('assigned:')) return 'Zugewiesen (intern)';
+    if (isSystemAccount(email)) return '⚙ System-Automation';
     return email.split('@')[0];
   };
 
@@ -304,7 +324,7 @@ export default function SalesStatistics() {
                   <tr key={u.email} className="border-b hover:bg-slate-50">
                     <td className="py-2">
                       <div className="font-medium text-slate-800">{shortName(u.email)}</div>
-                      <div className="text-xs text-slate-400">{u.email.startsWith('assigned:') ? '' : u.email}</div>
+                      <div className="text-xs text-slate-400">{u.email}</div>
                     </td>
                     <td className="py-2 text-right">
                       <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">{u.leadsCreated}</Badge>
@@ -314,6 +334,21 @@ export default function SalesStatistics() {
                     </td>
                   </tr>
                 ))}
+                {/* System automation row — always shown separately */}
+                {(systemTotals.leadsCreated > 0 || systemTotals.offersCreated > 0) && (
+                  <tr className="bg-amber-50 border-b border-amber-100">
+                    <td className="py-2">
+                      <div className="font-medium text-amber-700">⚙ System-Automation</div>
+                      <div className="text-xs text-amber-500">service+…@no-reply.base44.com — nicht manuell</div>
+                    </td>
+                    <td className="py-2 text-right">
+                      <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">{systemTotals.leadsCreated}</Badge>
+                    </td>
+                    <td className="py-2 text-right">
+                      <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">{systemTotals.offersCreated}</Badge>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           )}
@@ -358,6 +393,7 @@ export default function SalesStatistics() {
             <p>• <strong>Lead-Zuordnung:</strong> Basiert auf <code>created_by</code> (E-Mail) — kein dediziertes Owner-Feld vorhanden.</p>
             <p>• <strong>Angebote zugewiesen:</strong> Kein explizites owner/assigned-Feld im Offer — nur <code>created_by</code> verwendet.</p>
             <p>• <strong>Email-Anfragen:</strong> Basiert auf <code>EmailMessageSandbox</code> Entity, <code>direction=inbound</code>, Datum aus <code>received_at</code>.</p>
+            <p>• <strong>System-Automationen:</strong> Einträge mit <code>service+…@no-reply.base44.com</code> werden von echten Usern getrennt und als "⚙ System-Automation" ausgewiesen.</p>
             <p>• <strong>Alle Metriken:</strong> Read-only, keine Schreiboperationen, keine Seiteneffekte.</p>
           </div>
         </CardContent>
