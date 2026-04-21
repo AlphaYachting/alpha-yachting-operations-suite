@@ -174,7 +174,9 @@ export default function SalesStatistics() {
     offers
       .filter(o => inRange(o.created_date, rangeStart, rangeEnd))
       .forEach(o => {
-        ensure(o.created_by).offersCreated++;
+        // Prefer data.created_by override (set manually) over root created_by (system field)
+        const effectiveCreator = o.data?.created_by || o.created_by;
+        ensure(effectiveCreator).offersCreated++;
       });
 
     return Object.values(map)
@@ -183,6 +185,9 @@ export default function SalesStatistics() {
   }, [leads, offers, months]);
 
   // ── Monthly trend ─────────────────────────────────────────────────────────
+  // Helper: effective creator for offers (data.created_by override takes priority)
+  const effectiveOfferCreator = (o) => o.data?.created_by || o.created_by;
+
   const monthlyTrend = useMemo(() => months.map(m => ({
     month: m.label,
     Leads: leads.filter(l => inRange(l.created_date, m.start, m.end)).length,
@@ -198,7 +203,7 @@ export default function SalesStatistics() {
   const emailsThisMonth = emails.filter(e => inRange(e.received_at || e.created_date, thisMonthStart, thisMonthEnd)).length;
   const emailsLastMonth = emails.filter(e => inRange(e.received_at || e.created_date, lastMonthStart, lastMonthEnd)).length;
   const activeUsers = new Set(
-    [...leads.map(l => l.created_by), ...offers.map(o => o.created_by)]
+    [...leads.map(l => l.created_by), ...offers.map(o => effectiveOfferCreator(o))]
       .filter(e => e && !isSystemAccount(e))
   ).size;
 
@@ -215,6 +220,7 @@ export default function SalesStatistics() {
   const isLoading = leadsLoading || offersLoading || emailsLoading;
 
   // ── Split human vs system accounts ───────────────────────────────────────
+  // Note: effectiveOfferCreator is defined above monthlyTrend
   const humanUserStats = userStats.filter(u => !isSystemAccount(u.email) && !u.email.startsWith('assigned:'));
   const systemStats = userStats.filter(u => isSystemAccount(u.email));
 
