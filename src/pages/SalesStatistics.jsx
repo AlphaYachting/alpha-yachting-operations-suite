@@ -86,18 +86,21 @@ export default function SalesStatistics() {
     queryKey: ['stats-leads'],
     queryFn: () => base44.entities.Lead.list('-created_date', 500),
     staleTime: 0,
+    gcTime: 0,
   });
 
   const { data: offers = [], isLoading: offersLoading, refetch: refetchOffers } = useQuery({
     queryKey: ['stats-offers'],
     queryFn: () => base44.entities.Offer.list('-created_date', 500),
     staleTime: 0,
+    gcTime: 0,
   });
 
   const { data: emails = [], isLoading: emailsLoading, refetch: refetchEmails } = useQuery({
     queryKey: ['stats-emails'],
     queryFn: () => base44.entities.EmailMessageSandbox.filter({ direction: 'inbound' }, '-created_date', 500),
     staleTime: 0,
+    gcTime: 0,
   });
 
   const handleRefresh = () => {
