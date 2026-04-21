@@ -141,7 +141,7 @@ export default function SalesStatistics() {
 
     const ensure = (email) => {
       if (!email) email = 'unknown';
-      if (!map[email]) map[email] = { email, leadsCreated: 0, leadsAssigned: 0, offersCreated: 0 };
+      if (!map[email]) map[email] = { email, leadsCreated: 0, leadsAssigned: 0, offersCreated: 0, offersApproved: 0 };
       return map[email];
     };
 
@@ -159,7 +159,11 @@ export default function SalesStatistics() {
       .filter(o => inRange(o.created_date, rangeStart, rangeEnd))
       .forEach(o => {
         // effective_created_by is already resolved by the backend function
-        ensure(o.effective_created_by || o.created_by).offersCreated++;
+        const creator = o.effective_created_by || o.created_by;
+        ensure(creator).offersCreated++;
+        if (o.status === 'Approved') {
+          ensure(creator).offersApproved++;
+        }
       });
 
     return Object.values(map)
@@ -370,6 +374,7 @@ export default function SalesStatistics() {
                   <th className="pb-2 font-medium">Benutzer</th>
                   <th className="pb-2 font-medium text-right">Leads erstellt</th>
                   <th className="pb-2 font-medium text-right">Angebote erstellt</th>
+                  <th className="pb-2 font-medium text-right">Angebote gewonnen</th>
                 </tr>
               </thead>
               <tbody>
@@ -384,6 +389,9 @@ export default function SalesStatistics() {
                     </td>
                     <td className="py-2 text-right">
                       <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">{u.offersCreated}</Badge>
+                    </td>
+                    <td className="py-2 text-right">
+                      <Badge variant="outline" className={u.offersApproved > 0 ? "text-emerald-700 border-emerald-300 bg-emerald-50" : "text-slate-400 border-slate-200 bg-slate-50"}>{u.offersApproved}</Badge>
                     </td>
                   </tr>
                 ))}
@@ -402,6 +410,9 @@ export default function SalesStatistics() {
                     </td>
                     <td className="py-2 text-right">
                       <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">{systemTotals.offersCreated}</Badge>
+                    </td>
+                    <td className="py-2 text-right">
+                      <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">—</Badge>
                     </td>
                   </tr>
                 )}

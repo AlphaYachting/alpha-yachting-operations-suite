@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
         offer_number: o.offer_number,
         source_type: o.source_type,
         lead_id: o.lead_id || null,
+        status: o.status || null,
       };
     });
 
