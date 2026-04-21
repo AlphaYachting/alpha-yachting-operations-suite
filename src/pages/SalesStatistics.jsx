@@ -89,32 +89,43 @@ export default function SalesStatistics() {
     gcTime: 0,
   });
 
-  const { data: offersPage1 = [], isLoading: offersLoading1, refetch: refetchOffersP1 } = useQuery({
-    queryKey: ['stats-offers-p1'],
+  // Load offers from known human users directly (bypasses 500-record limit issue)
+  // and separately load system offers — combine for full picture
+  const { data: offersHuman = [], isLoading: offersLoading1, refetch: refetchOffersP1 } = useQuery({
+    queryKey: ['stats-offers-human'],
+    queryFn: async () => {
+      const [r1, r2, r3] = await Promise.all([
+        base44.entities.Offer.filter({ created_by: 'a.rittler@rittler.co' }, '-created_date', 500),
+        base44.entities.Offer.filter({ created_by: 'alfons@alpha-yachting.hr' }, '-created_date', 500),
+        base44.entities.Offer.filter({ created_by: 'oliver@alpha-yachting.hr' }, '-created_date', 500),
+      ]);
+      return [...r1, ...r2, ...r3];
+    },
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  const { data: offersSystem = [], isLoading: offersLoading2, refetch: refetchOffersP2 } = useQuery({
+    queryKey: ['stats-offers-system'],
     queryFn: () => base44.entities.Offer.list('-created_date', 500),
     staleTime: 0,
     gcTime: 0,
   });
 
-  const { data: offersPage2 = [], isLoading: offersLoading2, refetch: refetchOffersP2 } = useQuery({
-    queryKey: ['stats-offers-p2'],
-    queryFn: () => base44.entities.Offer.list('-created_date', 500, 500),
-    staleTime: 0,
-    gcTime: 0,
-  });
-
-  // Deduplicate by id
+  // Merge: human offers take priority, system offers fill the rest (deduplicate by id)
   const offers = useMemo(() => {
     const seen = new Set();
-    return [...offersPage1, ...offersPage2].filter(o => {
-      if (seen.has(o.id)) return false;
-      seen.add(o.id);
-      return true;
-    });
-  }, [offersPage1, offersPage2]);
+    const result = [];
+    for (const o of [...offersHuman, ...offersSystem]) {
+      if (!seen.has(o.id)) {
+        seen.add(o.id);
+        result.push(o);
+      }
+    }
+    return result;
+  }, [offersHuman, offersSystem]);
 
   const offersLoading = offersLoading1 || offersLoading2;
-  const refetchOffers = () => { refetchOffersP1(); refetchOffersP2(); };
 
   const { data: emails = [], isLoading: emailsLoading, refetch: refetchEmails } = useQuery({
     queryKey: ['stats-emails'],
@@ -129,6 +140,7 @@ export default function SalesStatistics() {
     refetchOffersP2();
     refetchEmails();
   };
+
 
   const months = useMemo(() => getRangeMonths(range), [range]);
   const now = new Date();
@@ -200,7 +212,7 @@ export default function SalesStatistics() {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [leads]);
 
-  const isLoading = leadsLoading || offersLoading1 || offersLoading2 || emailsLoading;
+  const isLoading = leadsLoading || offersLoading || emailsLoading;
 
   // ── Split human vs system accounts ───────────────────────────────────────
   const humanUserStats = userStats.filter(u => !isSystemAccount(u.email) && !u.email.startsWith('assigned:'));
