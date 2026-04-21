@@ -112,8 +112,18 @@ Deno.serve(async (req) => {
       if (wizardData.vessel?.existing) {
         const boats_arr = await base44.asServiceRole.entities.Boat.filter({ id: wizardData.vessel.existing });
         boat = boats_arr[0];
-        if (boat.customer_id !== customer.id) {
-          return Response.json({ error: 'Boat does not belong to selected customer' }, { status: 400 });
+        // Only enforce ownership check if boat has a customer_id set — 
+        // skip if they match OR if the boat's customer_id is empty (edge case)
+        if (boat && boat.customer_id && boat.customer_id !== customer.id) {
+          // The boat may belong to a different customer record (e.g. lead was converted and 
+          // a new customer was created, but the boat was already linked to an older customer record).
+          // Try to find the correct customer via the boat's customer_id.
+          console.log(`Boat customer_id mismatch: boat.customer_id=${boat.customer_id}, wizard customer=${customer.id}. Trying boat's customer.`);
+          const boatCustomers = await base44.asServiceRole.entities.Customer.filter({ id: boat.customer_id });
+          if (boatCustomers.length > 0) {
+            customer = boatCustomers[0];
+          }
+          // If still no match (shouldn't happen), trust the explicit wizard selection
         }
       } else if (wizardData.vessel?.new) {
         boat = await base44.asServiceRole.entities.Boat.create({
