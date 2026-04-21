@@ -150,6 +150,18 @@ export default function SalesStatistics() {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [leads]);
 
+  // ── Detect system/automation accounts ────────────────────────────────────
+  const isSystemAccount = (email) =>
+    !email || email.startsWith('service+') || email.includes('no-reply.base44.com');
+
+  // ── Short display name ────────────────────────────────────────────────────
+  const shortName = (email) => {
+    if (!email || email === 'unknown') return 'Unbekannt';
+    if (email.startsWith('assigned:')) return 'Zugewiesen (intern)';
+    if (isSystemAccount(email)) return '⚙ System-Automation';
+    return email.split('@')[0];
+  };
+
   const isLoading = leadsLoading || offersLoading || emailsLoading;
 
   // ── Split human vs system accounts ───────────────────────────────────────
@@ -167,18 +179,6 @@ export default function SalesStatistics() {
   // ── Filtered user rows ────────────────────────────────────────────────────
   const filteredUserStats = (userFilter === 'all' ? humanUserStats : humanUserStats.filter(u => u.email === userFilter));
   const uniqueUsers = humanUserStats.map(u => u.email);
-
-  // ── Detect system/automation accounts ────────────────────────────────────
-  const isSystemAccount = (email) =>
-    !email || email.startsWith('service+') || email.includes('no-reply.base44.com');
-
-  // ── Short display name ────────────────────────────────────────────────────
-  const shortName = (email) => {
-    if (!email || email === 'unknown') return 'Unbekannt';
-    if (email.startsWith('assigned:')) return 'Zugewiesen (intern)';
-    if (isSystemAccount(email)) return '⚙ System-Automation';
-    return email.split('@')[0];
-  };
 
   if (isLoading) return (
     <div className="flex items-center justify-center h-64">
