@@ -117,10 +117,9 @@ export default function SalesStatistics() {
   const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
   // ── User activity aggregation (filtered by selected range) ────────────────
-  const rangeStart = months[0]?.start;
-  const rangeEnd = months[months.length - 1]?.end;
-
   const userStats = useMemo(() => {
+    const rangeStart = months[0]?.start;
+    const rangeEnd = months[months.length - 1]?.end;
     const map = {};
 
     const ensure = (email) => {
@@ -148,7 +147,7 @@ export default function SalesStatistics() {
     return Object.values(map)
       .filter(u => u.leadsCreated > 0 || u.offersCreated > 0)
       .sort((a, b) => (b.leadsCreated + b.offersCreated) - (a.leadsCreated + a.offersCreated));
-  }, [leads, offers, rangeStart, rangeEnd]);
+  }, [leads, offers, months]);
 
   // ── Monthly trend ─────────────────────────────────────────────────────────
   const monthlyTrend = useMemo(() => months.map(m => ({
