@@ -113,7 +113,10 @@ export default function SalesStatistics() {
   const lastMonthStart = startOfMonth(subMonths(now, 1));
   const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
-  // ── User activity aggregation ──────────────────────────────────────────────
+  // ── User activity aggregation (filtered by selected range) ────────────────
+  const rangeStart = months[0]?.start;
+  const rangeEnd = months[months.length - 1]?.end;
+
   const userStats = useMemo(() => {
     const map = {};
 
@@ -123,24 +126,26 @@ export default function SalesStatistics() {
       return map[email];
     };
 
-    leads.forEach(l => {
-      ensure(l.created_by).leadsCreated++;
-      if (l.assigned_to_user_id) {
-        // We don't have email from ID easily, label as "assigned (ID)"
-        const key = `assigned:${l.assigned_to_user_id}`;
-        ensure(key).leadsAssigned++;
-      }
-    });
+    leads
+      .filter(l => inRange(l.created_date, rangeStart, rangeEnd))
+      .forEach(l => {
+        ensure(l.created_by).leadsCreated++;
+        if (l.assigned_to_user_id) {
+          const key = `assigned:${l.assigned_to_user_id}`;
+          ensure(key).leadsAssigned++;
+        }
+      });
 
-    offers.forEach(o => {
-      ensure(o.created_by).offersCreated++;
-    });
+    offers
+      .filter(o => inRange(o.created_date, rangeStart, rangeEnd))
+      .forEach(o => {
+        ensure(o.created_by).offersCreated++;
+      });
 
-    // Merge assigned counts back to creator where possible
     return Object.values(map)
       .filter(u => u.leadsCreated > 0 || u.offersCreated > 0)
       .sort((a, b) => (b.leadsCreated + b.offersCreated) - (a.leadsCreated + a.offersCreated));
-  }, [leads, offers]);
+  }, [leads, offers, rangeStart, rangeEnd]);
 
   // ── Monthly trend ─────────────────────────────────────────────────────────
   const monthlyTrend = useMemo(() => months.map(m => ({
