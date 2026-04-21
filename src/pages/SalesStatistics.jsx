@@ -84,8 +84,7 @@ export default function SalesStatistics() {
 
   // Clear stats cache on mount to always get fresh data
   useEffect(() => {
-    queryClient.removeQueries({ queryKey: ['stats-offers-human'] });
-    queryClient.removeQueries({ queryKey: ['stats-offers-system'] });
+    queryClient.removeQueries({ queryKey: ['stats-offers-all'] });
     queryClient.removeQueries({ queryKey: ['stats-leads'] });
     queryClient.removeQueries({ queryKey: ['stats-emails'] });
   }, []);
@@ -97,43 +96,20 @@ export default function SalesStatistics() {
     gcTime: 0,
   });
 
-  // Load offers from known human users directly (bypasses 500-record limit issue)
-  // and separately load system offers — combine for full picture
-  const { data: offersHuman = [], isLoading: offersLoading1, refetch: refetchOffersP1 } = useQuery({
-    queryKey: ['stats-offers-human'],
+  // Load all offers — use backend function which fetches 1000 records with effective_created_by resolved
+  const { data: offersRaw = [], isLoading: offersLoading, refetch: refetchOffersP1 } = useQuery({
+    queryKey: ['stats-offers-all'],
     queryFn: async () => {
-      const [r1, r2, r3] = await Promise.all([
-        base44.entities.Offer.filter({ created_by: 'a.rittler@rittler.co' }, '-created_date', 500),
-        base44.entities.Offer.filter({ created_by: 'alfons@alpha-yachting.hr' }, '-created_date', 500),
-        base44.entities.Offer.filter({ created_by: 'oliver@alpha-yachting.hr' }, '-created_date', 500),
-      ]);
-      return [...r1, ...r2, ...r3];
+      const res = await base44.functions.invoke('getOffersForStats', {});
+      return res.data?.offers || [];
     },
     staleTime: 0,
     gcTime: 0,
   });
 
-  const { data: offersSystem = [], isLoading: offersLoading2, refetch: refetchOffersP2 } = useQuery({
-    queryKey: ['stats-offers-system'],
-    queryFn: () => base44.entities.Offer.list('-created_date', 500),
-    staleTime: 0,
-    gcTime: 0,
-  });
-
-  // Merge: human offers take priority, system offers fill the rest (deduplicate by id)
-  const offers = useMemo(() => {
-    const seen = new Set();
-    const result = [];
-    for (const o of [...offersHuman, ...offersSystem]) {
-      if (!seen.has(o.id)) {
-        seen.add(o.id);
-        result.push(o);
-      }
-    }
-    return result;
-  }, [offersHuman, offersSystem]);
-
-  const offersLoading = offersLoading1 || offersLoading2;
+  // offersRaw already has effective_created_by resolved by backend
+  const offers = offersRaw;
+  const refetchOffersP2 = () => {}; // no-op, only one query now
 
   const { data: emails = [], isLoading: emailsLoading, refetch: refetchEmails } = useQuery({
     queryKey: ['stats-emails'],
@@ -182,11 +158,8 @@ export default function SalesStatistics() {
     offers
       .filter(o => inRange(o.created_date, rangeStart, rangeEnd))
       .forEach(o => {
-        // Prefer data.created_by override (set manually) over root created_by (system field)
-        // o is a flat SDK object: o.created_by = root field, o.data = nested data object
-        const dataOverride = o.data && typeof o.data === 'object' ? o.data.created_by : undefined;
-        const effectiveCreator = dataOverride || o.created_by;
-        ensure(effectiveCreator).offersCreated++;
+        // effective_created_by is already resolved by the backend function
+        ensure(o.effective_created_by || o.created_by).offersCreated++;
       });
 
     return Object.values(map)
@@ -195,8 +168,8 @@ export default function SalesStatistics() {
   }, [leads, offers, months]);
 
   // ── Monthly trend ─────────────────────────────────────────────────────────
-  // Helper: effective creator for offers (data.created_by override takes priority)
-  const effectiveOfferCreator = (o) => o.data?.created_by || o.created_by;
+  // effective_created_by is pre-resolved by backend
+  const effectiveOfferCreator = (o) => o.effective_created_by || o.created_by;
 
   const monthlyTrend = useMemo(() => months.map(m => ({
     month: m.label,
@@ -229,11 +202,10 @@ export default function SalesStatistics() {
 
   const isLoading = leadsLoading || offersLoading || emailsLoading;
 
-  // Count how many system offers have a data.created_by override
-  const overriddenOffersCount = offers.filter(o => {
-    const dataOverride = o.data && typeof o.data === 'object' ? o.data.created_by : undefined;
-    return isSystemAccount(o.created_by) && dataOverride && !isSystemAccount(dataOverride);
-  }).length;
+  // Count how many system offers were re-attributed via data.created_by override
+  const overriddenOffersCount = offers.filter(o =>
+    o.is_system === false && isSystemAccount(o.created_by)
+  ).length;
 
   // ── Split human vs system accounts ───────────────────────────────────────
   // Note: effectiveOfferCreator is defined above monthlyTrend
