@@ -89,12 +89,32 @@ export default function SalesStatistics() {
     gcTime: 0,
   });
 
-  const { data: offers = [], isLoading: offersLoading, refetch: refetchOffers } = useQuery({
-    queryKey: ['stats-offers'],
+  const { data: offersPage1 = [], isLoading: offersLoading1, refetch: refetchOffersP1 } = useQuery({
+    queryKey: ['stats-offers-p1'],
     queryFn: () => base44.entities.Offer.list('-created_date', 500),
     staleTime: 0,
     gcTime: 0,
   });
+
+  const { data: offersPage2 = [], isLoading: offersLoading2, refetch: refetchOffersP2 } = useQuery({
+    queryKey: ['stats-offers-p2'],
+    queryFn: () => base44.entities.Offer.list('-created_date', 500, 500),
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  // Deduplicate by id
+  const offers = useMemo(() => {
+    const seen = new Set();
+    return [...offersPage1, ...offersPage2].filter(o => {
+      if (seen.has(o.id)) return false;
+      seen.add(o.id);
+      return true;
+    });
+  }, [offersPage1, offersPage2]);
+
+  const offersLoading = offersLoading1 || offersLoading2;
+  const refetchOffers = () => { refetchOffersP1(); refetchOffersP2(); };
 
   const { data: emails = [], isLoading: emailsLoading, refetch: refetchEmails } = useQuery({
     queryKey: ['stats-emails'],
@@ -105,7 +125,8 @@ export default function SalesStatistics() {
 
   const handleRefresh = () => {
     refetchLeads();
-    refetchOffers();
+    refetchOffersP1();
+    refetchOffersP2();
     refetchEmails();
   };
 
@@ -179,7 +200,7 @@ export default function SalesStatistics() {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [leads]);
 
-  const isLoading = leadsLoading || offersLoading || emailsLoading;
+  const isLoading = leadsLoading || offersLoading1 || offersLoading2 || emailsLoading;
 
   // ── Split human vs system accounts ───────────────────────────────────────
   const humanUserStats = userStats.filter(u => !isSystemAccount(u.email) && !u.email.startsWith('assigned:'));
