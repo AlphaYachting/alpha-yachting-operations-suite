@@ -73,10 +73,8 @@ const navItems = [
   { name: 'Team Orders', icon: Users, page: 'TeamOrders' },
   { name: 'Workshop Display', icon: Monitor, page: 'WorkshopDisplay' },
   
-  // SALES & CUSTOMER FLOW
-  { header: 'SALES & CUSTOMER FLOW', leadTechAllowed: true },
-  { name: 'Leads', icon: Phone, page: 'LeadsV3', leadTechAllowed: true },
-  { name: 'Offers', icon: FileText, page: 'Offers', leadTechAllowed: true },
+  // CUSTOMER FLOW
+  { header: 'CUSTOMER FLOW', leadTechAllowed: true },
   { name: 'Customers', icon: Users, page: 'Customers', leadTechAllowed: true },
   { name: 'Boats', icon: Ship, page: 'Boats', leadTechAllowed: true },
   { name: 'Locations', icon: MapPin, page: 'Locations', leadTechAllowed: true },
