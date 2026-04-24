@@ -72,6 +72,25 @@ function safeErr(err) {
     .substring(0, 500);
 }
 
+// Fetch a single value from a UID-based fetch with a timeout
+async function fetchOneUID(client, uid, query, timeoutMs = 15000) {
+  return new Promise(async (resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`fetch UID ${uid} timeout ${timeoutMs}ms`)), timeoutMs);
+    try {
+      let result = null;
+      for await (const msg of client.fetch(`${uid}`, query, { uid: true })) {
+        result = msg;
+        break;
+      }
+      clearTimeout(timer);
+      resolve(result);
+    } catch (e) {
+      clearTimeout(timer);
+      reject(e);
+    }
+  });
+}
+
 async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, imapUser, startTime, log) {
   const MAX_EXECUTION_TIME = 40000;
   const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
@@ -88,181 +107,188 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
 
     if (total === 0) {
       results.messages.push({ info: 'Inbox is empty' });
-    } else {
-      const start = Math.max(1, total - batchSize + 1);
-      const range = `${start}:${total}`;
-      log.push({ step: 'fetch_range', range, total });
+      return results;
+    }
 
-      // Step 1: Fetch envelope+uid only (no BODYSTRUCTURE — avoids server stall on bulk fetch)
-      const msgInfos = [];
-      for await (const msg of client.fetch(range, {
-        envelope: true,
-        uid: true,
-      })) {
+    // Step 1: SEARCH for all UIDs (fast, no body download, server-side)
+    // This avoids the bulk FETCH stall by getting UIDs first
+    let allUids = [];
+    try {
+      allUids = await Promise.race([
+        client.search({ all: true }, { uid: true }),
+        new Promise((_, r) => setTimeout(() => r(new Error('UID SEARCH timeout 15s')), 15000)),
+      ]);
+      log.push({ step: 'uid_search_done', total_uids: allUids.length, ts: Date.now() - startTime });
+    } catch (searchErr) {
+      log.push({ step: 'uid_search_failed', error: safeErr(searchErr), ts: Date.now() - startTime });
+      // Fallback: use sequence numbers of last N messages
+      const start = Math.max(1, total - batchSize + 1);
+      allUids = Array.from({ length: total - start + 1 }, (_, i) => start + i);
+      log.push({ step: 'uid_search_fallback', using_seq: `${start}:${total}`, ts: Date.now() - startTime });
+    }
+
+    // Take the last N UIDs (most recent)
+    const candidateUids = allUids.slice(-batchSize);
+    log.push({ step: 'candidate_uids', count: candidateUids.length, uids: candidateUids, ts: Date.now() - startTime });
+
+    // Step 2: Fetch envelope for each candidate UID individually (avoids bulk stall)
+    const msgInfos = [];
+    for (const uid of candidateUids) {
+      if (Date.now() - startTime > MAX_EXECUTION_TIME) break;
+      try {
+        const msg = await fetchOneUID(client, uid, { envelope: true, uid: true }, 12000);
+        if (!msg) continue;
         results.fetched++;
         const messageId = msg.envelope?.messageId || null;
         if (messageId && existingMsgIds.has(messageId)) {
           results.duplicates++;
           continue;
         }
-        msgInfos.push({
-          uid: msg.uid,
-          envelope: msg.envelope,
-        });
-      }
-      log.push({ step: 'envelope_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates });
-
-      // Step 2: Fetch BODYSTRUCTURE individually per new message (avoids bulk stall)
-      for (const info of msgInfos) {
-        try {
-          const structData = await Promise.race([
-            (async () => {
-              const msgs = [];
-              for await (const m of client.fetch(info.uid.toString(), { bodyStructure: true, uid: true }, { uid: true })) {
-                msgs.push(m);
-              }
-              return msgs[0]?.bodyStructure || null;
-            })(),
-            new Promise((_, r) => setTimeout(() => r(new Error('bodyStructure fetch timeout 20s')), 20000)),
-          ]);
-          info.bodyStructure = structData;
-          info.partInfo = findTextPartInfo(structData);
-        } catch (structErr) {
-          log.push({ step: 'bodystructure_fetch_failed', uid: info.uid, error: safeErr(structErr) });
-          info.bodyStructure = null;
-          info.partInfo = null;
-        }
-      }
-      log.push({ step: 'bodystructure_fetch_done', new_messages: msgInfos.length });
-
-      for (const info of msgInfos) {
-        if (Date.now() - startTime > MAX_EXECUTION_TIME) {
-          results.messages.push({ status: 'timeout', info: `Stopped after ${results.stored} messages` });
-          break;
-        }
-
-        try {
-          let bodyText = '';
-
-          if (info.partInfo) {
-            // Attempt 1: download the specific text part (preferred)
-            const tryDownloadPart = async (partNum) => {
-              const { content } = await Promise.race([
-                client.download(info.uid, partNum, { uid: true }),
-                new Promise((_, r) => setTimeout(() => r(new Error('body download timeout 20s')), 20000)),
-              ]);
-              const chunks = [];
-              for await (const chunk of content) chunks.push(chunk);
-              return Buffer.concat(chunks).toString('utf-8');
-            };
-
-            try {
-              const rawText = await tryDownloadPart(info.partInfo.num);
-              bodyText = info.partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
-              bodyText = bodyText.substring(0, 10000);
-            } catch (dlErr) {
-              log.push({ step: 'body_download_part_failed', uid: info.uid, part: info.partInfo.num, error: safeErr(dlErr) });
-              // Attempt 2: fallback — download full message body (TEXT section)
-              try {
-                const rawText = await tryDownloadPart('TEXT');
-                bodyText = htmlToText(rawText).substring(0, 10000);
-                log.push({ step: 'body_download_fallback_ok', uid: info.uid });
-              } catch (dlErr2) {
-                log.push({ step: 'body_download_fallback_failed', uid: info.uid, error: safeErr(dlErr2) });
-                bodyText = '';  // store empty body rather than error string — lead parser handles it gracefully
-              }
-            }
-          }
-
-          const env = info.envelope;
-          const messageId = env?.messageId || null;
-          const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
-          const fromName = env?.from?.[0]?.name || fromEmail;
-          const toEmails = (env?.to || []).map(a => a.address).filter(Boolean);
-          const ccEmails = (env?.cc || []).map(a => a.address).filter(Boolean);
-          const subject = env?.subject || '(no subject)';
-          const normalizedSubj = normalizeSubject(subject);
-          const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
-          const conversationKey = buildConversationKey(messageId, fromEmail, normalizedSubj);
-          const hasAttachments = !!(info.bodyStructure?.childNodes?.some(n => n.disposition === 'attachment'));
-          const attachmentCount = info.bodyStructure?.childNodes?.filter(n => n.disposition === 'attachment').length || 0;
-
-          await base44.asServiceRole.entities.EmailMessageSandbox.create({
-            mailbox_name: imapUser,
-            direction: 'inbound',
-            message_id: messageId,
-            conversation_key: conversationKey,
-            linked_conversation_key: conversationKey,
-            in_reply_to: null,
-            references_header: [],
-            from_name: fromName,
-            from_email: fromEmail,
-            to_email: toEmails,
-            cc_emails: ccEmails,
-            bcc_emails: [],
-            subject,
-            normalized_subject: normalizedSubj,
-            received_at: receivedAt,
-            body_text: bodyText,
-            body_html_sanitized: '',
-            body_preview: bodyText.substring(0, 300),
-            has_attachments: hasAttachments,
-            attachment_count: attachmentCount,
-            attachments_meta_json: [],
-            raw_headers_json: {},
-            duplicate_status: 'original',
-            processing_status: 'stored',
-            security_flag: 'normal',
-            reviewed_manually: false,
-            future_agent_access_allowed: false,
-            future_agent_processing_status: 'disabled',
-          });
-
-          if (messageId) existingMsgIds.add(messageId);
-
-          const allParticipants = Array.from(new Set([fromEmail, ...toEmails, ...ccEmails]));
-          const existingConv = convMap.get(conversationKey);
-
-          if (existingConv) {
-            await base44.asServiceRole.entities.EmailConversationSandbox.update(existingConv.id, {
-              last_message_at: receivedAt,
-              message_count: (existingConv.message_count || 0) + 1,
-              latest_direction: 'inbound',
-              latest_from_email: fromEmail,
-              latest_to_email: toEmails,
-              latest_preview: bodyText.substring(0, 200),
-              participant_summary: Array.from(new Set([...(existingConv.participant_summary || []), ...allParticipants])),
-            });
-            existingConv.message_count = (existingConv.message_count || 0) + 1;
-          } else {
-            const newConv = await base44.asServiceRole.entities.EmailConversationSandbox.create({
-              conversation_key: conversationKey,
-              primary_subject: subject,
-              normalized_subject: normalizedSubj,
-              participant_summary: allParticipants,
-              first_message_at: receivedAt,
-              last_message_at: receivedAt,
-              message_count: 1,
-              latest_direction: 'inbound',
-              latest_from_email: fromEmail,
-              latest_to_email: toEmails,
-              latest_preview: bodyText.substring(0, 200),
-              status_internal: 'open',
-              reviewed_manually: false,
-              future_agent_access_allowed: false,
-            });
-            convMap.set(conversationKey, newConv);
-          }
-
-          results.stored++;
-          results.messages.push({ status: 'stored', message_id: messageId, from: fromEmail, subject });
-
-        } catch (msgErr) {
-          results.errors++;
-          results.messages.push({ status: 'error', error: safeErr(msgErr) });
-        }
+        msgInfos.push({ uid, envelope: msg.envelope });
+      } catch (envErr) {
+        log.push({ step: 'envelope_fetch_failed', uid, error: safeErr(envErr), ts: Date.now() - startTime });
       }
     }
+    log.push({ step: 'envelope_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates, ts: Date.now() - startTime });
+
+    // Step 3: For each new message, fetch BODYSTRUCTURE then body text individually
+    for (const info of msgInfos) {
+      if (Date.now() - startTime > MAX_EXECUTION_TIME) {
+        results.messages.push({ status: 'timeout', info: `Stopped after ${results.stored} messages` });
+        break;
+      }
+
+      try {
+        // Fetch bodyStructure
+        let bodyStructure = null;
+        try {
+          const structMsg = await fetchOneUID(client, info.uid, { bodyStructure: true, uid: true }, 12000);
+          bodyStructure = structMsg?.bodyStructure || null;
+        } catch (structErr) {
+          log.push({ step: 'bodystructure_failed', uid: info.uid, error: safeErr(structErr), ts: Date.now() - startTime });
+        }
+
+        const partInfo = findTextPartInfo(bodyStructure);
+        let bodyText = '';
+
+        if (partInfo) {
+          // Download specific text part
+          try {
+            const dlResult = await Promise.race([
+              client.download(`${info.uid}`, partInfo.num, { uid: true }),
+              new Promise((_, r) => setTimeout(() => r(new Error('body download timeout 12s')), 12000)),
+            ]);
+            const chunks = [];
+            for await (const chunk of dlResult.content) chunks.push(chunk);
+            const rawText = Buffer.concat(chunks).toString('utf-8');
+            bodyText = partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
+            bodyText = bodyText.substring(0, 10000);
+          } catch (dlErr) {
+            log.push({ step: 'body_part_download_failed', uid: info.uid, error: safeErr(dlErr), ts: Date.now() - startTime });
+            // Fallback: download TEXT section
+            try {
+              const dlResult2 = await Promise.race([
+                client.download(`${info.uid}`, 'TEXT', { uid: true }),
+                new Promise((_, r) => setTimeout(() => r(new Error('body TEXT fallback timeout 12s')), 12000)),
+              ]);
+              const chunks2 = [];
+              for await (const chunk of dlResult2.content) chunks2.push(chunk);
+              bodyText = htmlToText(Buffer.concat(chunks2).toString('utf-8')).substring(0, 10000);
+            } catch (dlErr2) {
+              log.push({ step: 'body_text_fallback_failed', uid: info.uid, error: safeErr(dlErr2), ts: Date.now() - startTime });
+            }
+          }
+        }
+
+        const env = info.envelope;
+        const messageId = env?.messageId || null;
+        const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
+        const fromName = env?.from?.[0]?.name || fromEmail;
+        const toEmails = (env?.to || []).map(a => a.address).filter(Boolean);
+        const ccEmails = (env?.cc || []).map(a => a.address).filter(Boolean);
+        const subject = env?.subject || '(no subject)';
+        const normalizedSubj = normalizeSubject(subject);
+        const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
+        const conversationKey = buildConversationKey(messageId, fromEmail, normalizedSubj);
+        const hasAttachments = !!(bodyStructure?.childNodes?.some(n => n.disposition === 'attachment'));
+        const attachmentCount = bodyStructure?.childNodes?.filter(n => n.disposition === 'attachment').length || 0;
+
+        await base44.asServiceRole.entities.EmailMessageSandbox.create({
+          mailbox_name: imapUser,
+          direction: 'inbound',
+          message_id: messageId,
+          conversation_key: conversationKey,
+          linked_conversation_key: conversationKey,
+          in_reply_to: null,
+          references_header: [],
+          from_name: fromName,
+          from_email: fromEmail,
+          to_email: toEmails,
+          cc_emails: ccEmails,
+          bcc_emails: [],
+          subject,
+          normalized_subject: normalizedSubj,
+          received_at: receivedAt,
+          body_text: bodyText,
+          body_html_sanitized: '',
+          body_preview: bodyText.substring(0, 300),
+          has_attachments: hasAttachments,
+          attachment_count: attachmentCount,
+          attachments_meta_json: [],
+          raw_headers_json: {},
+          duplicate_status: 'original',
+          processing_status: 'stored',
+          security_flag: 'normal',
+          reviewed_manually: false,
+          future_agent_access_allowed: false,
+          future_agent_processing_status: 'disabled',
+        });
+
+        if (messageId) existingMsgIds.add(messageId);
+
+        const allParticipants = Array.from(new Set([fromEmail, ...toEmails, ...ccEmails]));
+        const existingConv = convMap.get(conversationKey);
+
+        if (existingConv) {
+          await base44.asServiceRole.entities.EmailConversationSandbox.update(existingConv.id, {
+            last_message_at: receivedAt,
+            message_count: (existingConv.message_count || 0) + 1,
+            latest_direction: 'inbound',
+            latest_from_email: fromEmail,
+            latest_to_email: toEmails,
+            latest_preview: bodyText.substring(0, 200),
+            participant_summary: Array.from(new Set([...(existingConv.participant_summary || []), ...allParticipants])),
+          });
+          existingConv.message_count = (existingConv.message_count || 0) + 1;
+        } else {
+          const newConv = await base44.asServiceRole.entities.EmailConversationSandbox.create({
+            conversation_key: conversationKey,
+            primary_subject: subject,
+            normalized_subject: normalizedSubj,
+            participant_summary: allParticipants,
+            first_message_at: receivedAt,
+            last_message_at: receivedAt,
+            message_count: 1,
+            latest_direction: 'inbound',
+            latest_from_email: fromEmail,
+            latest_to_email: toEmails,
+            latest_preview: bodyText.substring(0, 200),
+            status_internal: 'open',
+            reviewed_manually: false,
+            future_agent_access_allowed: false,
+          });
+          convMap.set(conversationKey, newConv);
+        }
+
+        results.stored++;
+        results.messages.push({ status: 'stored', message_id: messageId, from: fromEmail, subject });
+
+      } catch (msgErr) {
+        results.errors++;
+        results.messages.push({ status: 'error', uid: info.uid, error: safeErr(msgErr) });
+      }
+    }
+
   } finally {
     lock.release();
     await client.logout().catch(() => {});
@@ -330,7 +356,7 @@ Deno.serve(async (req) => {
       logger: imapLogger,
       connectionTimeout: 15000,
       greetingTimeout: 10000,
-      socketTimeout: 30000,
+      socketTimeout: 20000,   // reduced from 30s — fail fast, don't wait 30s per stall
       disableAutoIdle: true,
     });
 
@@ -340,7 +366,7 @@ Deno.serve(async (req) => {
 
     const results = await Promise.race([
       runImapFetch(client, batchSize, existingMsgIds, convMap, base44, imapUser, startTime, log),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP hard timeout after 80s')), 80000)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP hard timeout after 50s')), 50000)),
     ]);
 
     return Response.json({
