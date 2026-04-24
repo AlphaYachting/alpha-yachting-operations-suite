@@ -118,39 +118,57 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
     log.push({ step: 'candidate_seqs', count: candidateUids.length, range: `${start}:${total}`, ts: Date.now() - startTime });
     log.push({ step: 'candidate_uids', count: candidateUids.length, uids: candidateUids, ts: Date.now() - startTime });
 
-    // Step 2: Fetch envelope for each candidate (by sequence number) individually
-    const msgInfos = [];
-    for (const seq of candidateUids) {
-      if (Date.now() - startTime > MAX_EXECUTION_TIME) break;
-      try {
-        // Use sequence number mode (uid: false)
-        const msg = await new Promise(async (resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error(`envelope seq ${seq} timeout`)), 12000);
-          try {
-            let result = null;
-            for await (const m of client.fetch(`${seq}`, { envelope: true, uid: true })) {
-              result = m; break;
-            }
-            clearTimeout(timer);
-            resolve(result);
-          } catch (e) { clearTimeout(timer); reject(e); }
-        });
-        if (!msg) continue;
-        results.fetched++;
-        const messageId = msg.envelope?.messageId || null;
-        if (messageId && existingMsgIds.has(messageId)) {
-          results.duplicates++;
-          continue;
-        }
-        // Use the real UID returned by the server for subsequent operations
-        msgInfos.push({ uid: msg.uid, seq, envelope: msg.envelope });
-      } catch (envErr) {
-        log.push({ step: 'envelope_fetch_failed', seq, error: safeErr(envErr), ts: Date.now() - startTime });
-      }
-    }
-    log.push({ step: 'envelope_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates, ts: Date.now() - startTime });
+    // Step 2+3 combined: fetch envelope + source in one pass over the sequence range
+    // This avoids "Connection not available" errors caused by multiple sequential fetches
+    const msgInfos = []; // collect new messages to process
 
-    // Step 3: For each new message, fetch BODYSTRUCTURE then body text individually (by UID)
+    await new Promise(async (resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('bulk fetch timeout')), 40000);
+      try {
+        for await (const msg of client.fetch(`${start}:${total}`, { envelope: true, bodyStructure: true, source: true, uid: true })) {
+          if (Date.now() - startTime > MAX_EXECUTION_TIME) break;
+
+          results.fetched++;
+          const messageId = msg.envelope?.messageId || null;
+          if (messageId && existingMsgIds.has(messageId)) {
+            results.duplicates++;
+            continue;
+          }
+
+          const env = msg.envelope;
+          const bodyStructure = msg.bodyStructure || null;
+
+          // Parse body from source
+          let bodyText = '';
+          if (msg.source) {
+            const raw = msg.source.toString('utf-8');
+            const splitIdx = raw.indexOf('\r\n\r\n');
+            const bodyRaw = splitIdx >= 0 ? raw.substring(splitIdx + 4) : raw;
+
+            const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
+            if (plainMatch) {
+              bodyText = plainMatch[1].replace(/=\r\n/g, '').trim().substring(0, 10000);
+            } else {
+              const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
+              if (htmlMatch) {
+                bodyText = htmlToText(htmlMatch[1]).substring(0, 10000);
+              } else {
+                bodyText = htmlToText(bodyRaw).substring(0, 10000);
+              }
+            }
+          }
+
+          log.push({ step: 'msg_parsed', uid: msg.uid, body_len: bodyText.length, preview: bodyText.substring(0, 100), ts: Date.now() - startTime });
+          msgInfos.push({ uid: msg.uid, envelope: env, bodyStructure, bodyText });
+        }
+        clearTimeout(timer);
+        resolve();
+      } catch (e) { clearTimeout(timer); reject(e); }
+    });
+
+    log.push({ step: 'bulk_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates, ts: Date.now() - startTime });
+
+    // Step 3: Store each new message
     for (const info of msgInfos) {
       if (Date.now() - startTime > MAX_EXECUTION_TIME) {
         results.messages.push({ status: 'timeout', info: `Stopped after ${results.stored} messages` });
@@ -158,55 +176,9 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
       }
 
       try {
-        // Fetch bodyStructure by UID
-        let bodyStructure = null;
-        try {
-          const structMsg = await fetchOneUID(client, info.uid, { bodyStructure: true, uid: true }, 12000);
-          bodyStructure = structMsg?.bodyStructure || null;
-        } catch (structErr) {
-          log.push({ step: 'bodystructure_failed', uid: info.uid, error: safeErr(structErr), ts: Date.now() - startTime });
-        }
-
-        // Fetch full raw message via download('', '') which returns the full RFC822 message as a stream
-        let bodyText = '';
-        try {
-          const rawEmail = await new Promise(async (resolve, reject) => {
-            const timer = setTimeout(() => reject(new Error(`rfc822 download uid ${info.uid} timeout`)), 15000);
-            try {
-              const dl = await client.download(`${info.uid}`, '', { uid: true });
-              const chunks = [];
-              for await (const chunk of dl.content) chunks.push(chunk);
-              clearTimeout(timer);
-              resolve(Buffer.concat(chunks).toString('utf-8'));
-            } catch (e) { clearTimeout(timer); reject(e); }
-          });
-
-          log.push({ step: 'rfc822_fetched', uid: info.uid, bytes: rawEmail.length, ts: Date.now() - startTime });
-
-          // Split headers from body at first blank line
-          const splitIdx = rawEmail.indexOf('\r\n\r\n');
-          const bodyRaw = splitIdx >= 0 ? rawEmail.substring(splitIdx + 4) : rawEmail;
-
-          // Try text/plain part first
-          const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
-          if (plainMatch) {
-            bodyText = plainMatch[1].replace(/=\r\n/g, '').trim().substring(0, 10000);
-          } else {
-            // Try text/html part
-            const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
-            if (htmlMatch) {
-              bodyText = htmlToText(htmlMatch[1]).substring(0, 10000);
-            } else {
-              // Not multipart — body is the raw body
-              bodyText = htmlToText(bodyRaw).substring(0, 10000);
-            }
-          }
-          log.push({ step: 'body_extracted', uid: info.uid, body_len: bodyText.length, preview: bodyText.substring(0, 200), ts: Date.now() - startTime });
-        } catch (srcErr) {
-          log.push({ step: 'rfc822_failed', uid: info.uid, error: safeErr(srcErr), ts: Date.now() - startTime });
-        }
-
         const env = info.envelope;
+        const bodyStructure = info.bodyStructure;
+        const bodyText = info.bodyText;
         const messageId = env?.messageId || null;
         const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
         const fromName = env?.from?.[0]?.name || fromEmail;
