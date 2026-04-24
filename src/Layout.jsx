@@ -65,6 +65,8 @@ const navItems = [
   { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard', leadTechAllowed: true },
   { name: 'Dashboard', icon: LayoutDashboard, page: 'DashboardV2', leadTechAllowed: true },
   { name: 'My Tasks', icon: ClipboardList, page: 'MyTasks', technicianAllowed: true },
+  { name: 'Leads', icon: Phone, page: 'LeadsV3', leadTechAllowed: true },
+  { name: 'Offers', icon: FileText, page: 'Offers', leadTechAllowed: true },
   { name: 'Schedule', icon: Clock, page: 'Schedule', technicianAllowed: true },
   { name: 'Projects', icon: Briefcase, page: 'Jobs', leadTechAllowed: true },
   { name: 'Work Orders', icon: ClipboardList, page: 'WorkOrders', leadTechAllowed: true },
@@ -74,7 +76,6 @@ const navItems = [
   // SALES & CUSTOMER FLOW
   { header: 'SALES & CUSTOMER FLOW', leadTechAllowed: true },
   { name: 'Leads', icon: Phone, page: 'LeadsV3', leadTechAllowed: true },
-  { name: 'Leads V2', icon: Phone, page: 'LeadsV2', leadTechAllowed: true, subLevel: true },
   { name: 'Offers', icon: FileText, page: 'Offers', leadTechAllowed: true },
   { name: 'Customers', icon: Users, page: 'Customers', leadTechAllowed: true },
   { name: 'Boats', icon: Ship, page: 'Boats', leadTechAllowed: true },
