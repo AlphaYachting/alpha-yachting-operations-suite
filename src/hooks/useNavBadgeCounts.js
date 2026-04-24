@@ -48,9 +48,10 @@ export default function useNavBadgeCounts() {
       }
     };
 
-    load();
+    // Delay initial load so it doesn't race with page-level queries on mount
+    const initialTimer = setTimeout(load, 3000);
     const interval = setInterval(load, 60000); // refresh every 60s
-    return () => { cancelled = true; clearInterval(interval); };
+    return () => { cancelled = true; clearTimeout(initialTimer); clearInterval(interval); };
   }, []);
 
   return counts;
