@@ -118,55 +118,60 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
     log.push({ step: 'candidate_seqs', count: candidateUids.length, range: `${start}:${total}`, ts: Date.now() - startTime });
     log.push({ step: 'candidate_uids', count: candidateUids.length, uids: candidateUids, ts: Date.now() - startTime });
 
-    // Step 2+3 combined: fetch envelope + source in one pass over the sequence range
-    // This avoids "Connection not available" errors caused by multiple sequential fetches
-    const msgInfos = []; // collect new messages to process
+    // Step 2+3: Per-sequence fetch of envelope+source+bodyStructure together in one fetch call per message
+    // Doing it per-seq (not bulk range) avoids Dovecot stalling on large source fetches
+    const msgInfos = [];
 
-    await new Promise(async (resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('bulk fetch timeout')), 40000);
+    for (const seq of candidateUids) {
+      if (Date.now() - startTime > MAX_EXECUTION_TIME) break;
       try {
-        for await (const msg of client.fetch(`${start}:${total}`, { envelope: true, bodyStructure: true, source: true, uid: true })) {
-          if (Date.now() - startTime > MAX_EXECUTION_TIME) break;
+        const msg = await new Promise(async (resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error(`full fetch seq ${seq} timeout`)), 18000);
+          try {
+            let result = null;
+            for await (const m of client.fetch(`${seq}`, { envelope: true, bodyStructure: true, source: true, uid: true })) {
+              result = m; break;
+            }
+            clearTimeout(timer);
+            resolve(result);
+          } catch (e) { clearTimeout(timer); reject(e); }
+        });
 
-          results.fetched++;
-          const messageId = msg.envelope?.messageId || null;
-          if (messageId && existingMsgIds.has(messageId)) {
-            results.duplicates++;
-            continue;
-          }
+        if (!msg) continue;
+        results.fetched++;
 
-          const env = msg.envelope;
-          const bodyStructure = msg.bodyStructure || null;
+        const messageId = msg.envelope?.messageId || null;
+        if (messageId && existingMsgIds.has(messageId)) {
+          results.duplicates++;
+          continue;
+        }
 
-          // Parse body from source
-          let bodyText = '';
-          if (msg.source) {
-            const raw = msg.source.toString('utf-8');
-            const splitIdx = raw.indexOf('\r\n\r\n');
-            const bodyRaw = splitIdx >= 0 ? raw.substring(splitIdx + 4) : raw;
-
-            const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
-            if (plainMatch) {
-              bodyText = plainMatch[1].replace(/=\r\n/g, '').trim().substring(0, 10000);
+        let bodyText = '';
+        if (msg.source) {
+          const raw = msg.source.toString('utf-8');
+          const splitIdx = raw.indexOf('\r\n\r\n');
+          const bodyRaw = splitIdx >= 0 ? raw.substring(splitIdx + 4) : raw;
+          const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
+          if (plainMatch) {
+            bodyText = plainMatch[1].replace(/=\r\n/g, '').trim().substring(0, 10000);
+          } else {
+            const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
+            if (htmlMatch) {
+              bodyText = htmlToText(htmlMatch[1]).substring(0, 10000);
             } else {
-              const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
-              if (htmlMatch) {
-                bodyText = htmlToText(htmlMatch[1]).substring(0, 10000);
-              } else {
-                bodyText = htmlToText(bodyRaw).substring(0, 10000);
-              }
+              bodyText = htmlToText(bodyRaw).substring(0, 10000);
             }
           }
-
-          log.push({ step: 'msg_parsed', uid: msg.uid, body_len: bodyText.length, preview: bodyText.substring(0, 100), ts: Date.now() - startTime });
-          msgInfos.push({ uid: msg.uid, envelope: env, bodyStructure, bodyText });
         }
-        clearTimeout(timer);
-        resolve();
-      } catch (e) { clearTimeout(timer); reject(e); }
-    });
 
-    log.push({ step: 'bulk_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates, ts: Date.now() - startTime });
+        log.push({ step: 'msg_parsed', seq, uid: msg.uid, body_len: bodyText.length, preview: bodyText.substring(0, 100), ts: Date.now() - startTime });
+        msgInfos.push({ uid: msg.uid, envelope: msg.envelope, bodyStructure: msg.bodyStructure || null, bodyText });
+      } catch (fetchErr) {
+        log.push({ step: 'seq_fetch_failed', seq, error: safeErr(fetchErr), ts: Date.now() - startTime });
+      }
+    }
+
+    log.push({ step: 'fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates, ts: Date.now() - startTime });
 
     // Step 3: Store each new message
     for (const info of msgInfos) {
