@@ -53,6 +53,7 @@ import {
 import { cn } from '@/lib/utils';
 import NotificationBell from '@/components/notifications/NotificationBell';
 import { Toaster } from '@/components/ui/sonner';
+import useNavBadgeCounts from '@/hooks/useNavBadgeCounts';
 
 // All nav items — roles: admin / lead_technician / technician / customer
 // adminOnly: true → only admin
@@ -132,6 +133,7 @@ export default function Layout({ children, currentPageName }) {
   const [mobileAppOpen, setMobileAppOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState(null);
   const fileInputRef = useRef(null);
+  const { newLeads, draftOffers } = useNavBadgeCounts();
 
   // Sync logo from authenticated user
   useEffect(() => {
@@ -309,30 +311,44 @@ export default function Layout({ children, currentPageName }) {
               }
               
               // Navigation item
-              const isActive = currentPageName === item.page;
-              return (
-                <Link
-                  key={item.name}
-                  to={createPageUrl(item.page)}
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                    item.subLevel && "ml-4",
-                    item.primary && !isActive && "bg-emerald-500 text-white hover:bg-emerald-600",
-                    item.primary && isActive && "bg-emerald-600 text-white",
-                    !item.primary && isActive && "bg-blue-50 text-blue-700",
-                    !item.primary && !isActive && "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                  )}
-                >
-                  <item.icon className={cn(
-                    "h-5 w-5",
-                    item.primary && "text-white",
-                    !item.primary && isActive && "text-blue-600",
-                    !item.primary && !isActive && "text-slate-400"
-                  )} />
-                  {item.name}
-                </Link>
-              );
+               const isActive = currentPageName === item.page;
+               let badgeCount = null;
+               if (item.page === 'LeadsV3') badgeCount = newLeads;
+               if (item.page === 'Offers') badgeCount = draftOffers;
+
+               return (
+                 <Link
+                   key={item.name}
+                   to={createPageUrl(item.page)}
+                   onClick={() => setSidebarOpen(false)}
+                   className={cn(
+                     "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all justify-between",
+                     item.subLevel && "ml-4",
+                     item.primary && !isActive && "bg-emerald-500 text-white hover:bg-emerald-600",
+                     item.primary && isActive && "bg-emerald-600 text-white",
+                     !item.primary && isActive && "bg-blue-50 text-blue-700",
+                     !item.primary && !isActive && "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                   )}
+                 >
+                   <div className="flex items-center gap-3">
+                     <item.icon className={cn(
+                       "h-5 w-5",
+                       item.primary && "text-white",
+                       !item.primary && isActive && "text-blue-600",
+                       !item.primary && !isActive && "text-slate-400"
+                     )} />
+                     {item.name}
+                   </div>
+                   {badgeCount > 0 && (
+                     <span className={cn(
+                       "text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0",
+                       item.primary ? "bg-white text-emerald-600" : (isActive ? "bg-blue-600 text-white" : "bg-red-500 text-white")
+                     )}>
+                       {badgeCount}
+                     </span>
+                   )}
+                 </Link>
+               );
             })}
           </nav>
 
