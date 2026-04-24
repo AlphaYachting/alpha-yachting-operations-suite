@@ -167,44 +167,46 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
           log.push({ step: 'bodystructure_failed', uid: info.uid, error: safeErr(structErr), ts: Date.now() - startTime });
         }
 
-        const partInfo = findTextPartInfo(bodyStructure);
+        // Fetch full raw message source and extract body from it
         let bodyText = '';
+        try {
+          const sourceMsg = await new Promise(async (resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error(`source fetch uid ${info.uid} timeout`)), 15000);
+            try {
+              let result = null;
+              for await (const m of client.fetch(`${info.uid}`, { source: true }, { uid: true })) {
+                result = m; break;
+              }
+              clearTimeout(timer);
+              resolve(result);
+            } catch (e) { clearTimeout(timer); reject(e); }
+          });
 
-        // Try specific part first (if bodyStructure resolved a part), then always fallback to TEXT section
-        if (partInfo) {
-          try {
-            const dlResult = await Promise.race([
-              client.download(`${info.uid}`, partInfo.num, { uid: true }),
-              new Promise((_, r) => setTimeout(() => r(new Error('body part download timeout')), 12000)),
-            ]);
-            const chunks = [];
-            for await (const chunk of dlResult.content) chunks.push(chunk);
-            const rawText = Buffer.concat(chunks).toString('utf-8');
-            bodyText = partInfo.isHtml ? htmlToText(rawText) : rawText.trim();
-            bodyText = bodyText.substring(0, 10000);
-          } catch (dlErr) {
-            log.push({ step: 'body_part_download_failed', uid: info.uid, error: safeErr(dlErr), ts: Date.now() - startTime });
+          if (sourceMsg?.source) {
+            const raw = sourceMsg.source.toString('utf-8');
+            log.push({ step: 'source_fetched', uid: info.uid, bytes: sourceMsg.source.length, ts: Date.now() - startTime });
+            // Split headers from body at first blank line
+            const headerBodySplit = raw.indexOf('\r\n\r\n');
+            const bodyRaw = headerBodySplit >= 0 ? raw.substring(headerBodySplit + 4) : raw;
+            // Extract plain text from multipart if needed
+            const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*\r\n(?:[^\r\n]+\r\n)*\r\n([\s\S]*?)(?=--|\z)/i);
+            if (plainMatch) {
+              bodyText = plainMatch[1].trim().substring(0, 10000);
+            } else {
+              // Try to get text/html and strip tags
+              const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*\r\n(?:[^\r\n]+\r\n)*\r\n([\s\S]*?)(?=--|\z)/i);
+              if (htmlMatch) {
+                bodyText = htmlToText(htmlMatch[1]).substring(0, 10000);
+              } else {
+                // No multipart — body is the raw body itself
+                bodyText = htmlToText(bodyRaw).substring(0, 10000);
+              }
+            }
+            log.push({ step: 'body_extracted', uid: info.uid, body_len: bodyText.length, preview: bodyText.substring(0, 150), ts: Date.now() - startTime });
           }
+        } catch (srcErr) {
+          log.push({ step: 'source_fetch_failed', uid: info.uid, error: safeErr(srcErr), ts: Date.now() - startTime });
         }
-
-        // Always try TEXT section as fallback if body is still empty
-        if (!bodyText) {
-          try {
-            const dlResult = await Promise.race([
-              client.download(`${info.uid}`, 'TEXT', { uid: true }),
-              new Promise((_, r) => setTimeout(() => r(new Error('body TEXT download timeout')), 12000)),
-            ]);
-            const chunks = [];
-            for await (const chunk of dlResult.content) chunks.push(chunk);
-            const rawBytes = Buffer.concat(chunks);
-            const rawText = rawBytes.toString('utf-8');
-            bodyText = htmlToText(rawText).substring(0, 10000);
-            log.push({ step: 'body_text_fallback_used', uid: info.uid, bytes: rawBytes.length, preview: rawText.substring(0, 200), ts: Date.now() - startTime });
-          } catch (dlErr) {
-            log.push({ step: 'body_text_download_failed', uid: info.uid, error: safeErr(dlErr), ts: Date.now() - startTime });
-          }
-        }
-        log.push({ step: 'body_final', uid: info.uid, body_len: bodyText.length, preview: bodyText.substring(0, 100), ts: Date.now() - startTime });
 
         const env = info.envelope;
         const messageId = env?.messageId || null;
