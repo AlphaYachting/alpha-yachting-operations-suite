@@ -167,45 +167,43 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
           log.push({ step: 'bodystructure_failed', uid: info.uid, error: safeErr(structErr), ts: Date.now() - startTime });
         }
 
-        // Fetch full raw message source and extract body from it
+        // Fetch full raw message via download('', '') which returns the full RFC822 message as a stream
         let bodyText = '';
         try {
-          const sourceMsg = await new Promise(async (resolve, reject) => {
-            const timer = setTimeout(() => reject(new Error(`source fetch uid ${info.uid} timeout`)), 15000);
+          const rawEmail = await new Promise(async (resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error(`rfc822 download uid ${info.uid} timeout`)), 15000);
             try {
-              let result = null;
-              for await (const m of client.fetch(`${info.uid}`, { source: true }, { uid: true })) {
-                result = m; break;
-              }
+              const dl = await client.download(`${info.uid}`, '', { uid: true });
+              const chunks = [];
+              for await (const chunk of dl.content) chunks.push(chunk);
               clearTimeout(timer);
-              resolve(result);
+              resolve(Buffer.concat(chunks).toString('utf-8'));
             } catch (e) { clearTimeout(timer); reject(e); }
           });
 
-          if (sourceMsg?.source) {
-            const raw = sourceMsg.source.toString('utf-8');
-            log.push({ step: 'source_fetched', uid: info.uid, bytes: sourceMsg.source.length, ts: Date.now() - startTime });
-            // Split headers from body at first blank line
-            const headerBodySplit = raw.indexOf('\r\n\r\n');
-            const bodyRaw = headerBodySplit >= 0 ? raw.substring(headerBodySplit + 4) : raw;
-            // Extract plain text from multipart if needed
-            const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*\r\n(?:[^\r\n]+\r\n)*\r\n([\s\S]*?)(?=--|\z)/i);
-            if (plainMatch) {
-              bodyText = plainMatch[1].trim().substring(0, 10000);
+          log.push({ step: 'rfc822_fetched', uid: info.uid, bytes: rawEmail.length, ts: Date.now() - startTime });
+
+          // Split headers from body at first blank line
+          const splitIdx = rawEmail.indexOf('\r\n\r\n');
+          const bodyRaw = splitIdx >= 0 ? rawEmail.substring(splitIdx + 4) : rawEmail;
+
+          // Try text/plain part first
+          const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
+          if (plainMatch) {
+            bodyText = plainMatch[1].replace(/=\r\n/g, '').trim().substring(0, 10000);
+          } else {
+            // Try text/html part
+            const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
+            if (htmlMatch) {
+              bodyText = htmlToText(htmlMatch[1]).substring(0, 10000);
             } else {
-              // Try to get text/html and strip tags
-              const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*\r\n(?:[^\r\n]+\r\n)*\r\n([\s\S]*?)(?=--|\z)/i);
-              if (htmlMatch) {
-                bodyText = htmlToText(htmlMatch[1]).substring(0, 10000);
-              } else {
-                // No multipart — body is the raw body itself
-                bodyText = htmlToText(bodyRaw).substring(0, 10000);
-              }
+              // Not multipart — body is the raw body
+              bodyText = htmlToText(bodyRaw).substring(0, 10000);
             }
-            log.push({ step: 'body_extracted', uid: info.uid, body_len: bodyText.length, preview: bodyText.substring(0, 150), ts: Date.now() - startTime });
           }
+          log.push({ step: 'body_extracted', uid: info.uid, body_len: bodyText.length, preview: bodyText.substring(0, 200), ts: Date.now() - startTime });
         } catch (srcErr) {
-          log.push({ step: 'source_fetch_failed', uid: info.uid, error: safeErr(srcErr), ts: Date.now() - startTime });
+          log.push({ step: 'rfc822_failed', uid: info.uid, error: safeErr(srcErr), ts: Date.now() - startTime });
         }
 
         const env = info.envelope;
