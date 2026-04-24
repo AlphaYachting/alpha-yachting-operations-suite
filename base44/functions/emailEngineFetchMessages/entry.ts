@@ -110,33 +110,31 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
       return results;
     }
 
-    // Step 1: SEARCH for all UIDs (fast, no body download, server-side)
-    // This avoids the bulk FETCH stall by getting UIDs first
-    let allUids = [];
-    try {
-      allUids = await Promise.race([
-        client.search({ all: true }, { uid: true }),
-        new Promise((_, r) => setTimeout(() => r(new Error('UID SEARCH timeout 15s')), 15000)),
-      ]);
-      log.push({ step: 'uid_search_done', total_uids: allUids.length, ts: Date.now() - startTime });
-    } catch (searchErr) {
-      log.push({ step: 'uid_search_failed', error: safeErr(searchErr), ts: Date.now() - startTime });
-      // Fallback: use sequence numbers of last N messages
-      const start = Math.max(1, total - batchSize + 1);
-      allUids = Array.from({ length: total - start + 1 }, (_, i) => start + i);
-      log.push({ step: 'uid_search_fallback', using_seq: `${start}:${total}`, ts: Date.now() - startTime });
-    }
-
-    // Take the last N UIDs (most recent)
-    const candidateUids = allUids.slice(-batchSize);
+    // Use sequence numbers directly (1..total) — avoid UID SEARCH which stalls on this server
+    // We'll fetch envelope for each individually and skip known message_ids
+    const start = Math.max(1, total - Math.max(batchSize, 20) + 1);
+    // Build sequence-number based candidate list (newest first)
+    const candidateUids = Array.from({ length: total - start + 1 }, (_, i) => total - i);
+    log.push({ step: 'candidate_seqs', count: candidateUids.length, range: `${start}:${total}`, ts: Date.now() - startTime });
     log.push({ step: 'candidate_uids', count: candidateUids.length, uids: candidateUids, ts: Date.now() - startTime });
 
-    // Step 2: Fetch envelope for each candidate UID individually (avoids bulk stall)
+    // Step 2: Fetch envelope for each candidate (by sequence number) individually
     const msgInfos = [];
-    for (const uid of candidateUids) {
+    for (const seq of candidateUids) {
       if (Date.now() - startTime > MAX_EXECUTION_TIME) break;
       try {
-        const msg = await fetchOneUID(client, uid, { envelope: true, uid: true }, 12000);
+        // Use sequence number mode (uid: false)
+        const msg = await new Promise(async (resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error(`envelope seq ${seq} timeout`)), 12000);
+          try {
+            let result = null;
+            for await (const m of client.fetch(`${seq}`, { envelope: true, uid: true })) {
+              result = m; break;
+            }
+            clearTimeout(timer);
+            resolve(result);
+          } catch (e) { clearTimeout(timer); reject(e); }
+        });
         if (!msg) continue;
         results.fetched++;
         const messageId = msg.envelope?.messageId || null;
@@ -144,14 +142,15 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
           results.duplicates++;
           continue;
         }
-        msgInfos.push({ uid, envelope: msg.envelope });
+        // Use the real UID returned by the server for subsequent operations
+        msgInfos.push({ uid: msg.uid, seq, envelope: msg.envelope });
       } catch (envErr) {
-        log.push({ step: 'envelope_fetch_failed', uid, error: safeErr(envErr), ts: Date.now() - startTime });
+        log.push({ step: 'envelope_fetch_failed', seq, error: safeErr(envErr), ts: Date.now() - startTime });
       }
     }
     log.push({ step: 'envelope_fetch_done', new_messages: msgInfos.length, duplicates: results.duplicates, ts: Date.now() - startTime });
 
-    // Step 3: For each new message, fetch BODYSTRUCTURE then body text individually
+    // Step 3: For each new message, fetch BODYSTRUCTURE then body text individually (by UID)
     for (const info of msgInfos) {
       if (Date.now() - startTime > MAX_EXECUTION_TIME) {
         results.messages.push({ status: 'timeout', info: `Stopped after ${results.stored} messages` });
@@ -159,7 +158,7 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
       }
 
       try {
-        // Fetch bodyStructure
+        // Fetch bodyStructure by UID
         let bodyStructure = null;
         try {
           const structMsg = await fetchOneUID(client, info.uid, { bodyStructure: true, uid: true }, 12000);
@@ -172,7 +171,7 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
         let bodyText = '';
 
         if (partInfo) {
-          // Download specific text part
+          // Download specific text part by UID
           try {
             const dlResult = await Promise.race([
               client.download(`${info.uid}`, partInfo.num, { uid: true }),
