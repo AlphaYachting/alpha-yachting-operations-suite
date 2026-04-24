@@ -133,7 +133,7 @@ export default function Layout({ children, currentPageName }) {
   const [mobileAppOpen, setMobileAppOpen] = useState(false);
   const [logoUrl, setLogoUrl] = useState(null);
   const fileInputRef = useRef(null);
-  const { newLeads, draftOffers } = useNavBadgeCounts();
+  const { newLeads, draftOffers, notStartedTasks } = useNavBadgeCounts();
 
   // Sync logo from authenticated user
   useEffect(() => {
@@ -315,6 +315,7 @@ export default function Layout({ children, currentPageName }) {
                let badgeCount = null;
                if (item.page === 'LeadsV3') badgeCount = newLeads;
                if (item.page === 'Offers') badgeCount = draftOffers;
+               if (item.page === 'MyTasks') badgeCount = notStartedTasks;
 
                return (
                  <Link
