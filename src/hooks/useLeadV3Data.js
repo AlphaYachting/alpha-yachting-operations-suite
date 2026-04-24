@@ -49,6 +49,33 @@ export function getPhaseConfig(status) {
   return V3_PHASES.find(p => p.status === status) || V3_PHASES[0];
 }
 
+// Module-level cache to prevent parallel rate-limit hits across multiple consumers
+let _cache = null;
+let _cacheTs = 0;
+let _inflightPromise = null;
+const CACHE_TTL_MS = 30_000; // 30s
+
+async function fetchLeadData() {
+  const now = Date.now();
+  if (_cache && now - _cacheTs < CACHE_TTL_MS) return _cache;
+  if (_inflightPromise) return _inflightPromise;
+
+  _inflightPromise = Promise.all([
+    base44.entities.Lead.filter({}, '-created_date', 500),
+    base44.entities.User.list(),
+  ]).then(([allLeads, allUsers]) => {
+    _cache = { leads: allLeads || [], users: allUsers || [] };
+    _cacheTs = Date.now();
+    _inflightPromise = null;
+    return _cache;
+  }).catch(err => {
+    _inflightPromise = null;
+    throw err;
+  });
+
+  return _inflightPromise;
+}
+
 export function useLeadV3Data() {
   const [leads, setLeads] = useState([]);
   const [users, setUsers] = useState([]);
@@ -56,21 +83,15 @@ export function useLeadV3Data() {
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
-      try {
-        const [allLeads, allUsers] = await Promise.all([
-          base44.entities.Lead.filter({}, '-created_date', 500),
-          base44.entities.User.list(),
-        ]);
-        if (!cancelled) {
-          setLeads(allLeads || []);
-          setUsers(allUsers || []);
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
+    fetchLeadData().then(({ leads, users }) => {
+      if (!cancelled) {
+        setLeads(leads);
+        setUsers(users);
+        setIsLoading(false);
       }
-    };
-    load();
+    }).catch(() => {
+      if (!cancelled) setIsLoading(false);
+    });
     return () => { cancelled = true; };
   }, []);
 
