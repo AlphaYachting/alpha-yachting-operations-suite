@@ -37,7 +37,6 @@ import {
   Loader2,
   Briefcase,
   Mail,
-  Search,
   Heading,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +50,7 @@ import { computeOfferTotals } from '@/components/offers/offerTotals';
 import FiraExportButton from '@/components/fira/FiraExportButton';
 import OfferFollowUpDraft from '@/components/offers/OfferFollowUpDraft';
 import CreateProjectDialog from '@/components/offers/CreateProjectDialog';
+import OfferCustomerBoatSelect from '@/components/offers/OfferCustomerBoatSelect';
 
 // Safe upsert: update existing tasks, create new ones, delete removed ones.
 // Never deletes ALL tasks first — prevents data loss on network errors.
@@ -123,6 +123,8 @@ export default function OfferDetail() {
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showFollowUpDraft, setShowFollowUpDraft] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
+  const [showEditCustomerDialog, setShowEditCustomerDialog] = useState(false);
+  const [showEditBoatDialog, setShowEditBoatDialog] = useState(false);
   const [projectStartDate, setProjectStartDate] = useState('');
   const [convertMode, setConvertMode] = useState('new'); // 'new' | 'existing'
   const [selectedExistingJobId, setSelectedExistingJobId] = useState('');
@@ -1404,65 +1406,39 @@ Alpha Yachting Service Team`);
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2" ref={customerDropdownRef}>
-                  <Label>Customer *</Label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => { setCustomerDropdownOpen(v => !v); setCustomerSearch(''); }}
-                      className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    >
-                      <span className={selectedCustomerName ? 'text-foreground' : 'text-muted-foreground'}>
-                        {selectedCustomerName || 'Select customer'}
-                      </span>
-                      <svg className="h-4 w-4 opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
-                    {customerDropdownOpen && (
-                      <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-                        <div className="flex items-center border-b px-3">
-                          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                          <input
-                            autoFocus
-                            className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
-                            placeholder="Search customer..."
-                            value={customerSearch}
-                            onChange={e => setCustomerSearch(e.target.value)}
-                          />
-                        </div>
-                        <div className="max-h-52 overflow-y-auto p-1">
-                          {filteredCustomers.length === 0 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">No customer found.</div>
-                          ) : filteredCustomers.map(c => (
-                            <div
-                              key={c.id}
-                              className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground ${formData.customer_id === c.id ? 'bg-accent' : ''}`}
-                              onClick={() => { updateField('customer_id', c.id); setCustomerDropdownOpen(false); setCustomerSearch(''); }}
-                            >
-                              {c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Boat</Label>
-                  <Select value={formData.boat_id} onValueChange={(v) => updateField('boat_id', v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select boat" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredBoats.map(b => (
-                        <SelectItem key={b.id} value={b.id}>
-                          {b.vessel_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <OfferCustomerBoatSelect
+                customerDropdownRef={customerDropdownRef}
+                customerDropdownOpen={customerDropdownOpen}
+                setCustomerDropdownOpen={setCustomerDropdownOpen}
+                setCustomerSearch={setCustomerSearch}
+                selectedCustomerName={selectedCustomerName}
+                customerSearch={customerSearch}
+                filteredCustomers={filteredCustomers}
+                customerId={formData.customer_id}
+                onCustomerSelect={(id) => { updateField('customer_id', id); setCustomerDropdownOpen(false); setCustomerSearch(''); }}
+                boatId={formData.boat_id}
+                filteredBoats={filteredBoats}
+                onBoatSelect={(v) => updateField('boat_id', v)}
+                showEditCustomerDialog={showEditCustomerDialog}
+                setShowEditCustomerDialog={setShowEditCustomerDialog}
+                showEditBoatDialog={showEditBoatDialog}
+                setShowEditBoatDialog={setShowEditBoatDialog}
+                customers={customers}
+                boats={boats}
+                locations={locations}
+                onCustomerSaved={async (data) => {
+                  await base44.entities.Customer.update(formData.customer_id, data);
+                  queryClient.invalidateQueries(['customers']);
+                  setShowEditCustomerDialog(false);
+                  toast.success('Kunde aktualisiert');
+                }}
+                onBoatSaved={async (data) => {
+                  await base44.entities.Boat.update(formData.boat_id, data);
+                  queryClient.invalidateQueries(['boats']);
+                  setShowEditBoatDialog(false);
+                  toast.success('Boot aktualisiert');
+                }}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
