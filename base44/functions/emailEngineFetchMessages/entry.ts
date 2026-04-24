@@ -170,12 +170,12 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
         const partInfo = findTextPartInfo(bodyStructure);
         let bodyText = '';
 
+        // Try specific part first (if bodyStructure resolved a part), then always fallback to TEXT section
         if (partInfo) {
-          // Download specific text part by UID
           try {
             const dlResult = await Promise.race([
               client.download(`${info.uid}`, partInfo.num, { uid: true }),
-              new Promise((_, r) => setTimeout(() => r(new Error('body download timeout 12s')), 12000)),
+              new Promise((_, r) => setTimeout(() => r(new Error('body part download timeout')), 12000)),
             ]);
             const chunks = [];
             for await (const chunk of dlResult.content) chunks.push(chunk);
@@ -184,18 +184,23 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
             bodyText = bodyText.substring(0, 10000);
           } catch (dlErr) {
             log.push({ step: 'body_part_download_failed', uid: info.uid, error: safeErr(dlErr), ts: Date.now() - startTime });
-            // Fallback: download TEXT section
-            try {
-              const dlResult2 = await Promise.race([
-                client.download(`${info.uid}`, 'TEXT', { uid: true }),
-                new Promise((_, r) => setTimeout(() => r(new Error('body TEXT fallback timeout 12s')), 12000)),
-              ]);
-              const chunks2 = [];
-              for await (const chunk of dlResult2.content) chunks2.push(chunk);
-              bodyText = htmlToText(Buffer.concat(chunks2).toString('utf-8')).substring(0, 10000);
-            } catch (dlErr2) {
-              log.push({ step: 'body_text_fallback_failed', uid: info.uid, error: safeErr(dlErr2), ts: Date.now() - startTime });
-            }
+          }
+        }
+
+        // Always try TEXT section as fallback if body is still empty
+        if (!bodyText) {
+          try {
+            const dlResult = await Promise.race([
+              client.download(`${info.uid}`, 'TEXT', { uid: true }),
+              new Promise((_, r) => setTimeout(() => r(new Error('body TEXT download timeout')), 12000)),
+            ]);
+            const chunks = [];
+            for await (const chunk of dlResult.content) chunks.push(chunk);
+            const rawText = Buffer.concat(chunks).toString('utf-8');
+            bodyText = htmlToText(rawText).substring(0, 10000);
+            log.push({ step: 'body_text_fallback_used', uid: info.uid, ts: Date.now() - startTime });
+          } catch (dlErr) {
+            log.push({ step: 'body_text_download_failed', uid: info.uid, error: safeErr(dlErr), ts: Date.now() - startTime });
           }
         }
 
