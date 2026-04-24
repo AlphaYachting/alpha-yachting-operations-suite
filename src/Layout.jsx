@@ -342,7 +342,7 @@ export default function Layout({ children, currentPageName }) {
                    {badgeCount > 0 && (
                      <span className={cn(
                        "text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0",
-                       item.primary ? "bg-white text-emerald-600" : (isActive ? "bg-blue-600 text-white" : "bg-red-500 text-white")
+                       item.primary ? "bg-white text-emerald-600" : (isActive ? "bg-blue-200 text-blue-700" : "bg-slate-200 text-slate-600")
                      )}>
                        {badgeCount}
                      </span>
