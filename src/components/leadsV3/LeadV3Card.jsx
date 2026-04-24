@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Ship, MapPin, Calendar, AlertTriangle, Clock, ChevronDown, CheckCircle2, Mail, User, Phone } from 'lucide-react';
+import { Ship, MapPin, Calendar, AlertTriangle, Clock, ChevronDown, CheckCircle2, Mail, User, Phone, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { getPhaseConfig, getV3AgingLevel, getV3AgingDays, V3_PHASES } from '@/hooks/useLeadV3Data';
 import { cn } from '@/lib/utils';
@@ -233,7 +233,7 @@ function AssignPopover({ lead, assignedUser, users, onAssigned, children }) {
 }
 
 // ─── Main Card ────────────────────────────────────────────────────────────────
-export default function LeadV3Card({ lead, assignedUser, users = [], onStatusChange, onAssigned }) {
+export default function LeadV3Card({ lead, assignedUser, users = [], onStatusChange, onAssigned, onDelete }) {
   const phase = getPhaseConfig(lead.status);
   const priority = PRIORITY_CONFIG[lead.priority] || PRIORITY_CONFIG.Medium;
   const agingLevel = getV3AgingLevel(lead);
@@ -412,12 +412,26 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
                         const body = encodeURIComponent(`${lead.description ? lead.description + '\n\n' : ''}---\nAnfrage von: ${lead.name || ''}${lead.boat_name ? '\nBoot: ' + lead.boat_name : ''}${lead.phone ? '\nTel: ' + lead.phone : ''}`);
                         window.open(`mailto:${lead.email}?subject=${subject}&body=${body}`, '_self');
                       }}
-                      className="h-7 w-7 p-0 text-sky-600 hover:bg-sky-50"
+                      className="h-7 w-7 p-0 text-sky-600 hover:bg-sky-50 border-slate-200"
                       title={`Email: ${lead.email}`}
                     >
                       <Mail className="h-3 w-3" />
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.preventDefault(); e.stopPropagation();
+                      if (window.confirm(`Lead "${lead.name}" wirklich löschen?`)) {
+                        base44.entities.Lead.delete(lead.id).then(() => onDelete?.(lead.id));
+                      }
+                    }}
+                    className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 border-slate-200"
+                    title="Lead löschen"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </div>
 
               </div>
