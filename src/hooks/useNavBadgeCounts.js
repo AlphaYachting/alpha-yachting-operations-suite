@@ -24,16 +24,18 @@ export default function useNavBadgeCounts() {
           );
           
           // Count "Not Started" tasks assigned to current user
-          let notStartedCount = 0;
-          if (myTechnicianProfile) {
-            const tasks = await base44.entities.Task.filter({ status: 'Not Started' }, '-created_date', 500);
-            notStartedCount = tasks.filter(task => {
-              const wo = workOrders.find(w => w.id === task.work_order_id);
-              if (!wo) return false;
-              return wo.lead_technician_id === myTechnicianProfile.id ||
-                (wo.assigned_technicians && wo.assigned_technicians.includes(myTechnicianProfile.id));
-            }).length;
-          }
+          const tasks = await base44.entities.Task.filter({ status: 'Not Started' }, '-created_date', 500);
+          const notStartedCount = tasks.filter(task => {
+            // Check task-level direct user assignment first
+            if (task.assigned_user_id && task.assigned_user_id === user.id) return true;
+            
+            // Check via WorkOrder assignment
+            if (!myTechnicianProfile) return false;
+            const wo = workOrders.find(w => w.id === task.work_order_id);
+            if (!wo) return false;
+            return wo.lead_technician_id === myTechnicianProfile.id ||
+              (wo.assigned_technicians && wo.assigned_technicians.includes(myTechnicianProfile.id));
+          }).length;
           
           setCounts({
             newLeads: leads?.length || 0,
