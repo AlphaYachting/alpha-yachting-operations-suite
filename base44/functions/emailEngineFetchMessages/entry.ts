@@ -196,13 +196,15 @@ async function runImapFetch(client, batchSize, existingMsgIds, convMap, base44, 
             ]);
             const chunks = [];
             for await (const chunk of dlResult.content) chunks.push(chunk);
-            const rawText = Buffer.concat(chunks).toString('utf-8');
+            const rawBytes = Buffer.concat(chunks);
+            const rawText = rawBytes.toString('utf-8');
             bodyText = htmlToText(rawText).substring(0, 10000);
-            log.push({ step: 'body_text_fallback_used', uid: info.uid, ts: Date.now() - startTime });
+            log.push({ step: 'body_text_fallback_used', uid: info.uid, bytes: rawBytes.length, preview: rawText.substring(0, 200), ts: Date.now() - startTime });
           } catch (dlErr) {
             log.push({ step: 'body_text_download_failed', uid: info.uid, error: safeErr(dlErr), ts: Date.now() - startTime });
           }
         }
+        log.push({ step: 'body_final', uid: info.uid, body_len: bodyText.length, preview: bodyText.substring(0, 100), ts: Date.now() - startTime });
 
         const env = info.envelope;
         const messageId = env?.messageId || null;
