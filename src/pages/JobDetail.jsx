@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { 
   ArrowLeft,
@@ -80,6 +80,7 @@ const taskStatusColors = {
 
 export default function ProjectDetail() {
    const [searchParams] = useSearchParams();
+   const navigate = useNavigate();
    const projectId = searchParams.get('id');
 
    const [project, setProject] = useState(null);
@@ -509,10 +510,8 @@ export default function ProjectDetail() {
 
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link to={createPageUrl('Jobs')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">

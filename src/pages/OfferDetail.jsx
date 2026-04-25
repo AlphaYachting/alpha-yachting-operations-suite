@@ -1169,7 +1169,7 @@ Alpha Yachting Service Team`);
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(createPageUrl('Offers'))}
+            onClick={() => navigate(-1)}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

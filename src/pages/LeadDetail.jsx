@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { 
   ArrowLeft, 
@@ -72,6 +72,7 @@ const priorityColors = {
 
 export default function LeadDetail() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const leadId = searchParams.get('id');
   const fromV2 = searchParams.get('from') === 'v2';
 
@@ -400,11 +401,9 @@ export default function LeadDetail() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <Button asChild variant="ghost" size="sm" className="mb-3">
-            <Link to={createPageUrl('LeadsV2')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Leads
-            </Link>
+          <Button variant="ghost" size="sm" className="mb-3" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Zurück
           </Button>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-slate-900">{lead.name}</h1>
