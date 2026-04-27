@@ -1,0 +1,45 @@
+{
+  "name": "WorkOrderAccessLog",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder"
+    },
+    "technician_id": {
+      "type": "string",
+      "description": "Reference to Technician who accessed"
+    },
+    "technician_email": {
+      "type": "string",
+      "description": "Email of technician for quick lookup"
+    },
+    "accessed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the technician opened the detail page"
+    },
+    "closed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When they left/closed the page"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "description": "How long they viewed it in seconds"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "IP address of access"
+    },
+    "device_info": {
+      "type": "string",
+      "description": "Device/browser info"
+    }
+  },
+  "required": [
+    "work_order_id",
+    "technician_id",
+    "accessed_at"
+  ]
+}

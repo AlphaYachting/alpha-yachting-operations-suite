@@ -1,0 +1,42 @@
+{
+  "name": "WorkOrderRequirementList",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder (unique, cascade delete)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Active",
+        "Completed",
+        "Archived"
+      ],
+      "default": "Draft",
+      "description": "Lifecycle status of the requirements list"
+    },
+    "ai_generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When AI generated the initial draft"
+    },
+    "ai_generation_version": {
+      "type": "string",
+      "description": "Track prompt/version used for AI generation"
+    },
+    "reviewed_by_user_id": {
+      "type": "string",
+      "description": "User who reviewed and activated the list"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the list was reviewed and activated"
+    }
+  },
+  "required": [
+    "work_order_id"
+  ]
+}

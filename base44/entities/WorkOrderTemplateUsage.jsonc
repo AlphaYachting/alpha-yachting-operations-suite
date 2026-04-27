@@ -1,0 +1,43 @@
+{
+  "name": "WorkOrderTemplateUsage",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder"
+    },
+    "template_list_id": {
+      "type": "string",
+      "description": "Reference to TaskTemplateList"
+    },
+    "applied_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When template was applied"
+    },
+    "applied_by": {
+      "type": "string",
+      "description": "User email who applied template"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "full",
+        "selected_items"
+      ],
+      "default": "full",
+      "description": "Whether all items or selected items were applied"
+    },
+    "selected_item_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs of template items that were applied (if mode=selected_items)"
+    }
+  },
+  "required": [
+    "work_order_id",
+    "template_list_id"
+  ]
+}

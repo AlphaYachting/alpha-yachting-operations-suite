@@ -1,0 +1,191 @@
+{
+  "name": "EmailMessageSandbox",
+  "type": "object",
+  "properties": {
+    "mailbox_name": {
+      "type": "string"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "inbound",
+        "outbound",
+        "draft"
+      ]
+    },
+    "message_id": {
+      "type": "string",
+      "description": "RFC 2822 Message-ID header"
+    },
+    "conversation_key": {
+      "type": "string"
+    },
+    "linked_conversation_key": {
+      "type": "string"
+    },
+    "in_reply_to": {
+      "type": "string"
+    },
+    "references_header": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "from_name": {
+      "type": "string"
+    },
+    "from_email": {
+      "type": "string"
+    },
+    "to_email": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cc_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "bcc_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "subject": {
+      "type": "string"
+    },
+    "normalized_subject": {
+      "type": "string",
+      "description": "Subject stripped of Re:/Fwd: prefixes, lowercased"
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "body_text": {
+      "type": "string",
+      "description": "Primary display content - plain text only"
+    },
+    "body_html_sanitized": {
+      "type": "string",
+      "description": "Sanitized HTML stored as inert reference only"
+    },
+    "body_preview": {
+      "type": "string",
+      "description": "First 300 chars of plain text body"
+    },
+    "has_attachments": {
+      "type": "boolean",
+      "default": false
+    },
+    "attachment_count": {
+      "type": "number"
+    },
+    "attachments_meta_json": {
+      "type": "array",
+      "description": "Attachment metadata only - no content stored",
+      "items": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "raw_headers_json": {
+      "type": "object",
+      "description": "Safe subset of headers - no auth headers stored"
+    },
+    "normalized_fingerprint": {
+      "type": "string",
+      "description": "Fallback duplicate detection fingerprint"
+    },
+    "duplicate_status": {
+      "type": "string",
+      "enum": [
+        "original",
+        "duplicate",
+        "possible_duplicate"
+      ]
+    },
+    "processing_status": {
+      "type": "string",
+      "enum": [
+        "fetched",
+        "parsed",
+        "sanitized",
+        "stored",
+        "duplicate",
+        "malformed",
+        "suspicious",
+        "error",
+        "sent",
+        "queued",
+        "approved_to_send"
+      ]
+    },
+    "security_flag": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "suspicious",
+        "malformed",
+        "oversized",
+        "unsupported_encoding",
+        "script_detected",
+        "remote_content_detected"
+      ]
+    },
+    "smtp_delivery_status": {
+      "type": "string"
+    },
+    "smtp_error_log": {
+      "type": "string"
+    },
+    "imap_fetch_log": {
+      "type": "string"
+    },
+    "reviewed_manually": {
+      "type": "boolean",
+      "default": false
+    },
+    "manual_label": {
+      "type": "string"
+    },
+    "internal_notes": {
+      "type": "string"
+    },
+    "future_agent_access_allowed": {
+      "type": "boolean",
+      "default": false,
+      "description": "PHASE 2+ ONLY - disabled by default"
+    },
+    "future_agent_processing_status": {
+      "type": "string",
+      "default": "disabled",
+      "description": "PHASE 2+ ONLY - disabled by default"
+    }
+  },
+  "required": [
+    "direction",
+    "mailbox_name",
+    "from_email",
+    "subject"
+  ]
+}

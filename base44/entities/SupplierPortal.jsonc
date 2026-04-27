@@ -1,0 +1,40 @@
+{
+  "name": "SupplierPortal",
+  "type": "object",
+  "properties": {
+    "supplier_id": {
+      "type": "string",
+      "description": "Reference to Supplier"
+    },
+    "portal_name": {
+      "type": "string",
+      "description": "Portal/webshop name (e.g. B2B Portal, Webshop)"
+    },
+    "portal_url": {
+      "type": "string",
+      "description": "Portal URL"
+    },
+    "username": {
+      "type": "string",
+      "description": "Login username"
+    },
+    "password_reference": {
+      "type": "string",
+      "description": "Password reference ONLY (e.g. 'Bitwarden: AlphaYachting/Shared/SupplierX') - NEVER store plaintext passwords"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Portal access notes"
+    },
+    "last_verified_at": {
+      "type": "string",
+      "format": "date",
+      "description": "Last time portal access was verified"
+    }
+  },
+  "required": [
+    "supplier_id",
+    "portal_name",
+    "portal_url"
+  ]
+}

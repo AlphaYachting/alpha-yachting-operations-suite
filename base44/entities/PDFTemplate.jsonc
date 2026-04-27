@@ -1,0 +1,327 @@
+{
+  "name": "PDFTemplate",
+  "type": "object",
+  "properties": {
+    "template_name": {
+      "type": "string",
+      "description": "Name of the PDF template (e.g., 'Offer Default', 'Invoice Premium', 'Partner Brief')"
+    },
+    "template_type": {
+      "type": "string",
+      "enum": [
+        "Offer",
+        "Invoice",
+        "PartnerBrief",
+        "Generic"
+      ],
+      "default": "Generic",
+      "description": "Type of document this template is for"
+    },
+    "company_name": {
+      "type": "string",
+      "default": "Alpha Yachting"
+    },
+    "letterhead_url": {
+      "type": "string",
+      "description": "URL to full-page letterhead background image (A4 size)"
+    },
+    "letterhead_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether to use the letterhead as page background"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL to company logo"
+    },
+    "logo_height_mm": {
+      "type": "number",
+      "default": 20,
+      "description": "Logo height in millimeters"
+    },
+    "footer_graphic_url": {
+      "type": "string",
+      "description": "URL to footer graphic/image"
+    },
+    "footer_graphic_height_mm": {
+      "type": "number",
+      "default": 25,
+      "description": "Footer graphic height in millimeters"
+    },
+    "company_address": {
+      "type": "string",
+      "default": "Novigrad, Croatia"
+    },
+    "company_vat": {
+      "type": "string",
+      "description": "Company VAT ID"
+    },
+    "company_registration": {
+      "type": "string",
+      "description": "Company registration number"
+    },
+    "contact_phone": {
+      "type": "string"
+    },
+    "contact_email": {
+      "type": "string"
+    },
+    "contact_website": {
+      "type": "string"
+    },
+    "bank_name": {
+      "type": "string"
+    },
+    "bank_iban": {
+      "type": "string"
+    },
+    "bank_bic": {
+      "type": "string"
+    },
+    "primary_color": {
+      "type": "string",
+      "default": "#2563eb"
+    },
+    "secondary_color": {
+      "type": "string",
+      "default": "#06b6d4"
+    },
+    "footer_text": {
+      "type": "string",
+      "description": "Legal disclaimer or additional footer text"
+    },
+    "custom_footer": {
+      "type": "string",
+      "description": "Custom footer content for PDF documents"
+    },
+    "show_vat_column": {
+      "type": "boolean",
+      "default": true
+    },
+    "show_net_gross": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false
+    },
+    "margin_top_mm": {
+      "type": "number",
+      "default": 20,
+      "description": "Top margin in millimeters"
+    },
+    "margin_left_mm": {
+      "type": "number",
+      "default": 20,
+      "description": "Left margin in millimeters"
+    },
+    "margin_right_mm": {
+      "type": "number",
+      "default": 20,
+      "description": "Right margin in millimeters"
+    },
+    "margin_bottom_mm": {
+      "type": "number",
+      "default": 20,
+      "description": "Bottom margin in millimeters"
+    },
+    "font_family": {
+      "type": "string",
+      "enum": [
+        "Arial",
+        "Helvetica",
+        "Times New Roman",
+        "Georgia",
+        "Courier New",
+        "Verdana"
+      ],
+      "default": "Arial",
+      "description": "Default font family for body text"
+    },
+    "font_size_body": {
+      "type": "number",
+      "default": 11,
+      "description": "Font size for body text in pt"
+    },
+    "font_size_heading": {
+      "type": "number",
+      "default": 18,
+      "description": "Font size for main heading in pt"
+    },
+    "font_size_company_name": {
+      "type": "number",
+      "default": 20,
+      "description": "Font size for company name in pt"
+    },
+    "line_spacing": {
+      "type": "number",
+      "default": 1.5,
+      "description": "Line height multiplier (1.0 to 2.5)"
+    },
+    "paragraph_spacing": {
+      "type": "number",
+      "default": 15,
+      "description": "Spacing between paragraphs in pt"
+    },
+    "page_format": {
+      "type": "string",
+      "enum": [
+        "A4",
+        "Letter"
+      ],
+      "default": "A4",
+      "description": "Paper format for PDF export"
+    },
+    "watermark_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable watermark on documents"
+    },
+    "watermark_text": {
+      "type": "string",
+      "default": "DRAFT",
+      "description": "Watermark text (e.g., DRAFT, PAID, CONFIDENTIAL)"
+    },
+    "watermark_opacity": {
+      "type": "number",
+      "default": 0.1,
+      "description": "Watermark opacity (0.0 to 1.0)"
+    },
+    "watermark_angle": {
+      "type": "number",
+      "default": -45,
+      "description": "Watermark rotation angle in degrees"
+    },
+    "table_column_widths": {
+      "type": "object",
+      "description": "Column width percentages for line items table",
+      "properties": {
+        "index": {
+          "type": "number",
+          "default": 4
+        },
+        "description": {
+          "type": "number",
+          "default": 38
+        },
+        "quantity": {
+          "type": "number",
+          "default": 8
+        },
+        "unit": {
+          "type": "number",
+          "default": 8
+        },
+        "unit_price": {
+          "type": "number",
+          "default": 13
+        },
+        "vat": {
+          "type": "number",
+          "default": 8
+        },
+        "total": {
+          "type": "number",
+          "default": 13
+        }
+      }
+    },
+    "table_column_align": {
+      "type": "object",
+      "description": "Column text alignment",
+      "properties": {
+        "index": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "center"
+        },
+        "description": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "left"
+        },
+        "quantity": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "right"
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "center"
+        },
+        "unit_price": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "right"
+        },
+        "vat": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "right"
+        },
+        "total": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "right"
+        }
+      }
+    },
+    "page_break_rules": {
+      "type": "object",
+      "description": "Rules for page breaks in PDFs",
+      "properties": {
+        "break_before_totals": {
+          "type": "boolean",
+          "default": false,
+          "description": "Insert page break before totals section"
+        },
+        "break_before_notes": {
+          "type": "boolean",
+          "default": false,
+          "description": "Insert page break before notes section"
+        },
+        "keep_totals_with_items": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prevent separation of totals from last item"
+        },
+        "min_lines_before_break": {
+          "type": "number",
+          "default": 3,
+          "description": "Minimum line items before page break is allowed"
+        }
+      }
+    }
+  },
+  "required": []
+}

@@ -1,0 +1,94 @@
+{
+  "name": "EmailConversationSandbox",
+  "type": "object",
+  "properties": {
+    "conversation_key": {
+      "type": "string",
+      "description": "Stable unique key for this thread"
+    },
+    "primary_subject": {
+      "type": "string"
+    },
+    "normalized_subject": {
+      "type": "string"
+    },
+    "participant_summary": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "All participant emails"
+    },
+    "first_message_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "message_count": {
+      "type": "number",
+      "default": 0
+    },
+    "latest_direction": {
+      "type": "string",
+      "enum": [
+        "inbound",
+        "outbound",
+        "draft"
+      ]
+    },
+    "latest_from_email": {
+      "type": "string"
+    },
+    "latest_to_email": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "latest_preview": {
+      "type": "string"
+    },
+    "status_internal": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed",
+        "pending_review",
+        "archived"
+      ],
+      "default": "open"
+    },
+    "manual_owner": {
+      "type": "string",
+      "description": "User email assigned to manage this conversation"
+    },
+    "reviewed_manually": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes_internal": {
+      "type": "string"
+    },
+    "future_agent_access_allowed": {
+      "type": "boolean",
+      "default": false,
+      "description": "PHASE 2+ ONLY"
+    },
+    "future_agent_summary": {
+      "type": "string",
+      "description": "PHASE 2+ ONLY - placeholder"
+    },
+    "future_agent_intent_label": {
+      "type": "string",
+      "description": "PHASE 2+ ONLY - placeholder"
+    }
+  },
+  "required": [
+    "conversation_key",
+    "primary_subject",
+    "normalized_subject"
+  ]
+}

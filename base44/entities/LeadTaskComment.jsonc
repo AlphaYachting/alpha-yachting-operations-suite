@@ -1,0 +1,26 @@
+{
+  "name": "LeadTaskComment",
+  "type": "object",
+  "properties": {
+    "lead_task_id": {
+      "type": "string",
+      "description": "Reference to LeadTask"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Name of the comment author"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "Email of the comment author"
+    },
+    "content": {
+      "type": "string",
+      "description": "Comment text"
+    }
+  },
+  "required": [
+    "lead_task_id",
+    "content"
+  ]
+}

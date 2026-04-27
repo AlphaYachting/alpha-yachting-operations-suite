@@ -1,0 +1,61 @@
+{
+  "name": "OfferTemplateLineItem",
+  "type": "object",
+  "properties": {
+    "template_id": {
+      "type": "string",
+      "description": "Reference to OfferTemplate"
+    },
+    "sequence_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order"
+    },
+    "title": {
+      "type": "string",
+      "description": "Line item title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Line item description"
+    },
+    "unit_type": {
+      "type": "string",
+      "enum": [
+        "Hour",
+        "Piece",
+        "Square Meter",
+        "Linear Meter",
+        "Liter",
+        "Kilogram",
+        "Set",
+        "Lump Sum"
+      ],
+      "default": "Hour",
+      "description": "Charging unit type"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Default quantity"
+    },
+    "unit_price": {
+      "type": "number",
+      "description": "Default price per unit"
+    },
+    "is_optional": {
+      "type": "boolean",
+      "default": false,
+      "description": "Optional item flag"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes"
+    }
+  },
+  "required": [
+    "template_id",
+    "title",
+    "quantity",
+    "unit_price"
+  ]
+}

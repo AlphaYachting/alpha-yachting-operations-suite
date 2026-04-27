@@ -1,0 +1,35 @@
+{
+  "name": "SupplierTerms",
+  "type": "object",
+  "properties": {
+    "supplier_id": {
+      "type": "string",
+      "description": "Reference to Supplier"
+    },
+    "payment_terms": {
+      "type": "string",
+      "description": "Payment terms (e.g. '7 days', 'proforma', '30 days net')"
+    },
+    "discount_note": {
+      "type": "string",
+      "description": "Discount information (e.g. '-15% dealer', 'special pricing')"
+    },
+    "lead_time_days": {
+      "type": "number",
+      "description": "Typical lead time in days"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional terms notes"
+    },
+    "attachment": {
+      "type": "string",
+      "description": "Attachment file URL (PDF/image)"
+    }
+  },
+  "required": [
+    "supplier_id",
+    "payment_terms",
+    "discount_note"
+  ]
+}

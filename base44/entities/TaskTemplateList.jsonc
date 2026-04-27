@@ -1,0 +1,56 @@
+{
+  "name": "TaskTemplateList",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Template name (e.g., 'Annual Service Outboard')"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Engine",
+        "Electrical",
+        "Hull",
+        "Commissioning",
+        "Winterization",
+        "Electronics",
+        "Plumbing",
+        "Rigging",
+        "General Service",
+        "Other"
+      ],
+      "default": "General Service",
+      "description": "Template category"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether template is active"
+    },
+    "default_priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Normal",
+        "High"
+      ],
+      "default": "Normal",
+      "description": "Default priority for work orders using this template"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags for filtering"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

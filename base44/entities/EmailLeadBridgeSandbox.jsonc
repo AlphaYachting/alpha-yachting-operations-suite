@@ -1,0 +1,85 @@
+{
+  "name": "EmailLeadBridgeSandbox",
+  "type": "object",
+  "properties": {
+    "source_email_message_id": {
+      "type": "string",
+      "description": "RFC 2822 Message-ID of the source inbound email"
+    },
+    "source_sandbox_record_id": {
+      "type": "string",
+      "description": "ID of the EmailMessageSandbox record"
+    },
+    "source_conversation_key": {
+      "type": "string"
+    },
+    "source_from_email": {
+      "type": "string"
+    },
+    "source_from_name": {
+      "type": "string"
+    },
+    "source_subject": {
+      "type": "string"
+    },
+    "source_received_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lead_created": {
+      "type": "boolean",
+      "default": false
+    },
+    "created_lead_id": {
+      "type": "string",
+      "description": "ID of the Lead record that was created"
+    },
+    "duplicate_check_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "unique",
+        "duplicate_by_message_id",
+        "duplicate_by_fingerprint"
+      ],
+      "default": "pending"
+    },
+    "extraction_status": {
+      "type": "string",
+      "enum": [
+        "extracted",
+        "partial",
+        "error"
+      ],
+      "default": "partial"
+    },
+    "creation_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "created",
+        "duplicate_blocked",
+        "failed"
+      ],
+      "default": "pending"
+    },
+    "creation_error_log": {
+      "type": "string"
+    },
+    "extracted_lead_payload_json": {
+      "type": "object",
+      "description": "The full lead payload that was submitted to Lead entity"
+    },
+    "auto_created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "internal_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "source_from_email",
+    "source_subject"
+  ]
+}

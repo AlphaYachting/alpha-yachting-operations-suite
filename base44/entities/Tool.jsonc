@@ -1,0 +1,98 @@
+{
+  "name": "Tool",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Hand Tools",
+        "Power Tools",
+        "Diagnostic Equipment",
+        "Lifting Equipment",
+        "Safety Equipment",
+        "Specialty Marine",
+        "Electrical Test",
+        "Measuring",
+        "Other"
+      ],
+      "default": "Hand Tools"
+    },
+    "serial_number": {
+      "type": "string"
+    },
+    "manufacturer": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "purchase_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "purchase_cost": {
+      "type": "number"
+    },
+    "condition": {
+      "type": "string",
+      "enum": [
+        "Excellent",
+        "Good",
+        "Fair",
+        "Needs Repair",
+        "Out of Service"
+      ],
+      "default": "Good"
+    },
+    "current_location": {
+      "type": "string",
+      "enum": [
+        "Novigrad Base",
+        "Van 1",
+        "Van 2",
+        "On Job",
+        "Repair"
+      ],
+      "default": "Novigrad Base"
+    },
+    "checked_out_to": {
+      "type": "string",
+      "description": "Technician ID if checked out"
+    },
+    "checked_out_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_calibration": {
+      "type": "string",
+      "format": "date"
+    },
+    "next_calibration": {
+      "type": "string",
+      "format": "date"
+    },
+    "maintenance_notes": {
+      "type": "string"
+    },
+    "photo_url": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Available",
+        "In Use",
+        "Maintenance",
+        "Retired"
+      ],
+      "default": "Available"
+    }
+  },
+  "required": [
+    "name",
+    "category"
+  ]
+}

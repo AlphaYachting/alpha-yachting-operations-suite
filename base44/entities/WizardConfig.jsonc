@@ -1,0 +1,29 @@
+{
+  "name": "WizardConfig",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "rate_card_id": {
+      "type": "string"
+    },
+    "enabled_options_json": {
+      "type": "object"
+    },
+    "enabled_steps_json": {
+      "type": "object"
+    },
+    "default_text_blocks_json": {
+      "type": "object"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "rate_card_id"
+  ]
+}

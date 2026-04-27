@@ -1,0 +1,41 @@
+{
+  "name": "InventoryAssignment",
+  "type": "object",
+  "properties": {
+    "inventory_item_id": {
+      "type": "string",
+      "description": "Reference to InventoryItem (required, cascade delete if item removed)"
+    },
+    "technician_id": {
+      "type": "string",
+      "description": "Reference to Technician (required, cascade delete if technician removed)"
+    },
+    "assigned_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Assignment start datetime"
+    },
+    "assigned_to": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Assignment end datetime (null = until unassigned)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Ended"
+      ],
+      "default": "Active",
+      "description": "Assignment status"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Assignment notes"
+    }
+  },
+  "required": [
+    "inventory_item_id",
+    "technician_id"
+  ]
+}

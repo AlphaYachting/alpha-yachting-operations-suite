@@ -1,0 +1,72 @@
+{
+  "name": "Supplier",
+  "type": "object",
+  "properties": {
+    "supplier_name": {
+      "type": "string",
+      "description": "Supplier company name"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "PRODUCT",
+        "WORK",
+        "BOTH"
+      ],
+      "description": "Supplier type"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "INACTIVE"
+      ],
+      "default": "ACTIVE",
+      "description": "Supplier status"
+    },
+    "country": {
+      "type": "string",
+      "description": "Country (short code or name)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Primary phone number"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Primary email address"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Tags for categorization (e.g. Electronics, Engine Parts, Rigging)"
+    },
+    "website_url": {
+      "type": "string",
+      "description": "Supplier website URL"
+    },
+    "address": {
+      "type": "string",
+      "description": "Physical address"
+    },
+    "vat_oib": {
+      "type": "string",
+      "description": "VAT/OIB number"
+    },
+    "internal_notes": {
+      "type": "string",
+      "description": "Internal notes (keep short)"
+    }
+  },
+  "required": [
+    "supplier_name",
+    "type",
+    "status",
+    "country",
+    "phone"
+  ]
+}

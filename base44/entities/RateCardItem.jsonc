@@ -1,0 +1,53 @@
+{
+  "name": "RateCardItem",
+  "type": "object",
+  "properties": {
+    "rate_card_id": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "TRANSPORT_START",
+        "TRANSPORT_KM",
+        "STORAGE",
+        "OPTION",
+        "ROOF_RULE"
+      ]
+    },
+    "code": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "km",
+        "day",
+        "month",
+        "season",
+        "flat",
+        "piece"
+      ]
+    },
+    "price": {
+      "type": "number"
+    },
+    "rules_json": {
+      "type": "object"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "rate_card_id",
+    "category",
+    "code",
+    "title",
+    "price"
+  ]
+}

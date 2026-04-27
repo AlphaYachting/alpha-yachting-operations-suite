@@ -1,0 +1,62 @@
+{
+  "name": "ProductModule",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Module name (e.g., Tech Basic, Tech Plus)"
+    },
+    "module_group": {
+      "type": "string",
+      "enum": [
+        "TECH",
+        "CARE",
+        "PREMIUM",
+        "ADDON"
+      ],
+      "description": "Module category for wizard grouping"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "display_order": {
+      "type": "number",
+      "default": 0
+    },
+    "description_short": {
+      "type": "string",
+      "description": "Brief description for wizard cards"
+    },
+    "description_long": {
+      "type": "string",
+      "description": "Full description for offer/PDF"
+    },
+    "bullets_json": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of included features"
+    },
+    "terms_json": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Optional terms per module"
+    },
+    "ui_default_selected": {
+      "type": "boolean",
+      "default": false
+    },
+    "requires_storage": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "module_group"
+  ]
+}

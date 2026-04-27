@@ -1,0 +1,93 @@
+{
+  "name": "OfferTemplateComponent",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Short descriptive name (e.g., 'Antifouling 10m Boot', 'Motor-Jahresservice')"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the service or item"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Mechanical",
+        "Electrical",
+        "Hull / GRP",
+        "Rigging",
+        "Plumbing",
+        "HVAC",
+        "Electronics",
+        "General Service",
+        "Safety",
+        "Other"
+      ],
+      "default": "General Service",
+      "description": "Service category for filtering and search"
+    },
+    "item_type": {
+      "type": "string",
+      "enum": [
+        "Labor",
+        "Material"
+      ],
+      "default": "Labor",
+      "description": "Whether this is a labor task or a material/part"
+    },
+    "estimated_duration_minutes": {
+      "type": "number",
+      "description": "Estimated time in minutes (for Labor items)"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1,
+      "description": "Default quantity"
+    },
+    "unit_type": {
+      "type": "string",
+      "enum": [
+        "Hour",
+        "Piece",
+        "Liter",
+        "Kilogram",
+        "Set",
+        "Square Meter",
+        "Meter",
+        "Job"
+      ],
+      "default": "Hour",
+      "description": "Unit of measurement"
+    },
+    "base_price_eur": {
+      "type": "number",
+      "description": "Default unit price in EUR"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Keywords for search (e.g., ['antifouling', 'hull', 'paint'])"
+    },
+    "source_offer_id": {
+      "type": "string",
+      "description": "Optional: ID of the offer this component was derived from"
+    },
+    "usage_count": {
+      "type": "number",
+      "default": 0,
+      "description": "How many times this component has been used in offers"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this component is available for use"
+    }
+  },
+  "required": [
+    "name",
+    "item_type"
+  ]
+}

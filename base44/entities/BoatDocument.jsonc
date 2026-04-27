@@ -1,0 +1,61 @@
+{
+  "name": "BoatDocument",
+  "type": "object",
+  "properties": {
+    "boat_id": {
+      "type": "string",
+      "description": "Reference to Boat (required)"
+    },
+    "document_type": {
+      "type": "string",
+      "enum": [
+        "Registration/Seebrief",
+        "Insurance",
+        "Certificate",
+        "Invoice",
+        "Other"
+      ],
+      "description": "Type of document"
+    },
+    "title": {
+      "type": "string",
+      "description": "Document title (e.g., 'Insurance 2026')"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes about the document"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "Full-size document URL (required)"
+    },
+    "thumb_url": {
+      "type": "string",
+      "description": "Thumbnail URL for images or PDF preview"
+    },
+    "file_name_original": {
+      "type": "string",
+      "description": "Original uploaded filename"
+    },
+    "mime_type": {
+      "type": "string",
+      "description": "MIME type (application/pdf, image/jpeg, image/png)"
+    },
+    "file_size_bytes": {
+      "type": "number",
+      "description": "File size in bytes"
+    },
+    "is_confidential": {
+      "type": "boolean",
+      "default": false,
+      "description": "Mark as confidential (future use)"
+    }
+  },
+  "required": [
+    "boat_id",
+    "document_type",
+    "file_url",
+    "mime_type",
+    "file_size_bytes"
+  ]
+}

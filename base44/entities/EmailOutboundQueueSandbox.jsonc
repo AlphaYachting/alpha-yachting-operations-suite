@@ -1,0 +1,104 @@
+{
+  "name": "EmailOutboundQueueSandbox",
+  "type": "object",
+  "properties": {
+    "conversation_key": {
+      "type": "string"
+    },
+    "related_message_id": {
+      "type": "string",
+      "description": "Message-ID of the inbound message being replied to"
+    },
+    "draft_subject": {
+      "type": "string"
+    },
+    "draft_body_text": {
+      "type": "string",
+      "description": "Plain text body only - no HTML in Phase 1"
+    },
+    "draft_body_html_sanitized": {
+      "type": "string",
+      "description": "Reserved for future use"
+    },
+    "to_email": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cc_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "bcc_emails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "from_address": {
+      "type": "string",
+      "description": "Resolved from EMAIL_ENGINE_FROM_ADDRESS secret at send time"
+    },
+    "sending_mode": {
+      "type": "string",
+      "enum": [
+        "manual"
+      ],
+      "default": "manual",
+      "description": "Phase 1: manual only"
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "pending_review",
+        "approved_to_send",
+        "sent",
+        "failed",
+        "cancelled"
+      ],
+      "default": "draft"
+    },
+    "queued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "send_result": {
+      "type": "string"
+    },
+    "send_error_log": {
+      "type": "string"
+    },
+    "created_by": {
+      "type": "string"
+    },
+    "reviewed_by": {
+      "type": "string"
+    },
+    "test_mode": {
+      "type": "boolean",
+      "default": true
+    },
+    "future_agent_generated": {
+      "type": "boolean",
+      "default": false,
+      "description": "PHASE 2+ ONLY - disabled"
+    }
+  },
+  "required": [
+    "draft_subject",
+    "draft_body_text",
+    "to_email"
+  ]
+}

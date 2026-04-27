@@ -1,0 +1,47 @@
+{
+  "name": "KPICache",
+  "type": "object",
+  "properties": {
+    "cache_key": {
+      "type": "string",
+      "description": "Cache identifier (e.g., 'kpi_2026-01-31_morning')"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of calculation (YYYY-MM-DD)"
+    },
+    "period": {
+      "type": "string",
+      "enum": [
+        "morning",
+        "afternoon"
+      ],
+      "description": "Morning (before 12:00) or afternoon (12:00+)"
+    },
+    "active_projects": {
+      "type": "number"
+    },
+    "open_work_orders": {
+      "type": "number"
+    },
+    "overdue_work_orders": {
+      "type": "number"
+    },
+    "open_offers": {
+      "type": "number"
+    },
+    "active_leads": {
+      "type": "number"
+    },
+    "capacity_today": {
+      "type": "number",
+      "description": "Percentage: assigned techs today / total techs"
+    }
+  },
+  "required": [
+    "cache_key",
+    "date",
+    "period"
+  ]
+}

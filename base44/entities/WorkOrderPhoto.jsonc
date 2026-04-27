@@ -1,0 +1,61 @@
+{
+  "name": "WorkOrderPhoto",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder (required)"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Optional reference to specific Task"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Before",
+        "During",
+        "After",
+        "Damage",
+        "Expenses",
+        "Other"
+      ],
+      "default": "Other",
+      "description": "Photo category"
+    },
+    "caption": {
+      "type": "string",
+      "description": "Optional photo caption"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "Full-size photo URL (required)"
+    },
+    "thumb_url": {
+      "type": "string",
+      "description": "Thumbnail URL for gallery"
+    },
+    "file_size_bytes": {
+      "type": "number",
+      "description": "File size in bytes (must be <= 512000)"
+    },
+    "width": {
+      "type": "number",
+      "description": "Image width in pixels"
+    },
+    "height": {
+      "type": "number",
+      "description": "Image height in pixels"
+    },
+    "is_customer_visible": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether photo is visible to customer"
+    }
+  },
+  "required": [
+    "work_order_id",
+    "file_url",
+    "file_size_bytes"
+  ]
+}

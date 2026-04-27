@@ -1,0 +1,64 @@
+{
+  "name": "LeadTask",
+  "type": "object",
+  "properties": {
+    "lead_id": {
+      "type": "string",
+      "description": "Reference to Lead"
+    },
+    "title": {
+      "type": "string",
+      "description": "Task title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed task description"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "In Progress",
+        "Completed",
+        "Blocked"
+      ],
+      "default": "Pending",
+      "description": "Task status"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "Technician/staff email"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Task due date"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Information",
+        "Inspection",
+        "Quote",
+        "Follow-up",
+        "Documentation",
+        "Other"
+      ],
+      "default": "Information",
+      "description": "Task category"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Work notes/results"
+    },
+    "ai_generated": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether task was created by AI"
+    }
+  },
+  "required": [
+    "lead_id",
+    "title"
+  ]
+}

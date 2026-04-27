@@ -1,0 +1,37 @@
+{
+  "name": "RateCard",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "default": "EUR"
+    },
+    "vat_rate": {
+      "type": "number",
+      "default": 25
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date"
+    },
+    "valid_to": {
+      "type": "string",
+      "format": "date"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "version_number": {
+      "type": "number",
+      "default": 1
+    }
+  },
+  "required": [
+    "name",
+    "version_number"
+  ]
+}

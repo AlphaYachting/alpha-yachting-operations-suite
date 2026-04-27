@@ -1,0 +1,39 @@
+{
+  "name": "DocumentPayment",
+  "type": "object",
+  "properties": {
+    "document_id": {
+      "type": "string",
+      "description": "Reference to Document (Invoice)"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "Bank Transfer",
+        "Cash",
+        "Card",
+        "Other"
+      ],
+      "default": "Bank Transfer"
+    },
+    "reference": {
+      "type": "string",
+      "description": "Payment reference or transaction ID"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "document_id",
+    "payment_date",
+    "amount"
+  ]
+}

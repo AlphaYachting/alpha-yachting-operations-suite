@@ -1,0 +1,43 @@
+{
+  "name": "NotificationSettings",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "User email (one record per user)"
+    },
+    "work_order_assignment_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notify on work order assignment"
+    },
+    "task_status_change_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notify on task status changes"
+    },
+    "work_order_reminder_enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Send 24h reminders before work orders"
+    },
+    "notification_method": {
+      "type": "string",
+      "enum": [
+        "both",
+        "in_app_only",
+        "email_only"
+      ],
+      "default": "both",
+      "description": "Notification delivery method"
+    },
+    "notify_as_lead_only": {
+      "type": "boolean",
+      "default": false,
+      "description": "Only notify when assigned as lead technician"
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}

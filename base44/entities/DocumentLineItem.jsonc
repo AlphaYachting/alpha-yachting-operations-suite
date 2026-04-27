@@ -1,0 +1,97 @@
+{
+  "name": "DocumentLineItem",
+  "type": "object",
+  "properties": {
+    "document_id": {
+      "type": "string",
+      "description": "Reference to Document"
+    },
+    "line_type": {
+      "type": "string",
+      "enum": [
+        "Labor",
+        "Travel",
+        "Material",
+        "FlatFee",
+        "Discount",
+        "Note"
+      ],
+      "default": "Labor"
+    },
+    "title": {
+      "type": "string"
+    },
+    "title_hr": {
+      "type": "string",
+      "description": "Croatian translation of the line item title (for legal requirements)"
+    },
+    "description": {
+      "type": "string"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "hrs",
+        "pcs",
+        "km",
+        "m",
+        "set",
+        "job"
+      ],
+      "default": "pcs"
+    },
+    "unit_price": {
+      "type": "number",
+      "default": 0
+    },
+    "tax_rate": {
+      "type": "number",
+      "default": 20,
+      "description": "Tax rate in percentage"
+    },
+    "discount_percent": {
+      "type": "number",
+      "default": 0
+    },
+    "total_net": {
+      "type": "number",
+      "default": 0
+    },
+    "total_tax": {
+      "type": "number",
+      "default": 0
+    },
+    "total_gross": {
+      "type": "number",
+      "default": 0
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 0
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Reference to Job if imported"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Reference to Task if imported"
+    },
+    "material_id": {
+      "type": "string",
+      "description": "Reference to Material if imported"
+    },
+    "show_on_pdf": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "document_id",
+    "title"
+  ]
+}

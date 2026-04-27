@@ -1,0 +1,55 @@
+{
+  "name": "ModuleComponent",
+  "type": "object",
+  "properties": {
+    "module_id": {
+      "type": "string",
+      "description": "Reference to ProductModule"
+    },
+    "rate_card_item_code": {
+      "type": "string",
+      "description": "References RateCardItem.code"
+    },
+    "qty_type": {
+      "type": "string",
+      "enum": [
+        "FIXED",
+        "PER_KM",
+        "PER_DAY",
+        "PER_MONTH",
+        "PER_SEASON",
+        "PER_M2",
+        "PER_HOUR"
+      ],
+      "default": "FIXED"
+    },
+    "qty_value": {
+      "type": "number",
+      "default": 1
+    },
+    "is_included": {
+      "type": "boolean",
+      "default": true
+    },
+    "display_order": {
+      "type": "number",
+      "default": 0
+    },
+    "override_title": {
+      "type": "string",
+      "description": "Custom display name"
+    },
+    "pricing_mode": {
+      "type": "string",
+      "enum": [
+        "INCLUDED_IN_PRICE",
+        "ADD_AS_LINE_ITEM"
+      ],
+      "default": "ADD_AS_LINE_ITEM"
+    }
+  },
+  "required": [
+    "module_id",
+    "rate_card_item_code"
+  ]
+}

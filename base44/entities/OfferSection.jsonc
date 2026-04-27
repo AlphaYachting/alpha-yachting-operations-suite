@@ -1,0 +1,49 @@
+{
+  "name": "OfferSection",
+  "type": "object",
+  "properties": {
+    "offer_id": {
+      "type": "string",
+      "description": "Reference to Offer"
+    },
+    "section_type": {
+      "type": "string",
+      "enum": [
+        "STORAGE",
+        "TRANSPORT",
+        "MODULE",
+        "OPTIONS",
+        "NOTES"
+      ],
+      "description": "Type of section"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "bullets_json": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "display_order": {
+      "type": "number",
+      "default": 0
+    },
+    "module_id": {
+      "type": "string",
+      "description": "Reference to ProductModule if applicable"
+    },
+    "meta_json": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "offer_id",
+    "section_type",
+    "title"
+  ]
+}

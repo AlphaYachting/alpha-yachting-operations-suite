@@ -1,0 +1,37 @@
+{
+  "name": "AppConfiguration",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "description": "Unique key for this configuration setting (e.g., 'OfferAIAssistantPrompt_DE')"
+    },
+    "value": {
+      "type": "string",
+      "description": "The configuration value (e.g., the LLM prompt text)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what this setting controls"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "string",
+        "text",
+        "json",
+        "prompt"
+      ],
+      "default": "text",
+      "description": "Type of value for UI rendering hints"
+    },
+    "last_updated_by": {
+      "type": "string",
+      "description": "Email of the user who last updated this setting"
+    }
+  },
+  "required": [
+    "key",
+    "value"
+  ]
+}

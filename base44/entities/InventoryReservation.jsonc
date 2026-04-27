@@ -1,0 +1,56 @@
+{
+  "name": "InventoryReservation",
+  "type": "object",
+  "properties": {
+    "inventory_item_id": {
+      "type": "string",
+      "description": "Reference to InventoryItem (required, cascade delete if item removed)"
+    },
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder (optional, cascade delete when work order deleted)"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Reference to Task (optional)"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Reference to Job (optional)"
+    },
+    "start_datetime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Reservation start datetime (required)"
+    },
+    "end_datetime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Reservation end datetime (required)"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1,
+      "description": "Quantity reserved (for pooled items)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Reserved",
+        "Cancelled",
+        "Completed"
+      ],
+      "default": "Reserved",
+      "description": "Reservation status"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Reservation notes"
+    }
+  },
+  "required": [
+    "inventory_item_id",
+    "start_datetime",
+    "end_datetime"
+  ]
+}

@@ -54,7 +54,7 @@ function makeClient(host, port, user, pass) {
   });
 }
 
-async function fetchSourceForUID(host, port, user, pass, uid) {
+async function fetchBodyForUID(host, port, user, pass, uid) {
   const client = makeClient(host, port, user, pass);
   try {
     await client.connect();
@@ -64,15 +64,14 @@ async function fetchSourceForUID(host, port, user, pass, uid) {
     ]);
     let bodyText = '';
     try {
-      let found = null;
+      let srcMsg = null;
       const fetchOp = (async () => {
-        // Search by UID
-        for await (const msg of client.fetch(`${uid}`, { source: true }, { uid: true })) {
-          found = msg; break;
+        for await (const m of client.fetch({ uid: `${uid}` }, { source: true }, { uid: true })) {
+          srcMsg = m; break;
         }
       })();
-      await Promise.race([fetchOp, new Promise((_, r) => setTimeout(() => r(new Error('source timeout')), 12000))]);
-      if (found?.source) bodyText = parseBodyFromSource(found.source);
+      await Promise.race([fetchOp, new Promise((_, r) => setTimeout(() => r(new Error('source timeout')), 30000))]);
+      if (srcMsg?.source) bodyText = parseBodyFromSource(srcMsg.source);
     } finally {
       lock.release();
       await Promise.race([client.logout(), new Promise(r => setTimeout(r, 2000))]).catch(() => {});
@@ -84,7 +83,7 @@ async function fetchSourceForUID(host, port, user, pass, uid) {
   }
 }
 
-// Search INBOX by Message-ID header to find the UID
+// Search INBOX by Message-ID — try header search first, fall back to envelope scan
 async function findUIDByMessageId(host, port, user, pass, messageId) {
   const client = makeClient(host, port, user, pass);
   try {
@@ -96,11 +95,28 @@ async function findUIDByMessageId(host, port, user, pass, messageId) {
     let uid = null;
     try {
       const clean = messageId.replace(/[<>]/g, '').trim();
-      const uids = await Promise.race([
-        client.search({ header: ['Message-ID', clean] }, { uid: true }),
-        new Promise((_, r) => setTimeout(() => r(new Error('search timeout')), 10000)),
-      ]);
-      if (uids && uids.length > 0) uid = uids[uids.length - 1]; // take the last (newest)
+      // Try header search first (fast)
+      try {
+        const uids = await Promise.race([
+          client.search({ header: ['Message-ID', clean] }, { uid: true }),
+          new Promise((_, r) => setTimeout(() => r(new Error('search timeout')), 8000)),
+        ]);
+        if (uids && uids.length > 0) uid = uids[uids.length - 1];
+      } catch (_) {}
+
+      // Fallback: scan envelopes of last 50 messages
+      if (!uid) {
+        const total = client.mailbox?.exists || 0;
+        if (total > 0) {
+          const start = Math.max(1, total - 49);
+          for await (const msg of client.fetch(`${start}:${total}`, { envelope: true, uid: true })) {
+            if (msg.envelope?.messageId && msg.envelope.messageId.replace(/[<>]/g, '').trim() === clean) {
+              uid = msg.uid;
+              break;
+            }
+          }
+        }
+      }
     } finally {
       lock.release();
       await Promise.race([client.logout(), new Promise(r => setTimeout(r, 2000))]).catch(() => {});
@@ -170,7 +186,7 @@ Deno.serve(async (req) => {
       log.push({ step: 'uid_found', uid, message_id: msg.message_id });
 
       // Step 2: Fetch source by UID
-      const fetchResult = await fetchSourceForUID(host, port, imapUser, imapPass, uid);
+      const fetchResult = await fetchBodyForUID(host, port, imapUser, imapPass, uid);
 
       if (!fetchResult.success || !fetchResult.bodyText) {
         result.status = 'source_fetch_failed';

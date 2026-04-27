@@ -1,0 +1,38 @@
+{
+  "name": "Note",
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "description": "Note content (max 300 characters)"
+    },
+    "reference_type": {
+      "type": "string",
+      "enum": [
+        "Job",
+        "WorkOrder",
+        "Customer",
+        "None"
+      ],
+      "default": "None",
+      "description": "Optional reference to entity type"
+    },
+    "reference_id": {
+      "type": "string",
+      "description": "Optional reference to entity ID"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional due date"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether note is completed"
+    }
+  },
+  "required": [
+    "text"
+  ]
+}

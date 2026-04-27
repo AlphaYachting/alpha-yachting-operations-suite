@@ -1,0 +1,61 @@
+{
+  "name": "OfferTemplate",
+  "type": "object",
+  "properties": {
+    "template_name": {
+      "type": "string",
+      "description": "Name of the template"
+    },
+    "title": {
+      "type": "string",
+      "description": "Default offer title from template"
+    },
+    "description": {
+      "type": "string",
+      "description": "Default offer description"
+    },
+    "customer_notes": {
+      "type": "string",
+      "description": "Default customer notes"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "German",
+        "English",
+        "Italian",
+        "Slovenian",
+        "Croatian"
+      ],
+      "default": "German",
+      "description": "Default language"
+    },
+    "vat_rate": {
+      "type": "number",
+      "default": 0,
+      "description": "Default VAT rate percentage"
+    },
+    "payment_terms_type": {
+      "type": "string",
+      "enum": [
+        "Full",
+        "Downpayment",
+        "Installments"
+      ],
+      "default": "Full",
+      "description": "Default payment method type"
+    },
+    "downpayment_percent": {
+      "type": "number",
+      "description": "Default downpayment percentage"
+    },
+    "payment_schedule": {
+      "type": "string",
+      "description": "Default payment schedule description"
+    }
+  },
+  "required": [
+    "template_name",
+    "title"
+  ]
+}

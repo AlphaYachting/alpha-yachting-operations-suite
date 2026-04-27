@@ -1,0 +1,177 @@
+{
+  "name": "Job",
+  "type": "object",
+  "properties": {
+    "job_number": {
+      "type": "string",
+      "description": "Auto-generated job reference"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Reference to Customer"
+    },
+    "boat_id": {
+      "type": "string",
+      "description": "Reference to Boat"
+    },
+    "location_id": {
+      "type": "string",
+      "description": "Reference to Location"
+    },
+    "lead_technician_id": {
+      "type": "string",
+      "description": "Primary responsible technician for this project"
+    },
+    "title": {
+      "type": "string",
+      "description": "Brief job description"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed problem/request description"
+    },
+    "job_type": {
+      "type": "string",
+      "enum": [
+        "Mobile Service",
+        "Dry Marina Work",
+        "Drive-In Express",
+        "Scheduled Maintenance",
+        "Emergency",
+        "Refit Project",
+        "Winter Storage"
+      ],
+      "default": "Mobile Service"
+    },
+    "service_category": {
+      "type": "string",
+      "enum": [
+        "General Service",
+        "Mechanical",
+        "Electrical",
+        "Electronics",
+        "GRP/Bodywork",
+        "Sealing",
+        "HVAC",
+        "Rigging",
+        "Plumbing",
+        "Installation",
+        "Diagnostics",
+        "Antifouling",
+        "Polish",
+        "Other"
+      ],
+      "default": "General Service"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Normal",
+        "High",
+        "Urgent",
+        "Express"
+      ],
+      "default": "Normal"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "New",
+        "Quoted",
+        "Approved",
+        "Scheduled",
+        "In Progress",
+        "Waiting for Parts",
+        "On Hold",
+        "Completed",
+        "Invoiced",
+        "Cancelled"
+      ],
+      "default": "New"
+    },
+    "intake_source": {
+      "type": "string",
+      "enum": [
+        "Phone",
+        "Email",
+        "Website",
+        "Drive-In",
+        "Referral",
+        "Return Customer"
+      ],
+      "default": "Phone"
+    },
+    "intake_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "requested_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Customer requested completion date"
+    },
+    "estimated_hours": {
+      "type": "number"
+    },
+    "actual_hours": {
+      "type": "number"
+    },
+    "estimated_cost": {
+      "type": "number"
+    },
+    "actual_cost": {
+      "type": "number"
+    },
+    "quote_amount": {
+      "type": "number"
+    },
+    "quote_approved": {
+      "type": "boolean",
+      "default": false
+    },
+    "quote_approved_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "customer_po_number": {
+      "type": "string",
+      "description": "Customer purchase order reference"
+    },
+    "internal_notes": {
+      "type": "string"
+    },
+    "customer_notes": {
+      "type": "string",
+      "description": "Notes visible to customer"
+    },
+    "completion_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "requires_parts": {
+      "type": "boolean",
+      "default": false
+    },
+    "parts_ordered": {
+      "type": "boolean",
+      "default": false
+    },
+    "parts_eta": {
+      "type": "string",
+      "format": "date"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "File URLs"
+    }
+  },
+  "required": [
+    "customer_id",
+    "boat_id",
+    "title"
+  ]
+}

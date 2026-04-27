@@ -108,44 +108,53 @@ Deno.serve(async (req) => {
 
     const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
 
-    // === PHASE 1: Envelope-only bulk fetch (fast, no body) ===
-    // Connect once and fetch envelopes for the newest N messages
+    // === SINGLE CONNECTION: Fetch envelope + source together per message ===
+    // edis.at IMAP is slow on separate connections — keep one connection open for all fetches
     const client1 = makeClient(host, port, imapUser, imapPass, log, startTime);
     let total = 0;
-    let envelopes = []; // [{seq, uid, envelope, bodyStructure}]
+    const messagesToStore = []; // [{envelope, bodyStructure, bodyText, sourceFailed}]
 
     await client1.connect();
-    log.push({ step: 'p1_connected', ts: Date.now() - startTime });
-    const lock1 = await withTimeout(client1.getMailboxLock('INBOX'), 12000, 'p1_lock');
+    log.push({ step: 'connected', ts: Date.now() - startTime });
+    const lock1 = await withTimeout(client1.getMailboxLock('INBOX'), 12000, 'lock');
     try {
       total = client1.mailbox.exists || 0;
-      log.push({ step: 'p1_inbox', total, ts: Date.now() - startTime });
+      log.push({ step: 'inbox', total, ts: Date.now() - startTime });
 
       if (total > 0) {
         const start = Math.max(1, total - batchSize + 1);
         const range = `${start}:${total}`;
-        log.push({ step: 'p1_fetch_envelopes', range, ts: Date.now() - startTime });
+        log.push({ step: 'fetch_start', range, ts: Date.now() - startTime });
 
-        const envFetch = (async () => {
-          for await (const msg of client1.fetch(range, { envelope: true, bodyStructure: true, uid: true })) {
+        // Fetch envelope + source in one pass per message on the same connection
+        const fetchOp = (async () => {
+          for await (const msg of client1.fetch(range, { envelope: true, bodyStructure: true, source: true, uid: true })) {
             results.fetched++;
             const msgId = msg.envelope?.messageId || null;
             if (msgId && existingMsgIds.has(msgId)) {
               results.duplicates++;
               continue;
             }
-            envelopes.push({ seq: msg.seq, uid: msg.uid, envelope: msg.envelope, bodyStructure: msg.bodyStructure || null });
+            const bodyText = msg.source ? parseBodyFromSource(msg.source) : '';
+            messagesToStore.push({
+              uid: msg.uid,
+              envelope: msg.envelope,
+              bodyStructure: msg.bodyStructure || null,
+              bodyText,
+              sourceFailed: !msg.source,
+            });
           }
         })();
-        await withTimeout(envFetch, 20000, 'p1_envelope_fetch');
-        log.push({ step: 'p1_envelopes_done', new_count: envelopes.length, ts: Date.now() - startTime });
+        // Allow up to 45s for the whole batch fetch
+        await withTimeout(fetchOp, 45000, 'batch_fetch');
+        log.push({ step: 'fetch_done', new_count: messagesToStore.length, ts: Date.now() - startTime });
       }
     } finally {
       lock1.release();
       await client1.logout().catch(() => {});
     }
 
-    if (envelopes.length === 0) {
+    if (messagesToStore.length === 0) {
       log.push({ step: 'no_new_messages', ts: Date.now() - startTime });
       return Response.json({
         success: true,
@@ -155,49 +164,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // === PHASE 2: Source fetch for each new message, one per connection ===
-    // We reconnect for each message to avoid Dovecot idle/timeout issues on long source fetches
-    for (const info of envelopes) {
-      if (Date.now() - startTime > 48000) {
-        log.push({ step: 'time_limit', remaining: envelopes.length - envelopes.indexOf(info), ts: Date.now() - startTime });
+    for (const info of messagesToStore) {
+      if (Date.now() - startTime > 58000) {
+        log.push({ step: 'time_limit', ts: Date.now() - startTime });
         break;
       }
 
-      let bodyText = '';
-      let sourceFailed = false;
+      const bodyText = info.bodyText;
+      const sourceFailed = info.sourceFailed;
 
-      const client2 = makeClient(host, port, imapUser, imapPass, log, startTime);
-      try {
-        await client2.connect();
-        log.push({ step: 'p2_connected', seq: info.seq, ts: Date.now() - startTime });
-        const lock2 = await withTimeout(client2.getMailboxLock('INBOX'), 10000, `p2_lock_seq${info.seq}`);
-        try {
-          let srcMsg = null;
-          const srcFetch = (async () => {
-            for await (const m of client2.fetch(`${info.seq}`, { source: true })) {
-              srcMsg = m; break;
-            }
-          })();
-          await withTimeout(srcFetch, 10000, `p2_source_seq${info.seq}`);
-          if (srcMsg?.source) {
-            bodyText = parseBodyFromSource(srcMsg.source);
-          }
-          log.push({ step: 'p2_source_ok', seq: info.seq, body_len: bodyText.length, ts: Date.now() - startTime });
-        } catch (srcErr) {
-          sourceFailed = true;
-          log.push({ step: 'p2_source_failed', seq: info.seq, error: safeErr(srcErr), ts: Date.now() - startTime });
-        } finally {
-          lock2.release();
-          // Use a short timeout on logout to avoid hanging after a failed source fetch
-          await Promise.race([client2.logout(), new Promise(r => setTimeout(r, 2000))]).catch(() => {});
-        }
-      } catch (connErr) {
-        sourceFailed = true;
-        log.push({ step: 'p2_conn_failed', seq: info.seq, error: safeErr(connErr), ts: Date.now() - startTime });
-        try { await Promise.race([client2.logout(), new Promise(r => setTimeout(r, 1000))]).catch(() => {}); } catch (_) {}
-      }
-
-      // Store the message regardless of source failure (body will be empty if source failed)
+      // Store the message
       try {
         const env = info.envelope;
         const messageId = env?.messageId || null;
@@ -285,7 +261,7 @@ Deno.serve(async (req) => {
 
       } catch (storeErr) {
         results.errors++;
-        results.messages.push({ status: 'store_error', seq: info.seq, error: safeErr(storeErr) });
+        results.messages.push({ status: 'store_error', uid: info.uid, error: safeErr(storeErr) });
       }
     }
 

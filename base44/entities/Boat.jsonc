@@ -1,0 +1,145 @@
+{
+  "name": "Boat",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Reference to Customer"
+    },
+    "vessel_name": {
+      "type": "string"
+    },
+    "vessel_type": {
+      "type": "string",
+      "enum": [
+        "Sailboat",
+        "Motorboat",
+        "Yacht",
+        "Catamaran",
+        "RIB",
+        "Other"
+      ],
+      "default": "Sailboat"
+    },
+    "manufacturer": {
+      "type": "string"
+    },
+    "model": {
+      "type": "string"
+    },
+    "year": {
+      "type": "number"
+    },
+    "length_m": {
+      "type": "number",
+      "description": "Length in meters"
+    },
+    "beam_m": {
+      "type": "number",
+      "description": "Beam in meters"
+    },
+    "draft_m": {
+      "type": "number",
+      "description": "Draft in meters"
+    },
+    "hull_material": {
+      "type": "string",
+      "enum": [
+        "GRP/Fiberglass",
+        "Aluminum",
+        "Steel",
+        "Wood",
+        "Carbon",
+        "Other"
+      ],
+      "default": "GRP/Fiberglass"
+    },
+    "engine_type": {
+      "type": "string",
+      "enum": [
+        "Inboard Diesel",
+        "Inboard Petrol",
+        "Outboard",
+        "Electric",
+        "Sail Only",
+        "Hybrid"
+      ],
+      "default": "Inboard Diesel"
+    },
+    "engine_manufacturer": {
+      "type": "string"
+    },
+    "engine_model": {
+      "type": "string"
+    },
+    "engine_number": {
+      "type": "string",
+      "description": "Engine serial / engine number as found on the engine plate"
+    },
+    "engine_hours": {
+      "type": "number"
+    },
+    "electrical_system": {
+      "type": "string",
+      "enum": [
+        "12V",
+        "24V",
+        "12V/24V Combined",
+        "Other"
+      ],
+      "default": "12V"
+    },
+    "current_location_id": {
+      "type": "string",
+      "description": "Reference to Location"
+    },
+    "berth_number": {
+      "type": "string"
+    },
+    "access_details": {
+      "type": "string",
+      "description": "Keys, lockbox, contact person"
+    },
+    "known_issues": {
+      "type": "string",
+      "description": "Recurring problems, pain points"
+    },
+    "systems_notes": {
+      "type": "string",
+      "description": "Installed systems, upgrades, special equipment"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "Primary boat image URL"
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Gallery of additional boat images"
+    },
+    "registration_number": {
+      "type": "string"
+    },
+    "flag_country": {
+      "type": "string"
+    },
+    "insurance_info": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "In Storage",
+        "Sold",
+        "Inactive"
+      ],
+      "default": "Active"
+    }
+  },
+  "required": [
+    "customer_id"
+  ]
+}

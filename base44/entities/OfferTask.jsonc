@@ -1,0 +1,90 @@
+{
+  "name": "OfferTask",
+  "type": "object",
+  "properties": {
+    "offer_id": {
+      "type": "string",
+      "description": "Reference to Offer"
+    },
+    "sequence_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order"
+    },
+    "title": {
+      "type": "string",
+      "description": "Task title"
+    },
+    "title_hr": {
+      "type": "string",
+      "description": "Croatian translation of the task title (for legal requirements)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Task description"
+    },
+    "item_type": {
+      "type": "string",
+      "enum": [
+        "Labor",
+        "Material",
+        "Chapter"
+      ],
+      "default": "Labor",
+      "description": "Whether this is a labor/service position, a material/part, or a chapter heading"
+    },
+    "unit_type": {
+      "type": "string",
+      "enum": [
+        "Hour",
+        "Piece",
+        "Square Meter",
+        "Linear Meter",
+        "Liter",
+        "Kilogram",
+        "Set",
+        "Lump Sum",
+        "km",
+        "day",
+        "month",
+        "season",
+        "flat"
+      ],
+      "default": "Hour",
+      "description": "Charging unit type"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Quantity of units"
+    },
+    "unit_price": {
+      "type": "number",
+      "description": "Price per unit"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Calculated total (quantity * unit_price)"
+    },
+    "is_optional": {
+      "type": "boolean",
+      "default": false,
+      "description": "Optional item - shown in offer but not included in total"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes"
+    },
+    "code": {
+      "type": "string",
+      "description": "Rate card item code"
+    },
+    "meta_json": {
+      "type": "object",
+      "description": "Additional metadata from pricing engine"
+    }
+  },
+  "required": [
+    "offer_id",
+    "title"
+  ]
+}

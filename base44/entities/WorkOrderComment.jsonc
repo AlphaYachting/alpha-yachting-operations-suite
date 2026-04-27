@@ -1,0 +1,45 @@
+{
+  "name": "WorkOrderComment",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder (required)"
+    },
+    "technician_id": {
+      "type": "string",
+      "description": "Reference to Technician (optional, for field team comments)"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Name of the comment author (auto-populated from user)"
+    },
+    "author_email": {
+      "type": "string",
+      "description": "Email of the comment author (auto-populated from user)"
+    },
+    "content": {
+      "type": "string",
+      "description": "Comment text (required)"
+    },
+    "comment_type": {
+      "type": "string",
+      "enum": [
+        "worker_note",
+        "admin_response",
+        "status_update"
+      ],
+      "default": "worker_note",
+      "description": "Type of comment"
+    },
+    "is_internal": {
+      "type": "boolean",
+      "default": false,
+      "description": "Visible to team only (not customer)"
+    }
+  },
+  "required": [
+    "work_order_id",
+    "content"
+  ]
+}

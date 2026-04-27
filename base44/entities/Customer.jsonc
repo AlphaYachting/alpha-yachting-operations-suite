@@ -1,0 +1,92 @@
+{
+  "name": "Customer",
+  "type": "object",
+  "properties": {
+    "company_name": {
+      "type": "string",
+      "description": "Company name if business customer"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "First name"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Last name"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "phone_secondary": {
+      "type": "string"
+    },
+    "preferred_language": {
+      "type": "string",
+      "enum": [
+        "German",
+        "English",
+        "Italian",
+        "Slovenian",
+        "Croatian"
+      ],
+      "default": "German"
+    },
+    "customer_type": {
+      "type": "string",
+      "enum": [
+        "Private",
+        "Business",
+        "Charter Company",
+        "Marina Partner"
+      ],
+      "default": "Private"
+    },
+    "billing_address": {
+      "type": "string"
+    },
+    "billing_city": {
+      "type": "string"
+    },
+    "billing_postal_code": {
+      "type": "string"
+    },
+    "billing_country": {
+      "type": "string"
+    },
+    "vat_number": {
+      "type": "string"
+    },
+    "payment_terms": {
+      "type": "string",
+      "enum": [
+        "Immediate",
+        "Net 14",
+        "Net 30",
+        "Prepaid"
+      ],
+      "default": "Net 14"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes, access rules, preferences"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Inactive",
+        "VIP",
+        "Blocked"
+      ],
+      "default": "Active"
+    }
+  },
+  "required": [
+    "last_name",
+    "email"
+  ]
+}

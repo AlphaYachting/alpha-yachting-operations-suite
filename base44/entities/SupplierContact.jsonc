@@ -1,0 +1,47 @@
+{
+  "name": "SupplierContact",
+  "type": "object",
+  "properties": {
+    "supplier_id": {
+      "type": "string",
+      "description": "Reference to Supplier"
+    },
+    "name": {
+      "type": "string",
+      "description": "Contact person name"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "SALES",
+        "ORDERING",
+        "TECH_SUPPORT",
+        "ACCOUNTING",
+        "MANAGEMENT"
+      ],
+      "description": "Contact role"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Contact email"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Contact phone"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Short notes about this contact"
+    },
+    "is_primary": {
+      "type": "boolean",
+      "default": false,
+      "description": "Mark as primary contact"
+    }
+  },
+  "required": [
+    "supplier_id",
+    "name"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "name": "EmailMailboxSandbox",
+  "type": "object",
+  "properties": {
+    "mailbox_name": {
+      "type": "string",
+      "description": "Unique identifier for this mailbox configuration"
+    },
+    "inbound_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "outbound_enabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "imap_host_display": {
+      "type": "string",
+      "description": "Display only - actual value from EMAIL_ENGINE_IMAP_HOST secret"
+    },
+    "imap_port_display": {
+      "type": "number",
+      "description": "Display only - actual value from EMAIL_ENGINE_IMAP_PORT secret"
+    },
+    "smtp_host_display": {
+      "type": "string",
+      "description": "Display only - actual value from EMAIL_ENGINE_SMTP_HOST secret"
+    },
+    "smtp_port_display": {
+      "type": "number",
+      "description": "Display only - actual value from EMAIL_ENGINE_SMTP_PORT secret"
+    },
+    "from_address_display": {
+      "type": "string",
+      "description": "Display only - actual value from EMAIL_ENGINE_FROM_ADDRESS secret"
+    },
+    "from_name": {
+      "type": "string"
+    },
+    "active": {
+      "type": "boolean",
+      "default": false
+    },
+    "test_mode": {
+      "type": "boolean",
+      "default": true,
+      "description": "Phase 1: always true. Sandbox mode."
+    },
+    "notes_internal": {
+      "type": "string"
+    },
+    "last_fetch_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_send_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_imap_test_result": {
+      "type": "string"
+    },
+    "last_smtp_test_result": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "mailbox_name"
+  ]
+}

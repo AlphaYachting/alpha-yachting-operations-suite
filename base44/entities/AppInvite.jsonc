@@ -1,0 +1,92 @@
+{
+  "name": "AppInvite",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Recipient email address"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "CUSTOMER",
+        "TECHNICIAN"
+      ],
+      "description": "Target role for the invite"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "CREATED",
+        "SENT",
+        "OPENED",
+        "ACCEPTED",
+        "EXPIRED",
+        "REVOKED"
+      ],
+      "default": "CREATED",
+      "description": "Current status of the invite"
+    },
+    "token_hash": {
+      "type": "string",
+      "description": "Hashed secure token (never store raw token)"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Expiration timestamp (default 7 days)"
+    },
+    "created_by_user_id": {
+      "type": "string",
+      "description": "User who created the invite"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Optional link to existing Customer"
+    },
+    "technician_id": {
+      "type": "string",
+      "description": "Optional link to existing Technician"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Optional context: related Job"
+    },
+    "work_order_id": {
+      "type": "string",
+      "description": "Optional context: related WorkOrder"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "First time email was sent"
+    },
+    "last_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Most recent send time"
+    },
+    "send_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times email was sent"
+    },
+    "opened_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When recipient opened the link"
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When recipient accepted the invite"
+    }
+  },
+  "required": [
+    "email",
+    "role",
+    "token_hash",
+    "expires_at"
+  ]
+}

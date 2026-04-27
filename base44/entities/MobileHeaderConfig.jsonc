@@ -1,0 +1,112 @@
+{
+  "name": "MobileHeaderConfig",
+  "type": "object",
+  "properties": {
+    "layout": {
+      "type": "object",
+      "description": "Header layout configuration",
+      "properties": {
+        "logoPosition": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "left"
+        },
+        "logoHeight": {
+          "type": "number",
+          "default": 48,
+          "description": "Logo height in pixels"
+        },
+        "timePosition": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "center"
+        },
+        "tasksPosition": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "default": "right"
+        },
+        "flexDirection": {
+          "type": "string",
+          "enum": [
+            "row",
+            "column"
+          ],
+          "default": "row"
+        },
+        "padding": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "default": 16,
+              "description": "Horizontal padding in pixels"
+            },
+            "y": {
+              "type": "number",
+              "default": 16,
+              "description": "Vertical padding in pixels"
+            }
+          }
+        },
+        "gap": {
+          "type": "number",
+          "default": 16,
+          "description": "Gap between elements in pixels"
+        },
+        "elementsOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "logo",
+              "time",
+              "tasks"
+            ]
+          },
+          "default": [
+            "logo",
+            "time",
+            "tasks"
+          ],
+          "description": "Order of elements from left to right"
+        }
+      }
+    },
+    "styling": {
+      "type": "object",
+      "properties": {
+        "backgroundColor": {
+          "type": "string",
+          "default": "from-blue-600 via-blue-500 to-cyan-500"
+        },
+        "welcomeBackground": {
+          "type": "string",
+          "default": "bg-white/15"
+        },
+        "borderRadius": {
+          "type": "string",
+          "default": "rounded-lg"
+        },
+        "headerHeight": {
+          "type": "number",
+          "default": 140,
+          "description": "Total header height in pixels"
+        }
+      }
+    }
+  },
+  "required": []
+}

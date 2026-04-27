@@ -1,0 +1,59 @@
+{
+  "name": "CalendarFeedConfig",
+  "type": "object",
+  "properties": {
+    "technician_id": {
+      "type": "string",
+      "description": "Reference to Technician (optional - null for admin/all-team feeds)"
+    },
+    "feed_token": {
+      "type": "string",
+      "description": "Secure token for feed access (UUID)"
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this feed is active"
+    },
+    "time_window_days": {
+      "type": "number",
+      "default": 90,
+      "description": "Days to include in feed (max 180)"
+    },
+    "include_unassigned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Include work orders without assigned technicians"
+    },
+    "status_filter": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "Scheduled",
+        "Dispatched",
+        "In Transit",
+        "In Progress"
+      ],
+      "description": "Work order statuses to include"
+    },
+    "feed_name": {
+      "type": "string",
+      "description": "Display name for this feed"
+    },
+    "last_accessed": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Last time this feed was accessed"
+    },
+    "access_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times feed has been accessed"
+    }
+  },
+  "required": [
+    "feed_token"
+  ]
+}

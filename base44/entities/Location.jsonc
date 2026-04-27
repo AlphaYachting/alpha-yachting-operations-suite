@@ -1,0 +1,104 @@
+{
+  "name": "Location",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Marina or location name"
+    },
+    "location_type": {
+      "type": "string",
+      "enum": [
+        "Marina",
+        "Dry Marina",
+        "Anchorage",
+        "Yard",
+        "Alpha Base",
+        "Other"
+      ],
+      "default": "Marina"
+    },
+    "region": {
+      "type": "string",
+      "enum": [
+        "Istria",
+        "Slovenia",
+        "North Italy",
+        "Other"
+      ],
+      "default": "Istria"
+    },
+    "address": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "latitude": {
+      "type": "number"
+    },
+    "longitude": {
+      "type": "number"
+    },
+    "access_notes": {
+      "type": "string",
+      "description": "Gate codes, parking, access restrictions"
+    },
+    "contact_person": {
+      "type": "string"
+    },
+    "contact_phone": {
+      "type": "string"
+    },
+    "opening_hours": {
+      "type": "string"
+    },
+    "is_partner": {
+      "type": "boolean",
+      "default": false
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Inactive"
+      ],
+      "default": "Active"
+    },
+    "marina_fee_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether marina fees/working permits apply"
+    },
+    "marina_fee_type": {
+      "type": "string",
+      "enum": [
+        "per_day",
+        "per_person_per_day",
+        "percent_commission",
+        "fixed_amount"
+      ],
+      "description": "Type of marina fee calculation"
+    },
+    "marina_fee_amount": {
+      "type": "number",
+      "description": "Fee amount (percentage for commission, monetary for others)"
+    },
+    "marina_fee_currency": {
+      "type": "string",
+      "default": "EUR",
+      "description": "Currency for marina fees"
+    },
+    "marina_fee_description": {
+      "type": "string",
+      "description": "Additional notes about marina fees/working permits"
+    }
+  },
+  "required": [
+    "name",
+    "location_type"
+  ]
+}

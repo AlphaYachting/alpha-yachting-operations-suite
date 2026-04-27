@@ -1,0 +1,93 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "Reference to WorkOrder"
+    },
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "sop_reference": {
+      "type": "string",
+      "description": "Link to standard operating procedure"
+    },
+    "sequence_order": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Not Started",
+        "In Progress",
+        "Completed",
+        "Not Possible",
+        "Needs Approval",
+        "Skipped"
+      ],
+      "default": "Not Started"
+    },
+    "estimated_minutes": {
+      "type": "number"
+    },
+    "actual_minutes": {
+      "type": "number"
+    },
+    "completed_by": {
+      "type": "string",
+      "description": "Technician ID who completed"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "issue_notes": {
+      "type": "string",
+      "description": "If task couldn't be completed"
+    },
+    "requires_approval": {
+      "type": "boolean",
+      "default": false
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": [
+        "Pending",
+        "Approved",
+        "Rejected"
+      ],
+      "default": "Pending"
+    },
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "task_stream": {
+      "type": "string",
+      "enum": [
+        "ORGANIZATION",
+        "EXECUTION"
+      ],
+      "default": "EXECUTION",
+      "description": "Classification: organizational prep tasks vs technical execution tasks"
+    },
+    "assigned_user_id": {
+      "type": "string",
+      "description": "Optional: specific user assigned to this task (overrides WorkOrder-level assignment)"
+    }
+  },
+  "required": [
+    "work_order_id",
+    "title"
+  ]
+}
