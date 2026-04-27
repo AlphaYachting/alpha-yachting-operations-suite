@@ -64,18 +64,40 @@ function makeClient(host, port, user, pass, log, startTime) {
     },
     connectionTimeout: 15000,
     greetingTimeout: 10000,
-    socketTimeout: 60000,
+    socketTimeout: 30000,
     disableAutoIdle: true,
   });
   c.on('error', (err) => log.push({ step: 'imap_error_event', error: safeErr(err), ts: Date.now() - startTime }));
   return c;
 }
 
-async function withTimeout(promise, ms, label) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout ${ms}ms`)), ms)),
-  ]);
+// Fetch source for a single UID with its own fresh connection
+async function fetchSourceForUID(host, port, user, pass, uid, log, startTime) {
+  const client = makeClient(host, port, user, pass, log, startTime);
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock('INBOX');
+    try {
+      let source = null;
+      const fetchOp = (async () => {
+        for await (const m of client.fetch({ uid: `${uid}` }, { source: true }, { uid: true })) {
+          source = m.source;
+          break;
+        }
+      })();
+      await Promise.race([
+        fetchOp,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('source_timeout')), 20000)),
+      ]);
+      return source;
+    } finally {
+      lock.release();
+      await Promise.race([client.logout(), new Promise(r => setTimeout(r, 2000))]).catch(() => {});
+    }
+  } catch (err) {
+    try { await client.logout().catch(() => {}); } catch (_) {}
+    throw err;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -108,53 +130,49 @@ Deno.serve(async (req) => {
 
     const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
 
-    // === SINGLE CONNECTION: Fetch envelope + source together per message ===
-    // edis.at IMAP is slow on separate connections — keep one connection open for all fetches
+    // === PHASE 1: Envelope-only fetch (fast, no body) on one connection ===
     const client1 = makeClient(host, port, imapUser, imapPass, log, startTime);
     let total = 0;
-    const messagesToStore = []; // [{envelope, bodyStructure, bodyText, sourceFailed}]
+    const newEnvelopes = []; // [{uid, envelope, bodyStructure}]
 
     await client1.connect();
-    log.push({ step: 'connected', ts: Date.now() - startTime });
-    const lock1 = await withTimeout(client1.getMailboxLock('INBOX'), 12000, 'lock');
+    log.push({ step: 'p1_connected', ts: Date.now() - startTime });
+    const lock1 = await Promise.race([
+      client1.getMailboxLock('INBOX'),
+      new Promise((_, r) => setTimeout(() => r(new Error('lock_timeout')), 12000)),
+    ]);
     try {
       total = client1.mailbox.exists || 0;
-      log.push({ step: 'inbox', total, ts: Date.now() - startTime });
+      log.push({ step: 'p1_inbox', total, ts: Date.now() - startTime });
 
       if (total > 0) {
         const start = Math.max(1, total - batchSize + 1);
         const range = `${start}:${total}`;
-        log.push({ step: 'fetch_start', range, ts: Date.now() - startTime });
+        log.push({ step: 'p1_fetch_envelopes', range, ts: Date.now() - startTime });
 
-        // Fetch envelope + source in one pass per message on the same connection
-        const fetchOp = (async () => {
-          for await (const msg of client1.fetch(range, { envelope: true, bodyStructure: true, source: true, uid: true })) {
+        const envFetch = (async () => {
+          for await (const msg of client1.fetch(range, { envelope: true, bodyStructure: true, uid: true })) {
             results.fetched++;
             const msgId = msg.envelope?.messageId || null;
             if (msgId && existingMsgIds.has(msgId)) {
               results.duplicates++;
               continue;
             }
-            const bodyText = msg.source ? parseBodyFromSource(msg.source) : '';
-            messagesToStore.push({
-              uid: msg.uid,
-              envelope: msg.envelope,
-              bodyStructure: msg.bodyStructure || null,
-              bodyText,
-              sourceFailed: !msg.source,
-            });
+            newEnvelopes.push({ uid: msg.uid, envelope: msg.envelope, bodyStructure: msg.bodyStructure || null });
           }
         })();
-        // Allow up to 45s for the whole batch fetch
-        await withTimeout(fetchOp, 45000, 'batch_fetch');
-        log.push({ step: 'fetch_done', new_count: messagesToStore.length, ts: Date.now() - startTime });
+        await Promise.race([
+          envFetch,
+          new Promise((_, r) => setTimeout(() => r(new Error('envelope_fetch_timeout')), 25000)),
+        ]);
+        log.push({ step: 'p1_done', new_count: newEnvelopes.length, ts: Date.now() - startTime });
       }
     } finally {
       lock1.release();
       await client1.logout().catch(() => {});
     }
 
-    if (messagesToStore.length === 0) {
+    if (newEnvelopes.length === 0) {
       log.push({ step: 'no_new_messages', ts: Date.now() - startTime });
       return Response.json({
         success: true,
@@ -164,16 +182,30 @@ Deno.serve(async (req) => {
       });
     }
 
-    for (const info of messagesToStore) {
-      if (Date.now() - startTime > 58000) {
+    // === PHASE 2: Fetch source per UID — each gets its own fresh connection ===
+    // edis.at is slow; each source fetch gets 20s before we give up and store empty body
+    for (const info of newEnvelopes) {
+      if (Date.now() - startTime > 55000) {
         log.push({ step: 'time_limit', ts: Date.now() - startTime });
         break;
       }
 
-      const bodyText = info.bodyText;
-      const sourceFailed = info.sourceFailed;
+      let bodyText = '';
+      let sourceFailed = false;
 
-      // Store the message
+      try {
+        log.push({ step: 'p2_fetching_source', uid: info.uid, ts: Date.now() - startTime });
+        const source = await fetchSourceForUID(host, port, imapUser, imapPass, info.uid, log, startTime);
+        if (source) {
+          bodyText = parseBodyFromSource(source);
+        }
+        log.push({ step: 'p2_source_ok', uid: info.uid, body_len: bodyText.length, ts: Date.now() - startTime });
+      } catch (srcErr) {
+        sourceFailed = true;
+        log.push({ step: 'p2_source_failed', uid: info.uid, error: safeErr(srcErr), ts: Date.now() - startTime });
+      }
+
+      // Store the message (body empty if source failed, will be repaired by refetch function)
       try {
         const env = info.envelope;
         const messageId = env?.messageId || null;
