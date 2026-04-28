@@ -31,6 +31,10 @@ export default function LeadsV3() {
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, assigned_to_user_id: userId, accepted_by_assignee: false } : l));
   };
 
+  const handleDelete = (leadId) => {
+    setLeads(prev => prev.filter(l => l.id !== leadId));
+  };
+
   const handleEmailLeadParsed = async (leadData) => {
     if (!leadData.phone) leadData.phone = '-';
     const created = await base44.entities.Lead.create(leadData);
@@ -186,6 +190,7 @@ export default function LeadsV3() {
         searchTerm={searchTerm}
         onStatusChange={handleStatusChange}
         onAssigned={handleAssigned}
+        onDelete={handleDelete}
       />
     </div>
   );

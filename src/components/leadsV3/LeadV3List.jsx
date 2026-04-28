@@ -16,7 +16,7 @@ function EmptyPhase({ phase }) {
   );
 }
 
-export default function LeadV3List({ leads, users, activePhase, searchTerm, onStatusChange, onAssigned }) {
+export default function LeadV3List({ leads, users, activePhase, searchTerm, onStatusChange, onAssigned, onDelete }) {
 
   // Filter by phase
   const phaseFiltered = activePhase === 'All'
@@ -71,6 +71,7 @@ export default function LeadV3List({ leads, users, activePhase, searchTerm, onSt
                     users={users}
                     onStatusChange={onStatusChange}
                     onAssigned={onAssigned}
+                    onDelete={onDelete}
                   />
                 ))}
               </div>
@@ -91,6 +92,7 @@ export default function LeadV3List({ leads, users, activePhase, searchTerm, onSt
           users={users}
           onStatusChange={onStatusChange}
           onAssigned={onAssigned}
+          onDelete={onDelete}
         />
       ))}
     </div>
