@@ -1041,6 +1041,9 @@ Alpha Yachting Service Team`);
     const descriptionPart = formData.description ? `${formData.description}\n\n` : `anbei erhalten Sie unser Angebot für die besprochenen Leistungen.\n\n`;
     const body = encodeURIComponent(`${salutationLine},\n\n${descriptionPart}Bitte prüfen Sie das Angebot in Ruhe und melden Sie sich bei Fragen.\n\nMit freundlichen Grüßen,\nIhr Team`);
     window.open(`mailto:${customer.email}?subject=${subject}&body=${body}`, '_self');
+    if (offerId && formData.status !== 'Sent') {
+      handleStatusChange('Sent');
+    }
   };
 
   // Get selected location and check if marina fees apply
