@@ -117,15 +117,16 @@ export default function InvoiceScanModal({ open, onOpenChange }) {
     setStep('extracting');
     try {
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a document parser. Extract header information from this supplier invoice or delivery note.
+        prompt: `You are a document parser. Extract structured data from this supplier invoice or delivery note.
 Return a JSON object with these exact fields:
 {
   "document_type": "Invoice" or "Delivery Note" or "Other",
   "supplier_name": "string or null",
   "document_number": "string or null",
-  "document_date": "YYYY-MM-DD or null"
+  "document_date": "YYYY-MM-DD or null",
+  "lines": [{ "item_title": "string", "item_description": "string or null", "quantity": number or null, "unit": "string or null", "unit_purchase_price": number or null, "total_purchase_price": number or null, "sku": "string or null" }]
 }
-Leave fields null if not clearly visible. Do not invent or guess values.`,
+Leave fields null if not clearly visible. Do not invent or guess values. Extract all line items in their original order.`,
         file_urls: [url],
         model: 'gemini_3_flash',
         response_json_schema: {
@@ -135,6 +136,7 @@ Leave fields null if not clearly visible. Do not invent or guess values.`,
             supplier_name: { type: 'string' },
             document_number: { type: 'string' },
             document_date: { type: 'string' },
+            lines: { type: 'array', items: { type: 'object', properties: { item_title: { type: 'string' }, item_description: { type: 'string' }, quantity: { type: 'number' }, unit: { type: 'string' }, unit_purchase_price: { type: 'number' }, total_purchase_price: { type: 'number' }, sku: { type: 'string' } } } }
           }
         }
       });
@@ -143,12 +145,13 @@ Leave fields null if not clearly visible. Do not invent or guess values.`,
         supplier_name: result.supplier_name || '',
         document_number: result.document_number || '',
         document_date: result.document_date || '',
+        lines: result.lines || [],
       });
       setStep('review');
     } catch {
       toast.error('KI-Extraktion fehlgeschlagen');
       setStep('review');
-      setExtracted({ document_type: 'Invoice', supplier_name: '', document_number: '', document_date: '' });
+      setExtracted({ document_type: 'Invoice', supplier_name: '', document_number: '', document_date: '', lines: [] });
     }
   };
 
@@ -165,6 +168,24 @@ Leave fields null if not clearly visible. Do not invent or guess values.`,
         extraction_status: 'needs_review',
         selected_customer_id: customerId || null,
       });
+      // Save extracted lines so MaterialImportDetail shows them immediately
+      if (extracted?.lines?.length > 0) {
+        await Promise.all(extracted.lines.map((l, i) =>
+          base44.entities.ImportDocumentLine.create({
+            import_document_id: doc.id,
+            line_order: i,
+            item_title: l.item_title || '',
+            item_description: l.item_description || '',
+            quantity: l.quantity ?? null,
+            unit: l.unit || '',
+            unit_purchase_price: l.unit_purchase_price ?? null,
+            total_purchase_price: l.total_purchase_price ?? null,
+            sku: l.sku || '',
+            assigned_customer_id: customerId || null,
+            is_manually_edited: false,
+          })
+        ));
+      }
       toast.success('Rechnung gesichert — jetzt Positionen prüfen');
       onOpenChange(false);
       navigate(`/MaterialImportDetail?id=${doc.id}`);
