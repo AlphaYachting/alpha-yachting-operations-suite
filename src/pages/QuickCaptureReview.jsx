@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Zap, CheckCircle2, XCircle, Clock, User, MapPin, Ship, ArrowRight, ExternalLink, Pencil, Save, X, Wrench } from 'lucide-react';
+import { Zap, CheckCircle2, XCircle, Clock, User, MapPin, Ship, ArrowRight, ExternalLink, Pencil, Save, X, Wrench, Receipt } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 import ConversionDialog from '@/components/quickcapture/ConversionDialog.jsx';
+import InvoiceScanModal from '@/components/quickcapture/InvoiceScanModal';
 
 const TYPE_CONFIG = {
   material_entry:   { label: 'Material / Parts',   color: 'bg-amber-100 text-amber-800',   border: 'border-amber-200' },
@@ -60,6 +61,7 @@ export default function QuickCaptureReview() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('new');
   const [showCaptureModal, setShowCaptureModal] = useState(false);
+  const [showInvoiceScanModal, setShowInvoiceScanModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
   const [convertingEntry, setConvertingEntry] = useState(null);
   const [forcedTarget, setForcedTarget] = useState(null);
@@ -182,10 +184,16 @@ export default function QuickCaptureReview() {
           </h1>
           <p className="text-slate-500 mt-1">Review and route field captures before they become operational records</p>
         </div>
-        <Button onClick={() => setShowCaptureModal(true)} className="bg-amber-500 hover:bg-amber-600 text-white">
-          <Zap className="h-4 w-4 mr-1" />
-          New Capture
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setShowInvoiceScanModal(true)} variant="outline" className="border-emerald-500 text-emerald-700 hover:bg-emerald-50">
+            <Receipt className="h-4 w-4 mr-1" />
+            Rechnung scannen
+          </Button>
+          <Button onClick={() => setShowCaptureModal(true)} className="bg-amber-500 hover:bg-amber-600 text-white">
+            <Zap className="h-4 w-4 mr-1" />
+            New Capture
+          </Button>
+        </div>
       </div>
 
       {/* Status filter tabs */}
@@ -479,6 +487,11 @@ export default function QuickCaptureReview() {
           })}
         </div>
       )}
+
+      <InvoiceScanModal
+        open={showInvoiceScanModal}
+        onOpenChange={setShowInvoiceScanModal}
+      />
 
       <QuickCaptureModal
         open={showCaptureModal}
