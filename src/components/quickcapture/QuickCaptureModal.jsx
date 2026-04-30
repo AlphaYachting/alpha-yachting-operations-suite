@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Mic, MicOff, Send, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertCircle, User, Ship, MapPin, Search } from 'lucide-react';
+import { Mic, MicOff, Send, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertCircle, User, Ship, MapPin, Search, Receipt } from 'lucide-react';
+import InvoiceScanModal from '@/components/quickcapture/InvoiceScanModal';
 import { toast } from 'sonner';
 
 const TYPE_CONFIG = {
@@ -606,6 +607,7 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
   const [parsed, setParsed] = useState(null);
   const [customers, setCustomers] = useState(customersProp);
   const [boats, setBoats] = useState(boatsProp);
+  const [showInvoiceScan, setShowInvoiceScan] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -661,16 +663,35 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
           </div>
         )}
 
-        {step === 'input' &&
-        <InputStep customers={customers} boats={boats}
-        onParsed={(p) => {setParsed(p);setStep('result');}} />
-        }
+        {step === 'input' && (
+          <>
+            <InputStep customers={customers} boats={boats}
+              onParsed={(p) => {setParsed(p);setStep('result');}} />
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowInvoiceScan(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+              >
+                <Receipt className="h-4 w-4" />
+                Rechnung scannen
+              </button>
+            </div>
+          </>
+        )}
         {step === 'result' && parsed &&
         <ResultStep parsed={parsed} customers={customers} boats={boats}
         workOrderContext={workOrderContext}
         onConfirm={() => handleClose(false)} onEdit={() => setStep('input')} />
         }
       </DialogContent>
+      <InvoiceScanModal
+        open={showInvoiceScan}
+        onOpenChange={(v) => {
+          setShowInvoiceScan(v);
+          if (!v) handleClose(false);
+        }}
+      />
     </Dialog>);
 
 }
