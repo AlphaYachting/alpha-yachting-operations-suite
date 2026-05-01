@@ -6,8 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Mic, MicOff, Send, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertCircle, User, Ship, MapPin, Search, Receipt } from 'lucide-react';
-import InvoiceScanModal from '@/components/quickcapture/InvoiceScanModal';
+import { Mic, MicOff, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertCircle, User, Ship, MapPin, Search, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 
 const TYPE_CONFIG = {
@@ -162,15 +161,19 @@ function matchBoat(boats, extractedName, customerId) {
 }
 
 // ── STEP 1: Input ──────────────────────────────────────────────────────────
-function InputStep({ onParsed, customers, boats }) {
+function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
   const [text, setText] = useState('');
   const [voiceState, setVoiceState] = useState('idle'); // idle | listening | ended | error
   const [interim, setInterim] = useState('');
   const [processing, setProcessing] = useState(false);
   const [photoUrls, setPhotoUrls] = useState([]);
+  const [invoiceUrls, setInvoiceUrls] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadingInvoice, setUploadingInvoice] = useState(false);
+  const [mode, setMode] = useState(invoiceMode ? 'invoice' : 'text'); // 'text' | 'invoice'
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
+  const invoiceInputRef = useRef(null);
   const committedTextRef = useRef('');
   const voiceUsedRef = useRef(false);
 
@@ -252,11 +255,46 @@ function InputStep({ onParsed, customers, boats }) {
     {setUploading(false);}
   };
 
+  const handleInvoiceUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingInvoice(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setInvoiceUrls((prev) => [...prev, file_url]);
+    } catch {toast.error('Rechnung-Upload fehlgeschlagen');} finally
+    {setUploadingInvoice(false);}
+  };
+
   const handleProcess = async () => {
-    if (!text.trim()) {toast.error('Please enter some text first');return;}
+    if (!text.trim() && mode !== 'invoice') {toast.error('Bitte zuerst Text eingeben');return;}
+    if (mode === 'invoice' && invoiceUrls.length === 0) {toast.error('Bitte zuerst eine Rechnung hochladen');return;}
     // Stop voice if still running
     recognitionRef.current?.stop();
     setProcessing(true);
+
+    // Invoice mode: save directly as material_entry without AI analysis
+    if (mode === 'invoice') {
+      const allPhotos = [...invoiceUrls, ...photoUrls];
+      onParsed({
+        rawText: text.trim() || 'Rechnung / Lieferschein (Foto)',
+        photoUrls: allPhotos,
+        inputMethod: 'text',
+        aiResult: {
+          entry_type: 'material_entry',
+          short_summary: text.trim() || 'Rechnung eingescannen — bitte in Materialimport übertragen',
+          suggested_target: 'Material Import Review',
+          urgency: 'normal',
+          billable: true,
+        },
+        customerMatch: null,
+        boatMatch: null,
+        isInvoice: true,
+      });
+      setProcessing(false);
+      return;
+    }
+
     try {
       let aiResult = null;
       try {
@@ -317,92 +355,166 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
   };
 
   const voiceMsg = VOICE_STATES[voiceState];
+  const canSubmit = mode === 'invoice' ? invoiceUrls.length > 0 : text.trim().length > 0;
 
   return (
     <div className="space-y-4">
+      {/* Mode selector */}
+      <div className="flex gap-2">
+        {voiceSupported && (
+          <button
+            type="button"
+            onClick={() => setMode('text')}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl border-2 text-sm font-medium transition-colors ${
+              mode !== 'invoice'
+                ? 'border-amber-400 bg-amber-50 text-amber-700'
+                : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            <Mic className="h-5 w-5" />
+            <span>Text / Sprache</span>
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => { setMode('text'); fileInputRef.current?.click(); }}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl border-2 text-sm font-medium transition-colors ${
+            mode !== 'invoice'
+              ? 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100'
+              : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100'
+          }`}
+        >
+          {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+          <span>Foto{photoUrls.length > 0 ? ` (${photoUrls.length})` : ''}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => { setMode('invoice'); invoiceInputRef.current?.click(); }}
+          className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 rounded-xl border-2 text-sm font-medium transition-colors ${
+            mode === 'invoice'
+              ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
+              : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100'
+          }`}
+        >
+          {uploadingInvoice ? <Loader2 className="h-5 w-5 animate-spin" /> : <Receipt className="h-5 w-5" />}
+          <span>Rechnung{invoiceUrls.length > 0 ? ` (${invoiceUrls.length})` : ''}</span>
+        </button>
+      </div>
+
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
+      <input ref={invoiceInputRef} type="file" accept="image/*,application/pdf" capture="environment" className="hidden" onChange={handleInvoiceUpload} />
+
+      {/* Invoice preview */}
+      {mode === 'invoice' && invoiceUrls.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {invoiceUrls.map((url, i) => (
+            <div key={i} className="relative">
+              <img src={url} alt="" className="h-20 w-20 object-cover rounded-lg border-2 border-emerald-300" />
+              <button onClick={() => setInvoiceUrls(p => p.filter((_, j) => j !== i))}
+                className="absolute -top-1 -right-1 bg-white rounded-full border p-0.5 shadow">
+                <X className="h-3 w-3 text-slate-500" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => invoiceInputRef.current?.click()}
+            className="h-20 w-20 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-emerald-300 text-emerald-600 hover:bg-emerald-50 text-xs gap-1"
+          >
+            <Receipt className="h-5 w-5" />
+            <span>+</span>
+          </button>
+        </div>
+      )}
+
+      {/* Invoice upload CTA when none uploaded yet */}
+      {mode === 'invoice' && invoiceUrls.length === 0 && (
+        <button
+          type="button"
+          onClick={() => invoiceInputRef.current?.click()}
+          className="w-full flex flex-col items-center justify-center gap-2 py-8 border-2 border-dashed border-emerald-300 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors"
+        >
+          {uploadingInvoice ? <Loader2 className="h-8 w-8 animate-spin" /> : <Receipt className="h-8 w-8" />}
+          <span className="text-sm font-medium">{uploadingInvoice ? 'Wird hochgeladen…' : 'Rechnung / Lieferschein fotografieren'}</span>
+        </button>
+      )}
+
+      {/* Text area — always visible */}
       <div className="relative">
         <Textarea
-          placeholder='Was ist passiert? z.B. "Blümel, Hochdruckreiniger in Vrsar gelassen" oder "Kunde möchte nächste Woche Politur"...'
+          placeholder={mode === 'invoice'
+            ? 'Optionale Notiz zur Rechnung, z.B. "Victron-Rechnung für Blümel, Marina Vrsar"…'
+            : 'Was ist passiert? z.B. "Blümel, Hochdruckreiniger in Vrsar gelassen"…'
+          }
           value={text + (interim ? ' ' + interim : '')}
           onChange={(e) => {
             committedTextRef.current = e.target.value;
             setText(e.target.value);
             setInterim('');
           }}
-          rows={5}
-          className="resize-none text-base min-h-[120px]"
-          autoFocus />
-        
-        {interim &&
-        <div className="absolute bottom-2 right-2 text-xs text-slate-400 bg-white/80 px-1 rounded">
-            …
-          </div>
-        }
+          rows={mode === 'invoice' ? 2 : 5}
+          className="resize-none text-base"
+        />
+        {interim && (
+          <div className="absolute bottom-2 right-2 text-xs text-slate-400 bg-white/80 px-1 rounded">…</div>
+        )}
       </div>
 
-      {/* Voice state hint */}
-      {voiceMsg &&
-      <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded border ${
-      voiceState === 'listening' ? 'bg-red-50 border-red-200 text-red-700' :
-      voiceState === 'error' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-      'bg-slate-50 border-slate-200 text-slate-600'}`
-      }>
-          {voiceState === 'listening' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
-          {voiceMsg}
-        </div>
-      }
-
-      <div className="flex items-center gap-3">
-        {voiceSupported &&
-        <button
-          type="button"
-          onClick={voiceState === 'listening' ? stopRecording : startRecording}
-          className={`flex-1 flex flex-col items-center justify-center gap-1 py-4 rounded-xl border-2 text-sm font-medium transition-colors ${
-          voiceState === 'listening' ?
-          'border-red-400 bg-red-50 text-red-600 animate-pulse' :
-          'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'}`
-          }>
-          
-            {voiceState === 'listening' ?
-          <><MicOff className="h-6 w-6" /><span>Stop</span></> :
-          <><Mic className="h-6 w-6" /><span>{voiceState === 'ended' || voiceState === 'error' ? 'Nochmal' : 'Sprache'}</span></>
-          }
+      {/* Voice controls — only in text mode */}
+      {mode !== 'invoice' && voiceSupported && (
+        <>
+          {voiceMsg && (
+            <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded border ${
+              voiceState === 'listening' ? 'bg-red-50 border-red-200 text-red-700' :
+              voiceState === 'error' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+              'bg-slate-50 border-slate-200 text-slate-600'}`}>
+              {voiceState === 'listening' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
+              {voiceMsg}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={voiceState === 'listening' ? stopRecording : startRecording}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 text-sm font-medium transition-colors ${
+              voiceState === 'listening'
+                ? 'border-red-400 bg-red-50 text-red-600 animate-pulse'
+                : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            {voiceState === 'listening'
+              ? <><MicOff className="h-5 w-5" /><span>Aufnahme stoppen</span></>
+              : <><Mic className="h-5 w-5" /><span>{voiceState === 'ended' || voiceState === 'error' ? 'Erneut aufnehmen' : 'Spracheingabe starten'}</span></>
+            }
           </button>
-        }
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-4 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 text-sm font-medium">
-          
-          {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
-          <span>Foto{photoUrls.length > 0 ? ` (${photoUrls.length})` : ''}</span>
-        </button>
-        <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
-        {photoUrls.length > 0 &&
-        <span className="text-xs text-slate-500">{photoUrls.length} photo(s) attached</span>
-        }
-      </div>
+        </>
+      )}
 
-      {photoUrls.length > 0 &&
-      <div className="flex flex-wrap gap-2">
-          {photoUrls.map((url, i) =>
-        <div key={i} className="relative">
+      {/* Attached photos preview (non-invoice mode) */}
+      {mode !== 'invoice' && photoUrls.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {photoUrls.map((url, i) => (
+            <div key={i} className="relative">
               <img src={url} alt="" className="h-14 w-14 object-cover rounded border" />
-              <button onClick={() => setPhotoUrls((p) => p.filter((_, j) => j !== i))}
-          className="absolute -top-1 -right-1 bg-white rounded-full border p-0.5">
+              <button onClick={() => setPhotoUrls(p => p.filter((_, j) => j !== i))}
+                className="absolute -top-1 -right-1 bg-white rounded-full border p-0.5">
                 <X className="h-3 w-3 text-slate-500" />
               </button>
             </div>
-        )}
+          ))}
         </div>
-      }
+      )}
 
-      <Button onClick={handleProcess} disabled={processing || !text.trim()}
-      className="bg-amber-500 hover:bg-amber-600 text-white w-full h-12 text-base">
-        {processing ?
-        <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Analysieren...</> :
-        <><Zap className="h-5 w-5 mr-2" />Analysieren &amp; Prüfen</>}
+      <Button
+        onClick={handleProcess}
+        disabled={processing || !canSubmit}
+        className={`w-full h-12 text-base ${mode === 'invoice' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'} text-white`}
+      >
+        {processing
+          ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Verarbeite…</>
+          : mode === 'invoice'
+            ? <><Receipt className="h-5 w-5 mr-2" />In Review ablegen</>
+            : <><Zap className="h-5 w-5 mr-2" />Analysieren &amp; Prüfen</>
+        }
       </Button>
     </div>);
 
@@ -607,7 +719,6 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
   const [parsed, setParsed] = useState(null);
   const [customers, setCustomers] = useState(customersProp);
   const [boats, setBoats] = useState(boatsProp);
-  const [showInvoiceScan, setShowInvoiceScan] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -664,34 +775,15 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
         )}
 
         {step === 'input' && (
-          <>
-            <InputStep customers={customers} boats={boats}
-              onParsed={(p) => {setParsed(p);setStep('result');}} />
-            <div className="pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowInvoiceScan(true)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-              >
-                <Receipt className="h-4 w-4" />
-                Rechnung scannen
-              </button>
-            </div>
-          </>
+          <InputStep customers={customers} boats={boats}
+            onParsed={(p) => { setParsed(p); setStep('result'); }} />
         )}
         {step === 'result' && parsed &&
-        <ResultStep parsed={parsed} customers={customers} boats={boats}
-        workOrderContext={workOrderContext}
-        onConfirm={() => handleClose(false)} onEdit={() => setStep('input')} />
+          <ResultStep parsed={parsed} customers={customers} boats={boats}
+            workOrderContext={workOrderContext}
+            onConfirm={() => handleClose(false)} onEdit={() => setStep('input')} />
         }
       </DialogContent>
-      <InvoiceScanModal
-        open={showInvoiceScan}
-        onOpenChange={(v) => {
-          setShowInvoiceScan(v);
-          if (!v) handleClose(false);
-        }}
-      />
     </Dialog>);
 
 }
