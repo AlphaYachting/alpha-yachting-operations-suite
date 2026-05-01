@@ -3,11 +3,11 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Zap, CheckCircle2, XCircle, Clock, User, MapPin, Ship, ArrowRight, ExternalLink, Pencil, Save, X, Wrench, Receipt } from 'lucide-react';
+import { Zap, CheckCircle2, XCircle, Clock, User, MapPin, Ship, ArrowRight, ExternalLink, Pencil, Save, X, Wrench, Receipt, Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 import ConversionDialog from '@/components/quickcapture/ConversionDialog.jsx';
@@ -54,6 +54,7 @@ const CONVERSION_LABEL = {
 };
 
 export default function QuickCaptureReview() {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [boats, setBoats] = useState([]);
@@ -67,6 +68,7 @@ export default function QuickCaptureReview() {
   const [forcedTarget, setForcedTarget] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
+  const [importingEntryId, setImportingEntryId] = useState(null);
 
   const startEdit = (entry) => { setEditingId(entry.id); setEditText(entry.raw_input); };
   const cancelEdit = () => { setEditingId(null); setEditText(''); };
@@ -150,6 +152,89 @@ export default function QuickCaptureReview() {
     ));
     setConvertingEntry(null);
     setForcedTarget(null);
+  };
+
+  // Convert a receipt entry → ImportDocument + Lines via KI, then navigate
+  const handleSendToMaterialImport = async (entry) => {
+    const photoUrl = entry.photo_urls?.[0];
+    if (!photoUrl) { toast.error('Kein Foto vorhanden'); return; }
+    setImportingEntryId(entry.id);
+    try {
+      // KI-Extraktion: Header + Lines aus dem Foto
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are a document parser. Extract structured data from this supplier invoice or delivery note.
+Return a JSON object with these exact fields:
+{
+  "document_type": "Invoice" or "Delivery Note" or "Other",
+  "supplier_name": "string or null",
+  "document_number": "string or null",
+  "document_date": "YYYY-MM-DD or null",
+  "lines": [{ "item_title": "string", "item_description": "string or null", "quantity": number or null, "unit": "string or null", "unit_purchase_price": number or null, "total_purchase_price": number or null, "sku": "string or null" }]
+}
+Leave fields null if not clearly visible. Do not invent or guess values. Extract all line items in their original order.`,
+        file_urls: [photoUrl],
+        model: 'gemini_3_flash',
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            document_type: { type: 'string' },
+            supplier_name: { type: 'string' },
+            document_number: { type: 'string' },
+            document_date: { type: 'string' },
+            lines: { type: 'array', items: { type: 'object', properties: { item_title: { type: 'string' }, item_description: { type: 'string' }, quantity: { type: 'number' }, unit: { type: 'string' }, unit_purchase_price: { type: 'number' }, total_purchase_price: { type: 'number' }, sku: { type: 'string' } } } }
+          }
+        }
+      });
+
+      // ImportDocument anlegen
+      const doc = await base44.entities.ImportDocument.create({
+        document_type: result.document_type || 'Invoice',
+        supplier_name: result.supplier_name || '',
+        document_number: result.document_number || '',
+        document_date: result.document_date || '',
+        original_file_url: photoUrl,
+        extraction_status: 'needs_review',
+      });
+
+      // Lines speichern
+      if (result.lines?.length > 0) {
+        await Promise.all(result.lines.map((l, i) =>
+          base44.entities.ImportDocumentLine.create({
+            import_document_id: doc.id,
+            line_order: i,
+            item_title: l.item_title || '',
+            item_description: l.item_description || '',
+            quantity: l.quantity ?? null,
+            unit: l.unit || '',
+            unit_purchase_price: l.unit_purchase_price ?? null,
+            total_purchase_price: l.total_purchase_price ?? null,
+            sku: l.sku || '',
+            is_manually_edited: false,
+          })
+        ));
+      }
+
+      // QuickCaptureEntry als "routed" markieren
+      const user = await base44.auth.me();
+      await base44.entities.QuickCaptureEntry.update(entry.id, {
+        review_status: 'routed',
+        routed_record_type: 'ImportDocument',
+        routed_record_id: doc.id,
+        routed_at: new Date().toISOString(),
+        routed_by: user?.email || '',
+      });
+      setEntries(prev => prev.map(e => e.id === entry.id
+        ? { ...e, review_status: 'routed', routed_record_type: 'ImportDocument', routed_record_id: doc.id, routed_at: new Date().toISOString() }
+        : e
+      ));
+
+      toast.success('Rechnung extrahiert — wird jetzt in Materialimport geöffnet');
+      navigate(`/MaterialImportDetail?id=${doc.id}`);
+    } catch (err) {
+      toast.error('Fehler: ' + err.message);
+    } finally {
+      setImportingEntryId(null);
+    }
   };
 
   const filteredEntries = filterStatus === 'all'
@@ -404,11 +489,25 @@ export default function QuickCaptureReview() {
                           </Button>
                         </>)}
 
-                        {/* material_entry → Customer Material Entry */}
+                        {/* material_entry → Customer Material Entry OR Materialimport (wenn Foto vorhanden) */}
                         {entry.suggested_type === 'material_entry' && (
                           <Button size="sm" onClick={() => openConvert(entry, 'CustomerMaterialEntry')}
                             className="bg-amber-500 hover:bg-amber-600 text-white text-xs">
                             <ArrowRight className="h-3 w-3 mr-1" />Material Entry
+                          </Button>
+                        )}
+                        {entry.suggested_type === 'material_entry' && entry.photo_urls?.length > 0 && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleSendToMaterialImport(entry)}
+                            disabled={importingEntryId === entry.id}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                          >
+                            {importingEntryId === entry.id
+                              ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              : <Receipt className="h-3 w-3 mr-1" />
+                            }
+                            {importingEntryId === entry.id ? 'KI extrahiert…' : '→ Materialimport'}
                           </Button>
                         )}
 
