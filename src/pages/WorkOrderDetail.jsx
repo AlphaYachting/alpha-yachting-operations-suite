@@ -716,26 +716,42 @@ export default function WorkOrderDetail() {
          </div>
       </div>
 
-      {/* Linked WorkOrder Alert */}
-      {linkedWorkOrder && (
+      {/* Linked WorkOrder + Project Links */}
+      {(linkedWorkOrder || job) && (
         <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-slate-700">
-                  {workOrder.workorder_type === 'ORGANIZATION' ? '🔧 Related Execution WorkOrder' : '📋 Related Organization WorkOrder'}
-                </p>
-                <p className="text-xs text-slate-500 mt-1">{linkedWorkOrder.title}</p>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex-1 min-w-0">
+                {linkedWorkOrder && (
+                  <>
+                    <p className="text-sm font-medium text-slate-700">
+                      {workOrder.workorder_type === 'ORGANIZATION' ? '🔧 Related Execution WorkOrder' : '📋 Related Organization WorkOrder'}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">{linkedWorkOrder.title}</p>
+                  </>
+                )}
+                {job && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Projekt: <span className="font-medium text-slate-700">{job.title}</span>
+                  </p>
+                )}
               </div>
-              <Button 
-                variant="outline" 
-                size="sm"
-                asChild
-              >
-                <Link to={createPageUrl('WorkOrderDetail') + `?id=${linkedWorkOrder.id}`}>
-                  View
-                </Link>
-              </Button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {linkedWorkOrder && (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to={createPageUrl('WorkOrderDetail') + `?id=${linkedWorkOrder.id}`}>
+                      WO ansehen
+                    </Link>
+                  </Button>
+                )}
+                {job && (
+                  <Button variant="outline" size="sm" asChild className="border-emerald-400 text-emerald-700 hover:bg-emerald-50">
+                    <Link to={createPageUrl('JobDetail') + `?id=${job.id}`}>
+                      → Projekt
+                    </Link>
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
