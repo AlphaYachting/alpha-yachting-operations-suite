@@ -39,16 +39,35 @@ function safeErr(err) {
     .substring(0, 500);
 }
 
-function parseBodyFromSource(source) {
-  if (!source) return '';
-  const raw = source.toString('utf-8');
-  const splitIdx = raw.indexOf('\r\n\r\n');
-  const bodyRaw = splitIdx >= 0 ? raw.substring(splitIdx + 4) : raw;
-  const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
-  if (plainMatch) return plainMatch[1].replace(/=\r\n/g, '').trim().substring(0, 10000);
-  const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
-  if (htmlMatch) return htmlToText(htmlMatch[1]).substring(0, 10000);
-  return htmlToText(bodyRaw).substring(0, 10000);
+function decodeQuotedPrintable(str) {
+  return str.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
+function decodeBase64Body(str) {
+  try {
+    return atob(str.replace(/\s/g, ''));
+  } catch (_) {
+    return str;
+  }
+}
+
+function extractBodyFromParts(bodyParts) {
+  if (!bodyParts) return '';
+  
+  // Try plain text first
+  const textPart = bodyParts['1'] || bodyParts['TEXT'] || null;
+  if (textPart) {
+    const raw = textPart.toString('utf-8');
+    return raw.substring(0, 10000);
+  }
+  
+  // Try HTML fallback
+  const htmlPart = bodyParts['2'] || null;
+  if (htmlPart) {
+    return htmlToText(htmlPart.toString('utf-8')).substring(0, 10000);
+  }
+  
+  return '';
 }
 
 function makeClient(host, port, user, pass, log, startTime) {
@@ -62,38 +81,85 @@ function makeClient(host, port, user, pass, log, startTime) {
       warn:  (obj) => log.push({ level: 'imap_warn',  msg: obj?.msg || JSON.stringify(obj), ts: Date.now() - startTime }),
       error: (obj) => log.push({ level: 'imap_error', msg: safeErr(obj?.err || new Error(obj?.msg || 'err')), ts: Date.now() - startTime }),
     },
-    connectionTimeout: 15000,
-    greetingTimeout: 10000,
-    socketTimeout: 30000,
+    connectionTimeout: 20000,
+    greetingTimeout: 15000,
+    socketTimeout: 60000,
     disableAutoIdle: true,
   });
   c.on('error', (err) => log.push({ step: 'imap_error_event', error: safeErr(err), ts: Date.now() - startTime }));
   return c;
 }
 
-// Fetch source for a single UID with its own fresh connection
-async function fetchSourceForUID(host, port, user, pass, uid, log, startTime) {
+// Fetch body text for a single UID — tries bodyParts first (faster), falls back to source
+async function fetchBodyForUID(host, port, user, pass, uid, log, startTime) {
   const client = makeClient(host, port, user, pass, log, startTime);
   try {
     await client.connect();
-    const lock = await client.getMailboxLock('INBOX');
+    const lock = await Promise.race([
+      client.getMailboxLock('INBOX'),
+      new Promise((_, r) => setTimeout(() => r(new Error('lock_timeout')), 15000)),
+    ]);
+    
+    let bodyText = '';
+    
     try {
-      let source = null;
+      // Strategy 1: fetch bodyParts (TEXT section only — much smaller/faster than full source)
+      let fetchedMsg = null;
       const fetchOp = (async () => {
-        for await (const m of client.fetch({ uid: `${uid}` }, { source: true }, { uid: true })) {
-          source = m.source;
+        for await (const m of client.fetch(
+          { uid: `${uid}` },
+          { bodyParts: ['TEXT', '1', '1.1', '1.2', '2'], envelope: true },
+          { uid: true }
+        )) {
+          fetchedMsg = m;
           break;
         }
       })();
+      
       await Promise.race([
         fetchOp,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('source_timeout')), 20000)),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('bodyparts_timeout')), 40000)),
       ]);
-      return source;
+      
+      if (fetchedMsg?.bodyParts) {
+        bodyText = extractBodyFromParts(fetchedMsg.bodyParts);
+      }
+      
+      // Strategy 2: if bodyParts gave nothing, try source as fallback
+      if (!bodyText) {
+        log.push({ step: 'bodyparts_empty_try_source', uid, ts: Date.now() - startTime });
+        let srcMsg = null;
+        const srcOp = (async () => {
+          for await (const m of client.fetch({ uid: `${uid}` }, { source: true }, { uid: true })) {
+            srcMsg = m;
+            break;
+          }
+        })();
+        await Promise.race([
+          srcOp,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('source_timeout')), 40000)),
+        ]);
+        if (srcMsg?.source) {
+          const raw = srcMsg.source.toString('utf-8');
+          const splitIdx = raw.indexOf('\r\n\r\n');
+          const bodyRaw = splitIdx >= 0 ? raw.substring(splitIdx + 4) : raw;
+          const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
+          if (plainMatch) {
+            bodyText = decodeQuotedPrintable(plainMatch[1]).substring(0, 10000);
+          } else {
+            const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
+            if (htmlMatch) bodyText = htmlToText(htmlMatch[1]).substring(0, 10000);
+            else bodyText = htmlToText(bodyRaw).substring(0, 10000);
+          }
+        }
+      }
+      
     } finally {
       lock.release();
-      await Promise.race([client.logout(), new Promise(r => setTimeout(r, 2000))]).catch(() => {});
+      await Promise.race([client.logout(), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
     }
+    
+    return bodyText;
   } catch (err) {
     try { await client.logout().catch(() => {}); } catch (_) {}
     throw err;
@@ -107,7 +173,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const batchSize = Math.min(Math.max(parseInt(body.batch_size) || 5, 3), 10);
+    const batchSize = Math.min(Math.max(parseInt(body.batch_size) || 10, 5), 20);
 
     const host = Deno.env.get('EMAIL_ENGINE_IMAP_HOST');
     const port = parseInt(Deno.env.get('EMAIL_ENGINE_IMAP_PORT') || '993');
@@ -121,7 +187,7 @@ Deno.serve(async (req) => {
 
     // Load existing message IDs and conversations from DB
     const [existingMessages, existingConversations] = await Promise.all([
-      base44.asServiceRole.entities.EmailMessageSandbox.list('-received_at', 200),
+      base44.asServiceRole.entities.EmailMessageSandbox.list('-received_at', 500),
       base44.asServiceRole.entities.EmailConversationSandbox.list('-last_message_at', 200),
     ]);
     const existingMsgIds = new Set((existingMessages || []).map(m => m.message_id).filter(Boolean));
@@ -139,13 +205,14 @@ Deno.serve(async (req) => {
     log.push({ step: 'p1_connected', ts: Date.now() - startTime });
     const lock1 = await Promise.race([
       client1.getMailboxLock('INBOX'),
-      new Promise((_, r) => setTimeout(() => r(new Error('lock_timeout')), 12000)),
+      new Promise((_, r) => setTimeout(() => r(new Error('lock_timeout')), 15000)),
     ]);
     try {
       total = client1.mailbox.exists || 0;
       log.push({ step: 'p1_inbox', total, ts: Date.now() - startTime });
 
       if (total > 0) {
+        // Fetch more messages to catch up — look at last batchSize messages
         const start = Math.max(1, total - batchSize + 1);
         const range = `${start}:${total}`;
         log.push({ step: 'p1_fetch_envelopes', range, ts: Date.now() - startTime });
@@ -163,7 +230,7 @@ Deno.serve(async (req) => {
         })();
         await Promise.race([
           envFetch,
-          new Promise((_, r) => setTimeout(() => r(new Error('envelope_fetch_timeout')), 25000)),
+          new Promise((_, r) => setTimeout(() => r(new Error('envelope_fetch_timeout')), 30000)),
         ]);
         log.push({ step: 'p1_done', new_count: newEnvelopes.length, ts: Date.now() - startTime });
       }
@@ -182,8 +249,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // === PHASE 2: Fetch source per UID — each gets its own fresh connection ===
-    // edis.at is slow; each source fetch gets 20s before we give up and store empty body
+    // === PHASE 2: Fetch body per UID using bodyParts (faster than source) ===
     for (const info of newEnvelopes) {
       if (Date.now() - startTime > 55000) {
         log.push({ step: 'time_limit', ts: Date.now() - startTime });
@@ -194,18 +260,15 @@ Deno.serve(async (req) => {
       let sourceFailed = false;
 
       try {
-        log.push({ step: 'p2_fetching_source', uid: info.uid, ts: Date.now() - startTime });
-        const source = await fetchSourceForUID(host, port, imapUser, imapPass, info.uid, log, startTime);
-        if (source) {
-          bodyText = parseBodyFromSource(source);
-        }
-        log.push({ step: 'p2_source_ok', uid: info.uid, body_len: bodyText.length, ts: Date.now() - startTime });
+        log.push({ step: 'p2_fetching_body', uid: info.uid, ts: Date.now() - startTime });
+        bodyText = await fetchBodyForUID(host, port, imapUser, imapPass, info.uid, log, startTime);
+        log.push({ step: 'p2_body_ok', uid: info.uid, body_len: bodyText.length, ts: Date.now() - startTime });
       } catch (srcErr) {
         sourceFailed = true;
-        log.push({ step: 'p2_source_failed', uid: info.uid, error: safeErr(srcErr), ts: Date.now() - startTime });
+        log.push({ step: 'p2_body_failed', uid: info.uid, error: safeErr(srcErr), ts: Date.now() - startTime });
       }
 
-      // Store the message (body empty if source failed, will be repaired by refetch function)
+      // Store the message
       try {
         const env = info.envelope;
         const messageId = env?.messageId || null;
