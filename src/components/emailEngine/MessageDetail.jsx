@@ -4,7 +4,8 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Eye, EyeOff, Paperclip, AlertTriangle, Shield, Reply, FileText, Code } from 'lucide-react';
+import { X, Eye, EyeOff, Paperclip, AlertTriangle, Shield, Reply, FileText, Code, RefreshCw, UserPlus } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function MessageDetail({ message, conversationKey, onClose, onReply }) {
   const [showHtml, setShowHtml] = useState(false);
@@ -13,6 +14,8 @@ export default function MessageDetail({ message, conversationKey, onClose, onRep
   const [saving, setSaving] = useState(false);
   const [threadMessages, setThreadMessages] = useState([]);
   const [loadingThread, setLoadingThread] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [localMessage, setLocalMessage] = useState(message);
 
   // Thread mode: load all messages for a conversation
   useEffect(() => {
@@ -23,6 +26,44 @@ export default function MessageDetail({ message, conversationKey, onClose, onRep
         .then(data => { setThreadMessages(data || []); setLoadingThread(false); });
     }
   }, [conversationKey, message]);
+
+  // Sync localMessage when prop changes
+  useEffect(() => { setLocalMessage(message); }, [message]);
+
+  const retryAndProcess = async (createLead) => {
+    if (!localMessage?.id) return;
+    setRetrying(true);
+    try {
+      const res = await base44.functions.invoke('emailRetryAndProcess', {
+        sandbox_record_id: localMessage.id,
+        create_lead: createLead,
+      });
+      const d = res.data;
+      if (!d.success) {
+        toast.error(`Fehler: ${d.error}`);
+        return;
+      }
+      // Update local message to show new body
+      const updated = await base44.entities.EmailMessageSandbox.filter({ id: localMessage.id });
+      if (updated?.[0]) setLocalMessage(updated[0]);
+
+      if (d.body_fetched) {
+        if (createLead && d.lead_result?.created) {
+          toast.success(`Lead erstellt: ${d.lead_result.name} (${d.lead_result.email})`);
+        } else if (createLead && d.lead_result?.skipped) {
+          toast.info(`Body geladen. Lead übersprungen: ${d.lead_result.reason}`);
+        } else {
+          toast.success(`Body erfolgreich geladen (${d.body_length} Zeichen)`);
+        }
+      } else {
+        toast.warning('Body konnte nicht geladen werden — IMAP Timeout. Später erneut versuchen.');
+      }
+    } catch (err) {
+      toast.error(`Fehler beim Abrufen: ${err.message}`);
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const saveNotes = async () => {
     if (!message) return;
@@ -186,15 +227,17 @@ export default function MessageDetail({ message, conversationKey, onClose, onRep
     );
   }
 
-  if (!message) return null;
+  if (!localMessage) return null;
+
+  const bodyMissing = !localMessage.body_text || localMessage.body_text.trim() === '';
 
   return (
     <div className="border rounded-xl overflow-hidden bg-white">
       <div className="bg-slate-50 px-4 py-3 border-b flex items-center justify-between">
         <span className="text-sm font-semibold text-slate-700">Message Detail</span>
         <div className="flex items-center gap-2">
-          {onReply && message.direction === 'inbound' && (
-            <Button size="sm" variant="outline" onClick={() => onReply(message)} className="text-xs">
+          {onReply && localMessage.direction === 'inbound' && (
+            <Button size="sm" variant="outline" onClick={() => onReply(localMessage)} className="text-xs">
               <Reply className="h-3 w-3 mr-1" /> Reply
             </Button>
           )}
@@ -203,7 +246,41 @@ export default function MessageDetail({ message, conversationKey, onClose, onRep
       </div>
       <div className="overflow-y-auto max-h-[650px]">
         <div className="p-4">
-          {renderMessage(message)}
+          {/* Retry Banner — shown when body is empty */}
+          {bodyMissing && localMessage.direction === 'inbound' && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                <span className="text-sm font-medium text-amber-800">E-Mail Body fehlt</span>
+                <Badge variant="outline" className="text-xs text-amber-700 border-amber-300">Status: {localMessage.processing_status}</Badge>
+              </div>
+              <p className="text-xs text-amber-700">
+                Der Body wurde nicht geladen (IMAP Timeout beim Abrufen). Hier manuell neu abrufen — dauert bis zu 60 Sek.
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => retryAndProcess(false)}
+                  disabled={retrying}
+                  className="text-xs border-amber-300 text-amber-800 hover:bg-amber-100"
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${retrying ? 'animate-spin' : ''}`} />
+                  {retrying ? 'Lädt...' : 'Nur Body laden'}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => retryAndProcess(true)}
+                  disabled={retrying}
+                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <UserPlus className="h-3 w-3 mr-1" />
+                  {retrying ? 'Lädt...' : 'Body laden + Lead erstellen'}
+                </Button>
+              </div>
+            </div>
+          )}
+          {renderMessage(localMessage)}
 
           {/* Internal Notes */}
           <div className="mt-4">
@@ -221,6 +298,22 @@ export default function MessageDetail({ message, conversationKey, onClose, onRep
               {saving ? 'Saving...' : 'Save Notes'}
             </Button>
           </div>
+          
+          {/* Retry section for messages WITH body — allow manual lead creation */}
+          {!bodyMissing && localMessage.direction === 'inbound' && localMessage.processing_status !== 'stored' && (
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => retryAndProcess(true)}
+                disabled={retrying}
+                className="text-xs text-blue-700 border-blue-200 hover:bg-blue-50"
+              >
+                <UserPlus className={`h-3 w-3 mr-1 ${retrying ? 'animate-spin' : ''}`} />
+                {retrying ? 'Verarbeite...' : 'Als Lead verarbeiten'}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
