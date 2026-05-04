@@ -25,9 +25,13 @@ export function getPriorityWeight(priority) {
   return { Urgent: 0, High: 1, Medium: 2, Low: 3 }[priority] ?? 4;
 }
 
-// V3-local sort: priority first, then aging (older = higher up within priority)
+// V3-local sort: unassigned first, then priority, then aging (older = higher up within priority)
 export function sortLeadsV3(leads) {
   return [...leads].sort((a, b) => {
+    // Unassigned (no assigned_to_user_id) always first
+    const aUnassigned = !a.assigned_to_user_id ? 0 : 1;
+    const bUnassigned = !b.assigned_to_user_id ? 0 : 1;
+    if (aUnassigned !== bUnassigned) return aUnassigned - bUnassigned;
     const priorityDiff = getPriorityWeight(a.priority) - getPriorityWeight(b.priority);
     if (priorityDiff !== 0) return priorityDiff;
     const aDate = new Date(a.last_contacted_at || a.created_date || 0);
