@@ -143,6 +143,29 @@ Deno.serve(async (req) => {
           break;
         }
         log.push({ step: 'fetch_text_done', text_size: result?.text_size, ts: t() });
+
+      } else if (fetchMode === 'rfc822') {
+        // Fetch RFC822 (full message) — most universally supported
+        log.push({ step: 'fetch_rfc822_start', uid: targetUid, ts: t() });
+        const msg = await client.fetchOne(`${targetUid}`, { bodyParts: [''] }, { uid: true });
+        log.push({ step: 'fetchOne_rfc822_done', ts: t() });
+        const p = msg?.bodyParts?.[''];
+        result = {
+          uid: targetUid,
+          size: p?.length || 0,
+          preview: (p?.toString('utf-8') || '').substring(0, 1000),
+        };
+
+      } else if (fetchMode === 'fetchone_source') {
+        // fetchOne with source — should be fastest single fetch
+        log.push({ step: 'fetchone_source_start', uid: targetUid, ts: t() });
+        const msg = await client.fetchOne(`${targetUid}`, { source: true }, { uid: true });
+        log.push({ step: 'fetchone_source_done', ts: t() });
+        result = {
+          uid: targetUid,
+          source_size: msg?.source?.length || 0,
+          preview: (msg?.source?.toString('utf-8') || '').substring(0, 1000),
+        };
       }
 
       lock.release();

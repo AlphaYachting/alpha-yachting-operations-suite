@@ -104,42 +104,93 @@ function getBestPartNums(bodyStructure) {
   return { partNums: ['1'], isHtml: false };
 }
 
-// Fetch body text for a single UID using fetchOne (avoids for-await hang on Dovecot)
-async function fetchBodyForUID(host, port, user, pass, uid, bodyStructure, log, startTime) {
-  const client = makeClient(host, port, user, pass, log, startTime);
-  try {
-    await client.connect();
-    const lock = await client.getMailboxLock('INBOX');
-    let bodyText = '';
-    try {
-      const { partNums, isHtml } = getBestPartNums(bodyStructure);
-      log.push({ step: 'fetch_parts', uid, parts: partNums, isHtml, ts: Date.now() - startTime });
+// Fetch body text for a single UID using Deno.connectTls raw IMAP
+// This bypasses imapflow for body fetching — avoids Dovecot hang on BODY.PEEK[x] via imapflow
+async function rawImapFetchBody(host, port, user, pass, seqNum, partNum) {
+  const TIMEOUT_MS = 15000;
+  const enc = new TextEncoder();
+  const dec = new TextDecoder('latin1');
+  let tag = 1;
 
-      const msg = await Promise.race([
-        client.fetchOne(`${uid}`, { bodyParts: partNums }, { uid: true }),
-        new Promise((_, r) => setTimeout(() => r(new Error('fetchOne_timeout')), 15000)),
-      ]);
+  const withTimeout = (p, ms, label) =>
+    Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error(`timeout_${label}`)), ms))]);
 
-      if (msg?.bodyParts) {
-        for (const pn of partNums) {
-          const buf = msg.bodyParts[pn];
-          if (buf && buf.length > 0) {
-            const raw = buf.toString('utf-8');
-            bodyText = isHtml ? htmlToText(raw).substring(0, 10000) : raw.substring(0, 10000);
-            break;
-          }
-        }
+  const conn = await withTimeout(Deno.connectTls({ hostname: host, port, alpnProtocols: [] }), 8000, 'connect');
+  const send = async (cmd) => { await conn.write(enc.encode(`A${tag++} ${cmd}\r\n`)); };
+
+  let readBuf = new Uint8Array(0);
+  const readLine = async () => {
+    while (true) {
+      const str = dec.decode(readBuf);
+      const idx = str.indexOf('\r\n');
+      if (idx !== -1) {
+        const line = str.substring(0, idx);
+        readBuf = enc.encode(str.substring(idx + 2));
+        return line;
       }
-
-    } finally {
-      lock.release();
-      client.close(); // close() instead of logout() — avoids Dovecot 120s hang on connection teardown
+      const chunk = new Uint8Array(4096);
+      const n = await withTimeout(conn.read(chunk), TIMEOUT_MS, 'read');
+      if (n === null) throw new Error('connection_closed');
+      const combined = new Uint8Array(readBuf.length + n);
+      combined.set(readBuf); combined.set(chunk.subarray(0, n), readBuf.length);
+      readBuf = combined;
     }
-    return bodyText;
+  };
+  const readBytes = async (n) => {
+    while (readBuf.length < n) {
+      const chunk = new Uint8Array(Math.max(4096, n - readBuf.length));
+      const read = await withTimeout(conn.read(chunk), TIMEOUT_MS, 'read_literal');
+      if (read === null) throw new Error('connection_closed_in_literal');
+      const combined = new Uint8Array(readBuf.length + read);
+      combined.set(readBuf); combined.set(chunk.subarray(0, read), readBuf.length);
+      readBuf = combined;
+    }
+    const result = dec.decode(readBuf.subarray(0, n));
+    readBuf = readBuf.subarray(n);
+    return result;
+  };
+
+  try {
+    const greeting = await readLine();
+    if (!greeting.startsWith('* OK')) throw new Error(`bad_greeting`);
+    await send(`LOGIN "${user}" "${pass}"`);
+    let line;
+    do { line = await readLine(); } while (!line.match(/^A\d+ (OK|NO|BAD)/));
+    if (!line.match(/^A\d+ OK/)) throw new Error('auth_failed');
+    await send('SELECT INBOX');
+    do { line = await readLine(); } while (!line.match(/^A\d+ (OK|NO|BAD)/));
+    if (!line.match(/^A\d+ OK/)) throw new Error('select_failed');
+    await send(`FETCH ${seqNum} BODY.PEEK[${partNum}]`);
+    let body = '';
+    while (true) {
+      line = await readLine();
+      const litMatch = line.match(/\{(\d+)\}$/);
+      if (litMatch) {
+        body = await readBytes(parseInt(litMatch[1]));
+        await readLine(); // trailing CRLF
+        break;
+      }
+      if (line.match(/^A\d+ (OK|NO|BAD)/)) break;
+    }
+    try { await send('LOGOUT'); } catch (_) {}
+    try { conn.close(); } catch (_) {}
+    return body;
   } catch (err) {
-    client.close();
+    try { conn.close(); } catch (_) {}
     throw err;
   }
+}
+
+async function fetchBodyForUID(host, port, user, pass, uid, bodyStructure, log, startTime) {
+  const { partNums, isHtml } = getBestPartNums(bodyStructure);
+  const partNum = partNums[0] || '1';
+  log.push({ step: 'fetch_parts', uid, partNum, isHtml, ts: Date.now() - startTime });
+
+  // uid == seqNum on this server (sequential mailbox)
+  const raw = await rawImapFetchBody(host, port, user, pass, uid, partNum);
+  if (!raw || !raw.trim()) return '';
+  const decoded = decodeQuotedPrintable(raw);
+  return isHtml ? htmlToText(decoded).substring(0, 10000) : decoded.substring(0, 10000);
 }
 
 Deno.serve(async (req) => {

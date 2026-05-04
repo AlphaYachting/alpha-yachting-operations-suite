@@ -9,7 +9,7 @@
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { ImapFlow } from 'npm:imapflow@1.0.167';
-import { connect as tlsConnect } from 'node:tls';
+// note: using Deno.connectTls instead of node:tls for better Deno compatibility
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -102,102 +102,146 @@ function getBestPartNums(bodyStructure) {
 // Uses a hard socket timeout so we never hang > 15s
 // ---------------------------------------------------------------------------
 
-function rawImapFetch(host, port, user, pass, uid, partNum) {
-  return new Promise((resolve, reject) => {
-    const TIMEOUT_MS = 15000;
-    let buffer = '';
-    let tag = 1;
-    let phase = 'greeting'; // greeting → login → select → fetch → done
-    let fetchBody = '';
-    let inFetch = false;
-    let fetchSize = 0;
-    let fetchReceived = 0;
+// Run a single raw IMAP command sequence using Deno.connectTls (async/await, line-based reads)
+// LOGIN → SELECT INBOX → fetchCmd → LOGOUT
+// Returns { body: string, rawLines: string[] }
+async function rawImapCommand(host, port, user, pass, fetchCmd) {
+  const TIMEOUT_MS = 15000;
+  const rawLines = [];
+  let conn;
 
-    const timer = setTimeout(() => {
-      socket.destroy();
-      reject(new Error(`raw_imap_timeout_in_phase_${phase}`));
-    }, TIMEOUT_MS);
+  const withTimeout = (promise, ms, label) =>
+    Promise.race([promise, new Promise((_, r) => setTimeout(() => r(new Error(`timeout_${label}`)), ms))]);
 
-    const socket = tlsConnect({ host, port, rejectUnauthorized: false });
+  conn = await withTimeout(Deno.connectTls({ hostname: host, port, alpnProtocols: [] }), 8000, 'connect');
 
-    socket.on('error', (err) => {
-      clearTimeout(timer);
-      reject(new Error(`socket_error: ${err.message}`));
-    });
+  const enc = new TextEncoder();
+  const dec = new TextDecoder('latin1'); // binary-safe
 
-    const send = (cmd) => {
-      const line = `A${tag++} ${cmd}\r\n`;
-      socket.write(line);
-    };
+  let tag = 1;
+  const send = async (cmd) => {
+    const line = `A${tag++} ${cmd}\r\n`;
+    await conn.write(enc.encode(line));
+  };
 
-    const finish = (result) => {
-      clearTimeout(timer);
-      try { socket.write(`A${tag} LOGOUT\r\n`); } catch (_) {}
-      setTimeout(() => socket.destroy(), 500);
-      resolve(result);
-    };
+  // Read bytes until we have at least one complete line (\r\n)
+  // Returns accumulated buffer as string
+  let readBuf = new Uint8Array(0);
 
-    socket.on('data', (chunk) => {
-      buffer += chunk.toString('binary');
+  const readLine = async () => {
+    while (true) {
+      const str = dec.decode(readBuf);
+      const idx = str.indexOf('\r\n');
+      if (idx !== -1) {
+        const line = str.substring(0, idx);
+        readBuf = enc.encode(str.substring(idx + 2));
+        return line;
+      }
+      const chunk = new Uint8Array(4096);
+      const n = await withTimeout(conn.read(chunk), TIMEOUT_MS, 'read');
+      if (n === null) throw new Error('connection_closed');
+      rawLines.push(dec.decode(chunk.subarray(0, n)).substring(0, 200));
+      const combined = new Uint8Array(readBuf.length + n);
+      combined.set(readBuf);
+      combined.set(chunk.subarray(0, n), readBuf.length);
+      readBuf = combined;
+    }
+  };
 
-      // If we're in a fetch literal, accumulate bytes
-      if (inFetch) {
-        fetchReceived += chunk.length;
-        if (fetchReceived >= fetchSize) {
-          inFetch = false;
-          finish({ body: Buffer.from(fetchBody + buffer, 'binary').toString('utf-8').substring(0, 15000) });
-          return;
-        }
-        fetchBody += chunk.toString('binary');
-        return;
+  // Read exactly N bytes (for literal body)
+  const readBytes = async (n) => {
+    while (readBuf.length < n) {
+      const chunk = new Uint8Array(Math.max(4096, n - readBuf.length));
+      const read = await withTimeout(conn.read(chunk), TIMEOUT_MS, 'read_literal');
+      if (read === null) throw new Error('connection_closed_in_literal');
+      const combined = new Uint8Array(readBuf.length + read);
+      combined.set(readBuf);
+      combined.set(chunk.subarray(0, read), readBuf.length);
+      readBuf = combined;
+    }
+    const result = dec.decode(readBuf.subarray(0, n));
+    readBuf = readBuf.subarray(n);
+    return result;
+  };
+
+  try {
+    // Greeting
+    const greeting = await readLine();
+    rawLines.push(`greeting: ${greeting.substring(0, 100)}`);
+    if (!greeting.startsWith('* OK')) throw new Error(`bad_greeting: ${greeting.substring(0, 50)}`);
+
+    // Login
+    await send(`LOGIN "${user}" "${pass}"`);
+    let line;
+    do { line = await readLine(); } while (!line.match(/^A\d+ (OK|NO|BAD)/));
+    if (!line.match(/^A\d+ OK/)) throw new Error('auth_failed');
+
+    // Select
+    await send('SELECT INBOX');
+    do { line = await readLine(); } while (!line.match(/^A\d+ (OK|NO|BAD)/));
+    if (!line.match(/^A\d+ OK/)) throw new Error('select_failed');
+
+    // Fetch
+    await send(fetchCmd);
+
+    // Read fetch response — look for literal {SIZE}
+    let body = '';
+    while (true) {
+      line = await readLine();
+      rawLines.push(`fetch_line: ${line.substring(0, 200)}`);
+
+      // Check for literal: "* N FETCH (...) {SIZE}"
+      const litMatch = line.match(/\{(\d+)\}$/);
+      if (litMatch) {
+        const size = parseInt(litMatch[1]);
+        body = await readBytes(size);
+        // Read the trailing \r\n after literal
+        await readLine();
+        break;
       }
 
-      const lines = buffer.split('\r\n');
-      buffer = lines.pop() || ''; // keep incomplete line
+      // Tagged OK = done with no literal
+      if (line.match(/^A\d+ OK/)) { body = ''; break; }
+      if (line.match(/^A\d+ (NO|BAD)/)) { body = ''; break; }
+    }
 
-      for (const line of lines) {
-        // Detect fetch literal: * <seq> FETCH ... {<size>}
-        const litMatch = line.match(/\* \d+ FETCH .*\{(\d+)\}/);
-        if (litMatch) {
-          fetchSize = parseInt(litMatch[1]);
-          fetchReceived = 0;
-          fetchBody = '';
-          inFetch = true;
-          continue;
-        }
+    // Logout (best effort)
+    try { await send('LOGOUT'); } catch (_) {}
+    try { conn.close(); } catch (_) {}
 
-        if (phase === 'greeting' && line.startsWith('* OK')) {
-          phase = 'login';
-          send(`LOGIN "${user}" "${pass}"`);
-          continue;
-        }
+    return { body, rawLines };
+  } catch (err) {
+    try { conn.close(); } catch (_) {}
+    throw err;
+  }
+}
 
-        if (phase === 'login' && line.match(/^A\d+ OK/)) {
-          phase = 'select';
-          send('SELECT INBOX');
-          continue;
-        }
+// Try multiple fetch strategies until one returns content
+async function rawImapFetch(host, port, user, pass, uid, partNum) {
+  // Try both UID FETCH and plain FETCH (sequence number = uid on this server since sequential)
+  const strategies = [
+    { cmd: `FETCH ${uid} BODY.PEEK[${partNum}]`,      name: `seq_part_${partNum}` },
+    { cmd: `UID FETCH ${uid} BODY.PEEK[${partNum}]`,  name: `uid_part_${partNum}` },
+    { cmd: `FETCH ${uid} BODY.PEEK[TEXT]`,             name: 'seq_TEXT' },
+    { cmd: `UID FETCH ${uid} BODY.PEEK[TEXT]`,         name: 'uid_TEXT' },
+    { cmd: `FETCH ${uid} (RFC822.TEXT)`,               name: 'seq_RFC822_TEXT' },
+  ];
 
-        if (phase === 'select' && line.match(/^A\d+ OK/)) {
-          phase = 'fetch';
-          send(`UID FETCH ${uid} BODY.PEEK[${partNum}]`);
-          continue;
-        }
-
-        if (phase === 'fetch' && line.match(/^A\d+ OK/)) {
-          // fetch done but we didn't get a literal — empty body
-          finish({ body: '' });
-          return;
-        }
-
-        if (line.match(/^A\d+ (NO|BAD)/)) {
-          if (phase === 'login') { clearTimeout(timer); socket.destroy(); reject(new Error('auth_failed')); return; }
-          finish({ body: '' });
-          return;
-        }
-      }
-    });
-  });
+  const allRawLines = [];
+  for (const s of strategies) {
+    let result;
+    try {
+      result = await rawImapCommand(host, port, user, pass, s.cmd);
+    } catch (e) {
+      allRawLines.push({ strategy: s.name, error: e.message });
+      continue;
+    }
+    allRawLines.push({ strategy: s.name, lines: result.rawLines.slice(0, 5) });
+    if (result.body && result.body.trim().length > 0) {
+      return { body: result.body, strategy: s.name, rawLog: allRawLines };
+    }
+  }
+  return { body: '', strategy: 'none', rawLog: allRawLines };
 }
 
 async function fetchBodyFromImap(host, port, user, pass, messageId) {
@@ -289,16 +333,19 @@ async function fetchBodyFromImap(host, port, user, pass, messageId) {
     }
 
     // --- Phase 3: raw TLS fetch — bypasses imapflow for body content ---
-    log.push({ step: 'raw_fetch_start', uid, partNum });
+    log.push({ step: 'raw_fetch_start', uid, partNum, isHtml });
     const rawResult = await rawImapFetch(host, port, user, pass, uid, partNum);
-    log.push({ step: 'raw_fetch_done', body_len: rawResult.body?.length || 0 });
+    log.push({ step: 'raw_fetch_done', body_len: rawResult.body?.length || 0, strategy: rawResult.strategy, rawLog: rawResult.rawLog });
 
     if (rawResult.body && rawResult.body.trim().length > 0) {
-      const raw = rawResult.body;
-      // Decode QP if needed (quoted-printable), then convert HTML if needed
+      let raw = rawResult.body;
+      // If full_source strategy, strip headers first
+      if (rawResult.strategy === 'full_source') {
+        raw = extractBodyFromSource(Buffer.from(raw, 'utf-8'));
+      }
       const decoded = decodeQuotedPrintable(raw);
       bodyText = isHtml ? htmlToText(decoded).substring(0, 10000) : decoded.substring(0, 10000);
-      log.push({ step: 'body_decoded', length: bodyText.length });
+      log.push({ step: 'body_decoded', length: bodyText.length, strategy: rawResult.strategy });
     }
 
     return { bodyText, log };
