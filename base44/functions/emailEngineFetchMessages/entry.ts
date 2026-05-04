@@ -75,93 +75,69 @@ function makeClient(host, port, user, pass, log, startTime) {
     host, port,
     secure: true,
     auth: { user, pass },
-    logger: {
-      debug: () => {},
-      info:  (obj) => log.push({ level: 'imap_info',  msg: obj?.msg, ts: Date.now() - startTime }),
-      warn:  (obj) => log.push({ level: 'imap_warn',  msg: obj?.msg || JSON.stringify(obj), ts: Date.now() - startTime }),
-      error: (obj) => log.push({ level: 'imap_error', msg: safeErr(obj?.err || new Error(obj?.msg || 'err')), ts: Date.now() - startTime }),
-    },
-    connectionTimeout: 20000,
-    greetingTimeout: 15000,
-    socketTimeout: 60000,
+    logger: false,
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,  // short — prevents 120s hangs on bad Dovecot responses
     disableAutoIdle: true,
   });
   c.on('error', (err) => log.push({ step: 'imap_error_event', error: safeErr(err), ts: Date.now() - startTime }));
   return c;
 }
 
-// Fetch body text for a single UID — tries bodyParts first (faster), falls back to source
-async function fetchBodyForUID(host, port, user, pass, uid, log, startTime) {
+// Determine which body part numbers to fetch based on bodyStructure
+// Returns { partNums, isHtml } — prefer plain text, fallback to HTML
+function getBestPartNums(bodyStructure) {
+  if (!bodyStructure) return { partNums: ['1'], isHtml: false };
+  const plain = [], html = [];
+  const walk = (node) => {
+    if (!node) return;
+    if (node.type === 'text/plain' && node.part) { plain.push(node.part); return; }
+    if (node.type === 'text/html' && node.part) { html.push(node.part); return; }
+    if (node.childNodes) node.childNodes.forEach(walk);
+  };
+  walk(bodyStructure);
+  if (plain.length > 0) return { partNums: plain, isHtml: false };
+  if (html.length > 0) return { partNums: html, isHtml: true };
+  // Single-part (no childNodes, type is on root)
+  if (bodyStructure.type === 'text/html') return { partNums: ['1'], isHtml: true };
+  return { partNums: ['1'], isHtml: false };
+}
+
+// Fetch body text for a single UID using fetchOne (avoids for-await hang on Dovecot)
+async function fetchBodyForUID(host, port, user, pass, uid, bodyStructure, log, startTime) {
   const client = makeClient(host, port, user, pass, log, startTime);
   try {
     await client.connect();
-    const lock = await Promise.race([
-      client.getMailboxLock('INBOX'),
-      new Promise((_, r) => setTimeout(() => r(new Error('lock_timeout')), 15000)),
-    ]);
-    
+    const lock = await client.getMailboxLock('INBOX');
     let bodyText = '';
-    
     try {
-      // Strategy 1: fetch bodyParts (TEXT section only — much smaller/faster than full source)
-      let fetchedMsg = null;
-      const fetchOp = (async () => {
-        for await (const m of client.fetch(
-          { uid: `${uid}` },
-          { bodyParts: ['TEXT', '1', '1.1', '1.2', '2'], envelope: true },
-          { uid: true }
-        )) {
-          fetchedMsg = m;
-          break;
-        }
-      })();
-      
-      await Promise.race([
-        fetchOp,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('bodyparts_timeout')), 40000)),
+      const { partNums, isHtml } = getBestPartNums(bodyStructure);
+      log.push({ step: 'fetch_parts', uid, parts: partNums, isHtml, ts: Date.now() - startTime });
+
+      const msg = await Promise.race([
+        client.fetchOne(`${uid}`, { bodyParts: partNums }, { uid: true }),
+        new Promise((_, r) => setTimeout(() => r(new Error('fetchOne_timeout')), 15000)),
       ]);
-      
-      if (fetchedMsg?.bodyParts) {
-        bodyText = extractBodyFromParts(fetchedMsg.bodyParts);
-      }
-      
-      // Strategy 2: if bodyParts gave nothing, try source as fallback
-      if (!bodyText) {
-        log.push({ step: 'bodyparts_empty_try_source', uid, ts: Date.now() - startTime });
-        let srcMsg = null;
-        const srcOp = (async () => {
-          for await (const m of client.fetch({ uid: `${uid}` }, { source: true }, { uid: true })) {
-            srcMsg = m;
+
+      if (msg?.bodyParts) {
+        for (const pn of partNums) {
+          const buf = msg.bodyParts[pn];
+          if (buf && buf.length > 0) {
+            const raw = buf.toString('utf-8');
+            bodyText = isHtml ? htmlToText(raw).substring(0, 10000) : raw.substring(0, 10000);
             break;
           }
-        })();
-        await Promise.race([
-          srcOp,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('source_timeout')), 40000)),
-        ]);
-        if (srcMsg?.source) {
-          const raw = srcMsg.source.toString('utf-8');
-          const splitIdx = raw.indexOf('\r\n\r\n');
-          const bodyRaw = splitIdx >= 0 ? raw.substring(splitIdx + 4) : raw;
-          const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
-          if (plainMatch) {
-            bodyText = decodeQuotedPrintable(plainMatch[1]).substring(0, 10000);
-          } else {
-            const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*(?:\r\n[^\r\n]+)*\r\n\r\n([\s\S]*?)(?=\r\n--)/i);
-            if (htmlMatch) bodyText = htmlToText(htmlMatch[1]).substring(0, 10000);
-            else bodyText = htmlToText(bodyRaw).substring(0, 10000);
-          }
         }
       }
-      
+
     } finally {
       lock.release();
-      await Promise.race([client.logout(), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
+      client.close(); // close() instead of logout() — avoids Dovecot 120s hang on connection teardown
     }
-    
     return bodyText;
   } catch (err) {
-    try { await client.logout().catch(() => {}); } catch (_) {}
+    client.close();
     throw err;
   }
 }
@@ -236,7 +212,7 @@ Deno.serve(async (req) => {
       }
     } finally {
       lock1.release();
-      await client1.logout().catch(() => {});
+      client1.close();
     }
 
     if (newEnvelopes.length === 0) {
@@ -261,7 +237,7 @@ Deno.serve(async (req) => {
 
       try {
         log.push({ step: 'p2_fetching_body', uid: info.uid, ts: Date.now() - startTime });
-        bodyText = await fetchBodyForUID(host, port, imapUser, imapPass, info.uid, log, startTime);
+        bodyText = await fetchBodyForUID(host, port, imapUser, imapPass, info.uid, info.bodyStructure, log, startTime);
         log.push({ step: 'p2_body_ok', uid: info.uid, body_len: bodyText.length, ts: Date.now() - startTime });
       } catch (srcErr) {
         sourceFailed = true;

@@ -1,14 +1,15 @@
 /**
  * EMAIL ENGINE — Retry body fetch for a single message + optionally create Lead
  *
- * Connects directly to IMAP, fetches the body for the given Message-ID (or DB record ID),
- * saves it to EmailMessageSandbox, then (if requested) runs lead extraction.
+ * Uses a raw TLS IMAP implementation to bypass imapflow's issues with this Dovecot server.
+ * Connects directly, runs minimal IMAP commands, and reads the raw body with a hard socket timeout.
  *
  * Usage:
  *   { sandbox_record_id: "...", create_lead: true }
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { ImapFlow } from 'npm:imapflow@1.0.167';
+import { connect as tlsConnect } from 'node:tls';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -79,25 +80,142 @@ function extractBodyFromSource(sourceBuffer) {
 // IMAP body fetch — tries bodyParts, falls back to source
 // ---------------------------------------------------------------------------
 
+function getBestPartNums(bodyStructure) {
+  if (!bodyStructure) return { partNums: ['1'], isHtml: false };
+  const plain = [], html = [];
+  const walk = (node) => {
+    if (!node) return;
+    if (node.type === 'text/plain' && node.part) { plain.push(node.part); return; }
+    if (node.type === 'text/html' && node.part) { html.push(node.part); return; }
+    if (node.childNodes) node.childNodes.forEach(walk);
+  };
+  walk(bodyStructure);
+  if (plain.length > 0) return { partNums: plain, isHtml: false };
+  if (html.length > 0) return { partNums: html, isHtml: true };
+  if (bodyStructure.type === 'text/html') return { partNums: ['1'], isHtml: true };
+  return { partNums: ['1'], isHtml: false };
+}
+
+// ---------------------------------------------------------------------------
+// Raw TLS IMAP — bypasses imapflow entirely for body fetch
+// Sends: LOGIN → SELECT INBOX → UID FETCH <uid> (BODYSTRUCTURE) → UID FETCH <uid> BODY.PEEK[<part>] → LOGOUT
+// Uses a hard socket timeout so we never hang > 15s
+// ---------------------------------------------------------------------------
+
+function rawImapFetch(host, port, user, pass, uid, partNum) {
+  return new Promise((resolve, reject) => {
+    const TIMEOUT_MS = 15000;
+    let buffer = '';
+    let tag = 1;
+    let phase = 'greeting'; // greeting → login → select → fetch → done
+    let fetchBody = '';
+    let inFetch = false;
+    let fetchSize = 0;
+    let fetchReceived = 0;
+
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(new Error(`raw_imap_timeout_in_phase_${phase}`));
+    }, TIMEOUT_MS);
+
+    const socket = tlsConnect({ host, port, rejectUnauthorized: false });
+
+    socket.on('error', (err) => {
+      clearTimeout(timer);
+      reject(new Error(`socket_error: ${err.message}`));
+    });
+
+    const send = (cmd) => {
+      const line = `A${tag++} ${cmd}\r\n`;
+      socket.write(line);
+    };
+
+    const finish = (result) => {
+      clearTimeout(timer);
+      try { socket.write(`A${tag} LOGOUT\r\n`); } catch (_) {}
+      setTimeout(() => socket.destroy(), 500);
+      resolve(result);
+    };
+
+    socket.on('data', (chunk) => {
+      buffer += chunk.toString('binary');
+
+      // If we're in a fetch literal, accumulate bytes
+      if (inFetch) {
+        fetchReceived += chunk.length;
+        if (fetchReceived >= fetchSize) {
+          inFetch = false;
+          finish({ body: Buffer.from(fetchBody + buffer, 'binary').toString('utf-8').substring(0, 15000) });
+          return;
+        }
+        fetchBody += chunk.toString('binary');
+        return;
+      }
+
+      const lines = buffer.split('\r\n');
+      buffer = lines.pop() || ''; // keep incomplete line
+
+      for (const line of lines) {
+        // Detect fetch literal: * <seq> FETCH ... {<size>}
+        const litMatch = line.match(/\* \d+ FETCH .*\{(\d+)\}/);
+        if (litMatch) {
+          fetchSize = parseInt(litMatch[1]);
+          fetchReceived = 0;
+          fetchBody = '';
+          inFetch = true;
+          continue;
+        }
+
+        if (phase === 'greeting' && line.startsWith('* OK')) {
+          phase = 'login';
+          send(`LOGIN "${user}" "${pass}"`);
+          continue;
+        }
+
+        if (phase === 'login' && line.match(/^A\d+ OK/)) {
+          phase = 'select';
+          send('SELECT INBOX');
+          continue;
+        }
+
+        if (phase === 'select' && line.match(/^A\d+ OK/)) {
+          phase = 'fetch';
+          send(`UID FETCH ${uid} BODY.PEEK[${partNum}]`);
+          continue;
+        }
+
+        if (phase === 'fetch' && line.match(/^A\d+ OK/)) {
+          // fetch done but we didn't get a literal — empty body
+          finish({ body: '' });
+          return;
+        }
+
+        if (line.match(/^A\d+ (NO|BAD)/)) {
+          if (phase === 'login') { clearTimeout(timer); socket.destroy(); reject(new Error('auth_failed')); return; }
+          finish({ body: '' });
+          return;
+        }
+      }
+    });
+  });
+}
+
 async function fetchBodyFromImap(host, port, user, pass, messageId) {
   const log = [];
   const client = new ImapFlow({
     host, port,
     secure: true,
     auth: { user, pass },
-    logger: { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} },
-    connectionTimeout: 20000,
-    greetingTimeout: 15000,
-    socketTimeout: 90000,
+    logger: false,
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,  // short — prevents 120s hangs on bad Dovecot responses
     disableAutoIdle: true,
   });
 
   try {
     await client.connect();
-    const lock = await Promise.race([
-      client.getMailboxLock('INBOX'),
-      new Promise((_, r) => setTimeout(() => r(new Error('lock_timeout')), 15000)),
-    ]);
+    const lock = await client.getMailboxLock('INBOX');
 
     let bodyText = '';
     let uid = null;
@@ -107,14 +225,14 @@ async function fetchBodyFromImap(host, port, user, pass, messageId) {
       const cleanMsgId = messageId.replace(/[<>]/g, '').trim();
       const searchResults = await Promise.race([
         client.search({ header: ['Message-ID', cleanMsgId] }),
-        new Promise((_, r) => setTimeout(() => r(new Error('search_timeout')), 15000)),
+        new Promise((_, r) => setTimeout(() => r(new Error('search_timeout')), 10000)),
       ]);
 
       if (searchResults && searchResults.length > 0) {
         uid = searchResults[searchResults.length - 1];
         log.push({ step: 'uid_found', uid });
       } else {
-        // Fallback: scan envelope list
+        // Fallback: scan last 100 envelopes
         log.push({ step: 'search_miss_scanning_envelopes' });
         const total = client.mailbox.exists || 0;
         if (total > 0) {
@@ -130,49 +248,62 @@ async function fetchBodyFromImap(host, port, user, pass, messageId) {
       }
 
       if (!uid) throw new Error('message_not_found_on_server');
-
-      // Step 2: fetch bodyParts (TEXT section only — fastest)
-      log.push({ step: 'fetching_bodyparts', uid });
-      let fetched = null;
-      const bpOp = (async () => {
-        for await (const m of client.fetch({ uid: `${uid}` }, { bodyParts: ['TEXT', '1', '1.1', '1.2', '2'], uid: true })) {
-          fetched = m;
-          break;
-        }
-      })();
-      await Promise.race([bpOp, new Promise((_, r) => setTimeout(() => r(new Error('bodyparts_timeout')), 50000))]);
-
-      if (fetched?.bodyParts) {
-        bodyText = extractBodyFromParts(fetched.bodyParts);
-        log.push({ step: 'bodyparts_ok', length: bodyText.length });
-      }
-
-      // Step 3: fallback to full source if bodyParts gave nothing
-      if (!bodyText) {
-        log.push({ step: 'bodyparts_empty_fallback_source' });
-        let srcMsg = null;
-        const srcOp = (async () => {
-          for await (const m of client.fetch({ uid: `${uid}` }, { source: true }, { uid: true })) {
-            srcMsg = m;
-            break;
-          }
-        })();
-        await Promise.race([srcOp, new Promise((_, r) => setTimeout(() => r(new Error('source_timeout')), 50000))]);
-
-        if (srcMsg?.source) {
-          bodyText = extractBodyFromSource(srcMsg.source);
-          log.push({ step: 'source_ok', length: bodyText.length });
-        }
-      }
+      log.push({ step: 'uid_resolved', uid });
 
     } finally {
       lock.release();
-      await Promise.race([client.logout(), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
+      client.close(); // close search connection before opening body-fetch connection
+    }
+
+    // --- Phase 2: get bodyStructure via imapflow (fast — no body data) ---
+    const client2 = new ImapFlow({
+      host, port, secure: true, auth: { user, pass },
+      logger: false,
+      connectionTimeout: 15000, greetingTimeout: 10000, socketTimeout: 20000,
+      disableAutoIdle: true,
+    });
+
+    let partNum = '1';
+    let isHtml = false;
+
+    try {
+      await client2.connect();
+      const lock2 = await client2.getMailboxLock('INBOX');
+      try {
+        log.push({ step: 'fetching_structure', uid });
+        const structMsg = await Promise.race([
+          client2.fetchOne(`${uid}`, { bodyStructure: true }, { uid: true }),
+          new Promise((_, r) => setTimeout(() => r(new Error('structure_timeout')), 12000)),
+        ]);
+        const best = getBestPartNums(structMsg?.bodyStructure);
+        partNum = best.partNums[0] || '1';
+        isHtml = best.isHtml;
+        log.push({ step: 'structure_ok', partNum, isHtml });
+      } finally {
+        lock2.release();
+        client2.close();
+      }
+    } catch (_structErr) {
+      log.push({ step: 'structure_failed_using_part1' });
+      // proceed with default partNum = '1'
+    }
+
+    // --- Phase 3: raw TLS fetch — bypasses imapflow for body content ---
+    log.push({ step: 'raw_fetch_start', uid, partNum });
+    const rawResult = await rawImapFetch(host, port, user, pass, uid, partNum);
+    log.push({ step: 'raw_fetch_done', body_len: rawResult.body?.length || 0 });
+
+    if (rawResult.body && rawResult.body.trim().length > 0) {
+      const raw = rawResult.body;
+      // Decode QP if needed (quoted-printable), then convert HTML if needed
+      const decoded = decodeQuotedPrintable(raw);
+      bodyText = isHtml ? htmlToText(decoded).substring(0, 10000) : decoded.substring(0, 10000);
+      log.push({ step: 'body_decoded', length: bodyText.length });
     }
 
     return { bodyText, log };
   } catch (err) {
-    try { await client.logout().catch(() => {}); } catch (_) {}
+    client.close();
     throw Object.assign(new Error(safeErr(err)), { log });
   }
 }
