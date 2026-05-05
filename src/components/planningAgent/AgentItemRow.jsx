@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import QuickResolutionForm from './QuickResolutionForm';
@@ -49,13 +49,29 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
   const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState(item.job?.location_id || '');
   const [locationSaving, setLocationSaving] = useState(false);
+  const [executorDropdownOpen, setExecutorDropdownOpen] = useState(false);
+  const [executorSaving, setExecutorSaving] = useState(false);
+  const executorRef = useRef(null);
 
-  // Close location dropdown when card expands
+  // Close dropdowns when card expands
   useEffect(() => {
-    if (expanded && locationDropdownOpen) {
+    if (expanded) {
       setLocationDropdownOpen(false);
+      setExecutorDropdownOpen(false);
     }
   }, [expanded]);
+
+  // Close executor dropdown on outside click
+  useEffect(() => {
+    if (!executorDropdownOpen) return;
+    const handler = (e) => {
+      if (executorRef.current && !executorRef.current.contains(e.target)) {
+        setExecutorDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [executorDropdownOpen]);
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
 
@@ -101,6 +117,20 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
     const isThisWeek = date >= today && date <= weekEnd;
     const formatted = date.toLocaleDateString('de-AT', { weekday: 'short', month: 'short', day: 'numeric' });
     return isThisWeek ? `This week: ${formatted}` : formatted;
+  };
+
+  // Update executor (WorkOrder.lead_technician_id)
+  const handleExecutorChange = async (technicianId) => {
+    setExecutorSaving(true);
+    try {
+      await base44.entities.WorkOrder.update(workOrder.id, { lead_technician_id: technicianId || null });
+      setExecutorDropdownOpen(false);
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error updating executor:', error);
+    } finally {
+      setExecutorSaving(false);
+    }
   };
 
   // Update location
@@ -227,25 +257,82 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
 
         {/* Assigned executor shown prominently if set, else show suggestion */}
         {assignedExecutorName ? (
-          <div className="flex items-center gap-1.5 text-xs">
-            <UserCheck className="h-3 w-3 text-emerald-600 flex-shrink-0" />
-            <span className="text-emerald-700 font-semibold">{assignedExecutorName}</span>
-            <span className="text-slate-400">executor</span>
+          <div className="relative" ref={executorRef}>
+            <div
+              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-emerald-50 rounded px-1 -mx-1 py-0.5 transition-colors"
+              onClick={() => setExecutorDropdownOpen(v => !v)}
+              title="Click to change execution owner"
+            >
+              <UserCheck className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+              <span className="text-emerald-700 font-semibold">{executorSaving ? '…' : assignedExecutorName}</span>
+              <span className="text-slate-400">executor</span>
+              <span className="text-slate-300 text-xs">✎</span>
+            </div>
+            {executorDropdownOpen && (
+              <div className="absolute top-6 left-0 z-50 bg-white border border-slate-200 rounded-lg shadow-lg min-w-[180px]">
+                <div className="px-3 py-1.5 text-xs text-slate-400 border-b border-slate-100 font-medium">Execution Owner</div>
+                <button
+                  onClick={() => handleExecutorChange(null)}
+                  className="block w-full text-left px-3 py-2 text-xs text-slate-400 hover:bg-slate-50 border-b border-slate-100"
+                  disabled={executorSaving}
+                >
+                  — Unassign
+                </button>
+                {technicians.filter(t => t.status === 'Active').map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => handleExecutorChange(t.id)}
+                    className={cn(
+                      'block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-b-0',
+                      t.id === workOrder.lead_technician_id ? 'font-semibold text-emerald-700 bg-emerald-50' : 'text-slate-700'
+                    )}
+                    disabled={executorSaving}
+                  >
+                    {t.first_name} {t.last_name}
+                    {t.id === workOrder.lead_technician_id && ' ✓'}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
-          d.preferredResourcePool?.length > 0 && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-              <UserCheck className="h-3 w-3 flex-shrink-0" />
-              <span className="text-slate-400">Suggested:</span>
-              {d.preferredResourcePool.slice(0, 2).map((r, i) => (
-                <span key={r.name}>
-                  {i > 0 && <span className="text-slate-300"> · </span>}
-                  <span className={cn('font-medium', r.team_type === 'Core' ? 'text-blue-700' : 'text-slate-600')}>{r.name}</span>
-                  <span className="text-slate-400"> ({r.skill_match_level}/{r.zone_compatibility})</span>
-                </span>
-              ))}
+          <div className="relative" ref={executorRef}>
+            <div
+              className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-slate-50 rounded px-1 -mx-1 py-0.5 transition-colors"
+              onClick={() => setExecutorDropdownOpen(v => !v)}
+              title="Click to assign execution owner"
+            >
+              <UserCheck className="h-3 w-3 text-slate-300 flex-shrink-0" />
+              <span className="text-slate-400 italic">No executor — assign</span>
+              <span className="text-slate-300 text-xs">+</span>
             </div>
-          )
+            {executorDropdownOpen && (
+              <div className="absolute top-6 left-0 z-50 bg-white border border-slate-200 rounded-lg shadow-lg min-w-[180px]">
+                <div className="px-3 py-1.5 text-xs text-slate-400 border-b border-slate-100 font-medium">Assign Execution Owner</div>
+                {technicians.filter(t => t.status === 'Active').map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => handleExecutorChange(t.id)}
+                    className="block w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 border-b border-slate-100 last:border-b-0"
+                    disabled={executorSaving}
+                  >
+                    {t.first_name} {t.last_name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {d.preferredResourcePool?.length > 0 && !executorDropdownOpen && (
+              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5 ml-1">
+                <span>Suggested:</span>
+                {d.preferredResourcePool.slice(0, 2).map((r, i) => (
+                  <span key={r.name}>
+                    {i > 0 && <span className="text-slate-300"> · </span>}
+                    <span className={cn('font-medium', r.team_type === 'Core' ? 'text-blue-700' : 'text-slate-600')}>{r.name}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Supporting persons */}

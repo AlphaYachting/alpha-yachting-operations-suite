@@ -1,10 +1,44 @@
-import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Ship, Briefcase, MapPin, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { ChevronDown, ChevronRight, Ship, Briefcase, MapPin, Calendar, AlertCircle, CheckCircle2, Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { base44 } from '@/api/base44Client';
 import AgentItemRow from './AgentItemRow';
 
 export default function ClusterGroup({ boat, job, location, items = [], technicians = [], allWorkOrders = [], jobs = {}, locations = {}, onRefresh, ranked = false }) {
   const [expanded, setExpanded] = useState(true);
+  const [leadDropdownOpen, setLeadDropdownOpen] = useState(false);
+  const [leadSaving, setLeadSaving] = useState(false);
+  const leadRef = useRef(null);
+
+  // Resolve current project lead
+  const projectLead = job?.lead_technician_id ? technicians.find(t => t.id === job.lead_technician_id) : null;
+  const projectLeadName = projectLead ? `${projectLead.first_name} ${projectLead.last_name}` : null;
+
+  // Close lead dropdown on outside click
+  useEffect(() => {
+    if (!leadDropdownOpen) return;
+    const handler = (e) => {
+      if (leadRef.current && !leadRef.current.contains(e.target)) {
+        setLeadDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [leadDropdownOpen]);
+
+  const handleLeadChange = async (technicianId) => {
+    if (!job) return;
+    setLeadSaving(true);
+    try {
+      await base44.entities.Job.update(job.id, { lead_technician_id: technicianId || null });
+      setLeadDropdownOpen(false);
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error updating project lead:', error);
+    } finally {
+      setLeadSaving(false);
+    }
+  };
 
   // Count actionable vs blocked
   const actionableCount = items.filter(i => !['BLOCKED', 'HARD'].includes(i.derived.blockerType)).length;
@@ -91,6 +125,55 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
                 <span className="text-slate-400">·</span>
                 <AlertCircle className="h-3 w-3 text-red-600" />
                 <span className="text-red-700 font-medium">{blockedCount} blocked</span>
+              </div>
+            )}
+            {/* Project Lead quick-change — stopPropagation prevents expand/collapse */}
+            {job && (
+              <div
+                ref={leadRef}
+                className="relative flex items-center"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  className={cn(
+                    'flex items-center gap-1 cursor-pointer rounded px-1.5 py-0.5 transition-colors',
+                    projectLeadName
+                      ? 'text-blue-600 hover:bg-blue-50'
+                      : 'text-slate-400 hover:bg-slate-100 italic'
+                  )}
+                  onClick={() => setLeadDropdownOpen(v => !v)}
+                  title="Click to change project lead"
+                >
+                  <Crown className="h-3 w-3 flex-shrink-0" />
+                  <span className="font-medium">{leadSaving ? '…' : (projectLeadName || 'Set lead')}</span>
+                  <span className="text-slate-300 text-xs">✎</span>
+                </div>
+                {leadDropdownOpen && (
+                  <div className="absolute top-6 left-0 z-50 bg-white border border-slate-200 rounded-lg shadow-lg min-w-[180px]">
+                    <div className="px-3 py-1.5 text-xs text-slate-400 border-b border-slate-100 font-medium">Project Lead</div>
+                    <button
+                      onClick={() => handleLeadChange(null)}
+                      className="block w-full text-left px-3 py-2 text-xs text-slate-400 hover:bg-slate-50 border-b border-slate-100"
+                      disabled={leadSaving}
+                    >
+                      — Unassign
+                    </button>
+                    {technicians.filter(t => t.status === 'Active').map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => handleLeadChange(t.id)}
+                        className={cn(
+                          'block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-b-0',
+                          t.id === job.lead_technician_id ? 'font-semibold text-blue-700 bg-blue-50' : 'text-slate-700'
+                        )}
+                        disabled={leadSaving}
+                      >
+                        {t.first_name} {t.last_name}
+                        {t.id === job.lead_technician_id && ' ✓'}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
