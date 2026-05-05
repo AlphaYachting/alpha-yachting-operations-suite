@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 // Pure function — no state, no side effects. Returns up to 3 contextual suggestions.
 // Suggestions are ranked by operational priority, not definition order.
 // ownerType: 'EXEC_OWNER' | 'ORG_OWNER' | 'FLEXIBLE'
-function suggestOrgTasks(item) {
+function suggestOrgTasks(item, projectAccessConfirmed = false) {
   const { workOrder, job, derived, tasks = [] } = item;
   const suggestions = [];
   const existingTitles = tasks.map(t => t.title?.toLowerCase() || '');
@@ -23,7 +23,8 @@ function suggestOrgTasks(item) {
   const isExecKnown = !!workOrder.lead_technician_id;
 
   // 1. Access not confirmed — executor handles on-site
-  if (!workOrder.access_confirmed && !hasExisting('access') && !hasExisting('zugang')) {
+  const accessConfirmed = projectAccessConfirmed || !!workOrder.access_confirmed || !!job?.access_confirmed;
+  if (!accessConfirmed && !hasExisting('access') && !hasExisting('zugang')) {
     suggestions.push({
       title: 'Confirm site/vessel access before scheduled date',
       ownerType: isExecKnown ? 'EXEC_OWNER' : 'FLEXIBLE',
@@ -126,7 +127,7 @@ const OWNER_BADGE = {
   FLEXIBLE:    { label: 'FLEX', cls: 'bg-slate-100 text-slate-500' },
 };
 
-export default function PlannerActionPanel({ item, technicians = [], onRefresh }) {
+export default function PlannerActionPanel({ item, technicians = [], onRefresh, projectAccessConfirmed = false }) {
   const queryClient = useQueryClient();
   const { workOrder, job, derived } = item;
   const [saving, setSaving] = useState(null); // 'exec' | 'org' | 'no-task' | 'access' | 'parts-ordered' | 'parts-eta'
@@ -139,9 +140,10 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
 
 
 
-  const { top3: orgSuggestions, allCount: allOrgSuggestionCount } = suggestOrgTasks(item);
+  const { top3: orgSuggestions, allCount: allOrgSuggestionCount } = suggestOrgTasks(item, projectAccessConfirmed);
 
-  const hasGaps = derived.executionOwnerMissing || derived.orgTasksMissing || !workOrder.access_confirmed || !job?.location_id || (job?.parts_ordered && !job?.parts_eta);
+  const effectiveAccessConfirmed = projectAccessConfirmed || !!workOrder.access_confirmed || !!job?.access_confirmed;
+  const hasGaps = derived.executionOwnerMissing || derived.orgTasksMissing || !effectiveAccessConfirmed || !job?.location_id || (job?.parts_ordered && !job?.parts_eta);
   if (!hasGaps && Object.values(done).every(v => !v)) return null;
 
   // Execution owner candidates: use shared base filter (no reordering)
@@ -222,7 +224,7 @@ export default function PlannerActionPanel({ item, technicians = [], onRefresh }
       <div className="px-3 py-3 space-y-4">
 
         {/* Site & Access */}
-        {(!workOrder.access_confirmed || done.access) && (
+        {(!effectiveAccessConfirmed || done.access) && (
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Lock className="h-3.5 w-3.5 text-emerald-600" />

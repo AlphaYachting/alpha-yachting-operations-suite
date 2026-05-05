@@ -404,7 +404,7 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
           )}
 
           {/* ── ACTIONS ─────────────────────────────────────── */}
-          <PlannerActionPanel item={item} technicians={technicians} onRefresh={onRefresh} />
+          <PlannerActionPanel item={item} technicians={technicians} onRefresh={onRefresh} projectAccessConfirmed={projectAccessConfirmed} />
 
           {/* ── BUNDLING RECOMMENDATION ─────────────────── */}
           {bundling?.group?.length > 0 && (
