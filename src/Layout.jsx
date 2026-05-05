@@ -39,7 +39,8 @@ import {
                     Mail,
                     Zap,
                     Activity,
-                    Calendar as CalendarIcon
+                    Calendar as CalendarIcon,
+                    Download
                   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -115,6 +116,7 @@ const navItems = [
   // ADMIN
   { header: 'ADMIN' },
   { name: 'Sales Statistics', icon: BarChart3, page: 'SalesStatistics' },
+  { name: 'Ops Reset Export', icon: Download, page: 'OperationsResetExport' },
   { name: 'Settings', icon: Settings, page: 'Settings' },
   { name: 'Product Modules', icon: Package, page: 'AdminProductModules' },
   { name: 'Storage Pricing', icon: Database, page: 'StoragePricingAdmin' },

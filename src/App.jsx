@@ -25,6 +25,7 @@ import ProductCatalogImport from './pages/ProductCatalogImport';
 import LeadsV3 from './pages/LeadsV3';
 import PartnerKalkulator from './pages/PartnerKalkulator';
 import SalesStatistics from './pages/SalesStatistics';
+import OperationsResetExport from './pages/OperationsResetExport';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -185,6 +186,7 @@ const AuthenticatedApp = () => {
         <Route path="/LeadsV3" element={<LayoutWrapper currentPageName="LeadsV3"><LeadsV3 /></LayoutWrapper>} />
         <Route path="/PartnerKalkulator" element={<LayoutWrapper currentPageName="PartnerKalkulator"><PartnerKalkulator /></LayoutWrapper>} />
         <Route path="/SalesStatistics" element={<LayoutWrapper currentPageName="SalesStatistics"><SalesStatistics /></LayoutWrapper>} />
+        <Route path="/OperationsResetExport" element={<LayoutWrapper currentPageName="OperationsResetExport"><OperationsResetExport /></LayoutWrapper>} />
         <Route path="/AIAssistantSettings" element={<LayoutWrapper currentPageName="AIAssistantSettings"><AIAssistantSettings /></LayoutWrapper>} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
