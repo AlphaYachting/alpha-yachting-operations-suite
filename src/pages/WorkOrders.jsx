@@ -29,6 +29,7 @@ import {
   Edit
 } from 'lucide-react';
 import { notifyWorkOrderAssignment } from '@/components/notifications/notificationUtils';
+import { useRefData } from '@/hooks/useRefData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,11 +83,16 @@ export default function WorkOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [workOrders, setWorkOrders] = useState([]);
   const [jobs, setJobs] = useState([]);
-  const [technicians, setTechnicians] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [boats, setBoats] = useState([]);
-  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Shared reference data from module-level cache (no repeated backend calls on navigation)
+  const {
+    customers,
+    boats,
+    locations,
+    technicians,
+    loading: refLoading,
+  } = useRefData();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Draft');
   const [boatFilter, setBoatFilter] = useState('all');
@@ -97,6 +103,7 @@ export default function WorkOrders() {
   const [reservations, setReservations] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [tasks, setTasks] = useState([]);
+  // customers, boats, locations, technicians come from useRefData() above — no local state needed
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('workOrdersViewMode') || 'list');
   const [expandedBoats, setExpandedBoats] = useState({});
   const [expandedWorkOrders, setExpandedWorkOrders] = useState({});
@@ -144,13 +151,10 @@ export default function WorkOrders() {
 
       const woData = await woQuery;
 
-      // Load all jobs (no limit) to ensure all referenced jobs are available
-      const [jobsData, techData, custData, boatsData, locData, reservationsData, vehiclesData] = await Promise.all([
+      // Load jobs and WO-specific relational data
+      // Customer, Boat, Location, Technician come from useRefData() cache — not fetched here
+      const [jobsData, reservationsData, vehiclesData] = await Promise.all([
         base44.entities.Job.list('-created_date', 1000),
-        base44.entities.Technician.list(),
-        base44.entities.Customer.list('-created_date', 50),
-        base44.entities.Boat.list('-created_date', 50),
-        base44.entities.Location.list(),
         base44.entities.InventoryReservation.filter({ status: 'Reserved' }),
         base44.entities.InventoryItem.filter({ item_type: 'VEHICLE' })
       ]);
@@ -192,10 +196,6 @@ export default function WorkOrders() {
 
       setWorkOrders(woData.map(wo => ({ ...wo, _aggregates: woAggregates[wo.id] })));
       setJobs(jobsData);
-      setTechnicians(techData);
-      setCustomers(custData);
-      setBoats(boatsData);
-      setLocations(locData);
       setReservations(reservationsData);
       setVehicles(vehiclesData);
       setTasks(tasksData);
@@ -726,7 +726,7 @@ export default function WorkOrders() {
             </div>
 
       {/* Work Orders List */}
-      {loading ? (
+      {(loading || refLoading) ? (
         <div className="grid gap-4">
           {[1,2,3].map(i => (
             <Skeleton key={i} className="h-28 w-full" />
