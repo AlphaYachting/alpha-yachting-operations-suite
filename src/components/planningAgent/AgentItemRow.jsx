@@ -5,7 +5,7 @@ import QuickResolutionForm from './QuickResolutionForm';
 import { findBundleCandidates, getBundleSummary } from '@/utils/bundleAnalyzer';
 import BundleRecommendation from './BundleRecommendation';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks, Calendar, Loader2, KeyRound } from 'lucide-react';
+import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks, Calendar, Loader2, KeyRound, Crown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import PlannerActionPanel from './PlannerActionPanel';
 
@@ -68,6 +68,17 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
   const assignedExecutorName = assignedExecutor
     ? `${assignedExecutor.first_name} ${assignedExecutor.last_name}`
     : null;
+
+  // Resolve project lead from Job.lead_technician_id
+  const projectLead = job?.lead_technician_id ? technicians.find(t => t.id === job.lead_technician_id) : null;
+  const projectLeadName = projectLead ? `${projectLead.first_name} ${projectLead.last_name}` : null;
+
+  // Resolve supporting persons (assigned_technicians minus executor)
+  const supportingTechs = (workOrder.assigned_technicians || [])
+    .filter(id => id !== workOrder.lead_technician_id)
+    .map(id => technicians.find(t => t.id === id))
+    .filter(Boolean);
+  const supportingNames = supportingTechs.map(t => `${t.first_name} ${t.last_name}`);
 
   const customerName = customer?.company_name || [customer?.first_name, customer?.last_name].filter(Boolean).join(' ') || '—';
 
@@ -205,12 +216,21 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
         </div>
         )}
 
+        {/* Project Lead (Job-level) */}
+        {projectLeadName && (
+          <div className="flex items-center gap-1.5 text-xs">
+            <Crown className="h-3 w-3 text-blue-500 flex-shrink-0" />
+            <span className="text-blue-600 font-medium">{projectLeadName}</span>
+            <span className="text-slate-400">project lead</span>
+          </div>
+        )}
+
         {/* Assigned executor shown prominently if set, else show suggestion */}
         {assignedExecutorName ? (
           <div className="flex items-center gap-1.5 text-xs">
             <UserCheck className="h-3 w-3 text-emerald-600 flex-shrink-0" />
             <span className="text-emerald-700 font-semibold">{assignedExecutorName}</span>
-            <span className="text-slate-400">assigned executor</span>
+            <span className="text-slate-400">executor</span>
           </div>
         ) : (
           d.preferredResourcePool?.length > 0 && (
@@ -226,6 +246,18 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
               ))}
             </div>
           )
+        )}
+
+        {/* Supporting persons */}
+        {supportingNames.length > 0 && (
+          <div className="flex items-center gap-1.5 text-xs">
+            <Users className="h-3 w-3 text-slate-400 flex-shrink-0" />
+            <span className="text-slate-500">
+              {supportingNames.slice(0, 2).join(', ')}
+              {supportingNames.length > 2 && <span className="text-slate-400"> +{supportingNames.length - 2} more</span>}
+            </span>
+            <span className="text-slate-400">supporting</span>
+          </div>
         )}
       </div>
 

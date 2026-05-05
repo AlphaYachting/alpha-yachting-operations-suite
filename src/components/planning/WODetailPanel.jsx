@@ -3,7 +3,7 @@ import { BLOCKER_META, NEXT_ACTIONS } from './readinessEvaluator';
 import QuickActionEditor from './QuickActionEditor';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { X, CheckCircle2, XCircle, AlertCircle, Clock, MapPin, User, Wrench } from 'lucide-react';
+import { X, CheckCircle2, XCircle, AlertCircle, MapPin, User, Wrench, UserCheck, Users, Crown } from 'lucide-react';
 
 const READINESS_WHY = {
   ready:               { color: 'bg-emerald-50 border-emerald-200 text-emerald-800', icon: '✅', text: 'This work order meets all planning criteria. It can be added to the schedule.' },
@@ -40,6 +40,18 @@ export default function WODetailPanel({ item, onClose, onRefresh, technicians = 
   if (!item) return null;
   const { workOrder, job, customer, boat, location, evaluation, taskCount, taskEstimatedMinutesSum } = item;
 
+  // Resolve ownership layers
+  const projectLead = job?.lead_technician_id ? technicians.find(t => t.id === job.lead_technician_id) : null;
+  const projectLeadName = projectLead ? `${projectLead.first_name} ${projectLead.last_name}` : null;
+  const executor = workOrder.lead_technician_id ? technicians.find(t => t.id === workOrder.lead_technician_id) : null;
+  const executorName = executor ? `${executor.first_name} ${executor.last_name}` : null;
+  const supportingTechs = (workOrder.assigned_technicians || [])
+    .filter(id => id !== workOrder.lead_technician_id)
+    .map(id => technicians.find(t => t.id === id))
+    .filter(Boolean);
+  const supportingNames = supportingTechs.map(t => `${t.first_name} ${t.last_name}`);
+  const hasOwnership = projectLeadName || executorName || (workOrder.assigned_technicians || []).length > 0;
+
   const hardB = evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'hard');
   const softB = evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'soft');
   const gapB  = evaluation.blockers.filter(b => BLOCKER_META[b]?.severity === 'gap');
@@ -62,6 +74,49 @@ export default function WODetailPanel({ item, onClose, onRefresh, technicians = 
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
+
+        {/* Ownership Section */}
+        {hasOwnership && (
+          <section className="flex flex-wrap gap-2">
+            {projectLeadName && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+                <Crown className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                <span className="text-blue-600 font-medium">{projectLeadName}</span>
+                <span className="text-blue-400">project lead</span>
+              </div>
+            )}
+            {executorName && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs">
+                <UserCheck className="h-3 w-3 text-emerald-600 flex-shrink-0" />
+                <span className="text-emerald-700 font-semibold">{executorName}</span>
+                <span className="text-emerald-500">executor</span>
+              </div>
+            )}
+            {supportingNames.length > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                <Users className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                <span className="text-slate-600">
+                  {supportingNames.slice(0, 2).join(', ')}
+                  {supportingNames.length > 2 && <span className="text-slate-400"> +{supportingNames.length - 2}</span>}
+                </span>
+                <span className="text-slate-400">supporting</span>
+              </div>
+            )}
+            {!executorName && !projectLeadName && (workOrder.assigned_technicians || []).length > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+                <Users className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                <span className="text-slate-600">
+                  {(workOrder.assigned_technicians || [])
+                    .map(id => technicians.find(t => t.id === id))
+                    .filter(Boolean)
+                    .map(t => `${t.first_name} ${t.last_name}`)
+                    .slice(0, 2).join(', ')}
+                </span>
+                <span className="text-slate-400">assigned</span>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Why is this WO here? */}
         {(() => {
