@@ -131,15 +131,19 @@ export default function Projects() {
       setLoadError(null);
       console.log('[Jobs] Starting data load...');
       
-      // FIELD MAPPING (page-scoped):
-      // PROJECT_ENTITY = Job
-      // DUE_DATE_FIELD = requested_date
-      // STATUS_FIELD = status
-      // COMPLETED_STATUS_VALUES = ['Completed', 'Invoiced', 'Cancelled']
-      
-      // Load all projects with increased limit to ensure older due-date projects are visible
-      // Changed from 30 to 500 to include all projects with due dates (page-scoped change only)
-      const projectsData = await base44.entities.Job.list('-created_date', 500);
+      // Load jobs + lookup data in parallel so cards render with full details
+      const [projectsData, customersData, boatsData, locationsData, techniciansData] = await Promise.all([
+        base44.entities.Job.list('-created_date', 500),
+        base44.entities.Customer.list('-created_date', 200),
+        base44.entities.Boat.list('-created_date', 200),
+        base44.entities.Location.list(),
+        base44.entities.Technician.list(),
+      ]);
+
+      setCustomers(customersData);
+      setBoats(boatsData);
+      setLocations(locationsData);
+      setTechnicians(techniciansData);
       console.log('[Jobs] Loaded projects:', projectsData.length);
 
       // Sort projects: overdue first, then by due date ascending (earliest first)
@@ -229,40 +233,9 @@ export default function Projects() {
     }
   };
 
-  // Load form data only when dialog opens - load in parallel for speed
+  // Form data is now loaded during initial loadData — this is a no-op kept for dialog compatibility
   const loadFormData = async () => {
-    if (customers.length > 0) {
-      console.log('[Jobs] Form data already loaded, skipping');
-      return;
-    }
-
-    setFormDataLoading(true);
-    console.log('[Jobs] Loading form data...');
-    try {
-      // Load all in parallel - no delays needed, we have reasonable limits
-      const [customersData, boatsData, locationsData, techniciansData] = await Promise.all([
-        base44.entities.Customer.list('-created_date', 50),
-        base44.entities.Boat.list('-created_date', 50),
-        base44.entities.Location.list(),
-        base44.entities.Technician.list()
-      ]);
-
-      setCustomers(customersData);
-      setBoats(boatsData);
-      setLocations(locationsData);
-      setTechnicians(techniciansData);
-      console.log('[Jobs] Form data loaded:', { 
-        customers: customersData.length, 
-        boats: boatsData.length, 
-        locations: locationsData.length,
-        technicians: techniciansData.length 
-      });
-    } catch (error) {
-      console.error('[Jobs] CRITICAL ERROR loading form data:', error);
-      console.error('[Jobs] Error details:', { message: error.message, stack: error.stack });
-    } finally {
-      setFormDataLoading(false);
-    }
+    // Already loaded during initial page load — nothing to do
   };
 
   const handleSave = async (projectData) => {
