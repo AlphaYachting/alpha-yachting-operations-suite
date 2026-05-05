@@ -94,9 +94,11 @@ export function computeConfidence(workOrder, job, effortSource, serviceArea, org
   const durationTaskBased = effortSource === 'task_based';
   const hasServiceArea = !!serviceArea;
 
+  const effectiveAccessConfirmed = !!(job?.access_confirmed || workOrder.access_confirmed);
+
   let softCount = 0;
   if (!workOrder.assigned_technicians?.length) softCount++;
-  if (!workOrder.access_confirmed) softCount++;
+  if (!effectiveAccessConfirmed) softCount++;
   if (!hasServiceArea) softCount++;
   // Org gap nudges confidence down for non-trivial WOs (not quick-wins)
   if (orgTasksMissing && workOrder.estimated_duration_hours > 2) softCount++;
@@ -179,9 +181,11 @@ export function computeRankingScore(workOrder, job, confidence, effortMax, servi
   const badWeatherBonus = ['Electronics', 'Electrical', 'HVAC'].includes(serviceArea) ? 5
     : serviceArea === 'GRP/Bodywork' ? 3 : 0;
 
+  const effectiveAccessConfirmed = !!(job?.access_confirmed || workOrder.access_confirmed);
+
   let penalty = 0;
   if (!workOrder.assigned_technicians?.length) penalty += 4;
-  if (!workOrder.access_confirmed)             penalty += 3;
+  if (!effectiveAccessConfirmed)               penalty += 3;
   if (!workOrder.service_area && !serviceArea) penalty += 3;
   if (blocker.type !== 'NONE')                 penalty += 5;
   penalty = Math.min(penalty, 15);
@@ -223,7 +227,7 @@ export function suggestNextAction(blocker, workOrder, job, confidence, resourceP
 
   // From here: technician assigned + duration known — reflect actual scheduling state
   const hasDate = !!workOrder.scheduled_date;
-  const hasAccess = !!workOrder.access_confirmed;
+  const hasAccess = !!(job?.access_confirmed || workOrder.access_confirmed);
 
   if (!hasDate) return 'Set a scheduled date';
   if (!hasAccess) return 'Confirm site access — date and executor set';

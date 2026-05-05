@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronRight, Ship, Briefcase, MapPin, Calendar, AlertCircle, CheckCircle2, Crown } from 'lucide-react';
+import { ChevronDown, ChevronRight, Ship, Briefcase, MapPin, Calendar, AlertCircle, CheckCircle2, Crown, KeyRound, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 import AgentItemRow from './AgentItemRow';
@@ -9,6 +9,7 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
   const [expanded, setExpanded] = useState(true);
   const [leadDropdownOpen, setLeadDropdownOpen] = useState(false);
   const [leadSaving, setLeadSaving] = useState(false);
+  const [accessSaving, setAccessSaving] = useState(false);
   const leadRef = useRef(null);
 
   // Resolve current project lead
@@ -27,8 +28,22 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
     return () => document.removeEventListener('mousedown', handler);
   }, [leadDropdownOpen]);
 
-  // Sorted lead candidates — no WO-level pool available at cluster, use alphabetical eligible sort
+  // Sorted lead candidates
   const leadCandidates = sortedCandidates(technicians);
+
+  const handleAccessToggle = async (e) => {
+    e.stopPropagation();
+    if (!job) return;
+    setAccessSaving(true);
+    try {
+      await base44.entities.Job.update(job.id, { access_confirmed: !job.access_confirmed });
+      onRefresh?.();
+    } catch (error) {
+      console.error('Error updating access:', error);
+    } finally {
+      setAccessSaving(false);
+    }
+  };
 
   const handleLeadChange = async (technicianId) => {
     if (!job) return;
@@ -131,6 +146,29 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
                 <span className="text-red-700 font-medium">{blockedCount} blocked</span>
               </div>
             )}
+
+            {/* Access confirmation — project-level toggle */}
+            {job && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={handleAccessToggle}
+                  disabled={accessSaving}
+                  title={job.access_confirmed ? 'Access confirmed — click to revoke' : 'Click to confirm boat/site access for this project'}
+                  className={cn(
+                    'flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors',
+                    job.access_confirmed
+                      ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                      : 'text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200'
+                  )}
+                >
+                  {job.access_confirmed
+                    ? <ShieldCheck className="h-3 w-3 flex-shrink-0" />
+                    : <KeyRound className="h-3 w-3 flex-shrink-0" />}
+                  <span>{accessSaving ? '…' : (job.access_confirmed ? 'Access confirmed' : 'Confirm access')}</span>
+                </button>
+              </div>
+            )}
+
             {/* Project Lead quick-change — stopPropagation prevents expand/collapse */}
             {job && (
               <div

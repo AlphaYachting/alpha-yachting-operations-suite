@@ -235,8 +235,8 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
           </div>
         )}
 
-        {/* Access not confirmed — always visible warning */}
-        {!workOrder.access_confirmed && (
+        {/* Access not confirmed — only show if neither project nor WO has access confirmed */}
+        {!job?.access_confirmed && !workOrder.access_confirmed && (
           <div className="flex items-center gap-1.5 text-xs text-amber-700 font-medium bg-amber-50 border border-amber-200 rounded px-2 py-1">
             <KeyRound className="h-3 w-3 flex-shrink-0" />
             <span>Boat / site access not confirmed</span>
