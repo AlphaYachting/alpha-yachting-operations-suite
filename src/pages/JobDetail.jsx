@@ -115,65 +115,66 @@ export default function ProjectDetail() {
 
    const loadProjectData = async () => {
      try {
-       const [projectsData, allWOs, allTasks, customers, boats, locations, technicians, allTeamOrders, allTimeEntries] = await Promise.all([
-         base44.entities.Job.list(),
-         base44.entities.WorkOrder.list(),
-         base44.entities.Task.list(),
-         base44.entities.Customer.list(),
-         base44.entities.Boat.list(),
+       // Phase 1: Load project + reference data in parallel (targeted queries only)
+       const [currentProject, allWOs, customers, boats, locations, technicians] = await Promise.all([
+         base44.entities.Job.filter({ id: projectId }).then(r => r?.[0] || null),
+         base44.entities.WorkOrder.filter({ job_id: projectId }),
+         base44.entities.Customer.list('-created_date', 200),
+         base44.entities.Boat.list('-created_date', 200),
          base44.entities.Location.list(),
          base44.entities.Technician.list(),
-         base44.entities.TeamOrder.list(),
-         base44.entities.TimeEntry.list()
        ]);
 
-       const currentProject = projectsData.find(j => j.id === projectId);
-       if (currentProject) {
-         setProject(currentProject);
-         setCustomer(customers.find(c => c.id === currentProject.customer_id));
-         setBoat(boats.find(b => b.id === currentProject.boat_id));
-         setLocation(locations.find(l => l.id === currentProject.location_id));
-         setLeadTechnician(technicians.find(t => t.id === currentProject.lead_technician_id));
-         setAllCustomers(customers);
-         setAllBoats(boats);
-         setAllLocations(locations);
-         setAllTechnicians(technicians);
+       if (!currentProject) {
+         setLoading(false);
+         return;
+       }
 
-         let projectWOs = allWOs.filter(wo => wo.job_id === projectId);
+       setProject(currentProject);
+       setCustomer(customers.find(c => c.id === currentProject.customer_id));
+       setBoat(boats.find(b => b.id === currentProject.boat_id));
+       setLocation(locations.find(l => l.id === currentProject.location_id));
+       setLeadTechnician(technicians.find(t => t.id === currentProject.lead_technician_id));
+       setAllCustomers(customers);
+       setAllBoats(boats);
+       setAllLocations(locations);
+       setAllTechnicians(technicians);
 
-         // Initialize sort_index if missing (batch update with error handling)
-         const needsIndexInit = projectWOs.filter(wo => wo.sort_index === null || wo.sort_index === undefined);
-         if (needsIndexInit.length > 0) {
-           const initPromises = needsIndexInit.map(async (wo, idx) => {
-             const sortIndex = projectWOs.indexOf(wo) + 1;
-             wo.sort_index = sortIndex;
-             try {
-               await base44.entities.WorkOrder.update(wo.id, { sort_index: sortIndex });
-             } catch (error) {
-               console.error(`Failed to init sort_index for WO ${wo.id}:`, error.message);
-               // Skip this WO if it no longer exists
-             }
-           });
-           await Promise.all(initPromises);
+       let projectWOs = allWOs;
 
-           // Re-fetch to ensure we have current data
-           const refreshedWOs = await base44.entities.WorkOrder.filter({ job_id: projectId });
-           projectWOs = refreshedWOs;
-         }
+       // Initialize sort_index if missing — only update those that need it, skip re-fetch
+       const needsIndexInit = projectWOs.filter(wo => wo.sort_index === null || wo.sort_index === undefined);
+       if (needsIndexInit.length > 0) {
+         const updates = needsIndexInit.map((wo, idx) => {
+           const sortIndex = projectWOs.indexOf(wo) + 1;
+           wo.sort_index = sortIndex;
+           return base44.entities.WorkOrder.update(wo.id, { sort_index: sortIndex }).catch(err =>
+             console.error(`Failed to init sort_index for WO ${wo.id}:`, err.message)
+           );
+         });
+         await Promise.all(updates);
+         // No re-fetch needed — we already mutated sort_index on the local objects above
+       }
 
-         // Sort by sort_index
-         projectWOs.sort((a, b) => (a.sort_index || 0) - (b.sort_index || 0));
-         setWorkOrders(projectWOs);
+       // Sort by sort_index
+       projectWOs.sort((a, b) => (a.sort_index || 0) - (b.sort_index || 0));
+       setWorkOrders(projectWOs);
 
-         const woIds = projectWOs.map(wo => wo.id);
-         const projectTasks = allTasks.filter(task => woIds.includes(task.work_order_id));
-         setTasks(projectTasks);
-
-         const projectTeamOrders = allTeamOrders.filter(to => woIds.includes(to.work_order_id));
-         setTeamOrders(projectTeamOrders);
-
-         const projectTimeEntries = allTimeEntries.filter(te => woIds.includes(te.work_order_id));
-         setTimeEntries(projectTimeEntries);
+       // Phase 2: Load WO-dependent data in parallel (only for this project's WOs)
+       const woIds = projectWOs.map(wo => wo.id);
+       if (woIds.length > 0) {
+         const [allTasks, allTeamOrders, allTimeEntries] = await Promise.all([
+           base44.entities.Task.filter({ work_order_id: { $in: woIds } }),
+           base44.entities.TeamOrder.filter({ work_order_id: { $in: woIds } }),
+           base44.entities.TimeEntry.filter({ work_order_id: { $in: woIds } }),
+         ]);
+         setTasks(allTasks);
+         setTeamOrders(allTeamOrders);
+         setTimeEntries(allTimeEntries);
+       } else {
+         setTasks([]);
+         setTeamOrders([]);
+         setTimeEntries([]);
        }
      } catch (error) {
        console.error('Error loading project data:', error);

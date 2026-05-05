@@ -121,11 +121,8 @@ export default function Projects() {
 
   useEffect(() => {
     console.log('[Jobs] Component mounted, starting data load');
-    loadData().then(() => {
-      // Load form data for dropdowns
-      console.log('[Jobs] Initial load complete, loading form data');
-      loadFormData();
-    });
+    loadData();
+    // Form data is now loaded lazily — only when the dialog opens
   }, []);
 
   const loadData = async () => {
