@@ -59,6 +59,7 @@ import {
 import { format, isPast, isToday, parseISO, differenceInDays } from 'date-fns';
 import JobForm from '@/components/jobs/JobForm';
 import { toast } from 'sonner';
+import { useRefData } from '@/hooks/useRefData';
 
 const priorityColors = {
   Low: 'bg-slate-100 text-slate-700',
@@ -84,11 +85,10 @@ const statusColors = {
 export default function Projects() {
    const [searchParams, setSearchParams] = useSearchParams();
    const [projects, setProjects] = useState([]);
-   const [customers, setCustomers] = useState([]);
-   const [boats, setBoats] = useState([]);
-   const [locations, setLocations] = useState([]);
-   const [technicians, setTechnicians] = useState([]);
    const [workOrders, setWorkOrders] = useState([]);
+
+   // Shared reference data — served from module-level cache, no repeated API calls on navigation
+   const { customers, boats, locations, technicians } = useRefData();
    const [tasks, setTasks] = useState([]);
    const [loading, setLoading] = useState(true);
    const [formDataLoading, setFormDataLoading] = useState(false);
@@ -131,19 +131,9 @@ export default function Projects() {
       setLoadError(null);
       console.log('[Jobs] Starting data load...');
       
-      // Load jobs + lookup data in parallel so cards render with full details
-      const [projectsData, customersData, boatsData, locationsData, techniciansData] = await Promise.all([
-        base44.entities.Job.list('-created_date', 500),
-        base44.entities.Customer.list('-created_date', 200),
-        base44.entities.Boat.list('-created_date', 200),
-        base44.entities.Location.list(),
-        base44.entities.Technician.list(),
-      ]);
+      // Load only jobs — Customer/Boat/Location/Technician come from useRefData() cache
+      const projectsData = await base44.entities.Job.list('-created_date', 500);
 
-      setCustomers(customersData);
-      setBoats(boatsData);
-      setLocations(locationsData);
-      setTechnicians(techniciansData);
       console.log('[Jobs] Loaded projects:', projectsData.length);
 
       // Sort projects: overdue first, then by due date ascending (earliest first)
