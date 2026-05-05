@@ -35,20 +35,22 @@ export default function SearchIndexManager({ children }) {
       const cacheAge = cacheTimestamp ? now - parseInt(cacheTimestamp) : Infinity;
       const cacheValid = cacheAge < 10 * 60 * 1000; // 10 minutes
       
-      // Try to load from localStorage if cache is valid
+      // If cache is valid, use it and skip all API calls
       if (cacheValid) {
         const cached = localStorage.getItem('search_index');
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
             setSearchIndex(parsed);
+            setLoading(false);
+            return; // ← skip API calls entirely
           } catch (e) {
             console.error('Failed to parse cached index:', e);
           }
         }
       }
 
-      // Fetch fresh data
+      // Cache expired or missing — fetch fresh data
       const [customers, boats, jobs, workOrders, offers] = await Promise.all([
         base44.entities.Customer.list('-updated_date', 100),
         base44.entities.Boat.list('-updated_date', 100),
