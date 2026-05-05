@@ -7,13 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { X, Search, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function ManualMaterialEntryModal({ customers = [], entry = null, onClose, onSaved }) {
+export default function ManualMaterialEntryModal({ customers = [], entry = null, preselectedCustomerId = null, onClose, onSaved }) {
   const isEdit = !!entry;
   const [saving, setSaving] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState(
-    entry ? (customers.find(c => c.id === entry.customer_id) || { id: entry.customer_id, last_name: entry.customer_id }) : null
-  );
+  const [selectedCustomer, setSelectedCustomer] = useState(() => {
+    if (entry) return customers.find(c => c.id === entry.customer_id) || { id: entry.customer_id, last_name: entry.customer_id };
+    if (preselectedCustomerId) return customers.find(c => c.id === preselectedCustomerId) || null;
+    return null;
+  });
   const [form, setForm] = useState({
     supplier_name: entry?.supplier_name || '',
     document_number: entry?.document_number || '',
@@ -57,12 +59,7 @@ export default function ManualMaterialEntryModal({ customers = [], entry = null,
     if (isEdit) {
       await base44.entities.CustomerMaterialEntry.update(entry.id, payload);
     } else {
-      await base44.entities.CustomerMaterialEntry.create({
-      customer_id: selectedCustomer.id,
-      source_type: 'manual',
-      customer_id: selectedCustomer.id,
-      source_type: 'manual',
-      });
+      await base44.entities.CustomerMaterialEntry.create(payload);
     }
     setSaving(false);
     toast.success(isEdit ? 'Eintrag aktualisiert' : 'Eintrag gespeichert');

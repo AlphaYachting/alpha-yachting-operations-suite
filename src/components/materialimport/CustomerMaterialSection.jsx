@@ -138,6 +138,7 @@ export default function CustomerMaterialSection({ customerId }) {
       {showManual && (
         <ManualMaterialEntryModal
           customers={customers}
+          preselectedCustomerId={customerId}
           onClose={() => setShowManual(false)}
           onSaved={() => { setShowManual(false); refetch(); }}
         />
