@@ -98,10 +98,10 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
 
   return (
     <div className="bg-white rounded-lg border border-slate-200 overflow-hidden hover:shadow-sm transition-shadow">
-      {/* Cluster Header */}
-      <button
+      {/* Cluster Header — div instead of button to allow nested interactive elements */}
+      <div
+        className="w-full px-4 py-3 flex items-start justify-between hover:bg-slate-50 transition-colors cursor-pointer"
         onClick={() => setExpanded(e => !e)}
-        className="w-full px-4 py-3 flex items-start justify-between hover:bg-slate-50 transition-colors"
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -149,27 +149,25 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
 
             {/* Access confirmation — project-level toggle */}
             {job && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={handleAccessToggle}
-                  disabled={accessSaving}
-                  title={job.access_confirmed ? 'Access confirmed — click to revoke' : 'Click to confirm boat/site access for this project'}
-                  className={cn(
-                    'flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors',
-                    job.access_confirmed
-                      ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                      : 'text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200'
-                  )}
-                >
-                  {job.access_confirmed
-                    ? <ShieldCheck className="h-3 w-3 flex-shrink-0" />
-                    : <KeyRound className="h-3 w-3 flex-shrink-0" />}
-                  <span>{accessSaving ? '…' : (job.access_confirmed ? 'Access confirmed' : 'Confirm access')}</span>
-                </button>
-              </div>
+              <button
+                onClick={handleAccessToggle}
+                disabled={accessSaving}
+                title={job.access_confirmed ? 'Access confirmed — click to revoke' : 'Click to confirm boat/site access for this project'}
+                className={cn(
+                  'flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors',
+                  job.access_confirmed
+                    ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                    : 'text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200'
+                )}
+              >
+                {job.access_confirmed
+                  ? <ShieldCheck className="h-3 w-3 flex-shrink-0" />
+                  : <KeyRound className="h-3 w-3 flex-shrink-0" />}
+                <span>{accessSaving ? '…' : (job.access_confirmed ? 'Access confirmed' : 'Confirm access')}</span>
+              </button>
             )}
 
-            {/* Project Lead quick-change — stopPropagation prevents expand/collapse */}
+            {/* Project Lead quick-change */}
             {job && (
               <div
                 ref={leadRef}
@@ -220,7 +218,7 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
             )}
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Expanded cluster items */}
       {expanded && (
