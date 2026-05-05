@@ -10,6 +10,7 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
   const [leadDropdownOpen, setLeadDropdownOpen] = useState(false);
   const [leadSaving, setLeadSaving] = useState(false);
   const [accessSaving, setAccessSaving] = useState(false);
+  const [localAccessConfirmed, setLocalAccessConfirmed] = useState(null); // null = use job value
   const leadRef = useRef(null);
 
   // Resolve current project lead
@@ -31,15 +32,20 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
   // Sorted lead candidates
   const leadCandidates = sortedCandidates(technicians);
 
+  const effectiveAccessConfirmed = localAccessConfirmed !== null ? localAccessConfirmed : !!job?.access_confirmed;
+
   const handleAccessToggle = async (e) => {
     e.stopPropagation();
     if (!job) return;
+    const newValue = !effectiveAccessConfirmed;
+    setLocalAccessConfirmed(newValue); // optimistic update
     setAccessSaving(true);
     try {
-      await base44.entities.Job.update(job.id, { access_confirmed: !job.access_confirmed });
+      await base44.entities.Job.update(job.id, { access_confirmed: newValue });
       onRefresh?.();
     } catch (error) {
       console.error('Error updating access:', error);
+      setLocalAccessConfirmed(!newValue); // revert on error
     } finally {
       setAccessSaving(false);
     }
@@ -152,18 +158,18 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
               <button
                 onClick={handleAccessToggle}
                 disabled={accessSaving}
-                title={job.access_confirmed ? 'Access confirmed — click to revoke' : 'Click to confirm boat/site access for this project'}
+                title={effectiveAccessConfirmed ? 'Access confirmed — click to revoke' : 'Click to confirm boat/site access for this project'}
                 className={cn(
                   'flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors',
-                  job.access_confirmed
+                  effectiveAccessConfirmed
                     ? 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
                     : 'text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200'
                 )}
-              >
-                {job.access_confirmed
+                >
+                {effectiveAccessConfirmed
                   ? <ShieldCheck className="h-3 w-3 flex-shrink-0" />
                   : <KeyRound className="h-3 w-3 flex-shrink-0" />}
-                <span>{accessSaving ? '…' : (job.access_confirmed ? 'Access confirmed' : 'Confirm access')}</span>
+                <span>{accessSaving ? '…' : (effectiveAccessConfirmed ? 'Access confirmed' : 'Confirm access')}</span>
               </button>
             )}
 
