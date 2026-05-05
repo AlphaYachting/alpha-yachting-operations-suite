@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Loader2, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { sortedCandidates } from '@/utils/planningAgent/sortCandidates';
 
 export default function QuickResolutionForm({ item, technicians = [], onSave }) {
   const { workOrder, job } = item;
@@ -95,7 +96,11 @@ export default function QuickResolutionForm({ item, technicians = [], onSave }) 
     }
   };
 
-  const activeFilter = technicians.filter(t => t.status === 'Active');
+  const activeFilter = useMemo(() => {
+    const preferred = item.derived?.preferredResourcePool || [];
+    const fallback  = item.derived?.fallbackResourcePool  || [];
+    return sortedCandidates(technicians, preferred, fallback);
+  }, [technicians, item.derived]);
 
   return (
     <div className="mt-3 pt-2 border-t border-slate-200 space-y-2">

@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Ship, Briefcase, MapPin, Calendar, AlertCirc
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 import AgentItemRow from './AgentItemRow';
+import { sortedCandidates } from '@/utils/planningAgent/sortCandidates';
 
 export default function ClusterGroup({ boat, job, location, items = [], technicians = [], allWorkOrders = [], jobs = {}, locations = {}, onRefresh, ranked = false }) {
   const [expanded, setExpanded] = useState(true);
@@ -25,6 +26,9 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [leadDropdownOpen]);
+
+  // Sorted lead candidates — no WO-level pool available at cluster, use alphabetical eligible sort
+  const leadCandidates = sortedCandidates(technicians);
 
   const handleLeadChange = async (technicianId) => {
     if (!job) return;
@@ -158,7 +162,7 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
                     >
                       — Unassign
                     </button>
-                    {technicians.filter(t => t.status === 'Active').map(t => (
+                    {leadCandidates.map(t => (
                       <button
                         key={t.id}
                         onClick={() => handleLeadChange(t.id)}

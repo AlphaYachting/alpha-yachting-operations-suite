@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks, Calendar, Loader2, KeyRound, Crown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import PlannerActionPanel from './PlannerActionPanel';
+import { sortedCandidates } from '@/utils/planningAgent/sortCandidates';
 
 const CONF_STYLE = {
   HIGH:   'bg-emerald-100 text-emerald-700',
@@ -74,6 +75,9 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
   }, [executorDropdownOpen]);
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
+
+  // Sorted executor candidates — preferred pool first, unavailable excluded
+  const executorCandidates = sortedCandidates(technicians, d.preferredResourcePool, d.fallbackResourcePool);
 
   // Compute bundling recommendation
   const bundling = findBundleCandidates(workOrder, allWorkOrders, jobs, locations);
@@ -278,7 +282,7 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
                 >
                   — Unassign
                 </button>
-                {technicians.filter(t => t.status === 'Active').map(t => (
+                {executorCandidates.map((t, idx) => (
                   <button
                     key={t.id}
                     onClick={() => handleExecutorChange(t.id)}
@@ -290,6 +294,7 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
                   >
                     {t.first_name} {t.last_name}
                     {t.id === workOrder.lead_technician_id && ' ✓'}
+                    {idx === 0 && t.id !== workOrder.lead_technician_id && <span className="text-slate-300 ml-1">★</span>}
                   </button>
                 ))}
               </div>
@@ -309,7 +314,7 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
             {executorDropdownOpen && (
               <div className="absolute top-6 left-0 z-50 bg-white border border-slate-200 rounded-lg shadow-lg min-w-[180px]">
                 <div className="px-3 py-1.5 text-xs text-slate-400 border-b border-slate-100 font-medium">Assign Execution Owner</div>
-                {technicians.filter(t => t.status === 'Active').map(t => (
+                {executorCandidates.map((t, idx) => (
                   <button
                     key={t.id}
                     onClick={() => handleExecutorChange(t.id)}
@@ -317,6 +322,7 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
                     disabled={executorSaving}
                   >
                     {t.first_name} {t.last_name}
+                    {idx === 0 && <span className="text-slate-300 ml-1">★</span>}
                   </button>
                 ))}
               </div>

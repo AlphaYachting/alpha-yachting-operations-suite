@@ -208,19 +208,27 @@ export function suggestNextAction(blocker, workOrder, job, confidence, resourceP
   if (!workOrder.assigned_technicians?.length) {
     const top = resourcePools && resourcePools.preferred && resourcePools.preferred[0];
     if (top) {
-      return 'Consider ' + top.name + ' as lead candidate - confirm availability and schedule';
+      if (workOrder.scheduled_date) return 'Date set — assign ' + top.name + ' as execution owner';
+      return 'Assign ' + top.name + ' as lead candidate, then set a date';
     }
     const fallback = resourcePools && resourcePools.fallback && resourcePools.fallback[0];
     if (fallback) {
-      return 'No core match - check ' + fallback.name + ' (' + fallback.availability_class + ') availability';
+      return 'No core match — check ' + fallback.name + ' (' + fallback.availability_class + ') availability';
     }
-    return 'Assign a technician and schedule';
+    if (workOrder.scheduled_date) return 'Date set — assign execution owner';
+    return 'Assign a technician and set a date';
   }
   if (orgTasksMissing) return 'Add organization tasks (access, customer coordination, scheduling prep)';
   if (!workOrder.estimated_duration_hours) return 'Confirm duration estimate';
-  if (!workOrder.access_confirmed) return 'Confirm boat/site access';
-  if (confidence === 'HIGH') return 'Ready to schedule - confirm date';
-  return 'Review details and schedule when ready';
+
+  // From here: technician assigned + duration known — reflect actual scheduling state
+  const hasDate = !!workOrder.scheduled_date;
+  const hasAccess = !!workOrder.access_confirmed;
+
+  if (!hasDate) return 'Set a scheduled date';
+  if (!hasAccess) return 'Confirm site access — date and executor set';
+  if (confidence === 'HIGH') return 'Dispatch ready';
+  return 'Review remaining details, then dispatch';
 }
 
 // ─── Main Evaluator ───────────────────────────────────────────────────────────
