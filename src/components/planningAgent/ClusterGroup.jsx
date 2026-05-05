@@ -240,6 +240,7 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
                   jobs={jobs}
                   locations={locations}
                   onRefresh={onRefresh}
+                  projectAccessConfirmed={effectiveAccessConfirmed}
                   compact
                 />
               </div>
