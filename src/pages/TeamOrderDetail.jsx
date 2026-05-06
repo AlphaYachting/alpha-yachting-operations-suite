@@ -73,9 +73,10 @@ export default function TeamOrderDetail() {
     try {
       setLoading(true);
 
-      // Load technicians
+      // Load technicians — only external partners for the Team Order partner dropdown
       const techList = await base44.entities.Technician.list();
-      setTechnicians(techList);
+      const externalPartners = techList.filter(t => t.is_external === true || t.team_type === 'External');
+      setTechnicians(externalPartners);
 
       if (teamOrderId) {
         // Load existing team order
