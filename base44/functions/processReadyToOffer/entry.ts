@@ -31,9 +31,11 @@ Deno.serve(async (req) => {
     return Response.json({ skipped: true, reason: 'validation_failed' });
   }
 
-  let customerId = lead.customer_id;
-
   // STEP 3 — Find or create Customer
+  // IMPORTANT: Only trust customer_id if this lead was already previously converted
+  // (converted_customer_id is set). A raw customer_id on a new lead may be stale/incorrect.
+  let customerId = lead.converted_customer_id || null;
+
   if (!customerId) {
     // Try to find by email first, then phone
     let existingCustomers = [];
