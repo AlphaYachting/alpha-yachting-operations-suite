@@ -185,14 +185,18 @@ Deno.serve(async (req) => {
       return false;
     };
 
-    // ---- LOGO (top-right) ----
+    // ---- LOGO (top-right, fixed 70x24mm, right-aligned) ----
+    const LOGO_W = 70;
+    const LOGO_H = 24;
+    const logoX = PW - M - LOGO_W;
+    const logoY = M - 4;
     if (logoB64) {
       try {
-        doc.addImage(`data:image/png;base64,${logoB64}`, 'PNG', PW - M - 52, M - 5, 52, 20);
-      } catch (_) { /* skip */ }
+        doc.addImage(`data:image/png;base64,${logoB64}`, 'PNG', logoX, logoY, LOGO_W, LOGO_H);
+      } catch (_) { /* skip logo silently */ }
     }
 
-    // ---- HEADER ----
+    // ---- HEADER (left side, vertically aligned with logo) ----
     doc.setFontSize(20);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(25, 55, 95);
@@ -203,7 +207,8 @@ Deno.serve(async (req) => {
     doc.setFont(undefined, 'bold');
     doc.setTextColor(60, 60, 60);
     doc.text(t.title, M, y);
-    y += 8;
+    // Ensure y clears the logo height before the divider
+    y = Math.max(y + 8, logoY + LOGO_H + 2);
 
     // Divider
     doc.setDrawColor(25, 55, 95);
