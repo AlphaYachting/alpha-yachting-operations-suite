@@ -186,9 +186,9 @@ Deno.serve(async (req) => {
       return false;
     };
 
-    // ---- LOGO (top-right, fixed 70x24mm, right-aligned) ----
-    const LOGO_W = 70;
-    const LOGO_H = 24;
+    // ---- LOGO (top-right, square 1:1 ratio, right-aligned) ----
+    const LOGO_W = 30;
+    const LOGO_H = 30;
     const logoX = PW - M - LOGO_W;
     const logoY = M - 4;
     if (logoDataUrl) {
@@ -209,7 +209,7 @@ Deno.serve(async (req) => {
     doc.setTextColor(60, 60, 60);
     doc.text(t.title, M, y);
     // Ensure y clears the logo height before the divider
-    y = Math.max(y + 8, logoY + LOGO_H + 2);
+    y = Math.max(y + 8, logoY + LOGO_H + 4);
 
     // Divider
     doc.setDrawColor(25, 55, 95);
