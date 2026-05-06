@@ -99,162 +99,33 @@ function safe(str) {
     .replace(/[^\x00-\xFF]/g, '?');
 }
 
-// Logo: resize via Cloudinary-style transform to 300x300px before embedding
-// This avoids jsPDF embedding a 1080x1080 image and downscaling it visually (which causes pixelation)
-const LOGO_URL_RESIZED = 'https://media.base44.com/images/public/6972766f1bd9af32693610c1/317ec2229_alpha-yachting-logo-dunkelblau-ohnepremiumsolutions.png';
+// Use wsrv.nl (free image proxy) to resize the logo to 120px wide before embedding.
+// This ensures jsPDF gets a small, sharp image instead of a huge 1080px one.
+const LOGO_URL = 'https://media.base44.com/images/public/6972766f1bd9af32693610c1/317ec2229_alpha-yachting-logo-dunkelblau-ohnepremiumsolutions.png';
+const LOGO_URL_RESIZED = `https://wsrv.nl/?url=${encodeURIComponent(LOGO_URL)}&w=120&h=120&fit=inside&output=png&bg=white`;
 
 async function loadLogoAsJpegDataUrl() {
   try {
-    // Fetch original, then manually downsample via pixel averaging to ~300x300
     const resp = await fetch(LOGO_URL_RESIZED);
-    if (!resp.ok) return null;
+    if (!resp.ok) {
+      // Fallback: load original directly
+      const resp2 = await fetch(LOGO_URL);
+      if (!resp2.ok) return null;
+      const buf2 = await resp2.arrayBuffer();
+      const bytes2 = new Uint8Array(buf2);
+      let bin2 = '';
+      for (let i = 0; i < bytes2.length; i += 8192) bin2 += String.fromCharCode(...bytes2.subarray(i, i + 8192));
+      return `data:image/png;base64,${btoa(bin2)}`;
+    }
     const buffer = await resp.arrayBuffer();
-
-    // Parse PNG to get raw pixel data, then downsample
-    const pngBytes = new Uint8Array(buffer);
-    const { width, height, pixels } = await decodePng(pngBytes);
-    if (!pixels) {
-      // Fallback: embed as-is
-      let binary = '';
-      for (let i = 0; i < pngBytes.length; i += 8192) {
-        binary += String.fromCharCode(...pngBytes.subarray(i, i + 8192));
-      }
-      return `data:image/png;base64,${btoa(binary)}`;
-    }
-
-    // Downsample to 300x300 using box filter
-    const TARGET = 300;
-    const scaleX = width / TARGET;
-    const scaleY = height / TARGET;
-    const out = new Uint8Array(TARGET * TARGET * 3);
-
-    for (let dy = 0; dy < TARGET; dy++) {
-      for (let dx = 0; dx < TARGET; dx++) {
-        const x0 = Math.floor(dx * scaleX);
-        const x1 = Math.min(Math.floor((dx + 1) * scaleX), width);
-        const y0 = Math.floor(dy * scaleY);
-        const y1 = Math.min(Math.floor((dy + 1) * scaleY), height);
-        let r = 0, g = 0, b = 0, count = 0;
-        for (let sy = y0; sy < y1; sy++) {
-          for (let sx = x0; sx < x1; sx++) {
-            const idx = (sy * width + sx) * 4;
-            const alpha = pixels[idx + 3] / 255;
-            // Composite onto white
-            r += pixels[idx]     * alpha + 255 * (1 - alpha);
-            g += pixels[idx + 1] * alpha + 255 * (1 - alpha);
-            b += pixels[idx + 2] * alpha + 255 * (1 - alpha);
-            count++;
-          }
-        }
-        const oi = (dy * TARGET + dx) * 3;
-        out[oi]     = Math.round(r / count);
-        out[oi + 1] = Math.round(g / count);
-        out[oi + 2] = Math.round(b / count);
-      }
-    }
-
-    // Encode as PNG (RGB, no alpha)
-    const encoded = await encodeRGBPng(TARGET, TARGET, out);
-    return `data:image/png;base64,${encoded}`;
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    return `data:image/png;base64,${btoa(binary)}`;
   } catch (e) {
     console.error('Logo load error:', e);
     return null;
   }
-}
-
-function readUint32BE(buf, offset) {
-  return ((buf[offset] << 24) | (buf[offset+1] << 16) | (buf[offset+2] << 8) | buf[offset+3]) >>> 0;
-}
-
-async function decodePng(pngBytes) {
-  try {
-    let pos = 8;
-    let width = 0, height = 0, bitDepth = 0, colorType = 0;
-    const idatChunks = [];
-    while (pos < pngBytes.length) {
-      const length = readUint32BE(pngBytes, pos); pos += 4;
-      const type = String.fromCharCode(pngBytes[pos], pngBytes[pos+1], pngBytes[pos+2], pngBytes[pos+3]); pos += 4;
-      const data = pngBytes.slice(pos, pos + length); pos += length + 4;
-      if (type === 'IHDR') { width = readUint32BE(data,0); height = readUint32BE(data,4); bitDepth = data[8]; colorType = data[9]; }
-      else if (type === 'IDAT') idatChunks.push(data);
-      else if (type === 'IEND') break;
-    }
-    if (bitDepth !== 8 || (colorType !== 6 && colorType !== 2)) return { width, height, pixels: null };
-    const hasAlpha = colorType === 6;
-    const channels = hasAlpha ? 4 : 3;
-
-    const combined = new Uint8Array(idatChunks.reduce((a,c) => a+c.length, 0));
-    let off = 0;
-    for (const c of idatChunks) { combined.set(c, off); off += c.length; }
-
-    const ds = new DecompressionStream('deflate');
-    const dw = ds.writable.getWriter(); dw.write(combined); dw.close();
-    const dr = ds.readable.getReader();
-    const dchunks = [];
-    while (true) { const {done,value} = await dr.read(); if (done) break; dchunks.push(value); }
-    const dtotal = dchunks.reduce((a,c) => a+c.length, 0);
-    const decomp = new Uint8Array(dtotal);
-    let dp = 0; for (const c of dchunks) { decomp.set(c, dp); dp += c.length; }
-
-    const stride = width * channels;
-    const pixels = new Uint8Array(width * height * 4);
-    const prev = new Uint8Array(stride);
-    let scanOff = 0;
-    for (let row = 0; row < height; row++) {
-      const ft = decomp[scanOff++];
-      const raw = decomp.slice(scanOff, scanOff + stride); scanOff += stride;
-      const recon = new Uint8Array(stride);
-      const paeth = (a,b,c) => { const p=a+b-c,pa=Math.abs(p-a),pb=Math.abs(p-b),pc=Math.abs(p-c); return pa<=pb&&pa<=pc?a:pb<=pc?b:c; };
-      for (let i = 0; i < stride; i++) {
-        const a = i>=channels?recon[i-channels]:0, b=prev[i], c=i>=channels?prev[i-channels]:0;
-        switch(ft) { case 0:recon[i]=raw[i];break; case 1:recon[i]=(raw[i]+a)&0xFF;break; case 2:recon[i]=(raw[i]+b)&0xFF;break; case 3:recon[i]=(raw[i]+((a+b)>>1))&0xFF;break; case 4:recon[i]=(raw[i]+paeth(a,b,c))&0xFF;break; default:recon[i]=raw[i]; }
-      }
-      prev.set(recon);
-      for (let x = 0; x < width; x++) {
-        const si = x * channels, di = (row * width + x) * 4;
-        pixels[di] = recon[si]; pixels[di+1] = recon[si+1]; pixels[di+2] = recon[si+2];
-        pixels[di+3] = hasAlpha ? recon[si+3] : 255;
-      }
-    }
-    return { width, height, pixels };
-  } catch(e) { return { width: 0, height: 0, pixels: null }; }
-}
-
-async function encodeRGBPng(w, h, rgb) {
-  const rowSize = w * 3;
-  const filtered = new Uint8Array(h * (rowSize + 1));
-  for (let r = 0; r < h; r++) {
-    filtered[r * (rowSize + 1)] = 0;
-    filtered.set(rgb.slice(r * rowSize, r * rowSize + rowSize), r * (rowSize + 1) + 1);
-  }
-  const cs = new CompressionStream('deflate');
-  const cw = cs.writable.getWriter(); cw.write(filtered); cw.close();
-  const cr = cs.readable.getReader();
-  const cchunks = [];
-  while (true) { const {done,value} = await cr.read(); if (done) break; cchunks.push(value); }
-  const compressed = new Uint8Array(cchunks.reduce((a,c)=>a+c.length,0));
-  let cp=0; for (const c of cchunks) { compressed.set(c,cp); cp+=c.length; }
-
-  const crc32 = (buf) => { let crc=0xFFFFFFFF; for (let i=0;i<buf.length;i++){crc^=buf[i];for(let j=0;j<8;j++)crc=(crc&1)?(crc>>>1)^0xEDB88320:crc>>>1;} return (crc^0xFFFFFFFF)>>>0; };
-  const writeChunk = (type, data) => {
-    const tb = new TextEncoder().encode(type);
-    const chunk = new Uint8Array(12 + data.length);
-    const view = new DataView(chunk.buffer);
-    view.setUint32(0, data.length);
-    chunk.set(tb, 4); chunk.set(data, 8);
-    const cb = new Uint8Array(tb.length + data.length); cb.set(tb); cb.set(data, tb.length);
-    view.setUint32(8 + data.length, crc32(cb));
-    return chunk;
-  };
-  const ihdr = new Uint8Array(13); const iv = new DataView(ihdr.buffer);
-  iv.setUint32(0,w); iv.setUint32(4,h); ihdr[8]=8; ihdr[9]=2;
-  const sig = new Uint8Array([137,80,78,71,13,10,26,10]);
-  const ic = writeChunk('IHDR',ihdr), dc = writeChunk('IDAT',compressed), ec = writeChunk('IEND',new Uint8Array(0));
-  const total = sig.length+ic.length+dc.length+ec.length;
-  const result = new Uint8Array(total); let p=0;
-  result.set(sig,p);p+=sig.length; result.set(ic,p);p+=ic.length; result.set(dc,p);p+=dc.length; result.set(ec,p);
-  let bin=''; for(let i=0;i<result.length;i+=8192) bin+=String.fromCharCode(...result.subarray(i,i+8192));
-  return btoa(bin);
 }
 
 Deno.serve(async (req) => {
