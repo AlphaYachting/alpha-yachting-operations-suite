@@ -24,25 +24,53 @@ const EMPTY_LINE = () => ({
   line_order: 0,
 });
 
-// Small inline customer picker for each line
-function LineCustomerPicker({ value, customers, onChange, loading }) {
+// Small inline customer picker — uses preloaded customers if available, live search fallback
+function LineCustomerPicker({ value, customers, onChange }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const [liveResults, setLiveResults] = useState([]);
+  const [searching, setSearching] = useState(false);
   const ref = useRef(null);
+  const debounceRef = useRef(null);
 
   const selected = customers.find(c => c.id === value);
-  const filtered = search.length > 0
-    ? customers.filter(c => {
-        const name = `${c.first_name || ''} ${c.last_name} ${c.company_name || ''}`.toLowerCase();
-        return name.includes(search.toLowerCase());
-      }).slice(0, 6)
-    : [];
+
+  // If customers are preloaded (>0), filter locally — instant
+  // If not yet loaded, do a live API search after short debounce
+  const filtered = customers.length > 0
+    ? (search.length > 0
+        ? customers.filter(c => {
+            const name = `${c.first_name || ''} ${c.last_name} ${c.company_name || ''}`.toLowerCase();
+            return name.includes(search.toLowerCase());
+          }).slice(0, 8)
+        : [])
+    : liveResults;
 
   useEffect(() => {
     const handleClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearch(val);
+    setOpen(true);
+
+    // Only do live search if preloaded list is empty
+    if (customers.length === 0 && val.length >= 2) {
+      clearTimeout(debounceRef.current);
+      setSearching(true);
+      debounceRef.current = setTimeout(async () => {
+        const results = await base44.entities.Customer.list('-last_name', 200);
+        const q = val.toLowerCase();
+        setLiveResults(results.filter(c =>
+          `${c.first_name || ''} ${c.last_name} ${c.company_name || ''}`.toLowerCase().includes(q)
+        ).slice(0, 8));
+        setSearching(false);
+      }, 300);
+    }
+  };
 
   if (selected) {
     return (
@@ -57,22 +85,19 @@ function LineCustomerPicker({ value, customers, onChange, loading }) {
 
   return (
     <div ref={ref} className="relative">
-      <div className="flex items-center gap-1">
-        <Input
-          value={search}
-          onChange={e => { setSearch(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          placeholder={loading ? 'Lade Kunden…' : 'Kunde…'}
-          disabled={loading}
-          className="h-7 text-xs w-[130px]"
-        />
-      </div>
-      {open && loading && (
-        <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg w-52 px-3 py-2 text-xs text-slate-400">
-          Kunden werden geladen…
+      <Input
+        value={search}
+        onChange={handleSearchChange}
+        onFocus={() => setOpen(true)}
+        placeholder="Kunde…"
+        className="h-7 text-xs w-[130px]"
+      />
+      {open && searching && (
+        <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg w-52 px-3 py-2 text-xs text-slate-400 flex items-center gap-2">
+          <Loader2 className="h-3 w-3 animate-spin" /> Suche…
         </div>
       )}
-      {open && !loading && filtered.length > 0 && (
+      {open && !searching && filtered.length > 0 && (
         <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg w-52 max-h-40 overflow-y-auto">
           {filtered.map(c => (
             <button
@@ -152,8 +177,11 @@ export default function MaterialImportDetail() {
 
   const { data: customers = [], isLoading: customersLoading } = useQuery({
     queryKey: ['customers_basic'],
-    queryFn: () => base44.entities.Customer.list('-created_date', 500),
-    staleTime: 5 * 60 * 1000, // 5 min cache — customers don't change often
+    queryFn: () => base44.entities.Customer.list('-last_name', 1000),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
   });
 
   const filteredDefaultCustomers = customers.filter(c => {
@@ -613,7 +641,6 @@ Rules:
                       <LineCustomerPicker
                         value={line.assigned_customer_id}
                         customers={customers}
-                        loading={customersLoading}
                         onChange={v => updateLine(line._key, 'assigned_customer_id', v)}
                       />
                     </td>
