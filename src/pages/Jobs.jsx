@@ -136,41 +136,69 @@ export default function Projects() {
 
       console.log('[Jobs] Loaded projects:', projectsData.length);
 
-      // Sort projects: overdue first, then by due date ascending (earliest first)
-      // Client-side sorting ensures correct order regardless of server response
+      // Sorting logic:
+      // Tier 0: Active/critical projects (not done, not invoiced, not cancelled)
+      //   → sorted by urgency: overdue first, then by due date ascending, priority as tiebreaker
+      // Tier 1: Completed (green) but not yet invoiced → below active, by completion date desc
+      // Tier 2: Invoiced / Cancelled → very bottom
+      const priorityOrder = { Express: 0, Urgent: 1, High: 2, Normal: 3, Low: 4 };
+
+      const getTier = (p) => {
+        if (['Invoiced', 'Cancelled'].includes(p.status)) return 2;
+        if (p.status === 'Completed') return 1;
+        return 0;
+      };
+
       const sortedProjects = projectsData.sort((a, b) => {
-        const today = new Date();
-        const aDate = a.requested_date ? parseISO(a.requested_date) : null;
-        const bDate = b.requested_date ? parseISO(b.requested_date) : null;
-        
-        // Check if completed/cancelled (no warning markers)
-        const aCompleted = ['Completed', 'Invoiced', 'Cancelled'].includes(a.status);
-        const bCompleted = ['Completed', 'Invoiced', 'Cancelled'].includes(b.status);
-        
-        const aOverdue = !aCompleted && aDate && isPast(aDate) && !isToday(aDate);
-        const bOverdue = !bCompleted && bDate && isPast(bDate) && !isToday(bDate);
-        
-        // Overdue projects first (highest priority)
-        if (aOverdue && !bOverdue) return -1;
-        if (!aOverdue && bOverdue) return 1;
-        
-        // Then sort by due date ascending (earliest due first)
-        if (aDate && bDate) {
-          const diff = aDate - bDate;
-          if (diff !== 0) return diff;
+        const tierA = getTier(a);
+        const tierB = getTier(b);
+
+        // Different tiers: lower tier = higher in list
+        if (tierA !== tierB) return tierA - tierB;
+
+        // ── Within Tier 0 (active) ──────────────────────────────────────────
+        if (tierA === 0) {
+          const today = new Date();
+          const aDate = a.requested_date ? parseISO(a.requested_date) : null;
+          const bDate = b.requested_date ? parseISO(b.requested_date) : null;
+
+          const isOverdue = (d) => d && isPast(d) && !isToday(d);
+          const isUrgent  = (p) => ['Express', 'Urgent'].includes(p.priority);
+
+          const aCritical = isOverdue(aDate) || isUrgent(a);
+          const bCritical = isOverdue(bDate) || isUrgent(b);
+
+          // Critical items first
+          if (aCritical && !bCritical) return -1;
+          if (!aCritical && bCritical) return 1;
+
+          // Both critical or both normal → sort by due date ascending (earliest first)
+          if (aDate && bDate) {
+            const diff = aDate - bDate;
+            if (diff !== 0) return diff;
+          }
+          if (aDate && !bDate) return -1;
+          if (!aDate && bDate) return 1;
+
+          // Priority as tiebreaker
+          const aPri = priorityOrder[a.priority] ?? 5;
+          const bPri = priorityOrder[b.priority] ?? 5;
+          if (aPri !== bPri) return aPri - bPri;
+
+          // Newest created last resort
+          return new Date(b.created_date) - new Date(a.created_date);
         }
-        // Projects with due dates before those without
-        if (aDate && !bDate) return -1;
-        if (!aDate && bDate) return 1;
-        
-        // Finally by priority for same due dates
-        const priorityOrder = { Express: 0, Urgent: 1, High: 2, Normal: 3, Low: 4 };
-        const aPriority = priorityOrder[a.priority] ?? 5;
-        const bPriority = priorityOrder[b.priority] ?? 5;
-        if (aPriority !== bPriority) return aPriority - bPriority;
-        
-        // By created date (newest first) as last resort
-        return new Date(b.created_date) - new Date(a.created_date);
+
+        // ── Within Tier 1 (Completed, not yet invoiced) ────────────────────
+        if (tierA === 1) {
+          // Most recently completed first
+          const aComp = a.completion_date ? new Date(a.completion_date) : new Date(a.updated_date);
+          const bComp = b.completion_date ? new Date(b.completion_date) : new Date(b.updated_date);
+          return bComp - aComp;
+        }
+
+        // ── Within Tier 2 (Invoiced / Cancelled) ──────────────────────────
+        return new Date(b.updated_date) - new Date(a.updated_date);
       });
 
       setProjects(sortedProjects);
