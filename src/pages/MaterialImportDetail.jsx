@@ -25,7 +25,7 @@ const EMPTY_LINE = () => ({
 });
 
 // Small inline customer picker — uses preloaded customers if available, live search fallback
-function LineCustomerPicker({ value, customers, onChange }) {
+function LineCustomerPicker({ value, customers, customersLoading, onChange }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [liveResults, setLiveResults] = useState([]);
@@ -37,7 +37,7 @@ function LineCustomerPicker({ value, customers, onChange }) {
 
   // If customers are preloaded (>0), filter locally — instant
   // If not yet loaded, do a live API search after short debounce
-  const filtered = customers.length > 0
+  const filtered = !customersLoading
     ? (search.length > 0
         ? customers.filter(c => {
             const name = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
@@ -57,8 +57,8 @@ function LineCustomerPicker({ value, customers, onChange }) {
     setSearch(val);
     setOpen(true);
 
-    // Only do live search if preloaded list is empty
-    if (customers.length === 0 && val.length >= 2) {
+    // Only do live search if preloaded list is still loading
+    if (customersLoading && val.length >= 2) {
       clearTimeout(debounceRef.current);
       setSearching(true);
       debounceRef.current = setTimeout(async () => {
@@ -641,6 +641,7 @@ Rules:
                       <LineCustomerPicker
                         value={line.assigned_customer_id}
                         customers={customers}
+                        customersLoading={customersLoading}
                         onChange={v => updateLine(line._key, 'assigned_customer_id', v)}
                       />
                     </td>
