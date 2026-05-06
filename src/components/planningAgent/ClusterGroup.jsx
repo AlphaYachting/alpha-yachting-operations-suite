@@ -11,10 +11,12 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
   const [leadSaving, setLeadSaving] = useState(false);
   const [accessSaving, setAccessSaving] = useState(false);
   const [localAccessConfirmed, setLocalAccessConfirmed] = useState(null); // null = use job value
+  const [localLeadId, setLocalLeadId] = useState(undefined); // undefined = use job value
   const leadRef = useRef(null);
 
-  // Resolve current project lead
-  const projectLead = job?.lead_technician_id ? technicians.find(t => t.id === job.lead_technician_id) : null;
+  // Resolve current project lead (prefer local optimistic value)
+  const effectiveLeadId = localLeadId !== undefined ? localLeadId : job?.lead_technician_id;
+  const projectLead = effectiveLeadId ? technicians.find(t => t.id === effectiveLeadId) : null;
   const projectLeadName = projectLead ? `${projectLead.first_name} ${projectLead.last_name}` : null;
 
   // Close lead dropdown on outside click
@@ -53,13 +55,15 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
 
   const handleLeadChange = async (technicianId) => {
     if (!job) return;
+    setLocalLeadId(technicianId || null); // optimistic update — visible immediately
+    setLeadDropdownOpen(false);
     setLeadSaving(true);
     try {
       await base44.entities.Job.update(job.id, { lead_technician_id: technicianId || null });
-      setLeadDropdownOpen(false);
       onRefresh?.();
     } catch (error) {
       console.error('Error updating project lead:', error);
+      setLocalLeadId(undefined); // revert on error
     } finally {
       setLeadSaving(false);
     }
@@ -210,12 +214,12 @@ export default function ClusterGroup({ boat, job, location, items = [], technici
                         onClick={() => handleLeadChange(t.id)}
                         className={cn(
                           'block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-b-0',
-                          t.id === job.lead_technician_id ? 'font-semibold text-blue-700 bg-blue-50' : 'text-slate-700'
+                          t.id === effectiveLeadId ? 'font-semibold text-blue-700 bg-blue-50' : 'text-slate-700'
                         )}
                         disabled={leadSaving}
                       >
                         {t.first_name} {t.last_name}
-                        {t.id === job.lead_technician_id && ' ✓'}
+                        {t.id === effectiveLeadId && ' ✓'}
                       </button>
                     ))}
                   </div>
