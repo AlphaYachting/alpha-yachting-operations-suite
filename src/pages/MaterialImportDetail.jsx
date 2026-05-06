@@ -40,7 +40,7 @@ function LineCustomerPicker({ value, customers, onChange }) {
   const filtered = customers.length > 0
     ? (search.length > 0
         ? customers.filter(c => {
-            const name = `${c.first_name || ''} ${c.last_name} ${c.company_name || ''}`.toLowerCase();
+            const name = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
             return name.includes(search.toLowerCase());
           }).slice(0, 8)
         : [])
@@ -65,7 +65,7 @@ function LineCustomerPicker({ value, customers, onChange }) {
         const results = await base44.entities.Customer.list('-last_name', 200);
         const q = val.toLowerCase();
         setLiveResults(results.filter(c =>
-          `${c.first_name || ''} ${c.last_name} ${c.company_name || ''}`.toLowerCase().includes(q)
+          `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase().includes(q)
         ).slice(0, 8));
         setSearching(false);
       }, 300);
