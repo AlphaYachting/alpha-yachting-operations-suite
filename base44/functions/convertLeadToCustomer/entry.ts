@@ -5,8 +5,8 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { leadId, customerData, boatData } = await req.json();
@@ -48,9 +48,8 @@ Deno.serve(async (req) => {
       boatId = boat.id;
     }
 
-    // Update lead as converted
+    // Update lead as converted — keep status valid (no "Converted" in schema enum)
     await base44.asServiceRole.entities.Lead.update(leadId, {
-      status: 'Converted',
       converted_customer_id: customer.id,
       converted_boat_id: boatId,
       converted_at: new Date().toISOString()
