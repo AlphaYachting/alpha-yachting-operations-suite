@@ -88,7 +88,7 @@ export default function Projects() {
    const [workOrders, setWorkOrders] = useState([]);
 
    // Shared reference data — served from module-level cache, no repeated API calls on navigation
-   const { customers, boats, locations, technicians } = useRefData();
+   const { customers, boats, locations, technicians, loading: refLoading } = useRefData();
    const [tasks, setTasks] = useState([]);
    const [loading, setLoading] = useState(true);
    const [formDataLoading, setFormDataLoading] = useState(false);
@@ -467,7 +467,7 @@ export default function Projects() {
       </div>
 
       {/* Projects List */}
-      {loading ? (
+      {(loading || refLoading) ? (
         <div className="grid gap-4">
           {[1,2,3].map(i => (
             <Skeleton key={i} className="h-28 w-full" />
