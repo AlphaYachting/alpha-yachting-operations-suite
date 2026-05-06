@@ -24,58 +24,33 @@ const EMPTY_LINE = () => ({
   line_order: 0,
 });
 
-// Small inline customer picker — uses preloaded customers if available, live search fallback
-function LineCustomerPicker({ value, customers, customersLoading, onChange }) {
+// Small inline customer picker
+function LineCustomerPicker({ value, customers, onChange }) {
   const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const [liveResults, setLiveResults] = useState([]);
-  const [searching, setSearching] = useState(false);
+  const [focused, setFocused] = useState(false);
   const ref = useRef(null);
-  const debounceRef = useRef(null);
 
   const selected = customers.find(c => c.id === value);
 
-  // If customers are preloaded (>0), filter locally — instant
-  // If not yet loaded, do a live API search after short debounce
-  const filtered = !customersLoading
-    ? (search.length > 0
-        ? customers.filter(c => {
-            const name = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
-            return name.includes(search.toLowerCase());
-          }).slice(0, 8)
-        : [])
-    : liveResults;
+  const filtered = search.length > 0
+    ? customers.filter(c => {
+        const name = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
+        return name.includes(search.toLowerCase());
+      }).slice(0, 8)
+    : [];
 
-  useEffect(() => {
-    const handleClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  const showDropdown = focused && filtered.length > 0;
 
-  const handleSearchChange = (e) => {
-    const val = e.target.value;
-    setSearch(val);
-    setOpen(true);
-
-    // Only do live search if preloaded list is still loading
-    if (customersLoading && val.length >= 2) {
-      clearTimeout(debounceRef.current);
-      setSearching(true);
-      debounceRef.current = setTimeout(async () => {
-        const results = await base44.entities.Customer.list('-last_name', 200);
-        const q = val.toLowerCase();
-        setLiveResults(results.filter(c =>
-          `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase().includes(q)
-        ).slice(0, 8));
-        setSearching(false);
-      }, 300);
-    }
+  const handleSelect = (customerId) => {
+    onChange(customerId);
+    setSearch('');
+    setFocused(false);
   };
 
   if (selected) {
     return (
       <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 whitespace-nowrap max-w-[150px]">
-        <span className="truncate flex-1">{selected.company_name || `${selected.first_name || ''} ${selected.last_name}`.trim()}</span>
+        <span className="truncate flex-1">{selected.company_name || `${selected.first_name || ''} ${selected.last_name || ''}`.trim()}</span>
         <button onClick={() => onChange('')} className="text-blue-400 hover:text-blue-700 flex-shrink-0">
           <X className="h-3 w-3" />
         </button>
@@ -87,25 +62,21 @@ function LineCustomerPicker({ value, customers, customersLoading, onChange }) {
     <div ref={ref} className="relative">
       <Input
         value={search}
-        onChange={handleSearchChange}
-        onFocus={() => setOpen(true)}
+        onChange={e => setSearch(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
         placeholder="Kunde…"
         className="h-7 text-xs w-[130px]"
       />
-      {open && searching && (
-        <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg w-52 px-3 py-2 text-xs text-slate-400 flex items-center gap-2">
-          <Loader2 className="h-3 w-3 animate-spin" /> Suche…
-        </div>
-      )}
-      {open && !searching && filtered.length > 0 && (
+      {showDropdown && (
         <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg w-52 max-h-40 overflow-y-auto">
           {filtered.map(c => (
             <button
               key={c.id}
               className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-xs border-b border-slate-100 last:border-0"
-              onMouseDown={e => { e.preventDefault(); onChange(c.id); setSearch(''); setOpen(false); }}
+              onMouseDown={e => { e.preventDefault(); handleSelect(c.id); }}
             >
-              <span className="font-medium">{c.company_name || `${c.first_name || ''} ${c.last_name}`.trim()}</span>
+              <span className="font-medium">{c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim()}</span>
             </button>
           ))}
         </div>
@@ -641,7 +612,6 @@ Rules:
                       <LineCustomerPicker
                         value={line.assigned_customer_id}
                         customers={customers}
-                        customersLoading={customersLoading}
                         onChange={v => updateLine(line._key, 'assigned_customer_id', v)}
                       />
                     </td>
