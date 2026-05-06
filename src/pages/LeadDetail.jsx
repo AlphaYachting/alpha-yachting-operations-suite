@@ -94,6 +94,7 @@ export default function LeadDetail() {
   const [commentText, setCommentText] = useState('');
   const [generatingTasks, setGeneratingTasks] = useState(false);
   const [creatingOffer, setCreatingOffer] = useState(false);
+  const [convertingToCustomer, setConvertingToCustomer] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editCustomers, setEditCustomers] = useState([]);
   const [editLocations, setEditLocations] = useState([]);
@@ -264,6 +265,31 @@ export default function LeadDetail() {
     }
   };
 
+  const handleConvertToCustomer = async () => {
+    if (!lead) return;
+    if (lead.converted_customer_id) {
+      alert('Dieser Lead wurde bereits als Kunde angelegt.');
+      return;
+    }
+    if (!window.confirm(`Lead "${lead.name}" als Kunden anlegen?`)) return;
+
+    try {
+      setConvertingToCustomer(true);
+      const result = await base44.functions.invoke('convertLeadToCustomer', { leadId: lead.id });
+      if (result.data?.success) {
+        alert(`Kunde erfolgreich angelegt: ${lead.name}`);
+        await loadLeadDetails();
+      } else {
+        alert('Fehler: ' + (result.data?.error || 'Unbekannter Fehler'));
+      }
+    } catch (error) {
+      console.error('Error converting lead:', error);
+      alert('Fehler beim Anlegen des Kunden: ' + error.message);
+    } finally {
+      setConvertingToCustomer(false);
+    }
+  };
+
   const handleCreateOffer = async () => {
     try {
       setCreatingOffer(true);
@@ -420,6 +446,28 @@ export default function LeadDetail() {
             <Edit className="h-4 w-4 mr-2" />
             Edit Lead
           </Button>
+          {lead.converted_customer_id ? (
+            <Button
+              asChild
+              variant="outline"
+              className="border-emerald-500 text-emerald-700"
+            >
+              <Link to={createPageUrl('CustomerDetail') + `?id=${lead.converted_customer_id}`}>
+                <UserCheck className="h-4 w-4 mr-2" />
+                Kunde anzeigen
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              onClick={handleConvertToCustomer}
+              disabled={convertingToCustomer}
+              variant="outline"
+              className="border-blue-500 text-blue-700 hover:bg-blue-50"
+            >
+              <User className="h-4 w-4 mr-2" />
+              {convertingToCustomer ? 'Anlegen...' : 'Als Kunde anlegen'}
+            </Button>
+          )}
           <Button
             onClick={handleCreateOffer}
             disabled={creatingOffer}
