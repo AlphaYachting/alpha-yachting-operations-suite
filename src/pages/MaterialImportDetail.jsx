@@ -25,7 +25,7 @@ const EMPTY_LINE = () => ({
 });
 
 // Small inline customer picker for each line
-function LineCustomerPicker({ value, customers, onChange }) {
+function LineCustomerPicker({ value, customers, onChange, loading }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -62,11 +62,17 @@ function LineCustomerPicker({ value, customers, onChange }) {
           value={search}
           onChange={e => { setSearch(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
-          placeholder="Kunde…"
+          placeholder={loading ? 'Lade Kunden…' : 'Kunde…'}
+          disabled={loading}
           className="h-7 text-xs w-[130px]"
         />
       </div>
-      {open && filtered.length > 0 && (
+      {open && loading && (
+        <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg w-52 px-3 py-2 text-xs text-slate-400">
+          Kunden werden geladen…
+        </div>
+      )}
+      {open && !loading && filtered.length > 0 && (
         <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg w-52 max-h-40 overflow-y-auto">
           {filtered.map(c => (
             <button
@@ -144,9 +150,10 @@ export default function MaterialImportDetail() {
     }
   }, [existingLines]);
 
-  const { data: customers = [] } = useQuery({
+  const { data: customers = [], isLoading: customersLoading } = useQuery({
     queryKey: ['customers_basic'],
     queryFn: () => base44.entities.Customer.list('-created_date', 500),
+    staleTime: 5 * 60 * 1000, // 5 min cache — customers don't change often
   });
 
   const filteredDefaultCustomers = customers.filter(c => {
@@ -606,6 +613,7 @@ Rules:
                       <LineCustomerPicker
                         value={line.assigned_customer_id}
                         customers={customers}
+                        loading={customersLoading}
                         onChange={v => updateLine(line._key, 'assigned_customer_id', v)}
                       />
                     </td>
