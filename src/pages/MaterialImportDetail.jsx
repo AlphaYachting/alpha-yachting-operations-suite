@@ -24,11 +24,11 @@ const EMPTY_LINE = () => ({
   line_order: 0,
 });
 
-// Small inline customer picker
+// Small inline customer picker — uses fixed positioning to escape overflow:hidden containers
 function LineCustomerPicker({ value, customers, onChange }) {
   const [search, setSearch] = useState('');
-  const [focused, setFocused] = useState(false);
-  const ref = useRef(null);
+  const [dropdownPos, setDropdownPos] = useState(null);
+  const inputRef = useRef(null);
 
   const selected = customers.find(c => c.id === value);
 
@@ -39,12 +39,18 @@ function LineCustomerPicker({ value, customers, onChange }) {
       }).slice(0, 8)
     : [];
 
-  const showDropdown = focused && filtered.length > 0;
+  const openDropdown = () => {
+    if (!inputRef.current) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    setDropdownPos({ top: rect.bottom + 4, left: rect.left });
+  };
+
+  const closeDropdown = () => setTimeout(() => setDropdownPos(null), 150);
 
   const handleSelect = (customerId) => {
     onChange(customerId);
     setSearch('');
-    setFocused(false);
+    setDropdownPos(null);
   };
 
   if (selected) {
@@ -59,17 +65,21 @@ function LineCustomerPicker({ value, customers, onChange }) {
   }
 
   return (
-    <div ref={ref} className="relative">
+    <>
       <Input
+        ref={inputRef}
         value={search}
-        onChange={e => setSearch(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setTimeout(() => setFocused(false), 150)}
+        onChange={e => { setSearch(e.target.value); openDropdown(); }}
+        onFocus={openDropdown}
+        onBlur={closeDropdown}
         placeholder="Kunde…"
         className="h-7 text-xs w-[130px]"
       />
-      {showDropdown && (
-        <div className="absolute z-50 top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg w-52 max-h-40 overflow-y-auto">
+      {dropdownPos && filtered.length > 0 && (
+        <div
+          style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
+          className="bg-white border border-slate-200 rounded-lg shadow-xl w-52 max-h-48 overflow-y-auto"
+        >
           {filtered.map(c => (
             <button
               key={c.id}
@@ -81,7 +91,7 @@ function LineCustomerPicker({ value, customers, onChange }) {
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }
 
