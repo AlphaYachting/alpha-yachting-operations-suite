@@ -1,0 +1,61 @@
+{
+  "name": "ActivityLog",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user who performed the action"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Full name of the user"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "create",
+        "update",
+        "delete"
+      ],
+      "description": "Type of action performed"
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "Which entity was affected (e.g. WorkOrder, Job, Offer, Lead)"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID of the affected record"
+    },
+    "entity_label": {
+      "type": "string",
+      "description": "Human-readable label of the record (e.g. title, number)"
+    },
+    "changed_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of fields that changed (for updates)"
+    },
+    "old_values": {
+      "type": "object",
+      "description": "Previous values of changed fields"
+    },
+    "new_values": {
+      "type": "object",
+      "description": "New values of changed fields"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the action occurred"
+    }
+  },
+  "required": [
+    "user_email",
+    "action",
+    "entity_type",
+    "entity_id"
+  ]
+}

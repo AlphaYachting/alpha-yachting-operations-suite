@@ -167,6 +167,11 @@
         "type": "string"
       },
       "description": "File URLs"
+    },
+    "access_confirmed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Boat / site access confirmed at project level \u2014 applies to all child work orders"
     }
   },
   "required": [
