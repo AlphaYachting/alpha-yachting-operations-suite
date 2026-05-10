@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { Plus, X } from 'lucide-react';
 
 /**
  * ConversionDialog — converts a QuickCaptureEntry into an operational record.
@@ -39,9 +40,14 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
 
   // --- Task fields ---
   const [workOrders, setWorkOrders] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [workOrderId, setWorkOrderId] = useState('');
   const [taskTitle, setTaskTitle] = useState(entry.suggested_summary || entry.raw_input?.slice(0, 80) || '');
   const [loadingWOs, setLoadingWOs] = useState(false);
+  const [showNewWO, setShowNewWO] = useState(false);
+  const [newWOTitle, setNewWOTitle] = useState('');
+  const [newWOJobId, setNewWOJobId] = useState('');
+  const [creatingWO, setCreatingWO] = useState(false);
 
   // --- Material entry fields ---
   const [itemTitle, setItemTitle] = useState(entry.suggested_summary || '');
@@ -51,21 +57,24 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
   // --- Offer fields ---
   const [offerTitle, setOfferTitle] = useState(entry.suggested_summary || entry.raw_input?.slice(0, 80) || '');
 
-  // Load work orders when target is Task
+  const ACTIVE_STATUSES = ['Draft','Scheduled','Dispatched','In Transit','In Progress','Paused','Waiting for Parts','Waiting for Approval','Ready to Invoice'];
+
+  // Load work orders when target is Task — FIX: all active statuses, load jobs for new WO creation
   useEffect(() => {
     if (target !== 'Task') return;
     setLoadingWOs(true);
-    const filter = customerId ? { job_id: undefined } : {};
-    base44.entities.WorkOrder.list('-created_date', 100)
+    base44.entities.WorkOrder.list('-created_date', 200)
       .then(wos => {
-        // if customer known, filter by jobs belonging to that customer
+        const activeWOs = wos.filter(wo => ACTIVE_STATUSES.includes(wo.status));
         if (customerId) {
-          base44.entities.Job.filter({ customer_id: customerId }).then(jobs => {
-            const jobIds = new Set(jobs.map(j => j.id));
-            setWorkOrders(wos.filter(wo => jobIds.has(wo.job_id)));
+          base44.entities.Job.filter({ customer_id: customerId }).then(jobList => {
+            setJobs(jobList);
+            const jobIds = new Set(jobList.map(j => j.id));
+            setWorkOrders(activeWOs.filter(wo => jobIds.has(wo.job_id)));
           });
         } else {
-          setWorkOrders(wos.filter(wo => ['Draft','Scheduled','Dispatched','In Progress'].includes(wo.status)));
+          base44.entities.Job.list('-created_date', 200).then(jobList => setJobs(jobList));
+          setWorkOrders(activeWOs);
         }
       })
       .finally(() => setLoadingWOs(false));
@@ -191,7 +200,31 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
     label: c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim(),
   }));
 
-  const filteredBoats = boatId ? boats : (customerId ? boats.filter(b => b.customer_id === customerId) : boats);
+  const availableJobs = customerId ? jobs.filter(j => j.customer_id === customerId) : jobs;
+
+  const handleCreateNewWO = async () => {
+    if (!newWOTitle.trim()) { toast.error('Bitte einen Titel eingeben'); return; }
+    if (!newWOJobId) { toast.error('Bitte ein Projekt auswählen'); return; }
+    setCreatingWO(true);
+    try {
+      const wo = await base44.entities.WorkOrder.create({
+        job_id: newWOJobId,
+        title: newWOTitle.trim(),
+        status: 'Draft',
+        scheduled_date: new Date().toISOString().slice(0, 10),
+      });
+      setWorkOrders(prev => [wo, ...prev]);
+      setWorkOrderId(wo.id);
+      setShowNewWO(false);
+      setNewWOTitle('');
+      setNewWOJobId('');
+      toast.success('Work Order angelegt');
+    } catch (err) {
+      toast.error('Fehler: ' + err.message);
+    } finally {
+      setCreatingWO(false);
+    }
+  };
 
   return (
     <Dialog open onOpenChange={onCancel}>
@@ -283,19 +316,64 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
               <Label>Work Order <span className="text-red-500">*</span></Label>
               {loadingWOs ? (
                 <p className="text-sm text-slate-500">Loading work orders…</p>
-              ) : (
-                <Select value={workOrderId} onValueChange={setWorkOrderId}>
+              ) : (<>
+                <Select value={workOrderId} onValueChange={v => { setWorkOrderId(v); setShowNewWO(false); }}>
                   <SelectTrigger><SelectValue placeholder="Select work order…" /></SelectTrigger>
                   <SelectContent>
-                    {workOrders.length === 0 && <SelectItem value={null} disabled>No open work orders</SelectItem>}
-                    {workOrders.map(wo => (
-                      <SelectItem key={wo.id} value={wo.id}>
-                        {wo.work_order_number ? `${wo.work_order_number} — ` : ''}{wo.title}
-                      </SelectItem>
-                    ))}
+                    {workOrders.length === 0
+                      ? <SelectItem value="__none" disabled>Keine aktiven Work Orders gefunden</SelectItem>
+                      : workOrders.map(wo => (
+                          <SelectItem key={wo.id} value={wo.id}>
+                            {wo.work_order_number ? `${wo.work_order_number} — ` : ''}{wo.title}
+                          </SelectItem>
+                        ))
+                    }
                   </SelectContent>
                 </Select>
-              )}
+                {!showNewWO ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewWO(true)}
+                    className="mt-1.5 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                  >
+                    <Plus className="h-3 w-3" /> Neue Work Order anlegen
+                  </button>
+                ) : (
+                  <div className="mt-2 p-3 border border-blue-200 rounded-lg bg-blue-50 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-blue-700">Neue Work Order</span>
+                      <button onClick={() => setShowNewWO(false)}><X className="h-3.5 w-3.5 text-slate-400" /></button>
+                    </div>
+                    <Input
+                      value={newWOTitle}
+                      onChange={e => setNewWOTitle(e.target.value)}
+                      placeholder="Titel der Work Order…"
+                      className="h-8 text-sm"
+                    />
+                    <Select value={newWOJobId} onValueChange={setNewWOJobId}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Projekt auswählen…" /></SelectTrigger>
+                      <SelectContent>
+                        {availableJobs.length === 0
+                          ? <SelectItem value="__none" disabled>Keine Projekte gefunden</SelectItem>
+                          : availableJobs.map(j => (
+                              <SelectItem key={j.id} value={j.id}>
+                                {j.job_number ? `${j.job_number} — ` : ''}{j.title}
+                              </SelectItem>
+                            ))
+                        }
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={handleCreateNewWO}
+                      disabled={creatingWO || !newWOTitle.trim() || !newWOJobId}
+                      className="w-full h-8 text-xs"
+                    >
+                      {creatingWO ? 'Anlegen…' : 'Work Order anlegen & auswählen'}
+                    </Button>
+                  </div>
+                )}
+              </>)}
             </div>
             <div className="space-y-1">
               <Label>Task Title</Label>
