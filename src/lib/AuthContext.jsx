@@ -84,12 +84,14 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('[AuthContext] checkAuth error:', error?.message || error);
-      if (error?.data?.extra_data?.reason === 'user_not_registered') {
-        setAuthError({ type: 'user_not_registered' });
-      } else if (error?.message === 'auth_timeout') {
+      if (error?.message === 'auth_timeout') {
+        // On timeout: keep existing auth state intact (user stays logged in if already was)
+        // Do NOT reset isAuthenticated — just unblock the loading spinner
         setIsLoadingAuth(false);
         isCheckingRef.current = false;
-        return;
+        return; // skip finally
+      } else if (error?.data?.extra_data?.reason === 'user_not_registered') {
+        setAuthError({ type: 'user_not_registered' });
       } else {
         setUser(null);
         setIsAuthenticated(false);
