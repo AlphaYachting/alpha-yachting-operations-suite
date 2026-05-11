@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schnellkalkulator – Alpha Yachting</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    select { appearance: auto; }
+    .service-row { cursor: pointer; transition: background 0.15s; }
+    .service-row:hover { background: #f8fafc; }
+    .service-row.selected { background: #eff6ff; border-color: #93c5fd; }
+    .checkbox { width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer; flex-shrink: 0; }
+    select:disabled { opacity: 0.5; cursor: not-allowed; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 p-4">
+<div class="max-w-2xl mx-auto space-y-5 pb-8">
+
+  <!-- Header -->
+  <div class="flex items-center gap-3 pt-4">
+    <div class="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center text-white font-bold text-sm">AY</div>
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">Schnellkalkulator – Alpha Yachting</h1>
+      <p class="text-sm text-slate-500">Preisabschätzung · Keine kaufmännische Verbindlichkeit</p>
+    </div>
+  </div>
+
+  <!-- Konfiguration -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+    <h2 class="font-semibold text-slate-800">Konfiguration</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Bootstyp</label>
+        <select id="boatType" onchange="onBoatTypeChange()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Wählen…</option>
+          <option value="SY">Segelyacht</option>
+          <option value="MY">Motoryacht</option>
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Längenklasse</label>
+        <select id="lengthBand" onchange="render()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+          <option value="">Wählen…</option>
+          <option>9-10 m</option><option>10-11 m</option><option>11-12 m</option>
+          <option>12-13 m</option><option>13-14 m</option><option>14-15 m</option>
+          <option>15-16 m</option><option>16-17 m</option><option>17-18 m</option>
+          <option>18-19 m</option><option>19-20 m</option><option>20-21 m</option>
+          <option>21-22 m</option><option>22-23 m</option><option>23-24 m</option>
+          <option>24-25 m</option><option>25+ m</option>
+        </select>
+      </div>
+      <div class="space-y-1">
+        <label class="text-sm font-medium text-slate-700">Leistungsbereich</label>
+        <select id="catFilter" onchange="render()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="all">Alles</option>
+          <option value="reinigung">Reinigung / Politur</option>
+          <option value="unterwasser">Unterwasserschiff</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-5 pt-2 border-t border-slate-100">
+      <label class="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" id="showVat" checked onchange="render()" class="checkbox" />
+        MwSt. anzeigen
+      </label>
+      <label class="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" id="showNotes" checked onchange="render()" class="checkbox" />
+        Hinweise anzeigen
+      </label>
+    </div>
+  </div>
+
+  <!-- Services -->
+  <div id="servicesCard" class="hidden bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+    <h2 class="font-semibold text-slate-800 mb-4">Dienstleistungen auswählen</h2>
+    <div id="servicesList"></div>
+  </div>
+
+  <!-- Result -->
+  <div id="resultCard" class="hidden bg-white rounded-xl border-2 border-blue-200 shadow-sm p-5">
+    <h2 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+      <span>🧮</span> Kalkulation
+    </h2>
+    <div id="resultContent"></div>
+  </div>
+
+  <p class="text-xs text-center text-slate-400">
+    Nur zur Orientierung · Kein offizielles Angebot · Keine kaufmännische Verbindlichkeit · © Alpha Yachting
+  </p>
+</div>
+
+<script>
+// ─── PREISDATEN ────────────────────────────────────────────────────────────
+const RUMPF = {
+  '9-10 m':  [130,160,255,50,180,190,310,160],
+  '10-11 m': [145,170,285,50,205,205,340,160],
+  '11-12 m': [160,180,300,50,225,230,370,160],
+  '12-13 m': [175,210,355,50,245,260,420,160],
+  '13-14 m': [190,230,395,50,270,295,470,160],
+  '14-15 m': [215,250,420,50,305,330,530,160],
+  '15-16 m': [240,285,475,50,340,375,595,160],
+  '16-17 m': [255,305,495,50,365,415,650,240],
+  '17-18 m': [285,320,520,70,405,470,750,240],
+  '18-19 m': [320,340,550,70,450,520,830,240],
+  '19-20 m': [350,360,595,70,500,595,950,240],
+  '20-21 m': [460,390,630,70,650,660,1060,240],
+  '21-22 m': [null,null,null,null,750,920,1472,315],
+  '22-23 m': [null,null,null,null,850,1056,1692,315],
+  '23-24 m': [null,null,null,null,950,1212,1940,315],
+  '24-25 m': [null,null,null,null,1050,1392,2248,315],
+  '25+ m':   [null,null,null,null,null,null,null,null],
+};
+
+const REINIGUNG = {
+  '9-10 m':  [105,205,55,110,180,615],
+  '10-11 m': [120,220,65,130,525,680],
+  '11-12 m': [130,230,75,150,570,730],
+  '12-13 m': [140,240,80,160,615,785],
+  '13-14 m': [155,255,90,180,665,840],
+  '14-15 m': [170,270,100,200,725,900],
+  '15-16 m': [190,290,120,220,900,1100],
+  '16-17 m': [210,310,140,240,1100,1300],
+  '17-18 m': [230,330,160,260,1300,1500],
+  '18-19 m': [250,350,180,280,1500,1700],
+  '19-20 m': [270,370,200,300,1700,1900],
+  '20-21 m': [290,390,220,320,1900,2100],
+  '21-22 m': [310,410,240,340,2100,2300],
+  '22-23 m': [330,430,260,360,2300,2500],
+  '23-24 m': [350,450,280,380,2500,2700],
+  '24-25 m': [370,470,300,400,2700,2900],
+  '25+ m':   [null,null,null,null,null,null],
+};
+
+const SERVICES = [
+  { key:'aussenwasche_normal',    label:'Außenwäsche normal',                                    cat:'reinigung',   types:['SY','MY'], col:0, tbl:'R', notes:['reinigungsmittel_inkludiert'] },
+  { key:'aussenwasche_teak',      label:'Außenwäsche mit Teak Cleaner + Brightener',             cat:'reinigung',   types:['SY','MY'], col:1, tbl:'R', notes:['reinigungsmittel_inkludiert','teakschutz_separat'] },
+  { key:'innen_normal',           label:'Innenreinigung normal',                                 cat:'reinigung',   types:['SY','MY'], col:2, tbl:'R', notes:[] },
+  { key:'innen_ausserordentlich', label:'Innenreinigung außergewöhnlicher Zustand',              cat:'reinigung',   types:['SY','MY'], col:3, tbl:'R', notes:[] },
+  { key:'politur',                label:'Politur',                                               cat:'reinigung',   types:['SY','MY'], col:4, tbl:'R', notes:['politur_richtpreis'] },
+  { key:'politur_metallic',       label:'Politur Metallic-Lack',                                 cat:'reinigung',   types:['SY','MY'], col:5, tbl:'R', notes:['politur_richtpreis'] },
+  { key:'sy_vorbereitung',        label:'Yachtvorbereitung Segelyacht',                          cat:'unterwasser', types:['SY'],       col:0, tbl:'H', notes:['material_nicht_inkludiert'] },
+  { key:'sy_erster_anstrich',     label:'Erster Anstrich Segelyacht',                           cat:'unterwasser', types:['SY'],       col:1, tbl:'H', notes:['material_nicht_inkludiert'] },
+  { key:'sy_zweiter_anstrich',    label:'Zweiter Anstrich Segelyacht',                          cat:'unterwasser', types:['SY'],       col:2, tbl:'H', notes:['material_nicht_inkludiert'] },
+  { key:'sy_shaft',               label:'Basis + Antifouling Shaft/Propeller Segelyacht',       cat:'unterwasser', types:['SY'],       col:3, tbl:'H', notes:['material_nicht_inkludiert'] },
+  { key:'my_vorbereitung',        label:'Yachtvorbereitung Motoryacht',                         cat:'unterwasser', types:['MY'],       col:4, tbl:'H', notes:['material_nicht_inkludiert'] },
+  { key:'my_erster_anstrich',     label:'Erster Anstrich Motoryacht',                           cat:'unterwasser', types:['MY'],       col:5, tbl:'H', notes:['material_nicht_inkludiert'] },
+  { key:'my_zweiter_anstrich',    label:'Zweiter Anstrich Motoryacht',                          cat:'unterwasser', types:['MY'],       col:6, tbl:'H', notes:['material_nicht_inkludiert'] },
+  { key:'my_shaft_flaps',         label:'Basis + Antifouling Shaft/Propeller/Flaps/Z-Drive MY', cat:'unterwasser', types:['MY'],       col:7, tbl:'H', notes:['material_nicht_inkludiert'] },
+];
+
+const NOTES = {
+  reinigungsmittel_inkludiert: 'Reinigungsmittel inkludiert.',
+  teakschutz_separat: 'Teakschutz / Teaköl gesondert zu verrechnen.',
+  politur_richtpreis: 'Richtpreis – exakter Preis abhängig vom Zustand des Bootes.',
+  material_nicht_inkludiert: 'Materialkosten nicht inkludiert.',
+};
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+let selected = new Set();
+
+function getPrice(svc, lb) {
+  const tbl = svc.tbl === 'H' ? RUMPF : REINIGUNG;
+  const row = tbl[lb];
+  if (!row) return null;
+  const val = row[svc.col];
+  return val === null ? 'request_only' : val;
+}
+
+function fmt(n) {
+  return 'EUR ' + n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function onBoatTypeChange() {
+  selected.clear();
+  const lb = document.getElementById('lengthBand');
+  lb.disabled = !document.getElementById('boatType').value;
+  render();
+}
+
+function toggleService(key) {
+  if (selected.has(key)) selected.delete(key);
+  else selected.add(key);
+  render();
+}
+
+function render() {
+  const boatType  = document.getElementById('boatType').value;
+  const lengthBand = document.getElementById('lengthBand').value;
+  const catFilter = document.getElementById('catFilter').value;
+  const showVat   = document.getElementById('showVat').checked;
+  const showNotes = document.getElementById('showNotes').checked;
+
+  // Services card
+  const servicesCard = document.getElementById('servicesCard');
+  const servicesList = document.getElementById('servicesList');
+
+  if (!boatType) {
+    servicesCard.classList.add('hidden');
+    document.getElementById('resultCard').classList.add('hidden');
+    return;
+  }
+
+  servicesCard.classList.remove('hidden');
+
+  const filtered = SERVICES.filter(s =>
+    s.types.includes(boatType) &&
+    (catFilter === 'all' || s.cat === catFilter)
+  );
+
+  const cats = ['reinigung', 'unterwasser'];
+  let html = '';
+  for (const cat of cats) {
+    const items = filtered.filter(s => s.cat === cat);
+    if (!items.length) continue;
+    html += `<div class="mb-5">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+        ${cat === 'reinigung' ? 'Reinigung / Politur' : 'Unterwasserschiff / Antifouling'}
+      </p>
+      <div class="space-y-1.5">`;
+    for (const svc of items) {
+      const isSelected = selected.has(svc.key);
+      const price = lengthBand ? getPrice(svc, lengthBand) : null;
+      let priceHtml = '';
+      if (!lengthBand) priceHtml = '<span class="text-slate-300 text-sm">— wähle Länge</span>';
+      else if (price === 'request_only') priceHtml = '<span class="text-xs font-medium px-2 py-0.5 rounded-full border border-amber-300 text-amber-600">Auf Anfrage</span>';
+      else if (price !== null) priceHtml = `<span class="text-sm font-semibold text-slate-800">${fmt(price)}</span>`;
+      else priceHtml = '<span class="text-slate-400">—</span>';
+
+      html += `<div class="service-row flex items-center justify-between p-3 rounded-lg border ${isSelected ? 'selected border-blue-300 bg-blue-50' : 'border-slate-200 bg-white'}"
+        onclick="toggleService('${svc.key}')">
+        <div class="flex items-center gap-2.5">
+          <input type="checkbox" class="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleService('${svc.key}')" />
+          <span class="text-sm font-medium text-slate-800">${svc.label}</span>
+        </div>
+        <div class="ml-4 whitespace-nowrap">${priceHtml}</div>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+  servicesList.innerHTML = html;
+
+  // Result
+  const resultCard = document.getElementById('resultCard');
+  const resultContent = document.getElementById('resultContent');
+
+  if (!lengthBand || selected.size === 0) {
+    resultCard.classList.add('hidden');
+    return;
+  }
+
+  const lines = [...selected].map(key => {
+    const svc = SERVICES.find(s => s.key === key);
+    return { ...svc, price: getPrice(svc, lengthBand) };
+  });
+
+  const hasRequestOnly = lines.some(l => l.price === 'request_only');
+  const nettoTotal = hasRequestOnly ? null : lines.reduce((s, l) => s + (typeof l.price === 'number' ? l.price : 0), 0);
+  const vat = nettoTotal !== null ? Math.round(nettoTotal * 0.25 * 100) / 100 : null;
+  const brutto = nettoTotal !== null ? Math.round((nettoTotal + vat) * 100) / 100 : null;
+  const allNoteKeys = [...new Set(lines.flatMap(l => l.notes))];
+
+  let rHtml = `
+    <div class="flex flex-wrap gap-2 mb-4 text-sm">
+      <span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600">${boatType === 'SY' ? 'Segelyacht' : 'Motoryacht'}</span>
+      <span class="bg-slate-100 px-2 py-0.5 rounded text-slate-600">${lengthBand}</span>
+    </div>
+    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Gewählte Leistungen</p>
+    <div class="space-y-1 mb-4">`;
+
+  for (const line of lines) {
+    const priceStr = line.price === 'request_only'
+      ? '<span class="text-xs px-2 py-0.5 rounded-full border border-amber-300 text-amber-600">Auf Anfrage</span>'
+      : `<span class="font-medium">${fmt(line.price)}</span>`;
+    rHtml += `<div class="flex justify-between text-sm py-1.5 border-b border-slate-100 last:border-0">
+      <span class="text-slate-700">${line.label}</span>
+      <span class="ml-4 whitespace-nowrap">${priceStr}</span>
+    </div>`;
+  }
+  rHtml += '</div>';
+
+  if (hasRequestOnly) {
+    rHtml += `<div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+      <span class="text-amber-600 mt-0.5">⚠️</span>
+      <p class="text-sm text-amber-800">Für mindestens eine gewählte Leistung liegt kein fixer Preis vor. <strong>Preis auf Anfrage.</strong></p>
+    </div>`;
+  } else {
+    rHtml += `<div class="bg-slate-50 rounded-lg p-4 space-y-2">
+      <div class="flex justify-between text-sm">
+        <span class="text-slate-600">Zwischensumme netto</span>
+        <span class="font-medium">${fmt(nettoTotal)}</span>
+      </div>`;
+    if (showVat) {
+      rHtml += `<div class="flex justify-between text-sm">
+        <span class="text-slate-600">MwSt. 25 %</span>
+        <span class="font-medium">${fmt(vat)}</span>
+      </div>`;
+    }
+    rHtml += `<div class="flex justify-between text-base font-bold border-t border-slate-200 pt-2 mt-1">
+        <span>${showVat ? 'Gesamtsumme brutto' : 'Gesamtsumme netto'}</span>
+        <span class="text-blue-700">${fmt(showVat ? brutto : nettoTotal)}</span>
+      </div>
+    </div>`;
+  }
+
+  if (showNotes && allNoteKeys.length > 0) {
+    rHtml += `<div class="mt-4 space-y-1">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">ℹ️ Hinweise</p>
+      <ul class="space-y-1">`;
+    for (const nk of allNoteKeys) {
+      rHtml += `<li class="text-sm text-slate-600 flex items-start gap-1.5"><span class="text-slate-400 mt-1">•</span>${NOTES[nk]}</li>`;
+    }
+    rHtml += '</ul></div>';
+  }
+
+  resultContent.innerHTML = rHtml;
+  resultCard.classList.remove('hidden');
+}
+</script>
+</body>
+</html>
