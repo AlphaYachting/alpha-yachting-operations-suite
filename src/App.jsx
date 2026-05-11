@@ -17,6 +17,7 @@ import QuickCaptureReview from './pages/QuickCaptureReview';
 import AIAssistantSettings from './pages/AIAssistantSettings';
 import PlanningReadiness from './pages/PlanningReadiness';
 import InviteAccept from './pages/InviteAccept';
+import PartnerKalkulatorPublic from './pages/PartnerKalkulatorPublic';
 import MaterialImport from './pages/MaterialImport';
 import BillingReview from './pages/BillingReview';
 import MaterialImportDetail from './pages/MaterialImportDetail';
@@ -204,6 +205,7 @@ function App() {
         <AuthProvider>
           <Routes>
             <Route path="/InviteAccept" element={<InviteAccept />} />
+            <Route path="/kalkulator" element={<PartnerKalkulatorPublic />} />
             <Route path="*" element={<>
               <NavigationTracker />
               <AuthenticatedApp />
