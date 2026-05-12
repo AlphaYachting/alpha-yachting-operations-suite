@@ -81,6 +81,11 @@ export default function Offers() {
     queryFn: () => base44.entities.Job.list(),
   });
 
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
   const duplicateOfferMutation = useMutation({
     mutationFn: async (offerId) => {
       // Get original offer
@@ -475,7 +480,11 @@ export default function Offers() {
                           )}
                           <span className="flex items-center gap-1">
                               <Users className="h-3 w-3" />
-                              Erstellt von: <span className="font-medium text-slate-700">{offer.created_by || '—'}</span>
+                              {offer.assigned_to_user_id ? (
+                                <>Verantwortlich: <span className="font-medium text-slate-700">{users.find(u => u.id === offer.assigned_to_user_id)?.full_name || offer.created_by || '—'}</span></>
+                              ) : (
+                                <>Erstellt von: <span className="font-medium text-slate-700">{offer.created_by || '—'}</span></>
+                              )}
                             </span>
                           {offer.fira_export_status === 'exported' && offer.fira_exported_at && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium border border-emerald-200">

@@ -231,6 +231,10 @@
       },
       "description": "Job/Project IDs included in this billing offer"
     },
+    "assigned_to_user_id": {
+      "type": "string",
+      "description": "User ID responsible for this offer \u2014 set from Lead assignee when auto-created via Ready-to-Offer"
+    },
     "fira_export_status": {
       "type": "string",
       "enum": [

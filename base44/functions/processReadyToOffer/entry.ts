@@ -116,6 +116,8 @@ Deno.serve(async (req) => {
     status: 'Draft'
   };
   if (boatId) offerData.boat_id = boatId;
+  // Inherit assigned user from Lead so the offer shows the correct responsible person
+  if (lead.assigned_to_user_id) offerData.assigned_to_user_id = lead.assigned_to_user_id;
 
   const newOffer = await base44.asServiceRole.entities.Offer.create(offerData);
 
