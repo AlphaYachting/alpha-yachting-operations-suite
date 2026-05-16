@@ -24,6 +24,7 @@ export default function EmailToLeadParser({ onLeadParsed, onCancel }) {
     setError(null);
     setPreview(null);
 
+    try {
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are an assistant that extracts structured lead information from a customer email.
 
@@ -62,8 +63,6 @@ ${emailText}
       },
     });
 
-    setLoading(false);
-
     // Clean up nulls
     const cleaned = {};
     for (const [k, v] of Object.entries(result)) {
@@ -75,6 +74,11 @@ ${emailText}
     cleaned.description = emailText; // always preserve original
 
     setPreview(cleaned);
+    } catch (err) {
+      setError('Analyse fehlgeschlagen: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleConfirm = () => {
