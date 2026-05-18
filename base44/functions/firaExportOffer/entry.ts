@@ -146,9 +146,11 @@ function buildFiraPayload(offer, tasks, customer, location) {
       // Bilingual FIRA export name: "German Title / Hrvatski naziv" when both exist
       const cleanTitle = (task.title || '').trim();
       const cleanTitleHr = (task.title_hr || '').trim();
-      const exportName = cleanTitle && cleanTitleHr
+      const combinedName = cleanTitle && cleanTitleHr
         ? `${cleanTitle} / ${cleanTitleHr}`
         : cleanTitle || cleanTitleHr || '';
+      // FIRA: name field is varchar(255) — truncate if needed
+      const exportName = combinedName.length > 255 ? combinedName.substring(0, 252) + '...' : combinedName;
       const item = {
         lineItemId: String(task.id || `item-${idx + 1}`),
         name: exportName,
