@@ -1,6 +1,5 @@
 // EMAIL ENGINE SANDBOX - Fetch & Store Inbound Messages
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import { ImapFlow } from 'npm:imapflow@1.0.167';
 
 function normalizeSubject(subject) {
   if (!subject) return '';
@@ -70,20 +69,7 @@ function extractBodyFromParts(bodyParts) {
   return '';
 }
 
-function makeClient(host, port, user, pass, log, startTime) {
-  const c = new ImapFlow({
-    host, port,
-    secure: true,
-    auth: { user, pass },
-    logger: false,
-    connectionTimeout: 15000,
-    greetingTimeout: 10000,
-    socketTimeout: 20000,  // short — prevents 120s hangs on bad Dovecot responses
-    disableAutoIdle: true,
-  });
-  c.on('error', (err) => log.push({ step: 'imap_error_event', error: safeErr(err), ts: Date.now() - startTime }));
-  return c;
-}
+// (imapflow client removed — raw IMAP used for all phases to avoid Dovecot hang)
 
 // Determine which body part numbers to fetch based on bodyStructure
 // Returns { partNums, isHtml } — prefer plain text, fallback to HTML
@@ -104,21 +90,20 @@ function getBestPartNums(bodyStructure) {
   return { partNums: ['1'], isHtml: false };
 }
 
-// Fetch body text for a single UID using Deno.connectTls raw IMAP
-// This bypasses imapflow for body fetching — avoids Dovecot hang on BODY.PEEK[x] via imapflow
-async function rawImapFetchBody(host, port, user, pass, seqNum, partNum) {
-  const TIMEOUT_MS = 15000;
+// Raw IMAP connection helper — all phases use this to avoid imapflow Dovecot hang
+async function rawImapConnection(host, port, user, pass) {
+  const CONNECT_TIMEOUT = 10000;
+  const READ_TIMEOUT = 20000;
   const enc = new TextEncoder();
   const dec = new TextDecoder('latin1');
-  let tag = 1;
+  let tagNum = 1;
 
   const withTimeout = (p, ms, label) =>
     Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error(`timeout_${label}`)), ms))]);
 
-  const conn = await withTimeout(Deno.connectTls({ hostname: host, port, alpnProtocols: [] }), 8000, 'connect');
-  const send = async (cmd) => { await conn.write(enc.encode(`A${tag++} ${cmd}\r\n`)); };
-
+  const conn = await withTimeout(Deno.connectTls({ hostname: host, port, alpnProtocols: [] }), CONNECT_TIMEOUT, 'connect');
   let readBuf = new Uint8Array(0);
+
   const readLine = async () => {
     while (true) {
       const str = dec.decode(readBuf);
@@ -129,17 +114,18 @@ async function rawImapFetchBody(host, port, user, pass, seqNum, partNum) {
         return line;
       }
       const chunk = new Uint8Array(4096);
-      const n = await withTimeout(conn.read(chunk), TIMEOUT_MS, 'read');
+      const n = await withTimeout(conn.read(chunk), READ_TIMEOUT, 'read');
       if (n === null) throw new Error('connection_closed');
       const combined = new Uint8Array(readBuf.length + n);
       combined.set(readBuf); combined.set(chunk.subarray(0, n), readBuf.length);
       readBuf = combined;
     }
   };
+
   const readBytes = async (n) => {
     while (readBuf.length < n) {
       const chunk = new Uint8Array(Math.max(4096, n - readBuf.length));
-      const read = await withTimeout(conn.read(chunk), TIMEOUT_MS, 'read_literal');
+      const read = await withTimeout(conn.read(chunk), READ_TIMEOUT, 'read_literal');
       if (read === null) throw new Error('connection_closed_in_literal');
       const combined = new Uint8Array(readBuf.length + read);
       combined.set(readBuf); combined.set(chunk.subarray(0, read), readBuf.length);
@@ -150,46 +136,217 @@ async function rawImapFetchBody(host, port, user, pass, seqNum, partNum) {
     return result;
   };
 
-  try {
-    const greeting = await readLine();
-    if (!greeting.startsWith('* OK')) throw new Error(`bad_greeting`);
-    await send(`LOGIN "${user}" "${pass}"`);
+  const sendCmd = async (cmd) => {
+    const t = `A${tagNum++}`;
+    await conn.write(enc.encode(`${t} ${cmd}\r\n`));
+    return t;
+  };
+
+  const waitForTag = async (t) => {
     let line;
-    do { line = await readLine(); } while (!line.match(/^A\d+ (OK|NO|BAD)/));
-    if (!line.match(/^A\d+ OK/)) throw new Error('auth_failed');
-    await send('SELECT INBOX');
-    do { line = await readLine(); } while (!line.match(/^A\d+ (OK|NO|BAD)/));
-    if (!line.match(/^A\d+ OK/)) throw new Error('select_failed');
-    await send(`FETCH ${seqNum} BODY.PEEK[${partNum}]`);
-    let body = '';
-    while (true) {
-      line = await readLine();
-      const litMatch = line.match(/\{(\d+)\}$/);
-      if (litMatch) {
-        body = await readBytes(parseInt(litMatch[1]));
-        await readLine(); // trailing CRLF
-        break;
-      }
-      if (line.match(/^A\d+ (OK|NO|BAD)/)) break;
-    }
-    try { await send('LOGOUT'); } catch (_) {}
-    try { conn.close(); } catch (_) {}
-    return body;
-  } catch (err) {
-    try { conn.close(); } catch (_) {}
-    throw err;
+    do { line = await readLine(); } while (!line.startsWith(`${t} `));
+    return line;
+  };
+
+  const close = () => { try { conn.close(); } catch (_) {} };
+
+  // Connect and authenticate
+  const greeting = await readLine();
+  if (!greeting.startsWith('* OK')) throw new Error('bad_greeting');
+  const loginTag = await sendCmd(`LOGIN "${user}" "${pass}"`);
+  const loginResp = await waitForTag(loginTag);
+  if (!loginResp.includes(' OK')) throw new Error('auth_failed');
+  const selTag = await sendCmd('SELECT INBOX');
+  // Collect untagged responses to find EXISTS
+  let existsCount = 0;
+  let selLine;
+  const untaggedLines = [];
+  while (true) {
+    selLine = await readLine();
+    if (selLine.startsWith(`${selTag} `)) break;
+    untaggedLines.push(selLine);
   }
+  if (!selLine.includes(' OK')) throw new Error('select_failed');
+  for (const l of untaggedLines) {
+    const m = l.match(/^\* (\d+) EXISTS/);
+    if (m) existsCount = parseInt(m[1]);
+  }
+
+  return { sendCmd, waitForTag, readLine, readBytes, close, existsCount };
 }
 
-async function fetchBodyForUID(host, port, user, pass, uid, bodyStructure, log, startTime) {
-  const { partNums, isHtml } = getBestPartNums(bodyStructure);
-  const partNum = partNums[0] || '1';
-  log.push({ step: 'fetch_parts', uid, partNum, isHtml, ts: Date.now() - startTime });
+// Fetch envelopes for a seq range using raw IMAP — returns array of parsed envelope objects
+async function rawFetchEnvelopes(host, port, user, pass, start, end, log, startTime) {
+  const conn = await rawImapConnection(host, port, user, pass);
+  const envelopes = [];
+  try {
+    const range = `${start}:${end}`;
+    log.push({ step: 'raw_fetch_envelopes', range, ts: Date.now() - startTime });
+    const fetchTag = await conn.sendCmd(`FETCH ${range} (UID ENVELOPE)`);
+    // Read all untagged FETCH responses until tag
+    while (true) {
+      const line = await conn.readLine();
+      if (line.startsWith(`${fetchTag} `)) break;
+      // Parse: * N FETCH (UID x ENVELOPE (...))
+      const seqMatch = line.match(/^\* (\d+) FETCH \(/i);
+      if (!seqMatch) continue;
+      const seqNum = parseInt(seqMatch[1]);
+      // Extract UID
+      const uidMatch = line.match(/UID (\d+)/i);
+      const uid = uidMatch ? parseInt(uidMatch[1]) : seqNum;
+      // Extract ENVELOPE — it's a parenthesized structure after ENVELOPE
+      const envIdx = line.toUpperCase().indexOf('ENVELOPE (');
+      let envelope = null;
+      if (envIdx !== -1) {
+        envelope = parseImapEnvelope(line.substring(envIdx + 9));
+      }
+      envelopes.push({ uid, seqNum, envelope });
+    }
+    log.push({ step: 'raw_envelopes_done', count: envelopes.length, ts: Date.now() - startTime });
+  } finally {
+    try { await conn.sendCmd('LOGOUT'); } catch (_) {}
+    conn.close();
+  }
+  return envelopes;
+}
 
-  // uid == seqNum on this server (sequential mailbox)
-  const raw = await rawImapFetchBody(host, port, user, pass, uid, partNum);
-  if (!raw || !raw.trim()) return '';
-  const decoded = decodeQuotedPrintable(raw);
+// IMAP ENVELOPE parser — handles quoted strings, literals {n}, nested parens, NIL
+function parseImapEnvelope(str) {
+  let i = 0;
+  const s = str.trim();
+
+  function skipSpace() { while (i < s.length && (s[i] === ' ' || s[i] === '\t')) i++; }
+
+  function readToken() {
+    skipSpace();
+    if (i >= s.length) return null;
+    // Literal string {n}
+    if (s[i] === '{') {
+      const end = s.indexOf('}', i);
+      const len = parseInt(s.substring(i + 1, end));
+      i = end + 1;
+      if (s[i] === '\r') i++;
+      if (s[i] === '\n') i++;
+      const val = s.substring(i, i + len);
+      i += len;
+      return val;
+    }
+    // Nested paren list
+    if (s[i] === '(') {
+      let depth = 0, start = i;
+      while (i < s.length) {
+        if (s[i] === '(') depth++;
+        else if (s[i] === ')') { depth--; if (depth === 0) { i++; return s.substring(start, i); } }
+        i++;
+      }
+      return null;
+    }
+    // Quoted string
+    if (s[i] === '"') {
+      let j = i + 1, out = '';
+      while (j < s.length) {
+        if (s[j] === '\\') { out += s[j + 1]; j += 2; }
+        else if (s[j] === '"') { j++; i = j; return out; }
+        else { out += s[j]; j++; }
+      }
+      return null;
+    }
+    // NIL
+    if (s.substring(i, i + 3).toUpperCase() === 'NIL') { i += 3; return null; }
+    // Unquoted atom
+    let j = i;
+    while (j < s.length && s[j] !== ' ' && s[j] !== ')' && s[j] !== '(') j++;
+    const tok = s.substring(i, j); i = j; return tok;
+  }
+
+  // Skip opening paren
+  if (s[i] === '(') i++;
+
+  const tokens = [];
+  for (let n = 0; n < 10; n++) tokens.push(readToken());
+
+  const date = tokens[0];
+  const subject = tokens[1] ? decodeImapString(tokens[1]) : '(no subject)';
+  const fromList = parseAddressList(tokens[2]);
+  const toList = parseAddressList(tokens[5]);
+  const messageId = tokens[9] ? tokens[9].replace(/[<>]/g, '').trim() : null;
+
+  return {
+    date: date ? new Date(date) : new Date(),
+    subject,
+    from: fromList,
+    to: toList,
+    messageId,
+  };
+}
+
+function parseAddressList(token) {
+  if (!token || token === 'NIL') return [];
+  // Format: ((name NIL mailbox host) ...)
+  const results = [];
+  const re = /\(([^)]*)\)/g;
+  let m;
+  while ((m = re.exec(token)) !== null) {
+    const parts = m[1].split(' ');
+    const name = parts[0] && parts[0] !== 'NIL' ? parts[0].replace(/^"|"$/g, '') : '';
+    const mailbox = parts[2] && parts[2] !== 'NIL' ? parts[2].replace(/^"|"$/g, '') : '';
+    const host = parts[3] && parts[3] !== 'NIL' ? parts[3].replace(/^"|"$/g, '') : '';
+    if (mailbox && host) results.push({ name, address: `${mailbox}@${host}` });
+  }
+  return results;
+}
+
+function decodeImapString(s) {
+  if (!s) return '';
+  // Decode encoded-word =?charset?encoding?text?=
+  return s.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_, charset, enc, text) => {
+    try {
+      if (enc.toUpperCase() === 'B') return atob(text);
+      if (enc.toUpperCase() === 'Q') return decodeQuotedPrintable(text.replace(/_/g, ' '));
+    } catch (_) {}
+    return text;
+  });
+}
+
+async function fetchBodyForUID(host, port, user, pass, uid, log, startTime) {
+  log.push({ step: 'fetch_body', uid, ts: Date.now() - startTime });
+  const conn = await rawImapConnection(host, port, user, pass);
+  let body = '';
+  let isHtml = false;
+  try {
+    // First try plain text part 1
+    const fetchTag = await conn.sendCmd(`FETCH ${uid} BODY.PEEK[1]`);
+    let fetchedEmpty = false;
+    while (true) {
+      const line = await conn.readLine();
+      if (line.startsWith(`${fetchTag} `)) break;
+      const litMatch = line.match(/\{(\d+)\}$/);
+      if (litMatch) {
+        body = await conn.readBytes(parseInt(litMatch[1]));
+        await conn.readLine(); // trailing CRLF
+      }
+      if (line.includes('* 0 FETCH') || line.includes('NIL')) fetchedEmpty = true;
+    }
+    // If empty, try HTML part 2
+    if (!body.trim() && !fetchedEmpty) {
+      const fetchTag2 = await conn.sendCmd(`FETCH ${uid} BODY.PEEK[2]`);
+      while (true) {
+        const line = await conn.readLine();
+        if (line.startsWith(`${fetchTag2} `)) break;
+        const litMatch = line.match(/\{(\d+)\}$/);
+        if (litMatch) {
+          body = await conn.readBytes(parseInt(litMatch[1]));
+          await conn.readLine();
+          isHtml = true;
+        }
+      }
+    }
+  } finally {
+    try { await conn.sendCmd('LOGOUT'); } catch (_) {}
+    conn.close();
+  }
+  if (!body.trim()) return '';
+  const decoded = decodeQuotedPrintable(body);
   return isHtml ? htmlToText(decoded).substring(0, 10000) : decoded.substring(0, 10000);
 }
 
@@ -223,47 +380,28 @@ Deno.serve(async (req) => {
 
     const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
 
-    // === PHASE 1: Envelope-only fetch (fast, no body) on one connection ===
-    const client1 = makeClient(host, port, imapUser, imapPass, log, startTime);
+    // === PHASE 1: Envelope fetch via raw IMAP (avoids imapflow Dovecot hang) ===
     let total = 0;
-    const newEnvelopes = []; // [{uid, envelope, bodyStructure}]
+    const newEnvelopes = []; // [{uid, seqNum, envelope}]
 
-    await client1.connect();
-    log.push({ step: 'p1_connected', ts: Date.now() - startTime });
-    const lock1 = await Promise.race([
-      client1.getMailboxLock('INBOX'),
-      new Promise((_, r) => setTimeout(() => r(new Error('lock_timeout')), 15000)),
-    ]);
-    try {
-      total = client1.mailbox.exists || 0;
-      log.push({ step: 'p1_inbox', total, ts: Date.now() - startTime });
+    // First open a connection just to get EXISTS count, then fetch envelopes
+    {
+      const conn = await rawImapConnection(host, port, imapUser, imapPass);
+      total = conn.existsCount;
+      conn.close();
+    }
+    log.push({ step: 'p1_inbox', total, ts: Date.now() - startTime });
 
-      if (total > 0) {
-        // Fetch more messages to catch up — look at last batchSize messages
-        const start = Math.max(1, total - batchSize + 1);
-        const range = `${start}:${total}`;
-        log.push({ step: 'p1_fetch_envelopes', range, ts: Date.now() - startTime });
-
-        const envFetch = (async () => {
-          for await (const msg of client1.fetch(range, { envelope: true, bodyStructure: true, uid: true })) {
-            results.fetched++;
-            const msgId = msg.envelope?.messageId || null;
-            if (msgId && existingMsgIds.has(msgId)) {
-              results.duplicates++;
-              continue;
-            }
-            newEnvelopes.push({ uid: msg.uid, envelope: msg.envelope, bodyStructure: msg.bodyStructure || null });
-          }
-        })();
-        await Promise.race([
-          envFetch,
-          new Promise((_, r) => setTimeout(() => r(new Error('envelope_fetch_timeout')), 30000)),
-        ]);
-        log.push({ step: 'p1_done', new_count: newEnvelopes.length, ts: Date.now() - startTime });
+    if (total > 0) {
+      const startSeq = Math.max(1, total - batchSize + 1);
+      const rawEnvs = await rawFetchEnvelopes(host, port, imapUser, imapPass, startSeq, total, log, startTime);
+      for (const e of rawEnvs) {
+        results.fetched++;
+        const msgId = e.envelope?.messageId || null;
+        if (msgId && existingMsgIds.has(msgId)) { results.duplicates++; continue; }
+        newEnvelopes.push(e);
       }
-    } finally {
-      lock1.release();
-      client1.close();
+      log.push({ step: 'p1_done', new_count: newEnvelopes.length, ts: Date.now() - startTime });
     }
 
     if (newEnvelopes.length === 0) {
@@ -288,7 +426,7 @@ Deno.serve(async (req) => {
 
       try {
         log.push({ step: 'p2_fetching_body', uid: info.uid, ts: Date.now() - startTime });
-        bodyText = await fetchBodyForUID(host, port, imapUser, imapPass, info.uid, info.bodyStructure, log, startTime);
+        bodyText = await fetchBodyForUID(host, port, imapUser, imapPass, info.uid, log, startTime);
         log.push({ step: 'p2_body_ok', uid: info.uid, body_len: bodyText.length, ts: Date.now() - startTime });
       } catch (srcErr) {
         sourceFailed = true;
@@ -307,9 +445,8 @@ Deno.serve(async (req) => {
         const normalizedSubj = normalizeSubject(subject);
         const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
         const conversationKey = buildConversationKey(messageId, fromEmail, normalizedSubj);
-        const bs = info.bodyStructure;
-        const hasAttachments = !!(bs?.childNodes?.some(n => n.disposition === 'attachment'));
-        const attachmentCount = bs?.childNodes?.filter(n => n.disposition === 'attachment').length || 0;
+        const hasAttachments = false;
+        const attachmentCount = 0;
 
         await base44.asServiceRole.entities.EmailMessageSandbox.create({
           mailbox_name: imapUser,
