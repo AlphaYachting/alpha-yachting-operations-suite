@@ -5,7 +5,7 @@ import QuickResolutionForm from './QuickResolutionForm';
 import { findBundleCandidates, getBundleSummary } from '@/utils/bundleAnalyzer';
 import BundleRecommendation from './BundleRecommendation';
 import { cn } from '@/lib/utils';
-import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks, Calendar, Loader2, KeyRound, Crown } from 'lucide-react';
+import { ChevronDown, ChevronRight, MapPin, Clock, Users, Zap, Cloud, UserCheck, ListChecks, Calendar, Loader2, KeyRound, Crown, Pencil, Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import PlannerActionPanel from './PlannerActionPanel';
 import { sortedCandidates } from '@/utils/planningAgent/sortCandidates';
@@ -53,6 +53,9 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
   const [executorDropdownOpen, setExecutorDropdownOpen] = useState(false);
   const [executorSaving, setExecutorSaving] = useState(false);
   const executorRef = useRef(null);
+  const [dateEditing, setDateEditing] = useState(false);
+  const [dateValue, setDateValue] = useState(workOrder.scheduled_date ? workOrder.scheduled_date.substring(0, 10) : '');
+  const [dateSaving, setDateSaving] = useState(false);
 
   // Close dropdowns when card expands
   useEffect(() => {
@@ -153,6 +156,25 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
     }
   };
 
+  const handleDateSave = async () => {
+    if (!dateValue) return;
+    setDateSaving(true);
+    try {
+      await base44.entities.WorkOrder.update(workOrder.id, { scheduled_date: dateValue });
+      setDateEditing(false);
+      onRefresh?.();
+    } catch (err) {
+      console.error('Error updating date:', err);
+    } finally {
+      setDateSaving(false);
+    }
+  };
+
+  const handleDateCancel = () => {
+    setDateValue(workOrder.scheduled_date ? workOrder.scheduled_date.substring(0, 10) : '');
+    setDateEditing(false);
+  };
+
   return (
     <div className="border border-slate-200 rounded-xl bg-white overflow-hidden hover:shadow-sm transition-shadow">
       <button
@@ -166,9 +188,43 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
             {d.isBadWeatherCandidate && <Cloud className="h-3.5 w-3.5 text-sky-500 flex-shrink-0" title="Bad Weather Candidate" />}
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            {workOrder.scheduled_date && (
-              <span className="flex items-center gap-1 text-slate-600 font-medium">
-                <Calendar className="h-3 w-3" />{formatScheduledDate()}
+            {/* Inline date editor */}
+            {dateEditing ? (
+              <span className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                <Calendar className="h-3 w-3 text-blue-500" />
+                <input
+                  type="date"
+                  value={dateValue}
+                  onChange={e => setDateValue(e.target.value)}
+                  className="text-xs border border-blue-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  autoFocus
+                  disabled={dateSaving}
+                />
+                <button
+                  onClick={handleDateSave}
+                  disabled={dateSaving || !dateValue}
+                  className="text-emerald-600 hover:text-emerald-700 disabled:opacity-40"
+                  title="Speichern"
+                >
+                  {dateSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                </button>
+                <button
+                  onClick={handleDateCancel}
+                  className="text-slate-400 hover:text-slate-600"
+                  title="Abbrechen"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ) : (
+              <span
+                className="flex items-center gap-1 text-slate-600 font-medium cursor-pointer hover:text-blue-600 group"
+                onClick={e => { e.stopPropagation(); setDateEditing(true); }}
+                title="Datum bearbeiten"
+              >
+                <Calendar className="h-3 w-3" />
+                {workOrder.scheduled_date ? formatScheduledDate() : <span className="text-slate-400 italic">Kein Datum</span>}
+                <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-60 transition-opacity ml-0.5" />
               </span>
             )}
             <div className="relative inline-block">

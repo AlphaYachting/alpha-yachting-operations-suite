@@ -6,6 +6,7 @@ import AgentSummaryBar from '@/components/planningAgent/AgentSummaryBar';
 import AgentItemRow from '@/components/planningAgent/AgentItemRow';
 import AgentSection from '@/components/planningAgent/AgentSection';
 import ClusterGroup from '@/components/planningAgent/ClusterGroup';
+import TechnicianWorkloadBar from '@/components/planningAgent/TechnicianWorkloadBar';
 import { RefreshCw, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -204,6 +205,9 @@ export default function PlanningAgent() {
           onFilterClick={setActiveFilter}
           activeFilter={activeFilter}
         />
+
+        {/* Techniker-Auslastung */}
+        <TechnicianWorkloadBar technicians={technicians} workOrders={workOrders} />
 
         {activeFilter && filteredView ? (
           <div className="space-y-4">
