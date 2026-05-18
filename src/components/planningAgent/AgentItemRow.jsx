@@ -54,7 +54,7 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
   const [executorSaving, setExecutorSaving] = useState(false);
   const executorRef = useRef(null);
   const [dateEditing, setDateEditing] = useState(false);
-  const [dateValue, setDateValue] = useState(workOrder.scheduled_date ? workOrder.scheduled_date.substring(0, 10) : '');
+  const [dateValue, setDateValue] = useState('');
   const [dateSaving, setDateSaving] = useState(false);
 
   // Close dropdowns when card expands
@@ -78,6 +78,11 @@ export default function AgentItemRow({ item, rank, technicians = [], allWorkOrde
   }, [executorDropdownOpen]);
   const { workOrder, job, customer, location, derived } = item;
   const d = derived;
+
+  // Sync dateValue when workOrder changes
+  useEffect(() => {
+    setDateValue(workOrder.scheduled_date ? workOrder.scheduled_date.substring(0, 10) : '');
+  }, [workOrder.scheduled_date]);
 
   // Sorted executor candidates — preferred pool first, unavailable excluded
   const executorCandidates = sortedCandidates(technicians, d.preferredResourcePool, d.fallbackResourcePool);
