@@ -454,7 +454,34 @@ Deno.serve(async (req) => {
         webshop_order_number: payload.webshopOrderNumber,
       });
     } else {
-      const errorMsg = firaBody?.message || firaBody?.error || firaBody?.errors?.join('; ') || `HTTP ${firaResponse.status}`;
+      const rawErrorText = firaBody?.raw || firaBody?.message || firaBody?.error || '';
+      const isAlreadyPresent = rawErrorText.toLowerCase().includes('already') && rawErrorText.toLowerCase().includes('present');
+
+      if (firaResponse.status === 400 && isAlreadyPresent) {
+        // FIRA says the order already exists — treat as successful export
+        const exportedAt = offer.fira_exported_at || new Date().toISOString();
+        await base44.asServiceRole.entities.Offer.update(offer_id, {
+          fira_export_status: 'exported',
+          fira_exported_at: exportedAt,
+          fira_exported_by: user.email,
+          fira_last_error_message: null,
+          fira_webshop_order_id: payload.webshopOrderId,
+          fira_webshop_order_number: payload.webshopOrderNumber,
+          fira_request_payload_json: payload,
+          fira_response_payload_json: firaBody,
+          fira_invoice_type: 'PONUDA',
+          fira_export_hash: exportHash,
+        });
+        return Response.json({
+          success: true,
+          already_in_fira: true,
+          fira_response: firaBody,
+          webshop_order_id: payload.webshopOrderId,
+          webshop_order_number: payload.webshopOrderNumber,
+        });
+      }
+
+      const errorMsg = firaBody?.message || firaBody?.error || firaBody?.errors?.join('; ') || rawErrorText || `HTTP ${firaResponse.status}`;
       await base44.asServiceRole.entities.Offer.update(offer_id, {
         fira_export_status: 'failed',
         fira_last_error_message: errorMsg,
