@@ -119,14 +119,49 @@ function parseImapEnvelope(str) {
 function parseAddressList(token) {
   if (!token || token === 'NIL') return [];
   const results = [];
-  const re = /\(([^)]*)\)/g;
-  let m;
-  while ((m = re.exec(token)) !== null) {
-    const parts = m[1].split(' ');
-    const name = parts[0] && parts[0] !== 'NIL' ? parts[0].replace(/^"|"$/g, '') : '';
-    const mailbox = parts[2] && parts[2] !== 'NIL' ? parts[2].replace(/^"|"$/g, '') : '';
-    const host = parts[3] && parts[3] !== 'NIL' ? parts[3].replace(/^"|"$/g, '') : '';
-    if (mailbox && host) results.push({ name, address: `${mailbox}@${host}` });
+  // Each address entry is a paren-list: (name route mailbox host)
+  // We need to tokenize properly — fields can be quoted strings or NIL
+  let i = 0;
+  const s = token.trim();
+
+  function skipSpace() { while (i < s.length && (s[i] === ' ' || s[i] === '\t')) i++; }
+
+  function readField() {
+    skipSpace();
+    if (i >= s.length) return null;
+    if (s.substring(i, i + 3).toUpperCase() === 'NIL') { i += 3; return null; }
+    if (s[i] === '"') {
+      let j = i + 1, out = '';
+      while (j < s.length) {
+        if (s[j] === '\\') { out += s[j + 1]; j += 2; }
+        else if (s[j] === '"') { j++; i = j; return out; }
+        else { out += s[j]; j++; }
+      }
+      return null;
+    }
+    // unquoted atom
+    let j = i;
+    while (j < s.length && s[j] !== ' ' && s[j] !== ')' && s[j] !== '(') j++;
+    const tok = s.substring(i, j); i = j;
+    return tok || null;
+  }
+
+  while (i < s.length) {
+    skipSpace();
+    if (i >= s.length) break;
+    if (s[i] !== '(') { i++; continue; }
+    i++; // skip opening (
+    const name = readField();
+    const _route = readField(); // route (usually NIL)
+    const mailbox = readField();
+    const host = readField();
+    // skip to closing )
+    while (i < s.length && s[i] !== ')') i++;
+    if (i < s.length) i++; // skip )
+    if (mailbox && host) {
+      const decodedName = name ? decodeImapString(name) : '';
+      results.push({ name: decodedName, address: `${mailbox}@${host}` });
+    }
   }
   return results;
 }
