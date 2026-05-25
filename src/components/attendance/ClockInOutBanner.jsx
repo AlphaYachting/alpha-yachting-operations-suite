@@ -35,7 +35,7 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
   const [elapsed, setElapsed] = useState('');
 
   const loadActiveRecord = useCallback(async () => {
-    if (!technicianId) return;
+    if (!technicianId) { setLoading(false); return; }
     try {
       // Fetch recent records and filter client-side for open ones (null clock_out)
       const records = await base44.entities.AttendanceRecord.filter(

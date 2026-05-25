@@ -466,17 +466,15 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         tasks={tasks} />
 
 
-      {/* Clock In/Out Banner — show for any logged-in user (technician ID or user email as key) */}
-      {(resolvedTechnicianId || user?.email) && (
-        <ClockInOutBanner
-          technicianId={resolvedTechnicianId || user?.email}
-          technicianName={displayUser?.full_name || user?.full_name}
-          onNavigateToHistory={() => {
-            if (onNavigate) onNavigate('attendance');
-            else window.location.href = '/TeamAttendance';
-          }}
-        />
-      )}
+      {/* Clock In/Out Banner — always show for logged-in users */}
+      <ClockInOutBanner
+        technicianId={resolvedTechnicianId || user?.id || user?.email}
+        technicianName={displayUser?.full_name || user?.full_name}
+        onNavigateToHistory={() => {
+          if (onNavigate) onNavigate('attendance');
+          else window.location.href = '/TeamAttendance';
+        }}
+      />
 
       {/* KPI Mini Cards */}
       <div className="px-4 py-3 grid grid-cols-3 gap-2 bg-slate-50">
