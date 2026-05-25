@@ -63,8 +63,7 @@ export function Step5Intent() {
       label: 'Storage & Transport Offer',
       description: 'Generate a calculated offer using the pricing engine (storage, transport, modules)',
       icon: Anchor,
-      color: 'text-emerald-600',
-      requiresExistingCustomer: true
+      color: 'text-emerald-600'
     }
   ];
 
