@@ -9,8 +9,11 @@ async function getGpsPosition() {
     if (!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(null),
-      { timeout: 5000, maximumAge: 60000 }
+      (err) => {
+        console.warn('GPS error:', err.code, err.message);
+        resolve(null);
+      },
+      { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
     );
   });
 }
@@ -93,7 +96,11 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
         clock_out: null
       });
       setActiveRecord(record);
-      toast.success(gps ? `Eingestempelt um ${format(new Date(), 'HH:mm')} 📍` : `Eingestempelt um ${format(new Date(), 'HH:mm')}`);
+      if (gps) {
+        toast.success(`Eingestempelt um ${format(new Date(), 'HH:mm')} 📍`);
+      } else {
+        toast.warning(`Eingestempelt um ${format(new Date(), 'HH:mm')} — kein GPS verfügbar`);
+      }
     } catch (e) {
       toast.error('Fehler beim Einstempeln');
     } finally {
