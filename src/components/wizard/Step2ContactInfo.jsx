@@ -58,6 +58,15 @@ export function Step2ContactInfo() {
     setAlertOpen(true);
   };
 
+  const handleStorageShortcut = () => {
+    if (!wizardData.sourceId) {
+      showAlert('Please select a lead or customer first');
+      return;
+    }
+    updateWizardData('intent', 'storage_transport');
+    setStep(6);
+  };
+
   const handleNext = async () => {
     if (wizardData.source === 'lead' && !wizardData.sourceId) {
       showAlert('Please select a lead');
@@ -143,12 +152,24 @@ export function Step2ContactInfo() {
           </CardContent>
         </Card>
 
+        {wizardData.sourceId && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-emerald-800">🏗️ Trockenmarina-Angebot erstellen?</p>
+              <p className="text-xs text-emerald-600">Direkt zum Konfigurator — ohne Boot & Standort</p>
+            </div>
+            <Button onClick={handleStorageShortcut} className="bg-emerald-600 hover:bg-emerald-700 text-sm shrink-0 ml-3">
+              Storage Offer →
+            </Button>
+          </div>
+        )}
+
         <div className="flex justify-between gap-2">
           <Button variant="outline" onClick={() => setStep(1)}>
             ← Back
           </Button>
           <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
-            Next →
+            Weiter (andere Angebote) →
           </Button>
         </div>
       </div>
@@ -198,12 +219,24 @@ export function Step2ContactInfo() {
           </CardContent>
         </Card>
 
+        {wizardData.sourceId && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-emerald-800">🏗️ Trockenmarina-Angebot erstellen?</p>
+              <p className="text-xs text-emerald-600">Direkt zum Konfigurator — ohne Boot & Standort</p>
+            </div>
+            <Button onClick={handleStorageShortcut} className="bg-emerald-600 hover:bg-emerald-700 text-sm shrink-0 ml-3">
+              Storage Offer →
+            </Button>
+          </div>
+        )}
+
         <div className="flex justify-between gap-2">
           <Button variant="outline" onClick={() => setStep(1)}>
             ← Back
           </Button>
           <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
-            Next →
+            Weiter (andere Angebote) →
           </Button>
         </div>
       </div>
