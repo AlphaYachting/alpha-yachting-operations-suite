@@ -197,6 +197,10 @@ export function StorageTransportFlow() {
             if (boatId) offerPayload.boat_id = boatId;
             if (locationId) offerPayload.location_id = locationId;
 
+            // Link lead_id so automation "Offer Sent → Lead Offered" can fire
+            const leadId = wizardData.source === 'lead' ? wizardData.sourceData?.lead?.id : null;
+            if (leadId) offerPayload.lead_id = leadId;
+
             const offer = await base44.entities.Offer.create(offerPayload);
 
             // Create OfferTasks
