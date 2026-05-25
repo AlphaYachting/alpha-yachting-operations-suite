@@ -4,16 +4,28 @@ import { format, differenceInMinutes, parseISO } from 'date-fns';
 import { Clock, MapPin, LogIn, LogOut, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Module-level watcher — starts once, keeps position fresh silently
+let _cachedPosition = null;
+let _watchId = null;
+
+function startPositionWatch() {
+  if (!navigator.geolocation || _watchId !== null) return;
+  _watchId = navigator.geolocation.watchPosition(
+    (pos) => { _cachedPosition = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
+    (err) => { console.warn('GPS watch error:', err.code, err.message); },
+    { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 }
+  );
+}
+
 async function getGpsPosition() {
+  if (_cachedPosition) return _cachedPosition;
+  // Fallback: one-time request if cache empty
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => {
-        console.warn('GPS error:', err.code, err.message);
-        resolve(null);
-      },
-      { timeout: 10000, maximumAge: 0, enableHighAccuracy: true }
+      (err) => { console.warn('GPS error:', err.code, err.message); resolve(null); },
+      { timeout: 10000, maximumAge: 30000, enableHighAccuracy: true }
     );
   });
 }
@@ -36,6 +48,9 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [elapsed, setElapsed] = useState('');
+
+  // Start background position watcher on mount
+  useEffect(() => { startPositionWatch(); }, []);
 
   const loadActiveRecord = useCallback(async () => {
     if (!technicianId) { setLoading(false); return; }
