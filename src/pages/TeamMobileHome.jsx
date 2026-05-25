@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users, WifiOff, Wifi, Calendar, Ship, Zap } from 'lucide-react';
 import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
+import ClockInOutBanner from '@/components/attendance/ClockInOutBanner';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -464,6 +465,18 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         customers={allSearchCustomers.length > 0 ? allSearchCustomers : customers}
         tasks={tasks} />
 
+
+      {/* Clock In/Out Banner */}
+      {resolvedTechnicianId && (
+        <ClockInOutBanner
+          technicianId={resolvedTechnicianId}
+          technicianName={displayUser?.full_name || user?.full_name}
+          onNavigateToHistory={() => {
+            if (onNavigate) onNavigate('attendance');
+            else window.location.href = '/TeamAttendance';
+          }}
+        />
+      )}
 
       {/* KPI Mini Cards */}
       <div className="px-4 py-3 grid grid-cols-3 gap-2 bg-slate-50">

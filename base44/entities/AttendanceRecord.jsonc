@@ -1,0 +1,66 @@
+{
+  "name": "AttendanceRecord",
+  "type": "object",
+  "properties": {
+    "technician_id": {
+      "type": "string",
+      "description": "Reference to Technician"
+    },
+    "technician_name": {
+      "type": "string",
+      "description": "Cached name for quick display"
+    },
+    "clock_in": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Clock-in timestamp (UTC)"
+    },
+    "clock_out": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Clock-out timestamp (UTC) \u2014 null if still active"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Calculated duration in minutes (set on clock-out)"
+    },
+    "clock_in_lat": {
+      "type": "number",
+      "description": "GPS latitude at clock-in"
+    },
+    "clock_in_lng": {
+      "type": "number",
+      "description": "GPS longitude at clock-in"
+    },
+    "clock_in_address": {
+      "type": "string",
+      "description": "Reverse-geocoded address at clock-in"
+    },
+    "clock_out_lat": {
+      "type": "number",
+      "description": "GPS latitude at clock-out"
+    },
+    "clock_out_lng": {
+      "type": "number",
+      "description": "GPS longitude at clock-out"
+    },
+    "clock_out_address": {
+      "type": "string",
+      "description": "Reverse-geocoded address at clock-out"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes"
+    },
+    "work_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date of work (derived from clock_in, used for grouping)"
+    }
+  },
+  "required": [
+    "technician_id",
+    "clock_in",
+    "work_date"
+  ]
+}
