@@ -252,27 +252,38 @@ async function rawImapConnection(host, port, user, pass) {
   return { sendCmd, waitForTag, readLine, readBytes, close, existsCount };
 }
 
-// Fetch envelopes using an ALREADY OPEN connection (no new connection opened)
+// Fetch envelopes one-by-one (edis.at freezes on range FETCH ENVELOPE)
 async function fetchEnvelopesOnConn(conn, start, end, log, startTime) {
   const envelopes = [];
-  const range = `${start}:${end}`;
-  log.push({ step: 'p1_fetch_envelopes', range, ts: Date.now() - startTime });
-  const fetchTag = await conn.sendCmd(`FETCH ${range} (UID ENVELOPE)`);
-  while (true) {
-    const line = await conn.readLine();
-    if (line.startsWith(`${fetchTag} `)) break;
-    const seqMatch = line.match(/^\* (\d+) FETCH \(/i);
-    if (!seqMatch) continue;
-    const seqNum = parseInt(seqMatch[1]);
-    const uidMatch = line.match(/UID (\d+)/i);
-    const uid = uidMatch ? parseInt(uidMatch[1]) : seqNum;
-    const envIdx = line.toUpperCase().indexOf('ENVELOPE (');
-    let envelope = null;
-    if (envIdx !== -1) {
-      envelope = parseImapEnvelope(line.substring(envIdx + 9));
-    }
-    envelopes.push({ uid, seqNum, envelope });
+  const ENVELOPE_TIMEOUT = 8000; // per-message timeout
+  log.push({ step: 'p1_fetch_envelopes', range: `${start}:${end}`, ts: Date.now() - startTime });
+
+  for (let seq = start; seq <= end; seq++) {
+    // Per-message timeout via a race
+    const result = await Promise.race([
+      (async () => {
+        const fetchTag = await conn.sendCmd(`FETCH ${seq} (UID ENVELOPE)`);
+        let envelope = null;
+        let uid = seq;
+        while (true) {
+          const line = await conn.readLine();
+          if (line.startsWith(`${fetchTag} `)) break;
+          const uidMatch = line.match(/UID (\d+)/i);
+          if (uidMatch) uid = parseInt(uidMatch[1]);
+          const envIdx = line.toUpperCase().indexOf('ENVELOPE (');
+          if (envIdx !== -1) envelope = parseImapEnvelope(line.substring(envIdx + 9));
+        }
+        return { uid, seqNum: seq, envelope };
+      })(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('envelope_msg_timeout')), ENVELOPE_TIMEOUT)),
+    ]).catch(err => {
+      log.push({ step: 'p1_envelope_skip', seq, error: err.message, ts: Date.now() - startTime });
+      return null;
+    });
+
+    if (result) envelopes.push(result);
   }
+
   log.push({ step: 'p1_envelopes_done', count: envelopes.length, ts: Date.now() - startTime });
   return envelopes;
 }
