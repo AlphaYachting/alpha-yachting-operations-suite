@@ -1,4 +1,9 @@
 // EMAIL ENGINE SANDBOX - Fetch & Store Inbound Messages
+// FIX SUMMARY:
+// 1. Multi-line ENVELOPE buffering (edis.at splits FETCH response across lines)
+// 2. UTF-8 decoder instead of latin1 (fixes Mojibake for German/Croatian chars)
+// 3. HTML body auto-converted to plain text
+// 4. Phantom messages (null message_id) deduplicated by seq-based fingerprint
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 function normalizeSubject(subject) {
@@ -14,6 +19,7 @@ function htmlToText(html) {
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n')
     .replace(/<\/li>/gi, '\n').replace(/<\/tr>/gi, '\n')
+    .replace(/<td[^>]*>/gi, ' ').replace(/<\/td>/gi, '')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
@@ -44,10 +50,28 @@ function decodeQuotedPrintable(str) {
 
 function decodeImapString(s) {
   if (!s) return '';
+  // Handle encoded words: =?charset?B/Q?text?=
   return s.replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (_, charset, enc, text) => {
     try {
-      if (enc.toUpperCase() === 'B') return atob(text);
-      if (enc.toUpperCase() === 'Q') return decodeQuotedPrintable(text.replace(/_/g, ' '));
+      if (enc.toUpperCase() === 'B') {
+        // Base64 decode with charset awareness
+        const binStr = atob(text);
+        if (charset.toLowerCase().startsWith('utf')) {
+          const bytes = new Uint8Array(binStr.length);
+          for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+          return new TextDecoder('utf-8').decode(bytes);
+        }
+        return binStr;
+      }
+      if (enc.toUpperCase() === 'Q') {
+        const qp = decodeQuotedPrintable(text.replace(/_/g, ' '));
+        if (charset.toLowerCase().startsWith('utf')) {
+          const bytes = new Uint8Array(qp.length);
+          for (let i = 0; i < qp.length; i++) bytes[i] = qp.charCodeAt(i);
+          return new TextDecoder('utf-8').decode(bytes);
+        }
+        return qp;
+      }
     } catch (_) {}
     return text;
   });
@@ -119,8 +143,6 @@ function parseImapEnvelope(str) {
 function parseAddressList(token) {
   if (!token || token === 'NIL') return [];
   const results = [];
-  // Each address entry is a paren-list: (name route mailbox host)
-  // We need to tokenize properly — fields can be quoted strings or NIL
   let i = 0;
   const s = token.trim();
 
@@ -139,7 +161,6 @@ function parseAddressList(token) {
       }
       return null;
     }
-    // unquoted atom
     let j = i;
     while (j < s.length && s[j] !== ' ' && s[j] !== ')' && s[j] !== '(') j++;
     const tok = s.substring(i, j); i = j;
@@ -150,14 +171,13 @@ function parseAddressList(token) {
     skipSpace();
     if (i >= s.length) break;
     if (s[i] !== '(') { i++; continue; }
-    i++; // skip opening (
+    i++;
     const name = readField();
-    const _route = readField(); // route (usually NIL)
+    const _route = readField();
     const mailbox = readField();
     const host = readField();
-    // skip to closing )
     while (i < s.length && s[i] !== ')') i++;
-    if (i < s.length) i++; // skip )
+    if (i < s.length) i++;
     if (mailbox && host) {
       const decodedName = name ? decodeImapString(name) : '';
       results.push({ name: decodedName, address: `${mailbox}@${host}` });
@@ -166,14 +186,13 @@ function parseAddressList(token) {
   return results;
 }
 
-// Raw IMAP connection — returns a reusable connection object
-// KEY FIX: one connection is opened and reused for both EXISTS + envelope fetch,
-// avoiding the second connection that was timing out on edis.at
+// Raw IMAP connection — UTF-8 decoder (FIX #2)
 async function rawImapConnection(host, port, user, pass) {
   const CONNECT_TIMEOUT = 12000;
   const READ_TIMEOUT = 25000;
   const enc = new TextEncoder();
-  const dec = new TextDecoder('latin1');
+  // FIX #2: Use UTF-8 instead of latin1 — edis.at sends UTF-8 encoded emails
+  const dec = new TextDecoder('utf-8');
   let tagNum = 1;
 
   const withTimeout = (p, ms, label) =>
@@ -228,7 +247,6 @@ async function rawImapConnection(host, port, user, pass) {
 
   const close = () => { try { conn.close(); } catch (_) {} };
 
-  // Connect, authenticate, and SELECT INBOX — returns existsCount
   const greeting = await readLine();
   if (!greeting.startsWith('* OK')) throw new Error('bad_greeting');
   const loginTag = await sendCmd(`LOGIN "${user}" "${pass}"`);
@@ -252,26 +270,35 @@ async function rawImapConnection(host, port, user, pass) {
   return { sendCmd, waitForTag, readLine, readBytes, close, existsCount };
 }
 
-// Fetch envelopes one-by-one (edis.at freezes on range FETCH ENVELOPE)
+// FIX #1: Buffer ALL lines for a FETCH response until the tagged end,
+// then join them before parsing ENVELOPE.
+// edis.at splits multi-line FETCH responses — previous code only read 1 line.
 async function fetchEnvelopesOnConn(conn, start, end, log, startTime) {
   const envelopes = [];
-  const ENVELOPE_TIMEOUT = 8000; // per-message timeout
+  const ENVELOPE_TIMEOUT = 8000;
   log.push({ step: 'p1_fetch_envelopes', range: `${start}:${end}`, ts: Date.now() - startTime });
 
   for (let seq = start; seq <= end; seq++) {
-    // Per-message timeout via a race
     const result = await Promise.race([
       (async () => {
         const fetchTag = await conn.sendCmd(`FETCH ${seq} (UID ENVELOPE)`);
-        let envelope = null;
-        let uid = seq;
+        // Collect ALL lines until the tagged response (edis.at may split across lines)
+        const allLines = [];
         while (true) {
           const line = await conn.readLine();
           if (line.startsWith(`${fetchTag} `)) break;
-          const uidMatch = line.match(/UID (\d+)/i);
-          if (uidMatch) uid = parseInt(uidMatch[1]);
-          const envIdx = line.toUpperCase().indexOf('ENVELOPE (');
-          if (envIdx !== -1) envelope = parseImapEnvelope(line.substring(envIdx + 9));
+          allLines.push(line);
+        }
+        // Join all lines — handles multi-line ENVELOPE responses
+        const combined = allLines.join(' ');
+        
+        const uidMatch = combined.match(/UID (\d+)/i);
+        const uid = uidMatch ? parseInt(uidMatch[1]) : seq;
+        
+        const envIdx = combined.toUpperCase().indexOf('ENVELOPE (');
+        let envelope = null;
+        if (envIdx !== -1) {
+          envelope = parseImapEnvelope(combined.substring(envIdx + 9));
         }
         return { uid, seqNum: seq, envelope };
       })(),
@@ -286,6 +313,16 @@ async function fetchEnvelopesOnConn(conn, start, end, log, startTime) {
 
   log.push({ step: 'p1_envelopes_done', count: envelopes.length, ts: Date.now() - startTime });
   return envelopes;
+}
+
+// FIX #3: HTML body detection and conversion
+function processBodyText(rawBody, isHtml) {
+  if (!rawBody || !rawBody.trim()) return '';
+  const decoded = decodeQuotedPrintable(rawBody);
+  // Auto-detect HTML even if isHtml flag not set
+  const looksLikeHtml = isHtml || /<html|<body|<div|<table/i.test(decoded);
+  const text = looksLikeHtml ? htmlToText(decoded) : decoded;
+  return text.substring(0, 10000);
 }
 
 // Fetch body for a single UID — opens its own connection
@@ -325,9 +362,7 @@ async function fetchBodyForUID(host, port, user, pass, uid, log, startTime) {
     try { await conn.sendCmd('LOGOUT'); } catch (_) {}
     conn.close();
   }
-  if (!body.trim()) return '';
-  const decoded = decodeQuotedPrintable(body);
-  return isHtml ? htmlToText(decoded).substring(0, 10000) : decoded.substring(0, 10000);
+  return processBodyText(body, isHtml);
 }
 
 Deno.serve(async (req) => {
@@ -355,15 +390,19 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.EmailConversationSandbox.list('-last_message_at', 200),
     ]);
     const existingMsgIds = new Set((existingMessages || []).map(m => m.message_id).filter(Boolean));
+    // FIX #4: Also track null-message_id phantom duplicates by seq fingerprint
+    const existingSeqFingerprints = new Set(
+      (existingMessages || [])
+        .filter(m => !m.message_id)
+        .map(m => `${m.normalized_subject}::${m.received_at?.substring(0, 10)}`)
+        .filter(Boolean)
+    );
     const convMap = new Map((existingConversations || []).map(c => [c.conversation_key, c]));
     log.push({ step: 'db_loaded', known_ids: existingMsgIds.size, convs: convMap.size, ts: Date.now() - startTime });
 
     const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
 
-    // === PHASE 1: Open ONE connection, get EXISTS count, then fetch envelopes on the SAME connection ===
-    // This avoids the second TLS handshake that was timing out on edis.at.
     const newEnvelopes = [];
-
     const p1Conn = await rawImapConnection(host, port, imapUser, imapPass);
     const total = p1Conn.existsCount;
     log.push({ step: 'p1_inbox', total, ts: Date.now() - startTime });
@@ -375,7 +414,18 @@ Deno.serve(async (req) => {
         for (const e of rawEnvs) {
           results.fetched++;
           const msgId = e.envelope?.messageId || null;
+          
           if (msgId && existingMsgIds.has(msgId)) { results.duplicates++; continue; }
+          
+          // FIX #4: Deduplicate null-message_id phantoms by subject+date fingerprint
+          if (!msgId) {
+            const subj = normalizeSubject(e.envelope?.subject || '');
+            const dateStr = e.envelope?.date ? new Date(e.envelope.date).toISOString().substring(0, 10) : '';
+            const seqFp = `${subj}::${dateStr}`;
+            if (existingSeqFingerprints.has(seqFp)) { results.duplicates++; continue; }
+            existingSeqFingerprints.add(seqFp);
+          }
+          
           newEnvelopes.push(e);
         }
         log.push({ step: 'p1_done', new_count: newEnvelopes.length, ts: Date.now() - startTime });
@@ -395,7 +445,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // === PHASE 2: Fetch body per UID (separate connection per message) ===
+    // === PHASE 2: Fetch body per UID ===
     for (const info of newEnvelopes) {
       if (Date.now() - startTime > 55000) {
         log.push({ step: 'time_limit', ts: Date.now() - startTime });
@@ -414,7 +464,6 @@ Deno.serve(async (req) => {
         log.push({ step: 'p2_body_failed', uid: info.uid, error: safeErr(srcErr), ts: Date.now() - startTime });
       }
 
-      // Store the message
       try {
         const env = info.envelope;
         const messageId = env?.messageId || null;
