@@ -79,7 +79,7 @@ export function Step5Intent() {
     } else if (wizardData.intent === 'workorder_for_existing_project') {
       setStep(5.5); // Go to project selection
     } else if (wizardData.intent === 'storage_transport') {
-      setStep(6); // Go to Storage & Transport Flow (rendered inside step 6)
+      setStep(6); // Go directly to Storage & Transport configurator — no vessel/location needed
     } else {
       setStep(6); // Go to details
     }

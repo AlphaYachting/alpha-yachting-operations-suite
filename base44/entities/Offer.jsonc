@@ -16,7 +16,7 @@
     },
     "customer_id": {
       "type": "string",
-      "description": "Reference to Customer"
+      "description": "Reference to Customer (optional for price inquiries)"
     },
     "boat_id": {
       "type": "string",
@@ -301,7 +301,6 @@
     }
   },
   "required": [
-    "customer_id",
     "title"
   ]
 }

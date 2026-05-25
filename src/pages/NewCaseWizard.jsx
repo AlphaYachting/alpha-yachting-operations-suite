@@ -42,6 +42,9 @@ function WizardContent() {
       return false;
     }
 
+    // Steps 2-4 not needed for storage_transport intent
+    if (wizardData.intent === 'storage_transport' && (step === 2 || step === 3 || step === 4)) return false;
+
     // Always show steps 1-5
     if (step <= 5) return true;
 

@@ -62,10 +62,10 @@ export function StorageTransportFlow() {
         queryFn: () => base44.entities.ModuleComponent.list()
     });
 
-    // Resolve customer_id from wizard context (set in steps 1-4)
+    // Resolve customer_id from wizard context — optional for storage offers
     const getCustomerId = () => {
-        if (wizardData.source === 'customer') return wizardData.sourceData?.customer?.id;
-        if (wizardData.source === 'lead') return wizardData.sourceData?.lead?.customer_id;
+        if (wizardData.source === 'customer') return wizardData.sourceData?.customer?.id || null;
+        if (wizardData.source === 'lead') return wizardData.sourceData?.lead?.customer_id || null;
         return null;
     };
 
@@ -145,7 +145,7 @@ export function StorageTransportFlow() {
     };
 
     const handleGenerate = async () => {
-        const customerId = getCustomerId();
+        const customerId = getCustomerId(); // May be null — customer is optional for storage price inquiries
         if (!activeRateCard) {
             setError("No active rate card found.");
             return;
@@ -173,11 +173,8 @@ export function StorageTransportFlow() {
                 ? wizardData.location.existing
                 : (wizardData.location?.existing?.id || null);
 
-            // Create Offer
-            const offer = await base44.entities.Offer.create({
-                ...(customerId ? { customer_id: customerId } : {}),
-                    boat_id: boatId,
-                location_id: locationId,
+            // Create Offer — customer_id is optional (e.g. price inquiry without linked customer)
+            const offerPayload = {
                 title: formData.title,
                 offer_number: offerNumber,
                 rate_card_id: activeRateCard.id,
@@ -195,7 +192,12 @@ export function StorageTransportFlow() {
                 },
                 status: 'Draft',
                 vat_rate: activeRateCard.vat_rate
-            });
+            };
+            if (customerId) offerPayload.customer_id = customerId;
+            if (boatId) offerPayload.boat_id = boatId;
+            if (locationId) offerPayload.location_id = locationId;
+
+            const offer = await base44.entities.Offer.create(offerPayload);
 
             // Create OfferTasks
             const tasks = calculation.lineItems.map((li, idx) => ({
