@@ -466,10 +466,10 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         tasks={tasks} />
 
 
-      {/* Clock In/Out Banner */}
-      {resolvedTechnicianId && (
+      {/* Clock In/Out Banner — show for any logged-in user (technician ID or user email as key) */}
+      {(resolvedTechnicianId || user?.email) && (
         <ClockInOutBanner
-          technicianId={resolvedTechnicianId}
+          technicianId={resolvedTechnicianId || user?.email}
           technicianName={displayUser?.full_name || user?.full_name}
           onNavigateToHistory={() => {
             if (onNavigate) onNavigate('attendance');

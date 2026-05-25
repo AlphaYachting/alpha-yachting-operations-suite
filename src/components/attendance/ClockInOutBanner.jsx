@@ -37,12 +37,14 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
   const loadActiveRecord = useCallback(async () => {
     if (!technicianId) return;
     try {
-      const records = await base44.entities.AttendanceRecord.filter({
-        technician_id: technicianId,
-        clock_out: null
-      });
-      // Find the most recent open record
-      const open = records.filter(r => !r.clock_out).sort((a, b) =>
+      // Fetch recent records and filter client-side for open ones (null clock_out)
+      const records = await base44.entities.AttendanceRecord.filter(
+        { technician_id: technicianId },
+        '-clock_in',
+        20
+      );
+      // Find the most recent record with no clock_out
+      const open = (records || []).filter(r => !r.clock_out).sort((a, b) =>
         new Date(b.clock_in) - new Date(a.clock_in)
       );
       setActiveRecord(open[0] || null);
