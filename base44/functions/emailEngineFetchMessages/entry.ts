@@ -1,6 +1,6 @@
 // EMAIL ENGINE - Fetch & Store Inbound Messages
-// Uses imapflow (same library as emailEngineDebugBodyFetch) for reliable IMAP parsing.
-// This replaces the fragile raw-TCP IMAP implementation that failed on edis.at.
+// Uses imapflow for reliable IMAP parsing (edis.at compatible).
+// v2: batch-fetches all bodies in one IMAP call to avoid sequential roundtrip timeouts.
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { ImapFlow } from 'npm:imapflow@1.0.167';
 
@@ -46,15 +46,13 @@ function decodeQuotedPrintable(str) {
   return str.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 }
 
-// Extract plain text from a fetched imapflow message
-function extractBodyText(msg) {
-  if (!msg?.bodyParts) return '';
+function extractBodyText(bodyParts) {
+  if (!bodyParts) return '';
 
   // Prefer plain text part [1]
-  const plain = msg.bodyParts['1'];
+  const plain = bodyParts['1'];
   if (plain && plain.length > 0) {
     const text = plain.toString('utf-8');
-    // If it looks like base64, decode it
     if (/^[A-Za-z0-9+/\r\n]+=*$/.test(text.trim()) && text.length > 50) {
       try {
         const decoded = atob(text.replace(/\r?\n/g, ''));
@@ -64,13 +62,12 @@ function extractBodyText(msg) {
       } catch (_) {}
     }
     const qp = decodeQuotedPrintable(text);
-    // If it looks like HTML, convert
     if (/<html|<body|<div|<table/i.test(qp)) return htmlToText(qp).substring(0, 10000);
     return qp.substring(0, 10000);
   }
 
   // Fallback: HTML part [2]
-  const html = msg.bodyParts['2'];
+  const html = bodyParts['2'];
   if (html && html.length > 0) {
     const text = html.toString('utf-8');
     return htmlToText(decodeQuotedPrintable(text)).substring(0, 10000);
@@ -98,13 +95,12 @@ Deno.serve(async (req) => {
       return Response.json({ success: false, error: 'IMAP secrets not configured', log });
     }
 
-    // Load existing message IDs from DB for deduplication
+    // Load existing message IDs from DB for deduplication (limit to recent 200)
     const [existingMessages, existingConversations] = await Promise.all([
-      base44.asServiceRole.entities.EmailMessageSandbox.list('-received_at', 500),
+      base44.asServiceRole.entities.EmailMessageSandbox.list('-received_at', 200),
       base44.asServiceRole.entities.EmailConversationSandbox.list('-last_message_at', 200),
     ]);
     const existingMsgIds = new Set((existingMessages || []).map(m => m.message_id).filter(Boolean));
-    // Deduplicate null-message_id phantoms by subject+date fingerprint
     const existingSeqFingerprints = new Set(
       (existingMessages || [])
         .filter(m => !m.message_id)
@@ -116,15 +112,15 @@ Deno.serve(async (req) => {
 
     const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
 
-    // Connect with imapflow
+    // Connect with imapflow — tighter timeouts to fail fast instead of hanging
     const client = new ImapFlow({
       host, port,
       secure: true,
       auth: { user: imapUser, pass: imapPass },
       logger: false,
-      connectionTimeout: 15000,
-      greetingTimeout: 10000,
-      socketTimeout: 50000,
+      connectionTimeout: 10000,
+      greetingTimeout: 8000,
+      socketTimeout: 20000,
       disableAutoIdle: true,
     });
 
@@ -160,107 +156,118 @@ Deno.serve(async (req) => {
         }
         log.push({ step: 'envelopes_done', new_count: toFetch.length, ts: Date.now() - startTime });
 
-        // Phase 2: Fetch body for each new message
-        for (const info of toFetch) {
-          if (Date.now() - startTime > 55000) {
-            log.push({ step: 'time_limit', ts: Date.now() - startTime });
-            break;
-          }
-
-          let bodyText = '';
-          try {
-            const msgWithBody = await client.fetchOne(`${info.uid}`, { bodyParts: ['1', '2'] }, { uid: true });
-            bodyText = extractBodyText(msgWithBody);
-            log.push({ step: 'body_ok', uid: info.uid, len: bodyText.length, ts: Date.now() - startTime });
-          } catch (bodyErr) {
-            log.push({ step: 'body_failed', uid: info.uid, error: safeErr(bodyErr), ts: Date.now() - startTime });
-          }
+        if (toFetch.length > 0) {
+          // Phase 2: Batch-fetch ALL bodies in one IMAP round-trip using UID set
+          // This avoids N sequential fetchOne calls which was causing timeouts
+          const uidSet = toFetch.map(m => m.uid).join(',');
+          const bodyMap = new Map(); // uid -> bodyParts
 
           try {
-            const env = info.envelope;
-            const messageId = env?.messageId || null;
-            const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
-            const fromName = env?.from?.[0]?.name || fromEmail;
-            const toEmails = (env?.to || []).map(a => a.address).filter(Boolean);
-            const ccEmails = (env?.cc || []).map(a => a.address).filter(Boolean);
-            const subject = env?.subject || '(no subject)';
-            const normalizedSubj = normalizeSubject(subject);
-            const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
-            const conversationKey = buildConversationKey(messageId, fromEmail, normalizedSubj);
+            for await (const msg of client.fetch(uidSet, { bodyParts: ['1', '2'], uid: true }, { uid: true })) {
+              if (msg.bodyParts) bodyMap.set(msg.uid, msg.bodyParts);
+            }
+            log.push({ step: 'bodies_batch_done', fetched: bodyMap.size, ts: Date.now() - startTime });
+          } catch (batchBodyErr) {
+            log.push({ step: 'bodies_batch_failed', error: safeErr(batchBodyErr), ts: Date.now() - startTime });
+            // Continue — bodyMap will be empty, messages stored without body
+          }
 
-            await base44.asServiceRole.entities.EmailMessageSandbox.create({
-              mailbox_name: imapUser,
-              direction: 'inbound',
-              message_id: messageId,
-              conversation_key: conversationKey,
-              linked_conversation_key: conversationKey,
-              in_reply_to: env?.inReplyTo || null,
-              references_header: [],
-              from_name: fromName,
-              from_email: fromEmail,
-              to_email: toEmails,
-              cc_emails: ccEmails,
-              bcc_emails: [],
-              subject,
-              normalized_subject: normalizedSubj,
-              received_at: receivedAt,
-              body_text: bodyText,
-              body_html_sanitized: '',
-              body_preview: bodyText.substring(0, 300),
-              has_attachments: false,
-              attachment_count: 0,
-              attachments_meta_json: [],
-              raw_headers_json: {},
-              duplicate_status: 'original',
-              processing_status: bodyText ? 'stored' : 'fetched',
-              security_flag: 'normal',
-              reviewed_manually: false,
-              future_agent_access_allowed: false,
-              future_agent_processing_status: 'disabled',
-            });
-
-            if (messageId) existingMsgIds.add(messageId);
-
-            // Update or create conversation
-            const allParticipants = Array.from(new Set([fromEmail, ...toEmails, ...ccEmails]));
-            const existingConv = convMap.get(conversationKey);
-            if (existingConv) {
-              await base44.asServiceRole.entities.EmailConversationSandbox.update(existingConv.id, {
-                last_message_at: receivedAt,
-                message_count: (existingConv.message_count || 0) + 1,
-                latest_direction: 'inbound',
-                latest_from_email: fromEmail,
-                latest_to_email: toEmails,
-                latest_preview: bodyText.substring(0, 200),
-                participant_summary: Array.from(new Set([...(existingConv.participant_summary || []), ...allParticipants])),
-              });
-              existingConv.message_count = (existingConv.message_count || 0) + 1;
-            } else {
-              const newConv = await base44.asServiceRole.entities.EmailConversationSandbox.create({
-                conversation_key: conversationKey,
-                primary_subject: subject,
-                normalized_subject: normalizedSubj,
-                participant_summary: allParticipants,
-                first_message_at: receivedAt,
-                last_message_at: receivedAt,
-                message_count: 1,
-                latest_direction: 'inbound',
-                latest_from_email: fromEmail,
-                latest_to_email: toEmails,
-                latest_preview: bodyText.substring(0, 200),
-                status_internal: 'open',
-                reviewed_manually: false,
-                future_agent_access_allowed: false,
-              });
-              convMap.set(conversationKey, newConv);
+          // Phase 3: Store each new message (DB writes only, no more IMAP calls)
+          for (const info of toFetch) {
+            // Hard cutoff — leave 10s for cleanup and response
+            if (Date.now() - startTime > 50000) {
+              log.push({ step: 'time_limit', ts: Date.now() - startTime });
+              break;
             }
 
-            results.stored++;
-            results.messages.push({ status: 'stored', message_id: messageId, from: fromEmail, subject });
+            const bodyText = extractBodyText(bodyMap.get(info.uid));
 
-          } catch (storeErr) {
-            results.errors++;
-            results.messages.push({ status: 'store_error', uid: info.uid, error: safeErr(storeErr) });
+            try {
+              const env = info.envelope;
+              const messageId = env?.messageId || null;
+              const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
+              const fromName = env?.from?.[0]?.name || fromEmail;
+              const toEmails = (env?.to || []).map(a => a.address).filter(Boolean);
+              const ccEmails = (env?.cc || []).map(a => a.address).filter(Boolean);
+              const subject = env?.subject || '(no subject)';
+              const normalizedSubj = normalizeSubject(subject);
+              const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
+              const conversationKey = buildConversationKey(messageId, fromEmail, normalizedSubj);
+
+              await base44.asServiceRole.entities.EmailMessageSandbox.create({
+                mailbox_name: imapUser,
+                direction: 'inbound',
+                message_id: messageId,
+                conversation_key: conversationKey,
+                linked_conversation_key: conversationKey,
+                in_reply_to: env?.inReplyTo || null,
+                references_header: [],
+                from_name: fromName,
+                from_email: fromEmail,
+                to_email: toEmails,
+                cc_emails: ccEmails,
+                bcc_emails: [],
+                subject,
+                normalized_subject: normalizedSubj,
+                received_at: receivedAt,
+                body_text: bodyText,
+                body_html_sanitized: '',
+                body_preview: bodyText.substring(0, 300),
+                has_attachments: false,
+                attachment_count: 0,
+                attachments_meta_json: [],
+                raw_headers_json: {},
+                duplicate_status: 'original',
+                processing_status: bodyText ? 'stored' : 'fetched',
+                security_flag: 'normal',
+                reviewed_manually: false,
+                future_agent_access_allowed: false,
+                future_agent_processing_status: 'disabled',
+              });
+
+              if (messageId) existingMsgIds.add(messageId);
+
+              // Update or create conversation
+              const allParticipants = Array.from(new Set([fromEmail, ...toEmails, ...ccEmails]));
+              const existingConv = convMap.get(conversationKey);
+              if (existingConv) {
+                await base44.asServiceRole.entities.EmailConversationSandbox.update(existingConv.id, {
+                  last_message_at: receivedAt,
+                  message_count: (existingConv.message_count || 0) + 1,
+                  latest_direction: 'inbound',
+                  latest_from_email: fromEmail,
+                  latest_to_email: toEmails,
+                  latest_preview: bodyText.substring(0, 200),
+                  participant_summary: Array.from(new Set([...(existingConv.participant_summary || []), ...allParticipants])),
+                });
+                existingConv.message_count = (existingConv.message_count || 0) + 1;
+              } else {
+                const newConv = await base44.asServiceRole.entities.EmailConversationSandbox.create({
+                  conversation_key: conversationKey,
+                  primary_subject: subject,
+                  normalized_subject: normalizedSubj,
+                  participant_summary: allParticipants,
+                  first_message_at: receivedAt,
+                  last_message_at: receivedAt,
+                  message_count: 1,
+                  latest_direction: 'inbound',
+                  latest_from_email: fromEmail,
+                  latest_to_email: toEmails,
+                  latest_preview: bodyText.substring(0, 200),
+                  status_internal: 'open',
+                  reviewed_manually: false,
+                  future_agent_access_allowed: false,
+                });
+                convMap.set(conversationKey, newConv);
+              }
+
+              results.stored++;
+              results.messages.push({ status: 'stored', message_id: messageId, from: fromEmail, subject });
+
+            } catch (storeErr) {
+              results.errors++;
+              results.messages.push({ status: 'store_error', uid: info.uid, error: safeErr(storeErr) });
+            }
           }
         }
       }
