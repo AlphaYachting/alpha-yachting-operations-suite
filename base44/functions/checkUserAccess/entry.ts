@@ -22,13 +22,13 @@ Deno.serve(async (req) => {
       return Response.json({ allowed: true, role: user.role });
     }
 
-    // Check for accepted invite matching this email
-    const invites = await base44.asServiceRole.entities.AppInvite.filter({
-      email: user.email.toLowerCase(),
-      status: 'ACCEPTED'
-    });
+    // Check for accepted invite matching this email (case-insensitive)
+    const invites = await base44.asServiceRole.entities.AppInvite.filter({ status: 'ACCEPTED' });
+    const hasAccess = invites && invites.some(
+      inv => inv.email && inv.email.toLowerCase() === user.email.toLowerCase()
+    );
 
-    if (invites && invites.length > 0) {
+    if (hasAccess) {
       return Response.json({ allowed: true, role: user.role });
     }
 
