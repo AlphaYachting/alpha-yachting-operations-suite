@@ -25,9 +25,12 @@ const USER_COLORS = [
   '#a855f7', // purple
 ];
 
-// Stable color by sorted index in the users list — no two users get the same color
+// Use technician color from settings if available, otherwise stable index-based color
 function getUserColor(userId, allUsers) {
   if (!userId || !allUsers || allUsers.length === 0) return '#94a3b8';
+  const user = allUsers.find(u => u.id === userId);
+  if (user?._techColor) return user._techColor;
+  // Fallback: index-based so no two users share the same color
   const sorted = [...allUsers].sort((a, b) => (a.id || '').localeCompare(b.id || ''));
   const idx = sorted.findIndex(u => u.id === userId);
   if (idx === -1) return '#94a3b8';

@@ -67,8 +67,16 @@ async function fetchLeadData() {
   _inflightPromise = Promise.all([
     base44.entities.Lead.filter({}, '-created_date', 500),
     base44.entities.User.list(),
-  ]).then(([allLeads, allUsers]) => {
-    _cache = { leads: allLeads || [], users: allUsers || [] };
+    base44.entities.Technician.list(),
+  ]).then(([allLeads, allUsers, allTechnicians]) => {
+    // Attach technician color to each user via user_id link
+    const techByUserId = {};
+    (allTechnicians || []).forEach(t => { if (t.user_id) techByUserId[t.user_id] = t; });
+    const usersWithColor = (allUsers || []).map(u => ({
+      ...u,
+      _techColor: techByUserId[u.id]?.color || null,
+    }));
+    _cache = { leads: allLeads || [], users: usersWithColor };
     _cacheTs = Date.now();
     _inflightPromise = null;
     return _cache;
