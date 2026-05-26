@@ -34,11 +34,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invite has been revoked' }, { status: 400 });
     }
 
-    // Check if expired
-    if (new Date(invite.expires_at) < new Date()) {
-      await base44.asServiceRole.entities.AppInvite.update(invite_id, { status: 'EXPIRED' });
-      return Response.json({ error: 'Invite has expired' }, { status: 400 });
-    }
+    // If expired, extend by 7 days so we can resend it
+    const newExpiresAt = invite.status === 'EXPIRED' || new Date(invite.expires_at) < new Date()
+      ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      : invite.expires_at;
 
     // Rate limit: max 3 sends per hour
     if (invite.last_sent_at) {
@@ -91,10 +90,11 @@ Deno.serve(async (req) => {
       throw new Error(`Resend error: ${JSON.stringify(emailResult)}`);
     }
 
-    // Update invite record
+    // Update invite record (also persist extended expiry if it was expired)
     const now = new Date().toISOString();
     await base44.asServiceRole.entities.AppInvite.update(invite_id, {
       token_hash,
+      expires_at: newExpiresAt,
       last_sent_at: now,
       send_count: (invite.send_count || 0) + 1,
       status: 'SENT'
