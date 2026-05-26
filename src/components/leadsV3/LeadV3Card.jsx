@@ -11,14 +11,27 @@ import { Button } from '@/components/ui/button';
 
 // ─── User color helpers ───────────────────────────────────────────────────────
 const USER_COLORS = [
-  '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b',
-  '#10b981', '#06b6d4', '#ef4444', '#f97316', '#6366f1',
+  '#3b82f6', // blue
+  '#10b981', // emerald
+  '#8b5cf6', // violet
+  '#f59e0b', // amber
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#ef4444', // red
+  '#f97316', // orange
+  '#6366f1', // indigo
+  '#14b8a6', // teal
+  '#84cc16', // lime
+  '#a855f7', // purple
 ];
-function getUserColor(str) {
-  if (!str) return '#94a3b8';
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return USER_COLORS[Math.abs(hash) % USER_COLORS.length];
+
+// Stable color by sorted index in the users list — no two users get the same color
+function getUserColor(userId, allUsers) {
+  if (!userId || !allUsers || allUsers.length === 0) return '#94a3b8';
+  const sorted = [...allUsers].sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+  const idx = sorted.findIndex(u => u.id === userId);
+  if (idx === -1) return '#94a3b8';
+  return USER_COLORS[idx % USER_COLORS.length];
 }
 function getUserInitials(user) {
   if (!user) return '?';
@@ -204,7 +217,7 @@ function AssignPopover({ lead, assignedUser, users, onAssigned, children }) {
             >
               <div
                 className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                style={{ backgroundColor: getUserColor(u.id || u.email) }}
+                style={{ backgroundColor: getUserColor(u.id, users) }}
               >
                 {getUserInitials(u)}
               </div>
@@ -241,7 +254,7 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
   const offerIds = lead.created_offer_ids || [];
   const hasError = !!lead.auto_offer_error;
   const isAccepted = lead.accepted_by_assignee;
-  const ownerColor = getUserColor(assignedUser?.id || assignedUser?.email);
+  const ownerColor = getUserColor(assignedUser?.id, users);
   const ownerInitials = getUserInitials(assignedUser);
   const ownerShortName = getUserShortName(assignedUser);
 
