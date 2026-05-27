@@ -350,14 +350,110 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     );
   }
 
+  // Groups a list of work orders by boat, renders collapsible boat blocks
+  const BoatGroupedSection = ({ workOrderList }) => {
+    const [collapsed, setCollapsed] = useState({});
+
+    const grouped = useMemo(() => {
+      const map = {};
+      workOrderList.forEach(wo => {
+        const job = jobs.find(j => j.id === wo.job_id);
+        const boat = job?.boat_id ? boats.find(b => b.id === job.boat_id) : null;
+        const key = boat?.id || '__noboat__';
+        if (!map[key]) map[key] = { boat, location: getLocationName(job?.location_id), wos: [] };
+        map[key].wos.push(wo);
+      });
+      return Object.values(map);
+    }, [workOrderList]);
+
+    const toggle = (key) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
+
+    return (
+      <div className="space-y-3">
+        {grouped.map(({ boat, location, wos }) => {
+          const key = boat?.id || '__noboat__';
+          const isOpen = !collapsed[key];
+          return (
+            <div key={key} className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              {/* Boat Header — tap to collapse/expand */}
+              <button
+                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100 text-left"
+                onClick={() => toggle(key)}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Ship className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                  <span className="text-sm font-bold text-slate-900 truncate">
+                    {boat?.vessel_name || 'Kein Boot zugeordnet'}
+                  </span>
+                  {location && (
+                    <span className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                      <MapPin className="h-3 w-3 flex-shrink-0" />{location}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                  <span className="text-xs font-medium text-slate-500 bg-slate-200 rounded-full px-2 py-0.5">{wos.length}</span>
+                  <ChevronRight className={`h-4 w-4 text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                </div>
+              </button>
+
+              {/* Work Orders under this boat */}
+              {isOpen && (
+                <div className="divide-y divide-slate-100">
+                  {wos.map(wo => {
+                    const woDate = wo.scheduled_date ? parseISO(wo.scheduled_date) : null;
+                    const dateStr = woDate ? format(woDate, 'EEE, d. MMM yyyy') : '—';
+                    const taskCount = getWorkOrderTaskCount(wo.id);
+                    const statusColor = wo.status === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                      wo.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                      wo.status === 'Ready to Invoice' ? 'bg-emerald-100 text-emerald-800' :
+                      'bg-slate-100 text-slate-700';
+
+                    const cardInner = (
+                      <div className="px-4 py-3">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <p className="text-sm font-semibold text-slate-900 leading-snug flex-1">{wo.title}</p>
+                          <Badge className={`text-xs whitespace-nowrap flex-shrink-0 ${statusColor}`}>{wo.status}</Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{dateStr}{wo.scheduled_start_time ? ` · ${wo.scheduled_start_time}` : ''}</span>
+                          <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />{taskCount} {taskCount === 1 ? 'Task' : 'Tasks'}</span>
+                        </div>
+                        {wo.work_order_number && <p className="text-xs text-slate-400 mt-1">#{wo.work_order_number}</p>}
+                      </div>
+                    );
+
+                    if (onNavigate) {
+                      return (
+                        <div key={wo.id} className="cursor-pointer hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                          onClick={() => onNavigate('workOrderDetail', { woId: wo.id })}>
+                          {cardInner}
+                        </div>
+                      );
+                    }
+                    return (
+                      <Link key={wo.id} to={createPageUrl('TeamWorkOrderDetail') + `?woId=${wo.id}`}
+                        className="block hover:bg-slate-50 active:bg-slate-100 transition-colors">
+                        {cardInner}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const WorkOrderCard = React.memo(({ workOrder, taskCount, showDateHeader }) => {
     // Memoize expensive date operations
-    const { dayName, dateString, timeString } = React.useMemo(() => {
+    const { dateString, timeString } = React.useMemo(() => {
       const woDate = workOrder.scheduled_date ? parseISO(workOrder.scheduled_date) : null;
       return {
-        dayName: woDate ? format(woDate, 'EEE').toUpperCase() : '—',
-        dateString: woDate ? format(woDate, 'd') : '—',
-        timeString: workOrder.scheduled_start_time || '—'
+        dateString: woDate ? format(woDate, 'EEE, d. MMM yyyy') : '—',
+        timeString: workOrder.scheduled_start_time || null
       };
     }, [workOrder.scheduled_date, workOrder.scheduled_start_time]);
 
@@ -374,7 +470,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         <div className="px-4 pt-3 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-600">
             <Clock className="h-4 w-4" />
-            <span className="text-xs font-medium">{dayName} {dateString} • {timeString}</span>
+            <span className="text-xs font-medium">{dateString}{timeString ? ` • ${timeString}` : ''}</span>
           </div>
           <Badge className={`text-xs whitespace-nowrap ${statusBadgeColor}`}>
             {workOrder.status}
@@ -561,117 +657,53 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           <Card className="bg-orange-50 border-orange-200 shadow-sm">
             <CardContent className="p-3 flex items-center gap-2">
               <WifiOff className="h-5 w-5 text-orange-600 flex-shrink-0" />
-              <span className="text-sm font-medium text-orange-900">You're offline. Data is cached.</span>
+              <span className="text-sm font-medium text-orange-900">Offline — Daten aus Cache.</span>
             </CardContent>
           </Card>
         }
 
         {/* OVERDUE Section */}
-        {sections.overdue.length > 0 &&
+        {sections.overdue.length > 0 && (
           <div>
-            <h2 className="text-lg font-bold text-red-700 mb-3">⚠️ Overdue ({sections.overdue.length})</h2>
-            <div className="space-y-3">
-              {sections.overdue.map((wo) =>
-                <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
-              )}
-            </div>
-          </div>
-        }
-
-        {/* TODAY Section */}
-        {sections.today.length > 0 &&
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-3">Today</h2>
-            <div className="space-y-3">
-              {sections.today.map((wo) =>
-                <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
-              )}
-            </div>
-          </div>
-        }
-
-        {/* UPCOMING Section */}
-        {sections.upcoming.length > 0 &&
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 mb-3">Upcoming (Next 7 days)</h2>
-            <div className="space-y-4">
-              {(() => {
-                const grouped = sections.upcoming.slice(0, 3).reduce((acc, wo) => {
-                  const woDate = wo.scheduled_date ? format(parseISO(wo.scheduled_date), 'EEE d') : 'No date';
-                  if (!acc[woDate]) acc[woDate] = [];
-                  acc[woDate].push(wo);
-                  return acc;
-                }, {});
-
-                return Object.entries(grouped).map(([dateLabel, wos]) => (
-                  <div key={dateLabel}>
-                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">{dateLabel}</h3>
-                    <div className="space-y-3">
-                      {wos.map((wo) =>
-                        <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} showDateHeader={false} />
-                      )}
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-          </div>
-        }
-
-        {/* LATER Section — beyond 7 days or no scheduled date */}
-        {sections.later.length > 0 && (
-          <div>
-            <h2 className="text-lg font-bold text-slate-600 mb-3">Later ({sections.later.length})</h2>
-            <div className="space-y-3">
-              {sections.later.map((wo) =>
-                <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
-              )}
-            </div>
+            <h2 className="text-base font-bold text-red-700 mb-2 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" /> Überfällig ({sections.overdue.length})
+            </h2>
+            <BoatGroupedSection workOrderList={sections.overdue} />
           </div>
         )}
 
-        {/* ATTENTION Section - Admin only for assignment/location issues */}
-        {user?.role === 'admin' && (() => {
-          const jobsWithoutTech = workOrders.filter(wo => 
-            (!wo.assigned_technicians || wo.assigned_technicians.length === 0) && 
-            wo.status !== 'Completed' && wo.status !== 'Cancelled'
-          );
-          const jobsWithoutLocation = workOrders.filter(wo => {
-            const job = jobs.find(j => j.id === wo.job_id);
-            return !job?.location_id && wo.status !== 'Completed' && wo.status !== 'Cancelled';
-          });
-          if (jobsWithoutTech.length === 0 && jobsWithoutLocation.length === 0) return null;
-          return (
-            <Card className="bg-amber-50 border-amber-200 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertCircle className="h-5 w-5 text-amber-600" />
-                  <h3 className="text-sm font-bold text-amber-900 uppercase">Admin: Attention Required</h3>
-                </div>
-                <div className="space-y-2">
-                  {jobsWithoutTech.length > 0 && (
-                    <div className="text-sm text-amber-900">⚠️ {jobsWithoutTech.length} {jobsWithoutTech.length === 1 ? 'job' : 'jobs'} without technician</div>
-                  )}
-                  {jobsWithoutLocation.length > 0 && (
-                    <div className="text-sm text-amber-900">⚠️ {jobsWithoutLocation.length} {jobsWithoutLocation.length === 1 ? 'job' : 'jobs'} without location</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })()}
+        {/* TODAY Section */}
+        {sections.today.length > 0 && (
+          <div>
+            <h2 className="text-base font-bold text-slate-900 mb-2">Heute</h2>
+            <BoatGroupedSection workOrderList={sections.today} />
+          </div>
+        )}
+
+        {/* UPCOMING Section */}
+        {sections.upcoming.length > 0 && (
+          <div>
+            <h2 className="text-base font-bold text-slate-900 mb-2">Nächste 7 Tage</h2>
+            <BoatGroupedSection workOrderList={sections.upcoming} />
+          </div>
+        )}
+
+        {/* LATER Section */}
+        {sections.later.length > 0 && (
+          <div>
+            <h2 className="text-base font-bold text-slate-500 mb-2">Später ({sections.later.length})</h2>
+            <BoatGroupedSection workOrderList={sections.later} />
+          </div>
+        )}
 
         {/* READY TO INVOICE Section */}
         {sections.readyToInvoice.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              <h2 className="text-lg font-bold text-emerald-700">Ready to Invoice ({sections.readyToInvoice.length})</h2>
-            </div>
-            <div className="space-y-3 opacity-80">
-              {sections.readyToInvoice.map((wo) =>
-                <WorkOrderCard key={wo.id} workOrder={wo} taskCount={getWorkOrderTaskCount(wo.id)} />
-              )}
+            <h2 className="text-base font-bold text-emerald-700 mb-2 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" /> Bereit zur Abrechnung ({sections.readyToInvoice.length})
+            </h2>
+            <div className="opacity-80">
+              <BoatGroupedSection workOrderList={sections.readyToInvoice} />
             </div>
           </div>
         )}
@@ -679,9 +711,9 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         {/* Empty State */}
         {sections.overdue.length === 0 && sections.today.length === 0 && sections.upcoming.length === 0 && sections.later.length === 0 && sections.readyToInvoice.length === 0 &&
           <div className="text-center py-12">
-            <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-600 font-medium mb-1">No open work orders</p>
-            <p className="text-slate-500 text-sm">All your work is done or no items assigned</p>
+            <CheckCircle2 className="h-12 w-12 mx-auto text-emerald-300 mb-3" />
+            <p className="text-slate-600 font-medium mb-1">Keine offenen Aufträge</p>
+            <p className="text-slate-500 text-sm">Alles erledigt oder nichts zugeteilt</p>
           </div>
         }
       </div>
