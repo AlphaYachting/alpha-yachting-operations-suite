@@ -69,13 +69,17 @@ async function fetchLeadData() {
     base44.entities.User.list(),
     base44.entities.Technician.list(),
   ]).then(([allLeads, allUsers, allTechnicians]) => {
-    // Attach technician color to each user via user_id link
+    // Match technician color by email (most reliable) or user_id
+    const techByEmail = {};
     const techByUserId = {};
-    (allTechnicians || []).forEach(t => { if (t.user_id) techByUserId[t.user_id] = t; });
-    const usersWithColor = (allUsers || []).map(u => ({
-      ...u,
-      _techColor: techByUserId[u.id]?.color || null,
-    }));
+    (allTechnicians || []).forEach(t => {
+      if (t.email && t.email !== 'no@no') techByEmail[t.email.toLowerCase()] = t;
+      if (t.user_id) techByUserId[t.user_id] = t;
+    });
+    const usersWithColor = (allUsers || []).map(u => {
+      const tech = techByUserId[u.id] || techByEmail[u.email?.toLowerCase()];
+      return { ...u, _techColor: tech?.color || null };
+    });
     _cache = { leads: allLeads || [], users: usersWithColor };
     _cacheTs = Date.now();
     _inflightPromise = null;
