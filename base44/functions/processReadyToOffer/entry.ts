@@ -42,7 +42,9 @@ Deno.serve(async (req) => {
     if (lead.email) {
       existingCustomers = await base44.asServiceRole.entities.Customer.filter({ email: lead.email });
     }
-    if (existingCustomers.length === 0 && lead.phone) {
+    // Only match by phone if it's a real number (not the '+0' placeholder set by email engine)
+    const isRealPhone = lead.phone && lead.phone !== '+0' && lead.phone.replace(/\D/g, '').length >= 6;
+    if (existingCustomers.length === 0 && isRealPhone) {
       existingCustomers = await base44.asServiceRole.entities.Customer.filter({ phone: lead.phone });
     }
 
