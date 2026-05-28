@@ -194,6 +194,10 @@ Deno.serve(async (req) => {
             const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
             const conversationKey = buildConversationKey(messageId, fromEmail, normalizedSubj);
 
+            // Extract Reply-To from envelope if present
+            const replyToEmails = (env?.replyTo || []).map(a => a.address).filter(Boolean);
+            const replyToHeader = replyToEmails.length > 0 ? replyToEmails[0] : null;
+
             await base44.asServiceRole.entities.EmailMessageSandbox.create({
               mailbox_name: imapUser,
               direction: 'inbound',
@@ -216,7 +220,7 @@ Deno.serve(async (req) => {
               has_attachments: false,
               attachment_count: 0,
               attachments_meta_json: [],
-              raw_headers_json: {},
+              raw_headers_json: replyToHeader ? { reply_to: replyToHeader } : {},
               duplicate_status: 'original',
               processing_status: bodyText ? 'stored' : 'fetched',
               security_flag: 'normal',

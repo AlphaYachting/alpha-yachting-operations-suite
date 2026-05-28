@@ -302,16 +302,27 @@ function extractLeadPayload(record) {
   let   senderSource  = 'direct';
 
   // --- SENDER GUARD ---
-  // If from_email is internal, try to find the real external sender in the body
+  // If from_email is internal, try to find the real external sender:
+  // 1. From the Reply-To header (stored in raw_headers_json.reply_to)
+  // 2. From the forwarded body text
   if (isInternalEmail(resolvedEmail)) {
-    const fwdSender = extractForwardedSender(body);
-    if (fwdSender) {
-      resolvedName  = fwdSender.name;
-      resolvedEmail = fwdSender.email;
-      senderSource  = 'forwarded_body';
+    // Check Reply-To header first (fastest — works even when body is empty)
+    const replyToHeader = record.raw_headers_json?.reply_to;
+    if (replyToHeader && !isInternalEmail(replyToHeader)) {
+      resolvedEmail = replyToHeader.toLowerCase().trim();
+      resolvedName  = resolvedEmail;
+      senderSource  = 'reply_to_header';
     } else {
-      // Could not find external sender — block
-      return { blocked: true, blockReason: 'internal_sender_no_external_found' };
+      // Fall back to body parsing
+      const fwdSender = extractForwardedSender(body);
+      if (fwdSender) {
+        resolvedName  = fwdSender.name;
+        resolvedEmail = fwdSender.email;
+        senderSource  = 'forwarded_body';
+      } else {
+        // Could not find external sender — block
+        return { blocked: true, blockReason: 'internal_sender_no_external_found' };
+      }
     }
   }
 
