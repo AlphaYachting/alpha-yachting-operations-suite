@@ -222,7 +222,7 @@ export default function SalesStatistics() {
     leadsCreated: acc.leadsCreated + u.leadsCreated,
     leadsAssigned: acc.leadsAssigned + u.leadsAssigned,
     offersCreated: acc.offersCreated + u.offersCreated,
-  }), { email: 'system', leadsCreated: 0, leadsAssigned: 0, offersCreated: 0 });
+  }), { email: 'system', leadsCreated: 0, leadsAssigned: 0, offersCreated: 0, offersApproved: 0 });
 
   // ── Filtered user rows ────────────────────────────────────────────────────
   const filteredUserStats = (userFilter === 'all' ? humanUserStats : humanUserStats.filter(u => u.email === userFilter));
@@ -373,6 +373,7 @@ export default function SalesStatistics() {
                 <tr className="border-b text-slate-500 text-left">
                   <th className="pb-2 font-medium">Benutzer</th>
                   <th className="pb-2 font-medium text-right">Leads erstellt</th>
+                  <th className="pb-2 font-medium text-right">Leads zugewiesen</th>
                   <th className="pb-2 font-medium text-right">Angebote erstellt</th>
                   <th className="pb-2 font-medium text-right">Angebote gewonnen</th>
                 </tr>
@@ -386,6 +387,9 @@ export default function SalesStatistics() {
                     </td>
                     <td className="py-2 text-right">
                       <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">{u.leadsCreated}</Badge>
+                    </td>
+                    <td className="py-2 text-right">
+                      <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">{u.leadsAssigned}</Badge>
                     </td>
                     <td className="py-2 text-right">
                       <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">{u.offersCreated}</Badge>
@@ -407,6 +411,9 @@ export default function SalesStatistics() {
                     </td>
                     <td className="py-2 text-right">
                       <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">{systemTotals.leadsCreated}</Badge>
+                    </td>
+                    <td className="py-2 text-right">
+                      <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">{systemTotals.leadsAssigned}</Badge>
                     </td>
                     <td className="py-2 text-right">
                       <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50">{systemTotals.offersCreated}</Badge>
