@@ -7,9 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Users, Ship, Briefcase, Clock, Package, ChevronRight,
-  Receipt, Loader2, AlertTriangle, ExternalLink, ChevronDown, ChevronUp
+  Receipt, Loader2, AlertTriangle, ExternalLink, ChevronDown, ChevronUp, CheckCircle2
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { base44 } from '@/api/base44Client';
+import { toast } from 'sonner';
 
 const WO_TYPE_BADGE = {
   EXECUTION: 'bg-purple-50 text-purple-700 border-purple-300',
@@ -34,6 +36,9 @@ export default function CustomerBillingBlock({
   const [selectedUnlinkedCMEIds, setSelectedUnlinkedCMEIds] = useState(new Set());
   const [creating, setCreating] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const [markingDoneId, setMarkingDoneId] = useState(null);
+  const [confirmDoneId, setConfirmDoneId] = useState(null);
+  const [doneWOIds, setDoneWOIds] = useState(new Set());
 
   const customerName = customer?.company_name ||
     `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown Customer';
@@ -118,6 +123,20 @@ export default function CustomerBillingBlock({
   };
 
   const canCreate = selectedWOIds.size > 0 || selectedUnlinkedCMEIds.size > 0;
+
+  const handleMarkAsDone = async (woId) => {
+    setMarkingDoneId(woId);
+    try {
+      await base44.entities.WorkOrder.update(woId, { status: 'Completed' });
+      setDoneWOIds(prev => new Set([...prev, woId]));
+      setConfirmDoneId(null);
+      toast.success('WorkOrder als abgerechnet markiert und aus der Liste entfernt.');
+    } catch (e) {
+      toast.error('Fehler: ' + e.message);
+    } finally {
+      setMarkingDoneId(null);
+    }
+  };
 
   const activeLinkedCME = useMemo(() => {
     const sorted = linkedCME.filter(c => !c.billed_offer_id && !c.staged_offer_id);
@@ -230,16 +249,18 @@ export default function CustomerBillingBlock({
 
           {/* WorkOrders list */}
           <div className="space-y-2">
-            {workOrders.map(wo => {
+            {workOrders.filter(wo => !doneWOIds.has(wo.id)).map(wo => {
               const job = jobMap[wo.job_id];
               const boat = boatMap[job?.boat_id];
               const totals = woTotals[wo.id] || {};
               const isSelected = selectedWOIds.has(wo.id);
+              const isConfirming = confirmDoneId === wo.id;
+              const isMarkingThis = markingDoneId === wo.id;
 
               return (
                 <div
                   key={wo.id}
-                  onClick={() => toggleWO(wo.id)}
+                  onClick={() => !isConfirming && toggleWO(wo.id)}
                   className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                     isSelected ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                   }`}
@@ -282,14 +303,43 @@ export default function CustomerBillingBlock({
                       </span>
                     </div>
                   </div>
-                  <Link
-                    to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
-                    onClick={e => e.stopPropagation()}
-                    className="shrink-0 p-1.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700"
-                    title="Open WorkOrder Detail"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
+                  <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                    {isConfirming ? (
+                      <div className="flex items-center gap-1.5 bg-green-50 border border-green-300 rounded-lg px-2 py-1">
+                        <span className="text-xs text-green-800 font-medium whitespace-nowrap">Abgerechnet?</span>
+                        <button
+                          onClick={() => handleMarkAsDone(wo.id)}
+                          disabled={isMarkingThis}
+                          className="px-2 py-0.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded font-medium flex items-center gap-1"
+                        >
+                          {isMarkingThis ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                          Ja
+                        </button>
+                        <button
+                          onClick={() => setConfirmDoneId(null)}
+                          className="px-2 py-0.5 text-xs text-slate-500 hover:text-slate-700"
+                        >
+                          Nein
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDoneId(wo.id)}
+                        className="p-1.5 rounded hover:bg-green-100 text-slate-400 hover:text-green-600 transition-colors"
+                        title="Als abgerechnet markieren"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                      </button>
+                    )}
+                    <Link
+                      to={createPageUrl('WorkOrderDetail') + `?id=${wo.id}`}
+                      onClick={e => e.stopPropagation()}
+                      className="p-1.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-700"
+                      title="Open WorkOrder Detail"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </div>
                 </div>
               );
             })}
