@@ -96,6 +96,12 @@ export default function SalesStatistics() {
     gcTime: 0,
   });
 
+  const { data: users = [] } = useQuery({
+    queryKey: ['stats-users'],
+    queryFn: () => base44.entities.User.list(),
+    staleTime: 60000,
+  });
+
   // Load all offers — use backend function which fetches 1000 records with effective_created_by resolved
   const { data: offersRaw = [], isLoading: offersLoading, refetch: refetchOffersP1 } = useQuery({
     queryKey: ['stats-offers-all'],
@@ -139,6 +145,10 @@ export default function SalesStatistics() {
     const rangeEnd = months[months.length - 1]?.end;
     const map = {};
 
+    // Build userId → email map from users list
+    const userIdToEmail = {};
+    users.forEach(u => { if (u.id && u.email) userIdToEmail[u.id] = u.email; });
+
     const ensure = (email) => {
       if (!email) email = 'unknown';
       if (!map[email]) map[email] = { email, leadsCreated: 0, leadsAssigned: 0, offersCreated: 0, offersApproved: 0 };
@@ -150,8 +160,9 @@ export default function SalesStatistics() {
       .forEach(l => {
         ensure(l.created_by).leadsCreated++;
         if (l.assigned_to_user_id) {
-          const key = `assigned:${l.assigned_to_user_id}`;
-          ensure(key).leadsAssigned++;
+          // Resolve user ID to email so it merges with the same user row
+          const assignedEmail = userIdToEmail[l.assigned_to_user_id] || `assigned:${l.assigned_to_user_id}`;
+          ensure(assignedEmail).leadsAssigned++;
         }
       });
 
@@ -167,9 +178,9 @@ export default function SalesStatistics() {
       });
 
     return Object.values(map)
-      .filter(u => u.leadsCreated > 0 || u.offersCreated > 0)
+      .filter(u => u.leadsCreated > 0 || u.leadsAssigned > 0 || u.offersCreated > 0)
       .sort((a, b) => (b.leadsCreated + b.offersCreated) - (a.leadsCreated + a.offersCreated));
-  }, [leads, offers, months]);
+  }, [leads, offers, months, users]);
 
   // ── Monthly trend ─────────────────────────────────────────────────────────
   // effective_created_by is pre-resolved by backend
