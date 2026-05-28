@@ -23,7 +23,8 @@ import {
   MoreVertical,
   Trash2,
   Printer,
-  Loader2
+  Loader2,
+  ChevronRight
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
@@ -542,35 +543,41 @@ export default function ProjectDetail() {
 
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-blue-600" />
+        <Link to={customer ? createPageUrl('CustomerDetail') + `?id=${customer.id}` : '#'} className="block hover:no-underline">
+          <Card className={customer ? 'hover:border-blue-300 hover:shadow-md transition-all cursor-pointer' : ''}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-500">Customer</p>
+                  <p className="font-medium text-slate-900 truncate">
+                    {customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'N/A'}
+                  </p>
+                </div>
+                {customer && <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-500">Customer</p>
-                <p className="font-medium text-slate-900 truncate">
-                  {customer?.company_name || `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
-                <Ship className="h-5 w-5 text-cyan-600" />
+        <Link to={boat ? createPageUrl('BoatDetail') + `?id=${boat.id}` : '#'} className="block hover:no-underline">
+          <Card className={boat ? 'hover:border-cyan-300 hover:shadow-md transition-all cursor-pointer' : ''}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
+                  <Ship className="h-5 w-5 text-cyan-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-500">Boat</p>
+                  <p className="font-medium text-slate-900 truncate">{boat?.vessel_name || 'N/A'}</p>
+                </div>
+                {boat && <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-slate-500">Boat</p>
-                <p className="font-medium text-slate-900 truncate">{boat?.vessel_name || 'N/A'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card>
           <CardContent className="p-4">
