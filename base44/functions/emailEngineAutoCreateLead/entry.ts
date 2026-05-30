@@ -445,8 +445,11 @@ Deno.serve(async (req) => {
         r.duplicate_status !== 'duplicate' &&
         (r.processing_status === 'stored' || r.processing_status === 'parsed' || r.processing_status === 'sanitized' || r.processing_status === 'fetched') &&
         !bridgedIds.has(r.id) &&
-        // FIX #6: Skip records where from_email is still unknown — data quality guard
-        r.from_email !== 'unknown@unknown'
+        // Skip records where from_email is still unknown — data quality guard
+        r.from_email !== 'unknown@unknown' &&
+        // Skip records with empty body if the sender is internal (WordPress contact form):
+        // these need body refetch first before we can extract the real customer.
+        !(isInternalEmail(r.from_email) && !r.body_text?.trim())
       );
     }
 
