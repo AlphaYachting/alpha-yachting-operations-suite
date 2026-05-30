@@ -50,26 +50,40 @@ function decodeQuotedPrintable(str) {
   return str.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 }
 
+function decodeAndClean(buf) {
+  if (!buf || buf.length === 0) return '';
+  const text = buf.toString('utf-8');
+  // Try base64 decode
+  if (/^[A-Za-z0-9+/\r\n]+=*$/.test(text.trim()) && text.length > 50) {
+    try {
+      const decoded = atob(text.replace(/\r?\n/g, ''));
+      const bytes = new Uint8Array(decoded.length);
+      for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+      const str = new TextDecoder('utf-8').decode(bytes);
+      return /<html|<body|<div|<table/i.test(str) ? htmlToText(str) : str;
+    } catch (_) {}
+  }
+  const qp = decodeQuotedPrintable(text);
+  return /<html|<body|<div|<table/i.test(qp) ? htmlToText(qp) : qp;
+}
+
 function extractBodyText(bodyParts) {
   if (!bodyParts) return '';
-  const plain = bodyParts['1'];
-  if (plain && plain.length > 0) {
-    const text = plain.toString('utf-8');
-    if (/^[A-Za-z0-9+/\r\n]+=*$/.test(text.trim()) && text.length > 50) {
-      try {
-        const decoded = atob(text.replace(/\r?\n/g, ''));
-        const bytes = new Uint8Array(decoded.length);
-        for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
-        return new TextDecoder('utf-8').decode(bytes).substring(0, 10000);
-      } catch (_) {}
+  // Try all known part keys in priority order: plain text first, then HTML variants
+  const partKeys = ['1', 'TEXT', '1.1', '1.2', '2', '2.1', '1.TEXT', '1.MIME'];
+  for (const key of partKeys) {
+    const part = bodyParts[key];
+    if (part && part.length > 10) {
+      const result = decodeAndClean(part);
+      if (result && result.trim().length > 5) return result.substring(0, 10000);
     }
-    const qp = decodeQuotedPrintable(text);
-    if (/<html|<body|<div|<table/i.test(qp)) return htmlToText(qp).substring(0, 10000);
-    return qp.substring(0, 10000);
   }
-  const html = bodyParts['2'];
-  if (html && html.length > 0) {
-    return htmlToText(decodeQuotedPrintable(html.toString('utf-8'))).substring(0, 10000);
+  // Fallback: try any non-empty part
+  for (const [key, part] of Object.entries(bodyParts)) {
+    if (part && part.length > 10) {
+      const result = decodeAndClean(part);
+      if (result && result.trim().length > 5) return result.substring(0, 10000);
+    }
   }
   return '';
 }
@@ -169,14 +183,19 @@ Deno.serve(async (req) => {
           }
 
           let bodyText = '';
+          let bodyPartsReceived = [];
           try {
-            // fetchOne with a 12s timeout — if it hangs, skip body and store without it
+            // fetchOne with a 14s timeout — request more part variants for forwarded/form emails
             const msgWithBody = await withTimeout(
-              client.fetchOne(String(info.uid), { bodyParts: ['1', '2'] }, { uid: true }),
-              12000,
+              client.fetchOne(String(info.uid), { bodyParts: ['1', '2', '1.1', '1.2', 'TEXT'] }, { uid: true }),
+              14000,
               `fetchOne uid=${info.uid}`
             );
+            if (msgWithBody?.bodyParts) {
+              bodyPartsReceived = Object.keys(msgWithBody.bodyParts).filter(k => msgWithBody.bodyParts[k]?.length > 0);
+            }
             bodyText = extractBodyText(msgWithBody?.bodyParts);
+            log.push({ step: 'body_fetched', uid: info.uid, parts: bodyPartsReceived, bodyLen: bodyText.length, ts: Date.now() - startTime });
           } catch (bodyErr) {
             log.push({ step: 'body_skip', uid: info.uid, reason: safeErr(bodyErr), ts: Date.now() - startTime });
             // Store message without body — better than dropping it entirely

@@ -54,6 +54,36 @@ function makeClient(host, port, user, pass) {
   });
 }
 
+function decodeQP(str) {
+  return str.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+function extractFromParts(bodyParts) {
+  if (!bodyParts) return '';
+  const keys = ['1', 'TEXT', '1.1', '1.2', '2', '2.1'];
+  for (const k of keys) {
+    const p = bodyParts[k];
+    if (!p || p.length < 5) continue;
+    const raw = p.toString('utf-8');
+    const qp = decodeQP(raw);
+    if (/<html|<body|<div|<table/i.test(qp)) {
+      const t = htmlToText(qp).trim();
+      if (t.length > 5) return t.substring(0, 10000);
+    } else if (qp.trim().length > 5) {
+      return qp.trim().substring(0, 10000);
+    }
+  }
+  // fallback: try any part
+  for (const [, p] of Object.entries(bodyParts)) {
+    if (!p || p.length < 5) continue;
+    const raw = p.toString('utf-8');
+    const qp = decodeQP(raw);
+    const t = /<html|<body/i.test(qp) ? htmlToText(qp) : qp;
+    if (t.trim().length > 5) return t.trim().substring(0, 10000);
+  }
+  return '';
+}
+
 async function fetchBodyForUID(host, port, user, pass, uid) {
   const client = makeClient(host, port, user, pass);
   try {
@@ -64,14 +94,24 @@ async function fetchBodyForUID(host, port, user, pass, uid) {
     ]);
     let bodyText = '';
     try {
-      let srcMsg = null;
-      const fetchOp = (async () => {
-        for await (const m of client.fetch({ uid: `${uid}` }, { source: true }, { uid: true })) {
-          srcMsg = m; break;
-        }
-      })();
-      await Promise.race([fetchOp, new Promise((_, r) => setTimeout(() => r(new Error('source timeout')), 30000))]);
-      if (srcMsg?.source) bodyText = parseBodyFromSource(srcMsg.source);
+      // Strategy 1: bodyParts (faster, targeted) — avoids full source download hang
+      const msgWithParts = await Promise.race([
+        client.fetchOne(String(uid), { bodyParts: ['1', '2', '1.1', '1.2', 'TEXT'] }, { uid: true }),
+        new Promise((_, r) => setTimeout(() => r(new Error('parts timeout')), 20000)),
+      ]);
+      bodyText = extractFromParts(msgWithParts?.bodyParts);
+
+      // Strategy 2: full source fallback if parts gave nothing
+      if (!bodyText) {
+        let srcMsg = null;
+        const fetchOp = (async () => {
+          for await (const m of client.fetch({ uid: `${uid}` }, { source: true }, { uid: true })) {
+            srcMsg = m; break;
+          }
+        })();
+        await Promise.race([fetchOp, new Promise((_, r) => setTimeout(() => r(new Error('source timeout')), 20000))]);
+        if (srcMsg?.source) bodyText = parseBodyFromSource(srcMsg.source);
+      }
     } finally {
       lock.release();
       await Promise.race([client.logout(), new Promise(r => setTimeout(r, 2000))]).catch(() => {});
