@@ -47,8 +47,8 @@ Deno.serve(async (req) => {
           customer = await base44.asServiceRole.entities.Customer.create({
             first_name: firstName,
             last_name: lastName,
-            email: lead.email,
-            phone: lead.phone,
+            email: lead.email || '',
+            phone: lead.phone || '',
             status: 'Active',
             preferred_language: 'German'
           });
