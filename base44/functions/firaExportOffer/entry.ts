@@ -32,6 +32,13 @@ function normalizeCountry(raw) {
   return COUNTRY_MAP[key] || null;
 }
 
+// ── Strip HTML tags and truncate to max length ──────────────────────────────
+function stripHtmlAndTruncate(str, maxLen = 255) {
+  if (!str) return '';
+  const stripped = str.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+  return stripped.length > maxLen ? stripped.substring(0, maxLen - 3) + '...' : stripped;
+}
+
 // ── Simple positive-integer hash ────────────────────────────────────────────
 function simpleHash(str) {
   let h = 0;
@@ -154,7 +161,7 @@ function buildFiraPayload(offer, tasks, customer, location) {
       const item = {
         lineItemId: String(task.id || `item-${idx + 1}`),
         name: exportName,
-        description: task.description || task.title || '',
+        description: stripHtmlAndTruncate(task.description || task.title || ''),
         price: parseFloat((task.unit_price || 0).toFixed(4)),
         quantity: task.quantity || 1,
         unit: mapUnit(task.unit_type),
