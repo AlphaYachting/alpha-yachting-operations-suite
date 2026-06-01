@@ -172,8 +172,8 @@ function buildFiraPayload(offer, tasks, customer, location) {
       return item;
     });
 
-  // Terms — by customer country
-  const termsDE = 'Dieses Angebot gilt 30 Tage ab Ausstellungsdatum. Eigentumsvorbehalt bis zur vollständigen Bezahlung.';
+  // Terms — by customer country (FIRA varchar(255) limit)
+  const termsDE = 'Dieses Angebot gilt 30 Tage ab Ausstellungsdatum. Eigentumsvorbehalt bis zur vollst\u00e4ndigen Bezahlung.';
   const termsHR = 'Ova ponuda vrijedi 30 dana od datuma izdavanja. Zadržano vlasništvo do potpune uplate.';
   const termsEN = 'This offer is valid for 30 days from the date of issue. Retention of title until full payment.';
 
@@ -220,6 +220,9 @@ function buildFiraPayload(offer, tasks, customer, location) {
 
   const builtNote = noteParts.join('\n\n');
 
+  // FIRA varchar(255) safe truncate for text fields
+  const t255 = (s) => s ? (s.length > 255 ? s.substring(0, 252) + '...' : s) : s;
+
   const payload = {
     webshopOrderId,
     webshopType: 'CUSTOM',
@@ -240,15 +243,15 @@ function buildFiraPayload(offer, tasks, customer, location) {
     netto,
     lineItems,
     totalShipping: null,
-    internalNote: builtNote || `Alpha Yachting Offer ${offer.offer_number || ''} | AY CRM Export`,
-    note: builtNote || null,
+    internalNote: t255(builtNote || `Alpha Yachting Offer ${offer.offer_number || ''} | AY CRM Export`),
+    note: builtNote ? t255(builtNote) : null,
     paymentType: 'TRANSAKCIJSKI',
   };
 
   // Attach terms based on country
-  if (country2 === 'AT' || country2 === 'DE') payload.termsDE = termsDE;
-  else if (country2 === 'HR') payload.termsHR = termsHR;
-  else payload.termsEN = termsEN;
+  if (country2 === 'AT' || country2 === 'DE') payload.termsDE = t255(termsDE);
+  else if (country2 === 'HR') payload.termsHR = t255(termsHR);
+  else payload.termsEN = t255(termsEN);
 
   return payload;
 }
