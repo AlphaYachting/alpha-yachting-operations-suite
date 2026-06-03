@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  Scan
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import BoatForm from '@/components/boats/BoatForm';
+import BoatFromRegistrationDialog from '@/components/boats/BoatFromRegistrationDialog';
 
 const typeColors = {
   Sailboat: 'bg-blue-100 text-blue-700',
@@ -54,6 +56,8 @@ export default function Boats() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(searchParams.get('new') === 'true');
   const [editingBoat, setEditingBoat] = useState(null);
+  const [showScanDialog, setShowScanDialog] = useState(false);
+  const [prefillData, setPrefillData] = useState(null);
   const preselectedCustomerId = searchParams.get('customer');
 
   useEffect(() => {
@@ -144,13 +148,23 @@ export default function Boats() {
           <h1 className="text-2xl font-bold text-slate-900">Boats</h1>
           <p className="text-slate-500 mt-1">{boats.length} registered vessels</p>
         </div>
-        <Button 
-          onClick={() => { setEditingBoat(null); setShowForm(true); }}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Boat
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowScanDialog(true)}
+            className="border-blue-300 text-blue-700 hover:bg-blue-50"
+          >
+            <Scan className="h-4 w-4 mr-2" />
+            Aus Zulassungsschein
+          </Button>
+          <Button 
+            onClick={() => { setEditingBoat(null); setPrefillData(null); setShowForm(true); }}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Boat
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -299,21 +313,32 @@ export default function Boats() {
       )}
 
       {/* Boat Form Dialog */}
-      <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) { setEditingBoat(null); setSearchParams({}); }}}>
+      <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) { setEditingBoat(null); setPrefillData(null); setSearchParams({}); }}}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingBoat ? 'Edit Boat' : 'Add New Boat'}</DialogTitle>
           </DialogHeader>
           <BoatForm
-            boat={editingBoat}
+            boat={editingBoat || prefillData}
             customers={customers}
             locations={locations}
             preselectedCustomerId={preselectedCustomerId}
             onSave={handleSave}
-            onCancel={() => { setShowForm(false); setEditingBoat(null); setSearchParams({}); }}
+            onCancel={() => { setShowForm(false); setEditingBoat(null); setPrefillData(null); setSearchParams({}); }}
           />
         </DialogContent>
       </Dialog>
+
+      {/* Scan Registration Dialog */}
+      <BoatFromRegistrationDialog
+        open={showScanDialog}
+        onOpenChange={setShowScanDialog}
+        onDataExtracted={(data) => {
+          setPrefillData(data);
+          setEditingBoat(null);
+          setShowForm(true);
+        }}
+      />
     </div>
   );
 }
