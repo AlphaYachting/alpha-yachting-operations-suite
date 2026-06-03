@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { FileText, Briefcase, Compass, Ship, Anchor, BookOpen } from 'lucide-react';
+import { FileText, Briefcase, Compass, Ship, Anchor, BookOpen, ClipboardList } from 'lucide-react';
 import { useWizard } from './WizardContext';
 import { WizardAlert } from './WizardAlert';
 
@@ -71,6 +71,13 @@ export function Step5Intent() {
       description: 'Generate a complete, legally binding storage contract PDF in DE / EN / HR / SL',
       icon: BookOpen,
       color: 'text-blue-700'
+    },
+    {
+      value: 'storage_contract_full',
+      label: 'Storage Angebot + Vertrag (Kombiniert)',
+      description: 'Preiskonfigurator → Preise automatisch in Lagervertrag übernehmen → PDF generieren',
+      icon: ClipboardList,
+      color: 'text-violet-600'
     }
   ];
 
@@ -89,6 +96,8 @@ export function Step5Intent() {
       setStep(6); // Go directly to Storage & Transport configurator — no vessel/location needed
     } else if (wizardData.intent === 'storage_contract') {
       setStep(6); // Go directly to Storage Contract flow
+    } else if (wizardData.intent === 'storage_contract_full') {
+      setStep(6); // Go directly to combined flow
     } else {
       setStep(6); // Go to details
     }
