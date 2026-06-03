@@ -112,6 +112,7 @@ export function StorageContractFullFlow() {
     transport_needed: false,
     pickup_address: '',
     distance_km: 0,
+    storage_needed: true,
     storage_period: 'season',
     roof_option: false,
     selected_modules: [],
