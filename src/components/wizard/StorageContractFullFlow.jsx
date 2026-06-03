@@ -174,8 +174,8 @@ export function StorageContractFullFlow() {
     }
 
     if (subStep === 2) {
-      // Configurator sub-steps
-      if (konfigSubStep < 4) {
+      // Configurator sub-steps 1–4: just advance
+      if (konfigSubStep < 5) {
         if (konfigSubStep === 1 && konfig.boat_length <= 0) {
           toast.error('Bitte eine gültige Bootslänge eingeben');
           return;
@@ -183,8 +183,12 @@ export function StorageContractFullFlow() {
         setKonfigSubStep(s => s + 1);
         return;
       }
-      // konfigSubStep === 4 (Options) → Calculate
-      if (konfigSubStep === 4) {
+      // konfigSubStep === 5 (Optionen) → Calculate & go to Preisvorschau
+      if (konfigSubStep === 5) {
+        if (!rateCardItems || rateCardItems.length === 0) {
+          toast.error('Preisliste nicht geladen – bitte kurz warten und nochmal versuchen.');
+          return;
+        }
         try {
           const extendedParams = { ...konfig };
           for (const selectedMod of konfig.selected_modules) {
@@ -198,23 +202,21 @@ export function StorageContractFullFlow() {
               }
             }
           }
-          const res = calculateOffer(extendedParams, rateCardItems || [], activeRateCard?.vat_rate || 25);
+          const res = calculateOffer(extendedParams, rateCardItems, activeRateCard?.vat_rate || 25);
           setCalculation(res);
 
-          // Convert line items to serviceItems for contract
           const items = res.lineItems.map((li, idx) => ({
             id: idx + 1,
             title: li.title,
             quantity: li.quantity,
             unit: li.unit,
             unit_price: li.unit_price,
-            total_price: li.total_price.toFixed(2),
+            total_price: typeof li.total_price === 'number' ? li.total_price.toFixed(2) : String(li.total_price),
             category: li.category === 'STORAGE' || li.category === 'ROOF_RULE' ? 'STORAGE'
               : li.category === 'TRANSPORT' ? 'TRANSPORT' : 'SERVICE',
           }));
           setServiceItems(items);
 
-          // Sync transport info to contract form
           if (konfig.transport_needed) {
             setForm(f => ({
               ...f,
@@ -224,15 +226,10 @@ export function StorageContractFullFlow() {
             }));
           }
 
-          setSubStep(3); // → Preisvorschau
+          setSubStep(3);
         } catch (err) {
           toast.error('Kalkulation fehlgeschlagen: ' + err.message);
         }
-        return;
-      }
-      if (konfigSubStep === 5) {
-        // Additional options → calculate
-        setKonfigSubStep(4);
         return;
       }
     }
@@ -889,9 +886,9 @@ export function StorageContractFullFlow() {
         </Button>
         {subStep < SUB_STEPS.length && (
           <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700">
-            {subStep === 2 && konfigSubStep === 4 ? (
+            {subStep === 2 && konfigSubStep === 5 ? (
               <><Calculator className="w-4 h-4 mr-2" />Preis berechnen</>
-            ) : subStep === 2 && konfigSubStep < 4 ? (
+            ) : subStep === 2 && konfigSubStep < 5 ? (
               <>Weiter <ArrowRight className="w-4 h-4 ml-2" /></>
             ) : (
               <>Weiter <ArrowRight className="w-4 h-4 ml-2" /></>
