@@ -608,8 +608,11 @@ Requirements:
     setError(null);
 
     try {
-      if (!formData.customer_id || !formData.title) {
-        throw new Error('Customer and title are required');
+      if (!formData.customer_id) {
+        throw new Error('Bitte einen Kunden auswählen.');
+      }
+      if (!formData.title) {
+        throw new Error('Bitte einen Titel eingeben.');
       }
 
       let savedOfferId = offerId;
@@ -1494,11 +1497,12 @@ Alpha Yachting Service Team`);
               )}
 
               <div className="space-y-2">
-                <Label>Title *</Label>
+                <Label>Titel *</Label>
                 <Input
                   value={formData.title || ''}
                   onChange={(e) => updateField('title', e.target.value)}
-                  placeholder="Offer title"
+                  placeholder="Angebotstitel"
+                  className={!formData.title && error ? 'border-red-500 ring-1 ring-red-500' : ''}
                 />
               </div>
 
