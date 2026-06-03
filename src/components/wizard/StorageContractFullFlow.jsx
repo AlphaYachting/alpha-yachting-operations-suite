@@ -113,7 +113,7 @@ export function StorageContractFullFlow() {
     pickup_address: '',
     distance_km: 0,
     storage_needed: true,
-    storage_period: 'season',
+    storage_period: '6_months',
     roof_option: false,
     selected_modules: [],
     selected_options: [],
@@ -571,9 +571,8 @@ export function StorageContractFullFlow() {
                   <SelectContent>
                     <SelectItem value="day">Täglich</SelectItem>
                     <SelectItem value="month">Monatlich</SelectItem>
-                    <SelectItem value="6_months">6 Monate</SelectItem>
+                    <SelectItem value="6_months">6 Monate (Saison)</SelectItem>
                     <SelectItem value="year">Ganzes Jahr</SelectItem>
-                    <SelectItem value="season">Ganze Saison</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
