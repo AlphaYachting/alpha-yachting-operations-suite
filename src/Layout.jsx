@@ -91,6 +91,7 @@ const navItems = [
   // RESOURCES
   { header: 'RESOURCES' },
   { name: 'Partner Kalkulator', icon: Calculator, page: 'PartnerKalkulator' },
+  { name: 'Storage Contract', icon: FileText, page: 'StorageContractWizard' },
   { name: 'Material Import', icon: Truck, page: 'MaterialImport' },
   { name: 'Technicians', icon: Wrench, page: 'Technicians' },
   { name: 'Vehicles', icon: Anchor, page: 'Vehicles' },

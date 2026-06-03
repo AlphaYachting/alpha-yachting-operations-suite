@@ -1,0 +1,50 @@
+{
+  "name": "StorageContractServiceItem",
+  "type": "object",
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "description": "Reference to StorageContract"
+    },
+    "sequence_order": {
+      "type": "number",
+      "default": 0
+    },
+    "title": {
+      "type": "string",
+      "description": "Service item title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Service description"
+    },
+    "quantity": {
+      "type": "number",
+      "default": 1
+    },
+    "unit": {
+      "type": "string",
+      "description": "Unit e.g. pau, h, kom"
+    },
+    "unit_price": {
+      "type": "number"
+    },
+    "total_price": {
+      "type": "number"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "STORAGE",
+        "TRANSPORT",
+        "SERVICE",
+        "OPTION"
+      ],
+      "default": "SERVICE"
+    }
+  },
+  "required": [
+    "contract_id",
+    "title"
+  ]
+}

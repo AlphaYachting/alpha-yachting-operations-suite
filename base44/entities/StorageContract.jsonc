@@ -1,0 +1,223 @@
+{
+  "name": "StorageContract",
+  "type": "object",
+  "properties": {
+    "contract_number": {
+      "type": "string",
+      "description": "Auto-generated contract reference e.g. SC-2026-0001"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Reference to Customer"
+    },
+    "boat_id": {
+      "type": "string",
+      "description": "Reference to Boat"
+    },
+    "location_id": {
+      "type": "string",
+      "description": "Reference to Location (storage site)"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "de",
+        "en",
+        "hr",
+        "sl"
+      ],
+      "default": "de",
+      "description": "Contract language \u2014 controls full PDF output"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Ready",
+        "Signed",
+        "Expired",
+        "Cancelled"
+      ],
+      "default": "Draft",
+      "description": "Contract lifecycle status"
+    },
+    "storage_type": {
+      "type": "string",
+      "enum": [
+        "outdoor",
+        "indoor",
+        "indoor_roof",
+        "tent"
+      ],
+      "description": "Type of storage"
+    },
+    "storage_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Storage period start"
+    },
+    "storage_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Storage period end"
+    },
+    "storage_period_label": {
+      "type": "string",
+      "description": "Human-readable period e.g. Winter 2026/2027"
+    },
+    "boat_length_m": {
+      "type": "number",
+      "description": "Boat length in meters"
+    },
+    "boat_location_on_site": {
+      "type": "string",
+      "description": "Exact location/berth on site"
+    },
+    "trailer_present": {
+      "type": "boolean",
+      "default": false,
+      "description": "Customer has own trailer"
+    },
+    "trailer_type": {
+      "type": "string",
+      "description": "Trailer make/model/details"
+    },
+    "trailer_plate": {
+      "type": "string",
+      "description": "Trailer license plate"
+    },
+    "trailer_dimensions": {
+      "type": "string",
+      "description": "Trailer dimensions (LxWxH)"
+    },
+    "transport_included": {
+      "type": "boolean",
+      "default": false,
+      "description": "Transport service included"
+    },
+    "transport_pickup_address": {
+      "type": "string",
+      "description": "Pickup address for transport"
+    },
+    "transport_distance_km": {
+      "type": "number",
+      "description": "Transport distance one-way km"
+    },
+    "price_storage_net": {
+      "type": "number",
+      "description": "Net storage price"
+    },
+    "price_transport_net": {
+      "type": "number",
+      "description": "Net transport price"
+    },
+    "price_services_net": {
+      "type": "number",
+      "description": "Net additional services price"
+    },
+    "price_total_net": {
+      "type": "number",
+      "description": "Total net price"
+    },
+    "vat_rate": {
+      "type": "number",
+      "default": 25,
+      "description": "VAT rate %"
+    },
+    "price_vat": {
+      "type": "number",
+      "description": "VAT amount"
+    },
+    "price_total_gross": {
+      "type": "number",
+      "description": "Total gross price"
+    },
+    "payment_terms": {
+      "type": "string",
+      "description": "Payment terms text"
+    },
+    "payment_due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Payment due date"
+    },
+    "boat_condition_notes": {
+      "type": "string",
+      "description": "Boat condition at handover"
+    },
+    "boat_condition_photos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Photo URLs of boat condition at handover"
+    },
+    "existing_damage_notes": {
+      "type": "string",
+      "description": "Pre-existing damage documentation"
+    },
+    "insurance_provider": {
+      "type": "string",
+      "description": "Customer insurance provider"
+    },
+    "insurance_policy_number": {
+      "type": "string",
+      "description": "Insurance policy number"
+    },
+    "insurance_valid_until": {
+      "type": "string",
+      "format": "date",
+      "description": "Insurance validity date"
+    },
+    "insurance_coverage_amount": {
+      "type": "number",
+      "description": "Insurance coverage amount"
+    },
+    "special_agreements": {
+      "type": "string",
+      "description": "Special agreements and individual clauses"
+    },
+    "signed_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date contract was signed"
+    },
+    "signed_place": {
+      "type": "string",
+      "description": "Place of signing"
+    },
+    "signed_by_customer": {
+      "type": "string",
+      "description": "Customer signer name"
+    },
+    "signed_by_provider": {
+      "type": "string",
+      "description": "Provider employee name who signed"
+    },
+    "signed_pdf_url": {
+      "type": "string",
+      "description": "URL of the archived signed PDF"
+    },
+    "pdf_generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the PDF was last generated"
+    },
+    "linked_offer_id": {
+      "type": "string",
+      "description": "Reference to source Offer (optional)"
+    },
+    "internal_notes": {
+      "type": "string",
+      "description": "Internal notes (not shown on contract)"
+    }
+  },
+  "required": [
+    "customer_id",
+    "boat_id",
+    "language",
+    "storage_type",
+    "storage_start_date",
+    "storage_end_date"
+  ]
+}
