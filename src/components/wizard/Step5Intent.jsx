@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { FileText, Briefcase, Compass, Ship, Anchor } from 'lucide-react';
+import { FileText, Briefcase, Compass, Ship, Anchor, BookOpen } from 'lucide-react';
 import { useWizard } from './WizardContext';
 import { WizardAlert } from './WizardAlert';
 
@@ -64,6 +64,13 @@ export function Step5Intent() {
       description: 'Generate a calculated offer using the pricing engine (storage, transport, modules)',
       icon: Anchor,
       color: 'text-emerald-600'
+    },
+    {
+      value: 'storage_contract',
+      label: 'Storage Contract (Lagervertrag)',
+      description: 'Generate a complete, legally binding storage contract PDF in DE / EN / HR / SL',
+      icon: BookOpen,
+      color: 'text-blue-700'
     }
   ];
 
@@ -80,6 +87,8 @@ export function Step5Intent() {
       setStep(5.5); // Go to project selection
     } else if (wizardData.intent === 'storage_transport') {
       setStep(6); // Go directly to Storage & Transport configurator — no vessel/location needed
+    } else if (wizardData.intent === 'storage_contract') {
+      setStep(6); // Go directly to Storage Contract flow
     } else {
       setStep(6); // Go to details
     }
