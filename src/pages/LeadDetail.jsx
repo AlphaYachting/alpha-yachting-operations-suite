@@ -46,6 +46,8 @@ import {
 import { format, parseISO } from 'date-fns';
 import LeadFormV2 from '@/components/leadsV2/LeadForm';
 import LeadIntelligencePanel from '@/components/leads/LeadIntelligencePanel';
+import { toast } from 'sonner';
+import { RefreshCw } from 'lucide-react';
 
 const statusColors = {
   'New Incoming': 'bg-amber-100 text-amber-700',
@@ -99,6 +101,8 @@ export default function LeadDetail() {
   const [editCustomers, setEditCustomers] = useState([]);
   const [editLocations, setEditLocations] = useState([]);
   const [editBoats, setEditBoats] = useState([]);
+  const [linkedEmail, setLinkedEmail] = useState(null);
+  const [retryingEmail, setRetryingEmail] = useState(false);
 
   useEffect(() => {
     loadCurrentUser();
@@ -174,6 +178,16 @@ export default function LeadDetail() {
       if (leadRecord.location_id) {
         const [locData] = await base44.entities.Location.filter({ id: leadRecord.location_id });
         if (locData) setLocation(locData);
+      }
+
+      // Load linked email if created from email
+      if (leadRecord.notes && leadRecord.notes.includes('Message-ID:')) {
+        const msgIdMatch = leadRecord.notes.match(/Message-ID:\s*<([^>]+)>/);
+        if (msgIdMatch) {
+          const msgId = `<${msgIdMatch[1]}>`;
+          const emails = await base44.entities.EmailMessageSandbox.filter({ message_id: msgId });
+          if (emails?.[0]) setLinkedEmail(emails[0]);
+        }
       }
     } catch (error) {
       console.error('Error loading lead details:', error);
@@ -344,6 +358,29 @@ export default function LeadDetail() {
       console.error('Error toggling acceptance:', error);
     } finally {
       setSavingAcceptance(false);
+    }
+  };
+
+  const handleRetryEmailBody = async () => {
+    if (!linkedEmail) return;
+    setRetryingEmail(true);
+    try {
+      const res = await base44.functions.invoke('emailRetryAndProcess', {
+        sandbox_record_id: linkedEmail.id,
+        create_lead: false,
+      });
+      if (res.data?.body_fetched) {
+        toast.success(`E-Mail Body geladen (${res.data.body_length} Zeichen)`);
+        // Reload email to show updated body
+        const emails = await base44.entities.EmailMessageSandbox.filter({ id: linkedEmail.id });
+        if (emails?.[0]) setLinkedEmail(emails[0]);
+      } else {
+        toast.warning('Body konnte nicht geladen werden — IMAP Timeout. Später erneut versuchen.');
+      }
+    } catch (err) {
+      toast.error(`Fehler: ${err.message}`);
+    } finally {
+      setRetryingEmail(false);
     }
   };
 
@@ -692,6 +729,32 @@ export default function LeadDetail() {
             <div>
               <p className="text-sm font-medium text-slate-700 mb-1">Notes</p>
               <p className="text-sm text-slate-600 whitespace-pre-wrap">{lead.notes}</p>
+            </div>
+          )}
+
+          {/* Linked Email Body */}
+          {linkedEmail && (
+            <div className="border-t border-slate-200 pt-4">
+              <p className="text-sm font-medium text-slate-700 mb-2">Verknüpfte E-Mail: {linkedEmail.subject}</p>
+              {linkedEmail.body_text && linkedEmail.body_text.trim() ? (
+                <pre className="text-sm text-slate-700 whitespace-pre-wrap bg-slate-50 rounded-lg p-3 max-h-64 overflow-y-auto font-sans leading-relaxed">
+                  {linkedEmail.body_text}
+                </pre>
+              ) : (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex flex-col gap-2">
+                  <p className="text-sm text-amber-800 font-medium">E-Mail Body fehlt — wurde beim Abrufen nicht geladen.</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRetryEmailBody}
+                    disabled={retryingEmail}
+                    className="w-fit text-xs border-amber-300 text-amber-800 hover:bg-amber-100"
+                  >
+                    <RefreshCw className={`h-3 w-3 mr-1 ${retryingEmail ? 'animate-spin' : ''}`} />
+                    {retryingEmail ? 'Lädt...' : 'E-Mail Body neu laden'}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
