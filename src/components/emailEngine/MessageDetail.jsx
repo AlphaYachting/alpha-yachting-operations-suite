@@ -246,7 +246,7 @@ export default function MessageDetail({ message, conversationKey, onClose, onRep
       </div>
       <div className="overflow-y-auto max-h-[650px]">
         <div className="p-4">
-          {/* Retry Banner — shown when body is empty */}
+          {/* Retry Banner — shown when body is empty, regardless of processing_status */}
           {bodyMissing && localMessage.direction === 'inbound' && (
             <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex flex-col gap-2">
               <div className="flex items-center gap-2">

@@ -31,7 +31,29 @@ function htmlToText(html) {
 }
 
 function decodeQuotedPrintable(str) {
-  return str.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+  // Decode soft line breaks first, then hex sequences to bytes, then interpret as UTF-8
+  const withoutSoftBreaks = str.replace(/=\r?\n/g, '');
+  // Collect bytes and decode as UTF-8
+  const bytes = [];
+  let i = 0;
+  while (i < withoutSoftBreaks.length) {
+    if (withoutSoftBreaks[i] === '=' && i + 2 < withoutSoftBreaks.length) {
+      const hex = withoutSoftBreaks.substring(i + 1, i + 3);
+      if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+        bytes.push(parseInt(hex, 16));
+        i += 3;
+        continue;
+      }
+    }
+    bytes.push(withoutSoftBreaks.charCodeAt(i));
+    i++;
+  }
+  try {
+    return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+  } catch (_) {
+    // fallback: latin-1
+    return bytes.map(b => String.fromCharCode(b)).join('');
+  }
 }
 
 function safeErr(err) {
@@ -116,7 +138,8 @@ async function rawImapCommand(host, port, user, pass, fetchCmd) {
   conn = await withTimeout(Deno.connectTls({ hostname: host, port, alpnProtocols: [] }), 8000, 'connect');
 
   const enc = new TextEncoder();
-  const dec = new TextDecoder('latin1'); // binary-safe
+  const dec = new TextDecoder('latin1'); // latin1 for protocol control lines (ASCII-safe)
+  const binDec = new TextDecoder('latin1'); // same — literal body bytes collected separately
 
   let tag = 1;
   const send = async (cmd) => {
