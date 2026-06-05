@@ -1,34 +1,32 @@
-// EMAIL ENGINE - Fetch & Store Inbound Messages
-// v3: envelope-first, then fetchOne per message with tight timeouts.
-// Avoids bulk bodyParts batch which causes IMAP socket hangs on edis.at.
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+/**
+ * EMAIL ENGINE — Fetch & Store Inbound Messages
+ *
+ * ARCHITECTURE:
+ * Phase 1: IMAP ENVELOPE FETCH (fast) — get metadata, deduplicate
+ * Phase 2: RAW TLS BODY FETCH (reliable) — same approach as emailRetryAndProcess
+ *          Uses Deno.connectTls directly, multiple IMAP strategies, proper UTF-8 QP decoding.
+ *          If body fetch fails/times out, stores the record with empty body (status=fetched)
+ *          so the auto-retry automation can pick it up later.
+ *
+ * ROOT CAUSE OF PREVIOUS FAILURES:
+ * - imapflow.fetchOne() was silently returning empty bodyParts on Dovecot/edis.at
+ * - decodeQuotedPrintable was using String.fromCharCode (latin-1) instead of TextDecoder (utf-8)
+ * - No retry mechanism for empty-body records
+ */
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { ImapFlow } from 'npm:imapflow@1.0.167';
 
-const HARD_LIMIT_MS = 45000; // leave 15s buffer before Deno 60s kill
+const HARD_LIMIT_MS = 42000;
 const IMAP_CONNECT_TIMEOUT = 10000;
-const IMAP_SOCKET_TIMEOUT = 15000;
+const IMAP_SOCKET_TIMEOUT = 12000;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function normalizeSubject(subject) {
   if (!subject) return '';
   return subject.replace(/^((Re|Fwd?|AW|WG|SV|VS|FWD?|R|I)(\[\d+\])?:\s*)+/gi, '').trim().toLowerCase();
-}
-
-function htmlToText(html) {
-  if (!html) return '';
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n')
-    .replace(/<\/li>/gi, '\n').replace(/<\/tr>/gi, '\n')
-    .replace(/<td[^>]*>/gi, ' ').replace(/<\/td>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
 }
 
 function buildConversationKey(messageId, fromEmail, normalizedSubject) {
@@ -46,55 +44,191 @@ function safeErr(err) {
     .substring(0, 500);
 }
 
+function htmlToText(html) {
+  if (!html) return '';
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n').replace(/<\/tr>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n').replace(/[ \t]+/g, ' ')
+    .trim();
+}
+
+/**
+ * Proper QP decode: collects raw bytes, then TextDecoder('utf-8')
+ * This is the CORRECT approach — String.fromCharCode causes latin-1 corruption for multi-byte chars.
+ */
 function decodeQuotedPrintable(str) {
-  return str.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-}
-
-function decodeAndClean(buf) {
-  if (!buf || buf.length === 0) return '';
-  const text = buf.toString('utf-8');
-  // Try base64 decode
-  if (/^[A-Za-z0-9+/\r\n]+=*$/.test(text.trim()) && text.length > 50) {
-    try {
-      const decoded = atob(text.replace(/\r?\n/g, ''));
-      const bytes = new Uint8Array(decoded.length);
-      for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
-      const str = new TextDecoder('utf-8').decode(bytes);
-      return /<html|<body|<div|<table/i.test(str) ? htmlToText(str) : str;
-    } catch (_) {}
-  }
-  const qp = decodeQuotedPrintable(text);
-  return /<html|<body|<div|<table/i.test(qp) ? htmlToText(qp) : qp;
-}
-
-function extractBodyText(bodyParts) {
-  if (!bodyParts) return '';
-  // Try all known part keys in priority order: plain text first, then HTML variants
-  const partKeys = ['1', 'TEXT', '1.1', '1.2', '2', '2.1', '1.TEXT', '1.MIME'];
-  for (const key of partKeys) {
-    const part = bodyParts[key];
-    if (part && part.length > 10) {
-      const result = decodeAndClean(part);
-      if (result && result.trim().length > 5) return result.substring(0, 10000);
+  const withoutSoftBreaks = str.replace(/=\r?\n/g, '');
+  const bytes = [];
+  let i = 0;
+  while (i < withoutSoftBreaks.length) {
+    if (withoutSoftBreaks[i] === '=' && i + 2 < withoutSoftBreaks.length) {
+      const hex = withoutSoftBreaks.substring(i + 1, i + 3);
+      if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
+        bytes.push(parseInt(hex, 16));
+        i += 3;
+        continue;
+      }
     }
+    bytes.push(withoutSoftBreaks.charCodeAt(i));
+    i++;
   }
-  // Fallback: try any non-empty part
-  for (const [key, part] of Object.entries(bodyParts)) {
-    if (part && part.length > 10) {
-      const result = decodeAndClean(part);
-      if (result && result.trim().length > 5) return result.substring(0, 10000);
-    }
+  try {
+    return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+  } catch (_) {
+    return bytes.map(b => String.fromCharCode(b)).join('');
   }
-  return '';
 }
 
-// Wraps a promise with a hard timeout — rejects after ms milliseconds
 function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout: ${label} (${ms}ms)`)), ms))
   ]);
 }
+
+// ---------------------------------------------------------------------------
+// Raw TLS IMAP body fetch — bypasses imapflow entirely
+// Same approach as emailRetryAndProcess (proven to work)
+// ---------------------------------------------------------------------------
+
+async function rawImapFetchBody(host, port, user, pass, uid) {
+  const TIMEOUT_MS = 12000;
+
+  const strategies = [
+    `FETCH ${uid} BODY.PEEK[1]`,
+    `UID FETCH ${uid} BODY.PEEK[1]`,
+    `FETCH ${uid} BODY.PEEK[TEXT]`,
+    `UID FETCH ${uid} BODY.PEEK[TEXT]`,
+    `FETCH ${uid} (RFC822.TEXT)`,
+  ];
+
+  for (const fetchCmd of strategies) {
+    let conn;
+    try {
+      const enc = new TextEncoder();
+      const dec = new TextDecoder('latin1');
+
+      conn = await withTimeout(
+        Deno.connectTls({ hostname: host, port, alpnProtocols: [] }),
+        6000, 'tls_connect'
+      );
+
+      let readBuf = new Uint8Array(0);
+      let tag = 1;
+
+      const send = async (cmd) => {
+        await conn.write(enc.encode(`A${tag++} ${cmd}\r\n`));
+      };
+
+      const readLine = async () => {
+        while (true) {
+          const str = dec.decode(readBuf);
+          const idx = str.indexOf('\r\n');
+          if (idx !== -1) {
+            const line = str.substring(0, idx);
+            readBuf = enc.encode(str.substring(idx + 2));
+            return line;
+          }
+          const chunk = new Uint8Array(4096);
+          const n = await withTimeout(conn.read(chunk), TIMEOUT_MS, 'readline');
+          if (n === null) throw new Error('connection_closed');
+          const combined = new Uint8Array(readBuf.length + n);
+          combined.set(readBuf);
+          combined.set(chunk.subarray(0, n), readBuf.length);
+          readBuf = combined;
+        }
+      };
+
+      const readBytes = async (n) => {
+        while (readBuf.length < n) {
+          const chunk = new Uint8Array(Math.max(4096, n - readBuf.length));
+          const read = await withTimeout(conn.read(chunk), TIMEOUT_MS, 'readbytes');
+          if (read === null) throw new Error('connection_closed_literal');
+          const combined = new Uint8Array(readBuf.length + read);
+          combined.set(readBuf);
+          combined.set(chunk.subarray(0, read), readBuf.length);
+          readBuf = combined;
+        }
+        const result = readBuf.subarray(0, n);
+        readBuf = readBuf.subarray(n);
+        return result; // return Uint8Array, not string — preserve bytes for UTF-8 decode
+      };
+
+      // Greeting
+      const greeting = await readLine();
+      if (!greeting.startsWith('* OK')) throw new Error(`bad_greeting`);
+
+      // Auth
+      await send(`LOGIN "${user}" "${pass}"`);
+      let line;
+      do { line = await readLine(); } while (!line.match(/^A\d+ (OK|NO|BAD)/));
+      if (!line.match(/^A\d+ OK/)) throw new Error('auth_failed');
+
+      // Select
+      await send('SELECT INBOX');
+      do { line = await readLine(); } while (!line.match(/^A\d+ (OK|NO|BAD)/));
+      if (!line.match(/^A\d+ OK/)) throw new Error('select_failed');
+
+      // Fetch
+      await send(fetchCmd);
+
+      let bodyBytes = null;
+      while (true) {
+        line = await readLine();
+        const litMatch = line.match(/\{(\d+)\}$/);
+        if (litMatch) {
+          const size = parseInt(litMatch[1]);
+          bodyBytes = await readBytes(size);
+          await readLine(); // trailing CRLF
+          break;
+        }
+        if (line.match(/^A\d+ (OK|NO|BAD)/)) break;
+      }
+
+      try { await send('LOGOUT'); } catch (_) {}
+      try { conn.close(); } catch (_) {}
+
+      if (bodyBytes && bodyBytes.length > 0) {
+        // Decode as UTF-8 first, fall back to latin-1
+        let raw;
+        try {
+          raw = new TextDecoder('utf-8').decode(bodyBytes);
+        } catch (_) {
+          raw = new TextDecoder('latin1').decode(bodyBytes);
+        }
+
+        // Detect if QP encoded
+        const isQP = /=[0-9A-F]{2}/i.test(raw) && raw.includes('=');
+        const decoded = isQP ? decodeQuotedPrintable(raw) : raw;
+
+        // Detect HTML
+        const isHtml = /<html|<body|<div|<table/i.test(decoded);
+        const text = isHtml ? htmlToText(decoded) : decoded;
+
+        if (text.trim().length > 5) {
+          return text.substring(0, 10000);
+        }
+      }
+    } catch (_err) {
+      try { if (conn) conn.close(); } catch (_) {}
+      // Try next strategy
+    }
+  }
+
+  return ''; // All strategies failed
+}
+
+// ---------------------------------------------------------------------------
+// MAIN HANDLER
+// ---------------------------------------------------------------------------
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
@@ -104,7 +238,6 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    // Keep batch small — each fetchOne takes time
     const batchSize = Math.min(Math.max(parseInt(body.batch_size) || 8, 3), 15);
 
     const host = Deno.env.get('EMAIL_ENGINE_IMAP_HOST');
@@ -115,6 +248,7 @@ Deno.serve(async (req) => {
     if (!host || !imapUser || !imapPass) {
       return Response.json({ success: false, error: 'IMAP secrets not configured', log });
     }
+
     log.push({ step: 'config', host, port, user: imapUser, batch: batchSize, ts: 0 });
 
     // Load existing message IDs for deduplication
@@ -132,8 +266,9 @@ Deno.serve(async (req) => {
     const convMap = new Map((existingConversations || []).map(c => [c.conversation_key, c]));
     log.push({ step: 'db_loaded', known_ids: existingMsgIds.size, convs: convMap.size, ts: Date.now() - startTime });
 
-    const results = { fetched: 0, stored: 0, duplicates: 0, errors: 0, messages: [] };
+    const results = { fetched: 0, stored: 0, stored_without_body: 0, duplicates: 0, errors: 0, messages: [] };
 
+    // --- Phase 1: Envelope fetch via imapflow (fast, reliable) ---
     client = new ImapFlow({
       host, port,
       secure: true,
@@ -152,13 +287,12 @@ Deno.serve(async (req) => {
     const total = client.mailbox?.exists || 0;
     log.push({ step: 'inbox', total, ts: Date.now() - startTime });
 
+    const toFetch = [];
     try {
       if (total > 0) {
         const startSeq = Math.max(1, total - batchSize + 1);
         const range = `${startSeq}:${total}`;
 
-        // Phase 1: Fetch envelopes only — fast, no body
-        const toFetch = [];
         for await (const msg of client.fetch(range, { envelope: true, uid: true })) {
           results.fetched++;
           const messageId = msg.envelope?.messageId || null;
@@ -174,128 +308,128 @@ Deno.serve(async (req) => {
           toFetch.push({ uid: msg.uid, envelope: msg.envelope });
         }
         log.push({ step: 'envelopes_done', new_count: toFetch.length, ts: Date.now() - startTime });
-
-        // Phase 2: Per-message body fetch + store — bail out before hard limit
-        for (const info of toFetch) {
-          if (Date.now() - startTime > HARD_LIMIT_MS) {
-            log.push({ step: 'hard_limit_reached', remaining: toFetch.length, ts: Date.now() - startTime });
-            break;
-          }
-
-          let bodyText = '';
-          let bodyPartsReceived = [];
-          try {
-            // fetchOne with a 14s timeout — request more part variants for forwarded/form emails
-            const msgWithBody = await withTimeout(
-              client.fetchOne(String(info.uid), { bodyParts: ['1', '2', '1.1', '1.2', 'TEXT'] }, { uid: true }),
-              14000,
-              `fetchOne uid=${info.uid}`
-            );
-            if (msgWithBody?.bodyParts) {
-              bodyPartsReceived = Object.keys(msgWithBody.bodyParts).filter(k => msgWithBody.bodyParts[k]?.length > 0);
-            }
-            bodyText = extractBodyText(msgWithBody?.bodyParts);
-            log.push({ step: 'body_fetched', uid: info.uid, parts: bodyPartsReceived, bodyLen: bodyText.length, ts: Date.now() - startTime });
-          } catch (bodyErr) {
-            log.push({ step: 'body_skip', uid: info.uid, reason: safeErr(bodyErr), ts: Date.now() - startTime });
-            // Store message without body — better than dropping it entirely
-          }
-
-          try {
-            const env = info.envelope;
-            const messageId = env?.messageId || null;
-            const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
-            const fromName = env?.from?.[0]?.name || fromEmail;
-            const toEmails = (env?.to || []).map(a => a.address).filter(Boolean);
-            const ccEmails = (env?.cc || []).map(a => a.address).filter(Boolean);
-            const subject = env?.subject || '(no subject)';
-            const normalizedSubj = normalizeSubject(subject);
-            const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
-            const conversationKey = buildConversationKey(messageId, fromEmail, normalizedSubj);
-
-            // Extract Reply-To from envelope if present
-            const replyToEmails = (env?.replyTo || []).map(a => a.address).filter(Boolean);
-            const replyToHeader = replyToEmails.length > 0 ? replyToEmails[0] : null;
-
-            await base44.asServiceRole.entities.EmailMessageSandbox.create({
-              mailbox_name: imapUser,
-              direction: 'inbound',
-              message_id: messageId,
-              conversation_key: conversationKey,
-              linked_conversation_key: conversationKey,
-              in_reply_to: env?.inReplyTo || null,
-              references_header: [],
-              from_name: fromName,
-              from_email: fromEmail,
-              to_email: toEmails,
-              cc_emails: ccEmails,
-              bcc_emails: [],
-              subject,
-              normalized_subject: normalizedSubj,
-              received_at: receivedAt,
-              body_text: bodyText,
-              body_html_sanitized: '',
-              body_preview: bodyText.substring(0, 300),
-              has_attachments: false,
-              attachment_count: 0,
-              attachments_meta_json: [],
-              raw_headers_json: replyToHeader ? { reply_to: replyToHeader } : {},
-              duplicate_status: 'original',
-              processing_status: bodyText ? 'stored' : 'fetched',
-              security_flag: 'normal',
-              reviewed_manually: false,
-              future_agent_access_allowed: false,
-              future_agent_processing_status: 'disabled',
-            });
-
-            if (messageId) existingMsgIds.add(messageId);
-
-            // Update or create conversation
-            const allParticipants = Array.from(new Set([fromEmail, ...toEmails, ...ccEmails]));
-            const existingConv = convMap.get(conversationKey);
-            if (existingConv) {
-              await base44.asServiceRole.entities.EmailConversationSandbox.update(existingConv.id, {
-                last_message_at: receivedAt,
-                message_count: (existingConv.message_count || 0) + 1,
-                latest_direction: 'inbound',
-                latest_from_email: fromEmail,
-                latest_to_email: toEmails,
-                latest_preview: bodyText.substring(0, 200),
-                participant_summary: Array.from(new Set([...(existingConv.participant_summary || []), ...allParticipants])),
-              });
-              existingConv.message_count = (existingConv.message_count || 0) + 1;
-            } else {
-              const newConv = await base44.asServiceRole.entities.EmailConversationSandbox.create({
-                conversation_key: conversationKey,
-                primary_subject: subject,
-                normalized_subject: normalizedSubj,
-                participant_summary: allParticipants,
-                first_message_at: receivedAt,
-                last_message_at: receivedAt,
-                message_count: 1,
-                latest_direction: 'inbound',
-                latest_from_email: fromEmail,
-                latest_to_email: toEmails,
-                latest_preview: bodyText.substring(0, 200),
-                status_internal: 'open',
-                reviewed_manually: false,
-                future_agent_access_allowed: false,
-              });
-              convMap.set(conversationKey, newConv);
-            }
-
-            results.stored++;
-            results.messages.push({ status: 'stored', message_id: messageId, from: fromEmail, subject });
-
-          } catch (storeErr) {
-            results.errors++;
-            results.messages.push({ status: 'store_error', uid: info.uid, error: safeErr(storeErr) });
-          }
-        }
       }
     } finally {
       lock.release();
+      // Close imapflow — we'll use raw TLS for body fetch
       await client.logout().catch(() => {});
+      client = null;
+    }
+
+    // --- Phase 2: Per-message raw TLS body fetch + store ---
+    for (const info of toFetch) {
+      if (Date.now() - startTime > HARD_LIMIT_MS) {
+        log.push({ step: 'hard_limit_reached', remaining: toFetch.length, ts: Date.now() - startTime });
+        break;
+      }
+
+      const env = info.envelope;
+      const messageId = env?.messageId || null;
+      const fromEmail = env?.from?.[0]?.address || 'unknown@unknown';
+      const fromName = env?.from?.[0]?.name || fromEmail;
+      const toEmails = (env?.to || []).map(a => a.address).filter(Boolean);
+      const ccEmails = (env?.cc || []).map(a => a.address).filter(Boolean);
+      const subject = env?.subject || '(no subject)';
+      const normalizedSubj = normalizeSubject(subject);
+      const receivedAt = env?.date ? new Date(env.date).toISOString() : new Date().toISOString();
+      const conversationKey = buildConversationKey(messageId, fromEmail, normalizedSubj);
+      const replyToEmails = (env?.replyTo || []).map(a => a.address).filter(Boolean);
+      const replyToHeader = replyToEmails.length > 0 ? replyToEmails[0] : null;
+
+      // Raw TLS body fetch — proven reliable on Dovecot/edis.at
+      let bodyText = '';
+      try {
+        bodyText = await withTimeout(
+          rawImapFetchBody(host, port, imapUser, imapPass, info.uid),
+          18000,
+          `body_uid=${info.uid}`
+        );
+        log.push({ step: 'body_fetched', uid: info.uid, bodyLen: bodyText.length, ts: Date.now() - startTime });
+      } catch (bodyErr) {
+        log.push({ step: 'body_skip', uid: info.uid, reason: safeErr(bodyErr), ts: Date.now() - startTime });
+        // Store without body — auto-retry automation will pick it up
+      }
+
+      try {
+        await base44.asServiceRole.entities.EmailMessageSandbox.create({
+          mailbox_name: imapUser,
+          direction: 'inbound',
+          message_id: messageId,
+          conversation_key: conversationKey,
+          linked_conversation_key: conversationKey,
+          in_reply_to: env?.inReplyTo || null,
+          references_header: [],
+          from_name: fromName,
+          from_email: fromEmail,
+          to_email: toEmails,
+          cc_emails: ccEmails,
+          bcc_emails: [],
+          subject,
+          normalized_subject: normalizedSubj,
+          received_at: receivedAt,
+          body_text: bodyText,
+          body_html_sanitized: '',
+          body_preview: bodyText.substring(0, 300),
+          has_attachments: false,
+          attachment_count: 0,
+          attachments_meta_json: [],
+          raw_headers_json: replyToHeader ? { reply_to: replyToHeader } : {},
+          duplicate_status: 'original',
+          // 'stored' = has body, 'fetched' = no body yet (auto-retry will handle)
+          processing_status: bodyText ? 'stored' : 'fetched',
+          security_flag: 'normal',
+          reviewed_manually: false,
+          future_agent_access_allowed: false,
+          future_agent_processing_status: 'disabled',
+        });
+
+        if (messageId) existingMsgIds.add(messageId);
+
+        // Update or create conversation
+        const allParticipants = Array.from(new Set([fromEmail, ...toEmails, ...ccEmails]));
+        const existingConv = convMap.get(conversationKey);
+        if (existingConv) {
+          await base44.asServiceRole.entities.EmailConversationSandbox.update(existingConv.id, {
+            last_message_at: receivedAt,
+            message_count: (existingConv.message_count || 0) + 1,
+            latest_direction: 'inbound',
+            latest_from_email: fromEmail,
+            latest_to_email: toEmails,
+            latest_preview: bodyText.substring(0, 200),
+            participant_summary: Array.from(new Set([...(existingConv.participant_summary || []), ...allParticipants])),
+          });
+          existingConv.message_count = (existingConv.message_count || 0) + 1;
+        } else {
+          const newConv = await base44.asServiceRole.entities.EmailConversationSandbox.create({
+            conversation_key: conversationKey,
+            primary_subject: subject,
+            normalized_subject: normalizedSubj,
+            participant_summary: allParticipants,
+            first_message_at: receivedAt,
+            last_message_at: receivedAt,
+            message_count: 1,
+            latest_direction: 'inbound',
+            latest_from_email: fromEmail,
+            latest_to_email: toEmails,
+            latest_preview: bodyText.substring(0, 200),
+            status_internal: 'open',
+            reviewed_manually: false,
+            future_agent_access_allowed: false,
+          });
+          convMap.set(conversationKey, newConv);
+        }
+
+        if (bodyText) {
+          results.stored++;
+        } else {
+          results.stored_without_body++;
+        }
+        results.messages.push({ status: bodyText ? 'stored' : 'stored_no_body', message_id: messageId, from: fromEmail, subject });
+
+      } catch (storeErr) {
+        results.errors++;
+        results.messages.push({ status: 'store_error', uid: info.uid, error: safeErr(storeErr) });
+      }
     }
 
     log.push({ step: 'done', ts: Date.now() - startTime });
@@ -305,6 +439,7 @@ Deno.serve(async (req) => {
       summary: {
         fetched: results.fetched,
         stored: results.stored,
+        stored_without_body: results.stored_without_body,
         duplicates: results.duplicates,
         errors: results.errors,
         execution_time_ms: Date.now() - startTime,

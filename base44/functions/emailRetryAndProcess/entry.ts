@@ -67,13 +67,22 @@ function extractBodyFromParts(bodyParts) {
   for (const key of ['TEXT', '1', '1.1', '1.2']) {
     const part = bodyParts[key];
     if (part && part.length > 0) {
-      return part.toString('utf-8').substring(0, 15000);
+      // Decode as UTF-8 bytes first, then apply QP decoding if needed
+      let raw;
+      try { raw = new TextDecoder('utf-8').decode(part); } catch (_) { raw = part.toString('latin1'); }
+      const isQP = /=[0-9A-F]{2}/i.test(raw);
+      const decoded = isQP ? decodeQuotedPrintable(raw) : raw;
+      return decoded.substring(0, 15000);
     }
   }
   for (const key of ['2', '1.2', 'HTML']) {
     const part = bodyParts[key];
     if (part && part.length > 0) {
-      return htmlToText(part.toString('utf-8')).substring(0, 15000);
+      let raw;
+      try { raw = new TextDecoder('utf-8').decode(part); } catch (_) { raw = part.toString('latin1'); }
+      const isQP = /=[0-9A-F]{2}/i.test(raw);
+      const decoded = isQP ? decodeQuotedPrintable(raw) : raw;
+      return htmlToText(decoded).substring(0, 15000);
     }
   }
   return '';
