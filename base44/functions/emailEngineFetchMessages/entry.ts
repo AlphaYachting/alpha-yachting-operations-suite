@@ -87,6 +87,87 @@ function decodeQuotedPrintable(str) {
   }
 }
 
+/**
+ * Decode a MIME body part — handles:
+ * 1. Pure base64 (Content-Transfer-Encoding: base64)
+ * 2. Quoted-Printable
+ * 3. Multipart MIME — extracts the first text/plain part (or text/html as fallback)
+ * 4. Plain text (no encoding)
+ */
+function decodeMimeBody(raw) {
+  if (!raw || !raw.trim()) return '';
+
+  // Check if this looks like a full MIME multipart message
+  // (contains MIME boundary markers and Content-Type headers)
+  const hasMultipart = /--[^\r\n]{10,}/m.test(raw) && /Content-Type:\s*text\//im.test(raw);
+
+  if (hasMultipart) {
+    // Extract boundary
+    const boundaryMatch = raw.match(/boundary="?([^"\r\n;]+)"?/i);
+    const boundary = boundaryMatch ? boundaryMatch[1].trim() : null;
+
+    if (boundary) {
+      // Split by boundary, find text/plain part first
+      const parts = raw.split(new RegExp(`--${boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g'));
+      let plainText = '';
+      let htmlText = '';
+
+      for (const part of parts) {
+        if (!part.trim() || part.startsWith('--')) continue;
+
+        const headerEnd = part.indexOf('\r\n\r\n');
+        if (headerEnd === -1) continue;
+        const headers = part.substring(0, headerEnd);
+        const body = part.substring(headerEnd + 4);
+
+        const isPlain = /Content-Type:\s*text\/plain/i.test(headers);
+        const isHtmlPart = /Content-Type:\s*text\/html/i.test(headers);
+        const isBase64 = /Content-Transfer-Encoding:\s*base64/i.test(headers);
+        const isQPPart = /Content-Transfer-Encoding:\s*quoted-printable/i.test(headers);
+
+        if (isPlain || isHtmlPart) {
+          let decoded = body.trim();
+          if (isBase64) {
+            try {
+              const b64 = decoded.replace(/\r?\n/g, '');
+              const binStr = atob(b64);
+              const bytes = new Uint8Array(binStr.length);
+              for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+              decoded = new TextDecoder('utf-8').decode(bytes);
+            } catch (_) { /* keep raw */ }
+          } else if (isQPPart) {
+            decoded = decodeQuotedPrintable(decoded);
+          }
+          if (isPlain && !plainText) plainText = decoded;
+          if (isHtmlPart && !htmlText) htmlText = decoded;
+        }
+      }
+
+      // Prefer plain text; fall back to HTML
+      if (plainText.trim()) return plainText.trim();
+      if (htmlText.trim()) return htmlToText(htmlText.trim());
+    }
+  }
+
+  // Not multipart — check if the whole thing is base64
+  const stripped = raw.replace(/\r?\n/g, '');
+  if (/^[A-Za-z0-9+/]+=*$/.test(stripped) && stripped.length > 50) {
+    try {
+      const binStr = atob(stripped);
+      const bytes = new Uint8Array(binStr.length);
+      for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+      return new TextDecoder('utf-8').decode(bytes);
+    } catch (_) { /* not valid base64 */ }
+  }
+
+  // Check if QP
+  if (/=[0-9A-F]{2}/i.test(raw)) {
+    return decodeQuotedPrintable(raw);
+  }
+
+  return raw;
+}
+
 function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
@@ -205,9 +286,7 @@ async function rawImapFetchBody(host, port, user, pass, uid) {
           raw = new TextDecoder('latin1').decode(bodyBytes);
         }
 
-        // Detect if QP encoded
-        const isQP = /=[0-9A-F]{2}/i.test(raw) && raw.includes('=');
-        const decoded = isQP ? decodeQuotedPrintable(raw) : raw;
+        const decoded = decodeMimeBody(raw);
 
         // Detect HTML
         const isHtml = /<html|<body|<div|<table/i.test(decoded);

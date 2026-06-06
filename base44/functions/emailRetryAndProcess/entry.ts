@@ -88,23 +88,77 @@ function extractBodyFromParts(bodyParts) {
   return '';
 }
 
+function decodeMimeBody(raw) {
+  if (!raw || !raw.trim()) return '';
+
+  const hasMultipart = /--[^\r\n]{10,}/m.test(raw) && /Content-Type:\s*text\//im.test(raw);
+
+  if (hasMultipart) {
+    const boundaryMatch = raw.match(/boundary="?([^"\r\n;]+)"?/i);
+    const boundary = boundaryMatch ? boundaryMatch[1].trim() : null;
+
+    if (boundary) {
+      const parts = raw.split(new RegExp(`--${boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g'));
+      let plainText = '';
+      let htmlText = '';
+
+      for (const part of parts) {
+        if (!part.trim() || part.startsWith('--')) continue;
+        const headerEnd = part.indexOf('\r\n\r\n');
+        if (headerEnd === -1) continue;
+        const headers = part.substring(0, headerEnd);
+        const body = part.substring(headerEnd + 4);
+
+        const isPlain = /Content-Type:\s*text\/plain/i.test(headers);
+        const isHtmlPart = /Content-Type:\s*text\/html/i.test(headers);
+        const isBase64 = /Content-Transfer-Encoding:\s*base64/i.test(headers);
+        const isQPPart = /Content-Transfer-Encoding:\s*quoted-printable/i.test(headers);
+
+        if (isPlain || isHtmlPart) {
+          let decoded = body.trim();
+          if (isBase64) {
+            try {
+              const b64 = decoded.replace(/\r?\n/g, '');
+              const binStr = atob(b64);
+              const bytes = new Uint8Array(binStr.length);
+              for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+              decoded = new TextDecoder('utf-8').decode(bytes);
+            } catch (_) {}
+          } else if (isQPPart) {
+            decoded = decodeQuotedPrintable(decoded);
+          }
+          if (isPlain && !plainText) plainText = decoded;
+          if (isHtmlPart && !htmlText) htmlText = decoded;
+        }
+      }
+
+      if (plainText.trim()) return plainText.trim().substring(0, 15000);
+      if (htmlText.trim()) return htmlToText(htmlText.trim()).substring(0, 15000);
+    }
+  }
+
+  // Single-part: check base64
+  const stripped = raw.replace(/\r?\n/g, '');
+  if (/^[A-Za-z0-9+/]+=*$/.test(stripped) && stripped.length > 50) {
+    try {
+      const binStr = atob(stripped);
+      const bytes = new Uint8Array(binStr.length);
+      for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
+      return new TextDecoder('utf-8').decode(bytes).substring(0, 15000);
+    } catch (_) {}
+  }
+
+  // QP fallback
+  if (/=[0-9A-F]{2}/i.test(raw)) return decodeQuotedPrintable(raw).substring(0, 15000);
+
+  return raw.substring(0, 15000);
+}
+
 function extractBodyFromSource(sourceBuffer) {
   const raw = sourceBuffer.toString('utf-8');
   const splitIdx = raw.indexOf('\r\n\r\n');
-  const bodyRaw = splitIdx >= 0 ? raw.substring(splitIdx + 4) : raw;
-
-  // Try plain/text first
-  const plainMatch = bodyRaw.match(/Content-Type:\s*text\/plain[^\r\n]*(?:\r\n[^\r\n:]+)*\r\n\r\n([\s\S]*?)(?:\r\n--|\r\n\r\n--|$)/i);
-  if (plainMatch) {
-    return decodeQuotedPrintable(plainMatch[1]).substring(0, 15000);
-  }
-
-  // HTML fallback
-  const htmlMatch = bodyRaw.match(/Content-Type:\s*text\/html[^\r\n]*(?:\r\n[^\r\n:]+)*\r\n\r\n([\s\S]*?)(?:\r\n--|\r\n\r\n--|$)/i);
-  if (htmlMatch) return htmlToText(htmlMatch[1]).substring(0, 15000);
-
-  // Whole body as fallback
-  return htmlToText(bodyRaw).substring(0, 15000);
+  const bodySection = splitIdx >= 0 ? raw.substring(splitIdx + 4) : raw;
+  return decodeMimeBody(bodySection);
 }
 
 // ---------------------------------------------------------------------------
