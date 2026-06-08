@@ -63,9 +63,12 @@ ${emailText}
       },
     });
 
+    // InvokeLLM returns the parsed object directly when response_json_schema is set
+    const parsed = (result && typeof result === 'object' && !Array.isArray(result)) ? result : {};
+
     // Clean up nulls
     const cleaned = {};
-    for (const [k, v] of Object.entries(result)) {
+    for (const [k, v] of Object.entries(parsed)) {
       if (v !== null && v !== undefined && v !== '') cleaned[k] = v;
     }
     // Always set contact_method
