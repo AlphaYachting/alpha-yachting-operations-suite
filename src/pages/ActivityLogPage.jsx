@@ -5,7 +5,8 @@ import { format, parseISO, subDays } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Activity, Search } from 'lucide-react';
+import { Activity, Search, ChevronDown, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const ACTION_COLORS = {
   create: 'bg-emerald-100 text-emerald-700',
@@ -25,16 +26,29 @@ const ENTITY_LABELS = {
   ImportDocument: 'Import Doc',
 };
 
+const PAGE_SIZE = 200;
+
 export default function ActivityLogPage() {
   const [search, setSearch] = useState('');
   const [entityFilter, setEntityFilter] = useState('all');
   const [actionFilter, setActionFilter] = useState('all');
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const { data: logs = [], isLoading } = useQuery({
-    queryKey: ['activity_logs'],
-    queryFn: () => base44.entities.ActivityLog.list('-occurred_at', 200),
+  const { data: logs = [], isLoading, refetch } = useQuery({
+    queryKey: ['activity_logs', limit],
+    queryFn: () => base44.entities.ActivityLog.list('-occurred_at', limit),
     staleTime: 30 * 1000,
   });
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    setLimit(prev => prev + PAGE_SIZE);
+    await refetch();
+    setLoadingMore(false);
+  };
+
+  const hasMore = logs.length >= limit;
 
   const filtered = logs.filter(log => {
     const matchesSearch = !search ||
@@ -142,6 +156,18 @@ export default function ActivityLogPage() {
           </div>
         )}
       </div>
+
+      {/* Load More */}
+      {!isLoading && hasMore && filtered.length > 0 && (
+        <div className="flex justify-center">
+          <Button variant="outline" onClick={handleLoadMore} disabled={loadingMore} className="gap-2">
+            {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
+            {loadingMore ? 'Lädt...' : `Weitere ${PAGE_SIZE} Einträge laden`}
+          </Button>
+        </div>
+      )}
+
+      <p className="text-center text-xs text-slate-400">{logs.length} Einträge geladen</p>
     </div>
   );
 }
