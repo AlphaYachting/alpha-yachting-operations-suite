@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Mic, MicOff, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertCircle, User, Ship, MapPin, Search, Receipt } from 'lucide-react';
+import { Mic, MicOff, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertCircle, User, Ship, MapPin, Search, Receipt, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 const TYPE_CONFIG = {
@@ -301,20 +301,22 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
         aiResult = await base44.integrations.Core.InvokeLLM({
           prompt: `You are an operational classifier for a marine yacht service company (Alpha Yachting).
 
-Parse this field note and extract ALL relevant information:
-"${text}"
+    Parse this field note and extract ALL relevant information:
+    "${text}"
 
-CLASSIFICATION TYPES:
-- material_entry: consumables/parts/materials left at customer (filter, sandpaper, paint, primer, oil)
-- tool_tracking: company equipment/machines/tools left on site (pressure washer, drill, polishing machine)
-- task_candidate: work that needs to be done (cleaning, repair, inspection, checking)
-- customer_request: customer asked for new service (wants polishing, wants storage, wants antifouling)
-- project_intake: site visit/inspection with multiple work areas identified
-- internal_note: informational only
+    CLASSIFICATION TYPES:
+    - material_entry: consumables/parts/materials left at customer (filter, sandpaper, paint, primer, oil)
+    - tool_tracking: company equipment/machines/tools left on site (pressure washer, drill, polishing machine)
+    - task_candidate: work that needs to be done (cleaning, repair, inspection, checking)
+    - customer_request: customer asked for new service (wants polishing, wants storage, wants antifouling)
+    - project_intake: site visit/inspection with multiple work areas identified
+    - internal_note: informational only
+    - new_customer: user wants to create a new customer record
 
-Detect the PRIMARY type. If multiple signals exist, list them as secondary_signals.
+    Detect the PRIMARY type. If someone says "neuen Kunden anlegen", "new customer", "Kunde anlegen", "add customer" or similar — set entry_type to "new_customer" and intent_new_customer to true.
 
-Extract: customer_name (surname preferred), boat_name, location (marina/city), item_names (list), work_hints (list), urgency (low/normal/high/urgent), billable (true/false), short_summary (1 sentence), suggested_target (where should this end up operationally, in one short phrase).`,
+    Extract: customer_name (full name), boat_name, location (marina/city), item_names (list), work_hints (list), urgency (low/normal/high/urgent), billable (true/false), short_summary (1 sentence), suggested_target (where should this end up operationally, in one short phrase).
+    Also extract: new_customer_phone (phone number if mentioned), new_customer_email (email if mentioned), new_customer_boat (boat name/type if mentioned for the new customer).`,
           response_json_schema: {
             type: 'object',
             properties: {
@@ -328,7 +330,11 @@ Extract: customer_name (surname preferred), boat_name, location (marina/city), i
               work_hints: { type: 'array', items: { type: 'string' } },
               urgency: { type: 'string' },
               billable: { type: 'boolean' },
-              secondary_signals: { type: 'array', items: { type: 'string' } }
+              secondary_signals: { type: 'array', items: { type: 'string' } },
+              intent_new_customer: { type: 'boolean' },
+              new_customer_phone: { type: 'string' },
+              new_customer_email: { type: 'string' },
+              new_customer_boat: { type: 'string' }
             }
           }
         });
@@ -528,9 +534,49 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
   const [overrideType, setOverrideType] = useState(aiResult?.entry_type || '');
   const [saving, setSaving] = useState(false);
 
+  // New customer fields — shown when AI detects intent_new_customer
+  const isNewCustomer = aiResult?.intent_new_customer && !customerMatch;
+  const [newCustName, setNewCustName] = useState(aiResult?.customer_name || '');
+  const [newCustPhone, setNewCustPhone] = useState(aiResult?.new_customer_phone || '');
+  const [newCustEmail, setNewCustEmail] = useState(aiResult?.new_customer_email || '');
+  const [newCustBoat, setNewCustBoat] = useState(aiResult?.new_customer_boat || aiResult?.boat_name || '');
+  const [newCustCreated, setNewCustCreated] = useState(false);
+  const [creatingCust, setCreatingCust] = useState(false);
+
   const availableBoats = overrideCustomerId ?
   boats.filter((b) => b.customer_id === overrideCustomerId) :
   boats;
+
+  const handleCreateNewCustomer = async () => {
+    if (!newCustName.trim()) { toast.error('Name ist erforderlich'); return; }
+    setCreatingCust(true);
+    try {
+      const nameParts = newCustName.trim().split(' ');
+      const lastName = nameParts.pop();
+      const firstName = nameParts.join(' ');
+      const customer = await base44.entities.Customer.create({
+        first_name: firstName || undefined,
+        last_name: lastName,
+        phone: newCustPhone.trim() || undefined,
+        email: newCustEmail.trim() || undefined,
+        status: 'Active',
+      });
+      // Optionally create a boat
+      if (newCustBoat.trim()) {
+        await base44.entities.Boat.create({
+          customer_id: customer.id,
+          vessel_name: newCustBoat.trim(),
+        });
+      }
+      setOverrideCustomerId(customer.id);
+      setNewCustCreated(true);
+      toast.success(`Kunde "${newCustName.trim()}" angelegt!`);
+    } catch (err) {
+      toast.error('Fehler beim Anlegen: ' + err.message);
+    } finally {
+      setCreatingCust(false);
+    }
+  };
 
   const handleConfirm = async () => {
     setSaving(true);
@@ -598,6 +644,56 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
             <p className="text-sm text-slate-800">{aiResult.short_summary}</p>
           </div>
         }
+
+        {/* ── New Customer Banner ── */}
+        {isNewCustomer && (
+          <div className={`p-3 border-t ${newCustCreated ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <UserPlus className={`h-4 w-4 ${newCustCreated ? 'text-green-600' : 'text-blue-600'}`} />
+              <span className={`text-xs font-semibold uppercase tracking-wide ${newCustCreated ? 'text-green-700' : 'text-blue-700'}`}>
+                {newCustCreated ? '✓ Kunde angelegt' : 'Neuen Kunden anlegen'}
+              </span>
+            </div>
+            {!newCustCreated ? (
+              <div className="space-y-2">
+                <Input
+                  value={newCustName}
+                  onChange={e => setNewCustName(e.target.value)}
+                  placeholder="Name *"
+                  className="h-8 text-sm bg-white"
+                />
+                <Input
+                  value={newCustPhone}
+                  onChange={e => setNewCustPhone(e.target.value)}
+                  placeholder="Telefon"
+                  className="h-8 text-sm bg-white"
+                />
+                <Input
+                  value={newCustEmail}
+                  onChange={e => setNewCustEmail(e.target.value)}
+                  placeholder="E-Mail"
+                  className="h-8 text-sm bg-white"
+                />
+                <Input
+                  value={newCustBoat}
+                  onChange={e => setNewCustBoat(e.target.value)}
+                  placeholder="Boot (optional)"
+                  className="h-8 text-sm bg-white"
+                />
+                <Button
+                  onClick={handleCreateNewCustomer}
+                  disabled={creatingCust || !newCustName.trim()}
+                  className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {creatingCust ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <UserPlus className="h-3 w-3 mr-1" />}
+                  {creatingCust ? 'Wird angelegt…' : 'Kunden jetzt anlegen'}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-green-700">Kunde wurde angelegt und verknüpft.</p>
+            )}
+          </div>
+        )}
 
         {/* Customer — searchable */}
         <div className="p-3 bg-white">
