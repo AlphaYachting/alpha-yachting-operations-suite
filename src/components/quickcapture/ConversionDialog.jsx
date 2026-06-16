@@ -57,6 +57,29 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
   // --- Offer fields ---
   const [offerTitle, setOfferTitle] = useState(entry.suggested_summary || entry.raw_input?.slice(0, 80) || '');
 
+  // --- TimeEntry fields ---
+  const [timeEntryWOId, setTimeEntryWOId] = useState('');
+  const [timeEntryTechnicianId, setTimeEntryTechnicianId] = useState('');
+  const [timeEntryDate, setTimeEntryDate] = useState(new Date().toISOString().slice(0, 10));
+  const [timeEntryHours, setTimeEntryHours] = useState('');
+  const [timeEntryNotes, setTimeEntryNotes] = useState('');
+  const [technicians, setTechnicians] = useState([]);
+
+  // Parse daily report info from review_notes
+  const dailyReportParsed = (() => {
+    const rn = entry.review_notes || '';
+    const drMatch = rn.match(/DAILY REPORT VISIT \| (.+?) \| ([\d.]+) Stunden/);
+    if (drMatch) {
+      const desc = drMatch[1];
+      const hours = drMatch[2];
+      // Extract location
+      const locMatch = rn.match(/Ort: (.+)$/);
+      const loc = locMatch ? locMatch[1] : '';
+      return { desc, hours: parseFloat(hours) || 0, location: loc !== '—' ? loc : '' };
+    }
+    return null;
+  })();
+
   const ACTIVE_STATUSES = ['Draft','Scheduled','Dispatched','In Transit','In Progress','Paused','Waiting for Parts','Waiting for Approval','Ready to Invoice'];
 
   // Load work orders when target is Task — FIX: all active statuses, load jobs for new WO creation
@@ -87,6 +110,30 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
       if (c) setLeadName(c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim());
     }
   }, [customerId]);
+
+  // Load technicians & pre-fill when target is TimeEntry
+  useEffect(() => {
+    if (target !== 'TimeEntry') return;
+    base44.entities.Technician.filter({ status: 'Active' }, '-last_name', 200)
+      .then(techs => setTechnicians(techs || []));
+    // Pre-fill from daily report parsed data
+    if (dailyReportParsed) {
+      setTimeEntryHours(String(dailyReportParsed.hours));
+      setTimeEntryNotes(dailyReportParsed.desc);
+    }
+  }, [target]);
+
+  // Load work orders when target is TimeEntry and customer selected
+  useEffect(() => {
+    if (target !== 'TimeEntry' || !customerId) return;
+    base44.entities.Job.filter({ customer_id: customerId }).then(jobList => {
+      const jobIds = new Set(jobList.map(j => j.id));
+      base44.entities.WorkOrder.filter({ status: 'In Progress' }, '-created_date', 200)
+        .then(wos => {
+          setWorkOrders((wos || []).filter(wo => jobIds.has(wo.job_id)));
+        });
+    });
+  }, [target, customerId]);
 
   const writeTraceability = async (recordType, recordId) => {
     const user = await base44.auth.me();
@@ -170,6 +217,23 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
         });
         recordId = task.id;
 
+      } else if (target === 'TimeEntry') {
+        if (!customerId) { toast.error('Customer is required'); setSaving(false); return; }
+        if (!timeEntryWOId) { toast.error('Please select a Work Order'); setSaving(false); return; }
+        if (!timeEntryTechnicianId) { toast.error('Please select a Technician'); setSaving(false); return; }
+        const durationMin = Math.round(parseFloat(timeEntryHours || '0') * 60);
+        if (durationMin <= 0) { toast.error('Hours must be > 0'); setSaving(false); return; }
+        const te = await base44.entities.TimeEntry.create({
+          work_order_id: timeEntryWOId,
+          technician_id: timeEntryTechnicianId,
+          entry_date: timeEntryDate,
+          duration_minutes: durationMin,
+          notes: timeEntryNotes || notes,
+          is_billable: true,
+        });
+        recordId = te.id;
+        recordType = 'TimeEntry';
+
       } else if (target === 'CustomerMaterialEntry') {
         if (!customerId) { toast.error('Customer is required for a Material Entry'); setSaving(false); return; }
         const mat = await base44.entities.CustomerMaterialEntry.create({
@@ -246,6 +310,7 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
                   <SelectItem value="Offer">Offer Draft</SelectItem>
                   <SelectItem value="Task">Task (under Work Order)</SelectItem>
                   <SelectItem value="CustomerMaterialEntry">Material Entry</SelectItem>
+                  <SelectItem value="TimeEntry">Time Entry</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -258,7 +323,7 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
 
           {/* Customer picker */}
           <div className="space-y-1">
-            <Label>Customer {['Offer','CustomerMaterialEntry'].includes(target) && <span className="text-red-500">*</span>}</Label>
+            <Label>Customer {['Offer','CustomerMaterialEntry','TimeEntry'].includes(target) && <span className="text-red-500">*</span>}</Label>
             <Select value={customerId} onValueChange={v => { setCustomerId(v); setBoatId(''); }}>
               <SelectTrigger><SelectValue placeholder="Select customer…" /></SelectTrigger>
               <SelectContent>
@@ -381,6 +446,49 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
             </div>
           </>)}
 
+          {/* TimeEntry fields */}
+          {target === 'TimeEntry' && (<>
+            <div className="space-y-1">
+              <Label>Datum</Label>
+              <Input type="date" value={timeEntryDate} onChange={e => setTimeEntryDate(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Stunden <span className="text-red-500">*</span></Label>
+              <Input type="number" step="0.25" min="0.25" value={timeEntryHours} onChange={e => setTimeEntryHours(e.target.value)} placeholder="z.B. 2.5" />
+            </div>
+            <div className="space-y-1">
+              <Label>Techniker <span className="text-red-500">*</span></Label>
+              <Select value={timeEntryTechnicianId} onValueChange={setTimeEntryTechnicianId}>
+                <SelectTrigger><SelectValue placeholder="Techniker wählen…" /></SelectTrigger>
+                <SelectContent>
+                  {technicians.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.first_name} {t.last_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Work Order <span className="text-red-500">*</span></Label>
+              <Select value={timeEntryWOId} onValueChange={setTimeEntryWOId}>
+                <SelectTrigger><SelectValue placeholder="Work Order wählen…" /></SelectTrigger>
+                <SelectContent>
+                  {workOrders.length === 0
+                    ? <SelectItem value="__none" disabled>Keine Work Orders für diesen Kunden</SelectItem>
+                    : workOrders.map(wo => (
+                        <SelectItem key={wo.id} value={wo.id}>
+                          {wo.work_order_number ? `${wo.work_order_number} — ` : ''}{wo.title}
+                        </SelectItem>
+                      ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Beschreibung</Label>
+              <Textarea value={timeEntryNotes} onChange={e => setTimeEntryNotes(e.target.value)} rows={2} placeholder="Was wurde gemacht?" />
+            </div>
+          </>)}
+
           {/* Material entry fields */}
           {target === 'CustomerMaterialEntry' && (<>
             <div className="space-y-1">
@@ -409,7 +517,7 @@ export default function ConversionDialog({ entry, customers, boats, forcedTarget
         <DialogFooter>
           <Button variant="outline" onClick={onCancel} disabled={saving}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : `Create ${target === 'CustomerMaterialEntry' ? 'Material Entry' : target}`}
+            {saving ? 'Saving…' : `Create ${target === 'CustomerMaterialEntry' ? 'Material Entry' : target === 'TimeEntry' ? 'Time Entry' : target}`}
           </Button>
         </DialogFooter>
       </DialogContent>

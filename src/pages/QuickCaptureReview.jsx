@@ -51,6 +51,7 @@ const CONVERSION_LABEL = {
   Note:  'Customer Note',
   Offer: 'Offer Draft',
   Task:  'Task',
+  TimeEntry: 'Time Entry',
 };
 
 export default function QuickCaptureReview() {
@@ -483,6 +484,12 @@ Leave fields null if not clearly visible. Do not invent or guess values. Extract
                             className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
                             <ArrowRight className="h-3 w-3 mr-1" />Add Task to WO
                           </Button>
+                          {(entry.review_notes || '').includes('DAILY REPORT VISIT') && (
+                            <Button size="sm" onClick={() => openConvert(entry, 'TimeEntry')}
+                              className="bg-cyan-600 hover:bg-cyan-700 text-white text-xs">
+                              <Clock className="h-3 w-3 mr-1" />Time Entry
+                            </Button>
+                          )}
                           <Button size="sm" onClick={() => openConvert(entry, 'Note')}
                             className="bg-slate-600 hover:bg-slate-700 text-white text-xs">
                             <ArrowRight className="h-3 w-3 mr-1" />Note
