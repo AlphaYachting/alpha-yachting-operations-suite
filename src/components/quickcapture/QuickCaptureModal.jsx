@@ -123,6 +123,92 @@ function CustomerPicker({ customers, value, onChange, label = 'Customer', confid
 
 }
 
+// ── Searchable Boat Picker ─────────────────────────────────────────────
+function BoatPicker({ boats, value, onChange, customerId, label = 'Boat' }) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const selected = boats.find((b) => b.id === value);
+  const pool = customerId ? boats.filter((b) => b.customer_id === customerId) : boats;
+
+  const filtered = pool.filter((b) => {
+    const q = search.toLowerCase();
+    return (b.vessel_name || '').toLowerCase().includes(q) ||
+           (b.manufacturer || '').toLowerCase().includes(q) ||
+           (b.model || '').toLowerCase().includes(q);
+  });
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSelect = (b) => {
+    onChange(b ? b.id : '');
+    setSearch('');
+    setOpen(false);
+  };
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
+        <Ship className="h-4 w-4 text-slate-400" />
+        <span className="text-sm font-medium text-slate-700">{label}</span>
+      </div>
+
+      <div ref={containerRef} className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm border rounded-md bg-white hover:bg-slate-50 text-left">
+          <span className={selected ? 'text-slate-900' : 'text-slate-400'}>
+            {selected ? selected.vessel_name : 'None — tap to search'}
+          </span>
+          <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
+        </button>
+
+        {open &&
+        <div className="absolute z-50 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
+            <div className="p-2 border-b">
+              <Input
+              autoFocus
+              placeholder="Search boat..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-sm" />
+            </div>
+            <div className="max-h-56 overflow-y-auto">
+              <button
+              type="button"
+              onClick={() => handleSelect(null)}
+              className="w-full px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 text-left">
+                — Clear / None
+              </button>
+              {filtered.length === 0 &&
+            <p className="px-3 py-2 text-sm text-slate-400">No results</p>
+            }
+              {filtered.map((b) =>
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => handleSelect(b)}
+              className={`w-full px-3 py-3 text-sm text-left hover:bg-amber-50 ${value === b.id ? 'bg-amber-50 font-medium' : ''}`}>
+                  {b.vessel_name}
+                </button>
+            )}
+            </div>
+          </div>
+        }
+      </div>
+    </div>);
+}
+
 // ── Fuzzy matching helpers ─────────────────────────────────────────────────
 function matchCustomer(customers, extractedName) {
   if (!extractedName) return null;
@@ -726,8 +812,6 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
             </div>
             <div className="space-y-3">
               {visitOverrides.map((vo, idx) => {
-                const voCustMatch = matchCustomer(customers, vo.customer_name);
-                const voBoatMatch = matchBoat(boats, vo.boat_name, vo.customerId || voCustMatch?.customer?.id);
                 return (
                   <div key={idx} className="p-3 bg-white rounded-lg border border-blue-100 space-y-2">
                     <div className="flex items-center gap-2">
@@ -762,39 +846,22 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
                       </div>
                     </div>
 
-                    {/* Customer + Boat */}
-                    <div className="flex gap-2">
-                      <div className="flex-1">
-                        <CustomerPicker
-                          customers={customers}
-                          value={vo.customerId}
-                          onChange={id => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, customerId: id, boatId: '' } : p))}
-                          label="Kunde"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1">
-                            <Ship className="h-3.5 w-3.5 text-slate-400" />
-                            <span className="text-xs font-medium text-slate-600">Boot</span>
-                          </div>
-                          <Select
-                            value={vo.boatId}
-                            onValueChange={id => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, boatId: id } : p))}
-                          >
-                            <SelectTrigger className="h-7 text-xs bg-white">
-                              <SelectValue placeholder={voBoatMatch?.boat?.vessel_name || 'Boot wählen'} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={null}>Keines</SelectItem>
-                              {(vo.customerId ? boats.filter(b => b.customer_id === vo.customerId) : boats).map(b =>
-                                <SelectItem key={b.id} value={b.id}>{b.vessel_name}</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
+                    {/* Customer — eigene Zeile */}
+                    <CustomerPicker
+                      customers={customers}
+                      value={vo.customerId}
+                      onChange={id => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, customerId: id, boatId: '' } : p))}
+                      label="Kunde"
+                    />
+
+                    {/* Boat — eigene Zeile mit Suchfeld */}
+                    <BoatPicker
+                      boats={boats}
+                      value={vo.boatId}
+                      onChange={id => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, boatId: id } : p))}
+                      customerId={vo.customerId}
+                      label="Boot"
+                    />
                   </div>
                 );
               })}
