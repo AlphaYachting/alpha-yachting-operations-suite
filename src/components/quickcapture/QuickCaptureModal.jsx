@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Mic, MicOff, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertCircle, User, Ship, MapPin, Search, Receipt, UserPlus } from 'lucide-react';
+import { Mic, MicOff, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertCircle, User, Ship, MapPin, Search, Receipt, UserPlus, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const TYPE_CONFIG = {
@@ -301,22 +301,30 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
         aiResult = await base44.integrations.Core.InvokeLLM({
           prompt: `You are an operational classifier for a marine yacht service company (Alpha Yachting).
 
-    Parse this field note and extract ALL relevant information:
-    "${text}"
+          Parse this field note and extract ALL relevant information:
+          "${text}"
 
-    CLASSIFICATION TYPES:
-    - material_entry: consumables/parts/materials left at customer (filter, sandpaper, paint, primer, oil)
-    - tool_tracking: company equipment/machines/tools left on site (pressure washer, drill, polishing machine)
-    - task_candidate: work that needs to be done (cleaning, repair, inspection, checking)
-    - customer_request: customer asked for new service (wants polishing, wants storage, wants antifouling)
-    - project_intake: site visit/inspection with multiple work areas identified
-    - internal_note: informational only
-    - new_customer: user wants to create a new customer record
+          CLASSIFICATION TYPES:
+          - material_entry: consumables/parts/materials left at customer
+          - tool_tracking: company equipment/machines/tools left on site
+          - task_candidate: work that needs to be done (cleaning, repair, inspection)
+          - customer_request: customer asked for new service
+          - project_intake: site visit/inspection with multiple work areas
+          - internal_note: informational only
+          - new_customer: user wants to create a new customer record
+          - daily_report: mechanic describes their work day across multiple boats/customers with hours worked ("war heute bei...", "5 Stunden...", "dann bei...")
 
-    Detect the PRIMARY type. If someone says "neuen Kunden anlegen", "new customer", "Kunde anlegen", "add customer" or similar — set entry_type to "new_customer" and intent_new_customer to true.
+          IMPORTANT daily_report detection: If the text describes multiple visits to different customers/boats with hours worked for each, set entry_type to "daily_report". Extract each visit into the visits array.
 
-    Extract: customer_name (full name), boat_name, location (marina/city), item_names (list), work_hints (list), urgency (low/normal/high/urgent), billable (true/false), short_summary (1 sentence), suggested_target (where should this end up operationally, in one short phrase).
-    Also extract: new_customer_phone (phone number if mentioned), new_customer_email (email if mentioned), new_customer_boat (boat name/type if mentioned for the new customer).`,
+          Extract: customer_name, boat_name, location, item_names, work_hints, urgency (low/normal/high/urgent), billable, short_summary (1 sentence), suggested_target.
+          For new_customer: intent_new_customer, new_customer_phone, new_customer_email, new_customer_boat.
+
+          For daily_report, fill the visits array. Each visit object has:
+          - customer_name: "Müller" or similar
+          - boat_name: "Bavaria 38" or similar
+          - work_description: "Motor repariert" or similar (short, in the language of the input)
+          - hours: number of hours worked (e.g. 5, 2.5). If "Viertelstunde" ≈ 0.25, "halbe Stunde" ≈ 0.5, "dreiviertel Stunde" ≈ 0.75.
+          - location: marina or city if mentioned`,
           response_json_schema: {
             type: 'object',
             properties: {
@@ -334,7 +342,20 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
               intent_new_customer: { type: 'boolean' },
               new_customer_phone: { type: 'string' },
               new_customer_email: { type: 'string' },
-              new_customer_boat: { type: 'string' }
+              new_customer_boat: { type: 'string' },
+              visits: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    customer_name: { type: 'string' },
+                    boat_name: { type: 'string' },
+                    work_description: { type: 'string' },
+                    hours: { type: 'number' },
+                    location: { type: 'string' }
+                  }
+                }
+              }
             }
           }
         });
@@ -534,7 +555,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
   const [overrideType, setOverrideType] = useState(aiResult?.entry_type || '');
   const [saving, setSaving] = useState(false);
 
-  // New customer fields — shown when AI detects intent_new_customer
+  // New customer fields
   const isNewCustomer = aiResult?.intent_new_customer && !customerMatch;
   const [newCustName, setNewCustName] = useState(aiResult?.customer_name || '');
   const [newCustPhone, setNewCustPhone] = useState(aiResult?.new_customer_phone || '');
@@ -542,6 +563,25 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
   const [newCustBoat, setNewCustBoat] = useState(aiResult?.new_customer_boat || aiResult?.boat_name || '');
   const [newCustCreated, setNewCustCreated] = useState(false);
   const [creatingCust, setCreatingCust] = useState(false);
+
+  // Daily report — multiple visits
+  const isDailyReport = aiResult?.entry_type === 'daily_report' && aiResult?.visits?.length > 0;
+  const [visitOverrides, setVisitOverrides] = useState(() => {
+    if (!aiResult?.visits) return [];
+    return aiResult.visits.map(v => {
+      const cm = matchCustomer(customers, v.customer_name);
+      const bm = matchBoat(boats, v.boat_name, cm?.customer?.id);
+      return {
+        customerId: cm?.customer?.id || '',
+        boatId: bm?.boat?.id || '',
+        customer_name: v.customer_name || '',
+        boat_name: v.boat_name || '',
+        workDescription: v.work_description || '',
+        hours: v.hours || 0,
+        location: v.location || '',
+      };
+    });
+  });
 
   const availableBoats = overrideCustomerId ?
   boats.filter((b) => b.customer_id === overrideCustomerId) :
@@ -581,12 +621,42 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
   const handleConfirm = async () => {
     setSaving(true);
     try {
+      // ── Daily report: create one entry per visit ──
+      if (isDailyReport && visitOverrides.length > 0) {
+        const entries = visitOverrides.map((vo) => {
+          const custName = vo.customerId ? customers.find(c => c.id === vo.customerId) : null;
+          const boatName = vo.boatId ? boats.find(b => b.id === vo.boatId) : null;
+          return {
+            raw_input: rawText,
+            input_method: inputMethod,
+            customer_id: vo.customerId || null,
+            boat_id: vo.boatId || null,
+            location_text: vo.location || aiResult?.location || null,
+            photo_urls: photoUrls?.length > 0 ? photoUrls : null,
+            suggested_type: 'task_candidate',
+            suggested_summary: `${vo.workDescription} (${vo.hours}h) — ${custName ? (custName.company_name || `${custName.first_name||''} ${custName.last_name||''}`.trim()) : ''} / ${boatName?.vessel_name || ''}`.trim(),
+            suggested_target: 'Time Entry',
+            ai_extracted_customer_name: vo.customerId ? null : (vo.customer_name || null),
+            ai_extracted_boat_name: vo.boatId ? null : (vo.boat_name || null),
+            ai_urgency_hint: aiResult?.urgency || null,
+            ai_billable_hint: aiResult?.billable ?? true,
+            review_status: 'new',
+            review_notes: `DAILY REPORT VISIT | ${vo.workDescription} | ${vo.hours} Stunden | Ort: ${vo.location || aiResult?.location || '—'}`,
+          };
+        });
+        await Promise.all(entries.map(e => base44.entities.QuickCaptureEntry.create(e)));
+        onConfirm();
+        toast.success(`${entries.length} Einträge gespeichert`);
+        setSaving(false);
+        return;
+      }
+
+      // ── Single entry (existing logic) ──
       const entry = {
         raw_input: rawText,
         input_method: inputMethod,
         customer_id: overrideCustomerId || null,
         boat_id: overrideBoatId || null,
-        // Operational context — only set when launched from a Work Order
         work_order_id: workOrderContext?.work_order_id || null,
         job_id: workOrderContext?.job_id || null,
         location_text: aiResult?.location || null,
@@ -644,6 +714,96 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
             <p className="text-sm text-slate-800">{aiResult.short_summary}</p>
           </div>
         }
+
+        {/* ── Daily Report: Multi-Visit Cards ── */}
+        {isDailyReport && (
+          <div className="p-3 border-t bg-blue-50/50">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-blue-600" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-blue-700">
+                Tagesbericht · {visitOverrides.length} {visitOverrides.length === 1 ? 'Besuch' : 'Besuche'}
+              </span>
+            </div>
+            <div className="space-y-3">
+              {visitOverrides.map((vo, idx) => {
+                const voCustMatch = matchCustomer(customers, vo.customer_name);
+                const voBoatMatch = matchBoat(boats, vo.boat_name, vo.customerId || voCustMatch?.customer?.id);
+                return (
+                  <div key={idx} className="p-3 bg-white rounded-lg border border-blue-100 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-blue-600 bg-blue-100 rounded-full w-5 h-5 flex items-center justify-center">{idx + 1}</span>
+                      <span className="text-xs text-blue-700 font-medium">Besuch {idx + 1}</span>
+                    </div>
+
+                    {/* Hours + Work */}
+                    <div className="flex gap-2">
+                      <div className="w-20 flex-shrink-0">
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Stunden</label>
+                        <Input
+                          type="number"
+                          step="0.25"
+                          min="0"
+                          value={vo.hours || ''}
+                          onChange={e => {
+                            const v = parseFloat(e.target.value) || 0;
+                            setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, hours: v } : p));
+                          }}
+                          className="h-7 text-sm text-center"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <label className="text-[10px] text-slate-400 block mb-0.5">Arbeit</label>
+                        <Input
+                          value={vo.workDescription}
+                          onChange={e => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, workDescription: e.target.value } : p))}
+                          className="h-7 text-sm"
+                          placeholder="Was wurde gemacht?"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Customer + Boat */}
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <CustomerPicker
+                          customers={customers}
+                          value={vo.customerId}
+                          onChange={id => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, customerId: id, boatId: '' } : p))}
+                          label="Kunde"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1">
+                            <Ship className="h-3.5 w-3.5 text-slate-400" />
+                            <span className="text-xs font-medium text-slate-600">Boot</span>
+                          </div>
+                          <Select
+                            value={vo.boatId}
+                            onValueChange={id => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, boatId: id } : p))}
+                          >
+                            <SelectTrigger className="h-7 text-xs bg-white">
+                              <SelectValue placeholder={voBoatMatch?.boat?.vessel_name || 'Boot wählen'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={null}>Keines</SelectItem>
+                              {(vo.customerId ? boats.filter(b => b.customer_id === vo.customerId) : boats).map(b =>
+                                <SelectItem key={b.id} value={b.id}>{b.vessel_name}</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Standard single-visit fields (hidden for daily_report) ── */}
+        {!isDailyReport && (<>
 
         {/* ── New Customer Banner ── */}
         {isNewCustomer && (
@@ -775,6 +935,8 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
             <p className="text-xs text-amber-700">→ Suggested destination: {aiResult.suggested_target}</p>
           </div>
         }
+
+        </> )}
       </div>
 
       {!aiResult &&
