@@ -262,17 +262,17 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
   const invoiceInputRef = useRef(null);
   const committedTextRef = useRef('');
   const voiceUsedRef = useRef(false);
+  const recordingActiveRef = useRef(false); // true = user wants to keep recording
 
   const voiceSupported = typeof window !== 'undefined' && (
   'SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
 
-  const startRecording = () => {
-    if (!voiceSupported) {toast.error('Voice not supported in this browser');return;}
+  const createRecognition = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const r = new SR();
     r.lang = 'de-DE';
-    r.continuous = true; // keep open as long as possible
-    r.interimResults = true; // show partial results live
+    r.continuous = true;
+    r.interimResults = true;
 
     r.onstart = () => {setVoiceState('listening');setInterim('');voiceUsedRef.current = true;};
 
@@ -298,11 +298,27 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
     };
 
     r.onerror = (e) => {
-      // Preserve everything committed so far
+      // 'no-speech' and 'aborted' are harmless — auto-restart on Android
+      if (e.error === 'no-speech' || e.error === 'aborted') {
+        // Don't show error, just wait for onend to auto-restart
+        return;
+      }
+      if (e.error === 'not-allowed') {
+        setVoiceState('error');
+        recordingActiveRef.current = false;
+        toast.error('Mikrofon-Zugriff verweigert');
+        return;
+      }
+      if (e.error === 'network') {
+        setVoiceState('error');
+        recordingActiveRef.current = false;
+        toast.error('Netzwerkfehler – bitte später versuchen');
+        return;
+      }
+      // Fallback for other errors
       setInterim('');
       setVoiceState('error');
-      recognitionRef.current = null;
-      // no toast — state message is enough
+      recordingActiveRef.current = false;
     };
 
     r.onend = () => {
@@ -316,16 +332,43 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
         }
         return '';
       });
-      if (voiceState === 'listening') setVoiceState('ended');
+
+      // Auto-restart on Android: if user didn't manually stop, create a new recognition
+      if (recordingActiveRef.current) {
+        // Small delay to avoid rapid restart loops on some Android versions
+        setTimeout(() => {
+          if (recordingActiveRef.current) {
+            try {
+              const newR = createRecognition();
+              recognitionRef.current = newR;
+              newR.start();
+            } catch {
+              // Silent fail — Android sometimes blocks rapid restarts
+              setVoiceState('ended');
+              recordingActiveRef.current = false;
+            }
+          }
+        }, 300);
+      } else {
+        setVoiceState('ended');
+      }
       recognitionRef.current = null;
     };
 
-    committedTextRef.current = text; // start from existing text
+    return r;
+  };
+
+  const startRecording = () => {
+    if (!voiceSupported) {toast.error('Spracheingabe nicht unterstützt');return;}
+    recordingActiveRef.current = true;
+    committedTextRef.current = text;
+    const r = createRecognition();
     recognitionRef.current = r;
     r.start();
   };
 
   const stopRecording = () => {
+    recordingActiveRef.current = false;
     recognitionRef.current?.stop();
     setVoiceState('ended');
   };
