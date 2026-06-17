@@ -4,11 +4,14 @@ import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
 import MobileSearchBar from './MobileSearchBar';
+import { t } from '@/lib/mobileTranslations';
 
 export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsClick, showSettings, onNavigate, workOrders, jobs, boats, locations, customers, tasks }) {
   const [config, setConfig] = React.useState(null);
+  const [lang, setLang] = React.useState('de');
 
   React.useEffect(() => {
+    base44.auth.me().then(u => setLang(u?.preferred_language || 'de')).catch(() => {});
     base44.entities.MobileHeaderConfig.list().then(configs => {
       if (configs.length > 0) setConfig(configs[0]);
     }).catch(() => {});
@@ -51,7 +54,7 @@ export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsCli
     tasks:
     <div key="tasks" className="bg-white/20 px-4 py-1 rounded-full">
         <p className="text-white px-1 text-2xl font-bold md:text-3xl">{taskCount}</p>
-        <p className="text-xs text-blue-100">tasks</p>
+        <p className="text-xs text-blue-100">{t('tasksHeader', lang)}</p>
       </div>
   };
 

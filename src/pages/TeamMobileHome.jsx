@@ -5,6 +5,7 @@ import { createPageUrl } from '@/utils';
 import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users, WifiOff, Wifi, Calendar, Ship, Zap } from 'lucide-react';
 import QuickCaptureModal from '@/components/quickcapture/QuickCaptureModal';
 import ClockInOutBanner from '@/components/attendance/ClockInOutBanner';
+import { t } from '@/lib/mobileTranslations';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const [allSearchCustomers, setAllSearchCustomers] = useState([]);
   const [technicianLookupDone, setTechnicianLookupDone] = useState(false);
   const [showQuickCapture, setShowQuickCapture] = useState(false);
+  const lang = displayUser?.preferred_language || user?.preferred_language || 'de';
 
   useEffect(() => {
     // Monitor connection status
@@ -337,14 +339,14 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           <AlertCircle className="h-8 w-8 text-amber-500" />
         </div>
         <div>
-          <p className="text-lg font-semibold text-slate-800">Kein Techniker-Profil verknüpft</p>
-          <p className="text-sm text-slate-500 mt-2 max-w-xs">Diesem Konto ist noch kein Techniker-Profil zugeordnet. Bitte einen Administrator kontaktieren.</p>
+          <p className="text-lg font-semibold text-slate-800">{t('noTechnicianLinked', lang)}</p>
+          <p className="text-sm text-slate-500 mt-2 max-w-xs">{t('noTechnicianHint', lang)}</p>
         </div>
         <button
           onClick={() => loadData(false)}
           className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium"
         >
-          Erneut versuchen
+          {t('tryAgain', lang)}
         </button>
       </div>
     );
@@ -383,7 +385,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
                 <div className="flex items-center gap-2 min-w-0">
                   <Ship className="h-4 w-4 text-blue-500 flex-shrink-0" />
                   <span className="text-sm font-bold text-slate-900 truncate">
-                    {boat?.vessel_name || 'Kein Boot zugeordnet'}
+                    {boat?.vessel_name || t('noBoatAssigned', lang)}
                   </span>
                   {location && (
                     <span className="text-xs text-slate-500 flex items-center gap-1 truncate">
@@ -506,7 +508,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         <div className="px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-slate-700">
             <CheckCircle2 className="h-4 w-4 text-slate-400" />
-            <span className="text-sm font-medium">{taskCount} {taskCount === 1 ? 'task' : 'tasks'}</span>
+            <span className="text-sm font-medium">{taskCount} {taskCount === 1 ? t('taskSingular', lang) : t('taskPlural', lang)}</span>
           </div>
 
           {workOrder.internal_notes &&
@@ -577,13 +579,13 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         <Card className="bg-white shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-slate-900">{sections.today.length}</div>
-            <div className="text-xs text-slate-600 mt-1">Today</div>
+            <div className="text-xs text-slate-600 mt-1">{t('kpiToday', lang)}</div>
           </CardContent>
         </Card>
         <Card className="bg-white shadow-sm">
           <CardContent className="p-3 text-center">
             <div className="text-2xl font-bold text-slate-900">{sections.upcoming.length}</div>
-            <div className="text-xs text-slate-600 mt-1">Upcoming</div>
+            <div className="text-xs text-slate-600 mt-1">{t('kpiUpcoming', lang)}</div>
           </CardContent>
         </Card>
         <Card 
@@ -606,7 +608,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
               </div>
               <Calendar className="h-4 w-4 text-slate-400" />
             </div>
-            <div className="text-xs text-slate-600 mt-1">Open Tasks</div>
+            <div className="text-xs text-slate-600 mt-1">{t('kpiOpenTasks', lang)}</div>
           </CardContent>
         </Card>
       </div>
@@ -657,7 +659,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
           <Card className="bg-orange-50 border-orange-200 shadow-sm">
             <CardContent className="p-3 flex items-center gap-2">
               <WifiOff className="h-5 w-5 text-orange-600 flex-shrink-0" />
-              <span className="text-sm font-medium text-orange-900">Offline — Daten aus Cache.</span>
+              <span className="text-sm font-medium text-orange-900">{t('offlineCache', lang)}</span>
             </CardContent>
           </Card>
         }
@@ -666,7 +668,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         {sections.overdue.length > 0 && (
           <div>
             <h2 className="text-base font-bold text-red-700 mb-2 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" /> Überfällig ({sections.overdue.length})
+              <AlertCircle className="h-4 w-4" /> {t('overdue', lang)} ({sections.overdue.length})
             </h2>
             <BoatGroupedSection workOrderList={sections.overdue} />
           </div>
@@ -675,7 +677,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         {/* TODAY Section */}
         {sections.today.length > 0 && (
           <div>
-            <h2 className="text-base font-bold text-slate-900 mb-2">Heute</h2>
+            <h2 className="text-base font-bold text-slate-900 mb-2">{t('today', lang)}</h2>
             <BoatGroupedSection workOrderList={sections.today} />
           </div>
         )}
@@ -683,7 +685,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         {/* UPCOMING Section */}
         {sections.upcoming.length > 0 && (
           <div>
-            <h2 className="text-base font-bold text-slate-900 mb-2">Nächste 7 Tage</h2>
+            <h2 className="text-base font-bold text-slate-900 mb-2">{t('next7Days', lang)}</h2>
             <BoatGroupedSection workOrderList={sections.upcoming} />
           </div>
         )}
@@ -691,7 +693,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         {/* LATER Section */}
         {sections.later.length > 0 && (
           <div>
-            <h2 className="text-base font-bold text-slate-500 mb-2">Später ({sections.later.length})</h2>
+            <h2 className="text-base font-bold text-slate-500 mb-2">{t('later', lang)} ({sections.later.length})</h2>
             <BoatGroupedSection workOrderList={sections.later} />
           </div>
         )}
@@ -700,7 +702,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         {sections.readyToInvoice.length > 0 && (
           <div>
             <h2 className="text-base font-bold text-emerald-700 mb-2 flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4" /> Bereit zur Abrechnung ({sections.readyToInvoice.length})
+              <CheckCircle2 className="h-4 w-4" /> {t('readyToInvoice', lang)} ({sections.readyToInvoice.length})
             </h2>
             <div className="opacity-80">
               <BoatGroupedSection workOrderList={sections.readyToInvoice} />
@@ -712,8 +714,8 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         {sections.overdue.length === 0 && sections.today.length === 0 && sections.upcoming.length === 0 && sections.later.length === 0 && sections.readyToInvoice.length === 0 &&
           <div className="text-center py-12">
             <CheckCircle2 className="h-12 w-12 mx-auto text-emerald-300 mb-3" />
-            <p className="text-slate-600 font-medium mb-1">Keine offenen Aufträge</p>
-            <p className="text-slate-500 text-sm">Alles erledigt oder nichts zugeteilt</p>
+            <p className="text-slate-600 font-medium mb-1">{t('noOpenWOs', lang)}</p>
+            <p className="text-slate-500 text-sm">{t('allDoneOrNothing', lang)}</p>
           </div>
         }
       </div>
@@ -729,7 +731,7 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         aria-label="Quick Capture"
       >
         <Zap className="h-5 w-5 flex-shrink-0" />
-        <span className="text-sm font-semibold pr-1">Capture</span>
+        <span className="text-sm font-semibold pr-1">{t('capture', lang)}</span>
       </button>
 
       {/* Quick Capture Modal */}

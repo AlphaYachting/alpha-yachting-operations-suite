@@ -13,6 +13,7 @@ import { format, parseISO } from 'date-fns';
 import PhotoUpload from '@/components/photos/PhotoUpload';
 import PhotoGallery from '@/components/photos/PhotoGallery';
 import { offlineStorage } from '@/components/offline/offlineStorage';
+import { t } from '@/lib/mobileTranslations';
 import { connectionMonitor } from '@/components/offline/connectionMonitor';
 import { syncQueue } from '@/components/offline/syncQueue';
 
@@ -21,6 +22,7 @@ function RequirementsModal({ workOrderId }) {
   const [items, setItems] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [user, setUser] = React.useState(null);
+  const [lang, setLang] = React.useState('de');
 
   React.useEffect(() => {
     loadUser();
@@ -31,6 +33,7 @@ function RequirementsModal({ workOrderId }) {
     try {
       const userData = await base44.auth.me();
       setUser(userData);
+      setLang(userData?.preferred_language || 'de');
     } catch (error) {
       console.error('Error loading user:', error);
     }
@@ -88,14 +91,14 @@ function RequirementsModal({ workOrderId }) {
   };
 
   if (loading) {
-    return <div className="text-sm text-slate-500">Loading...</div>;
+    return <div className="text-sm text-slate-500">{t('loading', lang)}</div>;
   }
 
   if (items.length === 0) {
     return (
       <div className="text-center py-6">
         <ShoppingCart className="h-12 w-12 mx-auto mb-2 text-slate-300" />
-        <p className="text-sm text-slate-500">No requirements added yet</p>
+        <p className="text-sm text-slate-500">{t('noRequirements', lang)}</p>
       </div>
     );
   }
@@ -120,7 +123,7 @@ function RequirementsModal({ workOrderId }) {
   return (
     <div className="space-y-3">
       <div className="text-sm font-medium text-slate-600 mb-4">
-        Packed: {packedCount}/{items.length}
+        {t('packed', lang)}: {packedCount}/{items.length}
       </div>
       {sortedItems.map((item) => (
         <div
@@ -157,7 +160,7 @@ function RequirementsModal({ workOrderId }) {
                 onClick={() => handlePackItem(item)}
                 className="text-xs border-blue-300 hover:bg-blue-50"
               >
-                Packed
+                {t('packedButton', lang)}
               </Button>
             )}
             {item.checklist_state !== 'Missing' && (
@@ -167,7 +170,7 @@ function RequirementsModal({ workOrderId }) {
                 onClick={() => handleResetItem(item.id)}
                 className="text-xs text-slate-500"
               >
-                Reset
+                {t('resetButton', lang)}
               </Button>
             )}
           </div>
@@ -213,6 +216,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
   const [requirementsCount, setRequirementsCount] = useState(0);
   const [technicians, setTechnicians] = useState([]);
   const [showQuickCapture, setShowQuickCapture] = useState(false);
+  const lang = user?.preferred_language || 'de';
 
   useEffect(() => {
     const loadUser = async () => {
@@ -518,7 +522,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         </div>
         <div className="p-4 text-center">
           <AlertCircle className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-          <p className="text-slate-500">Work order not found</p>
+          <p className="text-slate-500">{t('woNotFound', lang)}</p>
         </div>
       </div>);
 
@@ -684,7 +688,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-600">Work Order Details</span>
+          <span className="text-sm font-semibold text-slate-600">{t('woDetails', lang)}</span>
         </div>
         <div className="flex flex-col items-end gap-0.5">
           <Button
@@ -696,17 +700,17 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
             }>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              <span>{timerRunning ? 'Stop' : 'WO Timer'}</span>
+              <span>{timerRunning ? t('stopTimer', lang) : t('woTimer', lang)}</span>
               {timerRunning && <span className="font-mono text-xs">{formatTime(elapsedSeconds)}</span>}
             </div>
           </Button>
-          {timerRunning && <span className="text-[10px] text-slate-400">Tracking full work order</span>}
+          {timerRunning && <span className="text-[10px] text-slate-400">{t('trackingFullWO', lang)}</span>}
         </div>
       </div>
 
       {/* Work Order Info */}
       <div className="px-4 pt-4">
-        <p className="text-xs text-slate-500 font-medium">Work Order ID</p>
+        <p className="text-xs text-slate-500 font-medium">{t('woId', lang)}</p>
         <p className="text-sm font-bold text-slate-900">#{workOrder.work_order_number || workOrder.id}</p>
       </div>
 
@@ -718,7 +722,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
             className="w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white shadow-lg"
           >
             <ShoppingCart className="h-5 w-5 mr-2" />
-            Requirements & Shopping List ({requirementsCount})
+            {t('requirementsList', lang)} ({requirementsCount})
           </Button>
         </div>
       )}
@@ -728,7 +732,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end">
           <div className="bg-white w-full max-h-[90vh] rounded-t-lg flex flex-col overflow-hidden">
             <div className="sticky top-0 flex items-center justify-between p-4 border-b border-slate-200 bg-white">
-              <h2 className="text-lg font-semibold text-slate-900">Requirements & Shopping List</h2>
+              <h2 className="text-lg font-semibold text-slate-900">{t('requirementsList', lang)}</h2>
               <Button variant="outline" size="icon" onClick={() => setShowRequirements(false)} className="border-slate-300 hover:bg-slate-100">
                 <ChevronLeft className="h-5 w-5" />
               </Button>
@@ -783,7 +787,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
             {/* Team */}
             {(workOrder.assigned_technicians?.length > 0 || workOrder.lead_technician_id) && (
               <div className="mt-2 pt-2 border-t border-slate-100">
-                <p className="text-xs text-slate-500 font-medium mb-1">Team</p>
+                <p className="text-xs text-slate-500 font-medium mb-1">{t('teamLabel', lang)}</p>
                 <div className="flex flex-wrap gap-1">
                   {[workOrder.lead_technician_id, ...(workOrder.assigned_technicians || []).filter(id => id !== workOrder.lead_technician_id)]
                     .filter(Boolean)
@@ -813,12 +817,12 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
               >
                 <MapPin className="h-5 w-5 text-blue-500 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="text-xs text-slate-500 font-medium">LOCATION</p>
+                  <p className="text-xs text-slate-500 font-medium">{t('locationLabel', lang)}</p>
                   <p className="text-sm font-semibold text-slate-900">{location.name}</p>
                   {location.address && <p className="text-xs text-slate-600 mt-1">{location.address}</p>}
                 </div>
                 {location.latitude && location.longitude && (
-                  <span className="text-xs text-blue-600 font-medium whitespace-nowrap">Open Maps →</span>
+                  <span className="text-xs text-blue-600 font-medium whitespace-nowrap">{t('openMaps', lang)}</span>
                 )}
               </button>
             </CardContent>
@@ -828,7 +832,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         {/* Tasks Section */}
         {tasks.length > 0 && (
           <div>
-            <h2 className="text-sm font-semibold text-slate-900 mb-3">Tasks ({tasks.length})</h2>
+            <h2 className="text-sm font-semibold text-slate-900 mb-3">{t('taskPlural', lang)} ({tasks.length})</h2>
             <div className="space-y-3">
               {[...tasks]
                 .sort((a, b) => {
@@ -850,7 +854,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
                               disabled={updatingTaskId === task.id}
                               className="text-sm font-semibold px-3 py-1.5 rounded text-white bg-slate-500 hover:bg-slate-600"
                             >
-                              Reopen
+                              {t('reopen', lang)}
                             </Button>
                           ) : (
                             <Button
@@ -858,7 +862,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
                               disabled={updatingTaskId === task.id}
                               className="text-sm font-semibold px-3 py-1.5 rounded text-white bg-emerald-600 hover:bg-emerald-700"
                             >
-                              Mark Done
+                              {t('markDone', lang)}
                             </Button>
                           )}
                           <div className="flex-shrink-0">
@@ -874,7 +878,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
                         <Badge variant="outline" className="text-xs">{task.status}</Badge>
                         {task.notes && (
                           <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
-                            <p className="font-medium mb-1">Notes:</p>
+                            <p className="font-medium mb-1">{t('notesLabel', lang)}</p>
                             <p>{task.notes}</p>
                           </div>
                         )}
@@ -889,7 +893,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         {tasks.length === 0 && (
           <div className="text-center py-8">
             <CheckCircle2 className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-            <p className="text-slate-500 text-sm">No tasks assigned yet</p>
+            <p className="text-slate-500 text-sm">{t('noTasksYet', lang)}</p>
           </div>
         )}
 
@@ -897,7 +901,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         {job?.description &&
         <Card>
             <CardContent className="p-4">
-              <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Description</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase mb-2">{t('woDescription', lang)}</p>
               <p className="text-sm text-slate-700 leading-relaxed">{job.description}</p>
             </CardContent>
           </Card>
@@ -910,7 +914,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
               <div className="flex gap-3">
                 <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-orange-900 uppercase mb-1">Safety Notes</p>
+                  <p className="text-xs font-semibold text-orange-900 uppercase mb-1">{t('safetyNotes', lang)}</p>
                   <p className="text-sm text-orange-900">{workOrder.safety_notes}</p>
                 </div>
               </div>
@@ -921,7 +925,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         {/* Photos Section */}
         <Card>
          <CardContent className="p-4">
-           <h2 className="text-sm font-semibold text-slate-900 mb-4">Documentation Photos</h2>
+           <h2 className="text-sm font-semibold text-slate-900 mb-4">{t('docPhotos', lang)}</h2>
            <div className="mb-4">
              <PhotoUpload 
                workOrderId={workOrder.id} 
@@ -943,14 +947,14 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         {/* Comments Section */}
         <Card>
           <CardContent className="p-4">
-            <h2 className="text-sm font-semibold text-slate-900 mb-4">Work Notes</h2>
+            <h2 className="text-sm font-semibold text-slate-900 mb-4">{t('workNotes', lang)}</h2>
 
             {/* Comment Input */}
             <div className="space-y-2 mb-4">
               <Textarea
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Leave a note about this work order..."
+                placeholder={t('leaveNote', lang)}
                 rows={3}
                 className="text-sm"
               />
@@ -960,7 +964,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Send className="h-4 w-4 mr-2" />
-                Add Note
+                {t('addNote', lang)}
               </Button>
             </div>
 
@@ -971,7 +975,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
                   <div key={comment.id} className="bg-slate-50 rounded-lg p-3">
                     <div className="flex items-start justify-between gap-2 mb-1">
                       <p className="font-medium text-sm text-slate-900">{comment.author_name}</p>
-                      <span className="text-xs text-slate-500">{comment.created_date ? format(parseISO(comment.created_date), 'MMM d, HH:mm') : 'Just now'}</span>
+                      <span className="text-xs text-slate-500">{comment.created_date ? format(parseISO(comment.created_date), 'MMM d, HH:mm') : t('justNow', lang)}</span>
                     </div>
                     <p className="text-sm text-slate-700 leading-relaxed">{comment.content}</p>
                   </div>
@@ -980,7 +984,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
             )}
 
             {comments.length === 0 && (
-              <p className="text-sm text-slate-500 text-center py-4">No notes yet</p>
+              <p className="text-sm text-slate-500 text-center py-4">{t('noNotesYet', lang)}</p>
             )}
           </CardContent>
         </Card>
@@ -996,7 +1000,7 @@ export default function TeamWorkOrderDetail({ woId, onNavigate }) {
         aria-label="Quick Capture"
       >
         <Zap className="h-5 w-5 flex-shrink-0" />
-        <span className="text-sm font-semibold pr-1">Capture</span>
+        <span className="text-sm font-semibold pr-1">{t('capture', lang)}</span>
       </button>
 
       {/* Quick Capture Modal — pre-linked to this Work Order */}

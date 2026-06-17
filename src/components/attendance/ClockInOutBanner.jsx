@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { format, differenceInMinutes, parseISO } from 'date-fns';
 import { Clock, MapPin, LogIn, LogOut, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { t } from '@/lib/mobileTranslations';
 
 // Module-level watcher — starts once, keeps position fresh silently
 let _cachedPosition = null;
@@ -30,17 +31,17 @@ async function getGpsPosition() {
   });
 }
 
-async function reverseGeocode(lat, lng) {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-      { headers: { 'Accept-Language': 'de' } }
-    );
-    const data = await res.json();
-    return data.display_name?.split(',').slice(0, 3).join(', ') || null;
-  } catch {
-    return null;
-  }
+async function reverseGeocode(lat, lng, lang = 'de') {
+try {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+    { headers: { 'Accept-Language': lang === 'en' ? 'en' : 'de' } }
+  );
+  const data = await res.json();
+  return data.display_name?.split(',').slice(0, 3).join(', ') || null;
+} catch {
+  return null;
+}
 }
 
 export default function ClockInOutBanner({ technicianId, technicianName, onNavigateToHistory }) {
@@ -48,9 +49,10 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [elapsed, setElapsed] = useState('');
+  const [lang, setLang] = useState('de');
 
-  // Start background position watcher on mount
-  useEffect(() => { startPositionWatch(); }, []);
+  // Start background position watcher on mount & load user language
+  useEffect(() => { startPositionWatch(); base44.auth.me().then(u => setLang(u?.preferred_language || 'de')).catch(() => {}); }, []);
 
   const loadActiveRecord = useCallback(async () => {
     if (!technicianId) { setLoading(false); return; }
@@ -97,7 +99,7 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
       const gps = await getGpsPosition();
       let address = null;
       if (gps) {
-        address = await reverseGeocode(gps.lat, gps.lng);
+        address = await reverseGeocode(gps.lat, gps.lng, lang);
       }
       const now = new Date().toISOString();
       const record = await base44.entities.AttendanceRecord.create({
@@ -112,12 +114,12 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
       });
       setActiveRecord(record);
       if (gps) {
-        toast.success(`Eingestempelt um ${format(new Date(), 'HH:mm')} 📍`);
+        toast.success(`${t('clockedInAt', lang)} ${format(new Date(), 'HH:mm')} 📍`);
       } else {
-        toast.warning(`Eingestempelt um ${format(new Date(), 'HH:mm')} — kein GPS verfügbar`);
+        toast.warning(`${t('clockInSuccess', lang)} ${format(new Date(), 'HH:mm')} — ${t('noGps', lang)}`);
       }
     } catch (e) {
-      toast.error('Fehler beim Einstempeln');
+      toast.error(t('clockInError', lang));
     } finally {
       setProcessing(false);
     }
@@ -130,12 +132,12 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
       const gps = await getGpsPosition();
       let address = null;
       if (gps) {
-        address = await reverseGeocode(gps.lat, gps.lng);
+        address = await reverseGeocode(gps.lat, gps.lng, lang);
       }
-      const now = new Date().toISOString();
+      const nowo = new Date().toISOString();
       const duration = differenceInMinutes(new Date(), parseISO(activeRecord.clock_in));
       await base44.entities.AttendanceRecord.update(activeRecord.id, {
-        clock_out: now,
+        clock_out: nowo,
         duration_minutes: duration,
         clock_out_lat: gps?.lat || null,
         clock_out_lng: gps?.lng || null,
@@ -143,9 +145,9 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
       });
       setActiveRecord(null);
       setElapsed('');
-      toast.success(`Ausgestempelt — ${Math.floor(duration / 60)}h ${duration % 60}min`);
+      toast.success(`${t('clockedOut', lang)} ${Math.floor(duration / 60)}h ${duration % 60}min`);
     } catch (e) {
-      toast.error('Fehler beim Ausstempeln');
+      toast.error(t('clockOutError', lang));
     } finally {
       setProcessing(false);
     }
@@ -163,11 +165,11 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
           style={{ boxShadow: '0 4px 16px rgba(16,185,129,0.35)' }}
         >
           {processing ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
-          {processing ? 'Wird eingestempelt...' : 'Kommen — Einstempeln'}
+          {processing ? t('clockingIn', lang) : t('clockIn', lang)}
         </button>
         {onNavigateToHistory && (
           <button onClick={onNavigateToHistory} className="w-full text-center text-xs text-slate-400 mt-2 py-1">
-            Zeitaufzeichnungen ansehen →
+            {t('viewTimeRecords', lang)}
           </button>
         )}
       </div>
@@ -181,7 +183,7 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
         <div className="px-4 pt-3 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
-            <span className="text-sm font-semibold">Aktiv seit {format(parseISO(activeRecord.clock_in), 'HH:mm')} Uhr</span>
+            <span className="text-sm font-semibold">{t('activeSince', lang)} {format(parseISO(activeRecord.clock_in), 'HH:mm')}</span>
           </div>
           <div className="flex items-center gap-1 text-blue-200 text-sm font-mono">
             <Clock className="h-4 w-4" />
@@ -201,11 +203,11 @@ export default function ClockInOutBanner({ technicianId, technicianName, onNavig
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500 active:bg-red-600 font-bold text-base transition-colors disabled:opacity-60"
           >
             {processing ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
-            {processing ? 'Wird ausgestempelt...' : 'Gehen — Ausstempeln'}
+            {processing ? t('clockingOut', lang) : t('clockOut', lang)}
           </button>
           {onNavigateToHistory && (
             <button onClick={onNavigateToHistory} className="px-3 py-3 rounded-xl bg-blue-500 active:bg-blue-700 text-white text-xs font-medium">
-              Verlauf
+              {t('history', lang)}
             </button>
           )}
         </div>

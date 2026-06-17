@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, ArrowLeft, X, Clock, Anchor } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, parseISO, startOfWeek, endOfWeek, subMonths, addMonths } from 'date-fns';
 import { offlineStorage } from '@/components/offline/offlineStorage';
+import { t } from '@/lib/mobileTranslations';
 
 const STATUS_COLORS = {
   'Draft':              'bg-slate-100 border-slate-300 text-slate-700',
@@ -110,6 +111,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
   const [jobs, setJobs] = useState([]);
   const [boats, setBoats] = useState([]);
   const [selectedDay, setSelectedDay] = useState(null);
+  const lang = user?.preferred_language || 'de';
 
   useEffect(() => {
     loadData();
@@ -209,7 +211,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 p-4">
-        <div className="text-center py-12">Loading calendar...</div>
+        <div className="text-center py-12">{t('loadingCalendar', lang)}</div>
       </div>
     );
   }
@@ -240,7 +242,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
               </Link>
             </Button>
           )}
-          <h1 className="text-xl font-bold">My Calendar</h1>
+          <h1 className="text-xl font-bold">{t('myCalendar', lang)}</h1>
         </div>
 
         <div className="flex items-center justify-between">
@@ -258,7 +260,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
         <div className="mt-3">
           <Button onClick={goToToday} variant="outline" size="sm"
             className="w-full bg-transparent border-white hover:bg-white/20 text-white">
-            Today
+            {t('calendarToday', lang)}
           </Button>
         </div>
       </div>
@@ -325,7 +327,7 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
                     })}
                     {overflow > 0 && (
                       <div className="text-[10px] text-blue-600 font-semibold pl-1">
-                        +{overflow} more
+                        +{overflow} {t('moreLabel', lang)}
                       </div>
                     )}
                   </div>
@@ -339,12 +341,17 @@ export default function TeamCalendar({ onNavigate, previewUserId }) {
       {/* Legend */}
       <div className="px-3 pb-6">
         <div className="bg-white rounded-xl p-3 border border-slate-200">
-          <p className="text-xs font-semibold text-slate-600 mb-2">Status Colors</p>
+          <p className="text-xs font-semibold text-slate-600 mb-2">{t('statusColors', lang)}</p>
           <div className="grid grid-cols-2 gap-1">
-            {['Scheduled', 'In Progress', 'Completed', 'Waiting for Parts'].map(s => (
-              <div key={s} className="flex items-center gap-1.5">
-                <div className={`h-3 w-3 rounded border ${getStatusColor(s)}`} />
-                <span className="text-[11px] text-slate-600">{s}</span>
+            {[
+              { key: 'Scheduled', label: t('statusScheduled', lang) },
+              { key: 'In Progress', label: t('statusInProgress', lang) },
+              { key: 'Completed', label: t('statusCompleted', lang) },
+              { key: 'Waiting for Parts', label: t('statusWaitingParts', lang) }
+            ].map(s => (
+              <div key={s.key} className="flex items-center gap-1.5">
+                <div className={`h-3 w-3 rounded border ${getStatusColor(s.key)}`} />
+                <span className="text-[11px] text-slate-600">{s.label}</span>
               </div>
             ))}
           </div>

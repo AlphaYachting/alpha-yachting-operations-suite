@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
 import TimeBooking from '@/components/mobile/TimeBooking';
+import { t } from '@/lib/mobileTranslations';
 
 export default function TeamTaskDetail() {
   const [searchParams] = useSearchParams();
@@ -20,8 +21,10 @@ export default function TeamTaskDetail() {
   const [location, setLocation] = useState(null);
   const [boat, setBoat] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lang, setLang] = useState('de');
 
   useEffect(() => {
+    base44.auth.me().then(u => setLang(u?.preferred_language || 'de')).catch(() => {});
     loadData();
   }, [taskId]);
 
@@ -86,7 +89,7 @@ export default function TeamTaskDetail() {
   if (!task || !workOrder) {
     return (
       <div className="p-4 text-center">
-        <p className="text-slate-500">Task not found</p>
+        <p className="text-slate-500">{t('taskNotFound', lang)}</p>
       </div>
     );
   }
@@ -101,7 +104,7 @@ export default function TeamTaskDetail() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <h1 className="text-lg font-bold text-slate-900">Task Details</h1>
+          <h1 className="text-lg font-bold text-slate-900">{t('taskDetails', lang)}</h1>
         </div>
       </div>
 
@@ -133,7 +136,7 @@ export default function TeamTaskDetail() {
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-slate-400 flex-shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-500">Scheduled</p>
+                  <p className="text-xs text-slate-500">{t('scheduled', lang)}</p>
                   <p className="text-sm font-medium text-slate-900">
                     {format(parseISO(workOrder.scheduled_date), 'MMMM d, yyyy')}
                     {workOrder.scheduled_start_time && ` at ${workOrder.scheduled_start_time}`}
@@ -147,7 +150,7 @@ export default function TeamTaskDetail() {
                   <div className="flex items-center gap-3 flex-1">
                     <MapPin className="h-4 w-4 text-slate-400 flex-shrink-0" />
                     <div>
-                      <p className="text-xs text-slate-500">Location</p>
+                      <p className="text-xs text-slate-500">{t('locationLabel', lang)}</p>
                       <p className="text-sm font-medium text-slate-900">{location.name}</p>
                     </div>
                   </div>
@@ -164,7 +167,7 @@ export default function TeamTaskDetail() {
                 </div>
                 {location.contact_phone && (
                   <div className="text-xs text-slate-600 ml-7">
-                    <span className="font-medium">Marina Phone:</span> {location.contact_phone}
+                    <span className="font-medium">{t('marinaPhone', lang)}</span> {location.contact_phone}
                   </div>
                 )}
               </div>
@@ -177,25 +180,25 @@ export default function TeamTaskDetail() {
           <Card>
             <CardContent className="p-4 space-y-3">
               <div>
-                <p className="text-xs text-slate-500 font-medium mb-1">Boat Details</p>
+                <p className="text-xs text-slate-500 font-medium mb-1">{t('boatDetails', lang)}</p>
                 <p className="text-sm font-semibold text-slate-900">{boat.vessel_name}</p>
                 <p className="text-xs text-slate-600">{boat.vessel_type}</p>
               </div>
               {boat.known_issues && (
                 <div>
-                  <p className="text-xs text-slate-500 font-medium mb-1">Boat Position & Access</p>
+                  <p className="text-xs text-slate-500 font-medium mb-1">{t('boatAccess', lang)}</p>
                   <p className="text-sm text-slate-700">{boat.known_issues}</p>
                 </div>
               )}
               {boat.access_details && (
                 <div>
-                  <p className="text-xs text-slate-500 font-medium mb-1">Access Details</p>
+                  <p className="text-xs text-slate-500 font-medium mb-1">{t('accessDetails', lang)}</p>
                   <p className="text-sm text-slate-700">{boat.access_details}</p>
                 </div>
               )}
               {boat.systems_notes && (
                 <div>
-                  <p className="text-xs text-slate-500 font-medium mb-1">Boat Conditions</p>
+                  <p className="text-xs text-slate-500 font-medium mb-1">{t('boatConditions', lang)}</p>
                   <p className="text-sm text-slate-700">{boat.systems_notes}</p>
                 </div>
               )}
@@ -208,7 +211,7 @@ export default function TeamTaskDetail() {
           <Card>
             <CardContent className="p-4 space-y-3">
               <div>
-                <p className="text-xs text-slate-500 mb-2">Description</p>
+                <p className="text-xs text-slate-500 mb-2">{t('woDescription', lang)}</p>
                 <p className="text-sm text-slate-700">{task.description}</p>
               </div>
             </CardContent>
@@ -221,18 +224,18 @@ export default function TeamTaskDetail() {
             <div className="flex items-start gap-2">
               <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-yellow-900 text-sm">Important Security & Safety Notices</p>
+                <p className="font-semibold text-yellow-900 text-sm">{t('safetyNotices', lang)}</p>
               </div>
             </div>
             {task.issue_notes && (
               <div>
-                <p className="text-xs text-yellow-700 font-medium mb-1">Special Requirements:</p>
+                <p className="text-xs text-yellow-700 font-medium mb-1">{t('specialRequirements', lang)}</p>
                 <p className="text-sm text-yellow-800">{task.issue_notes}</p>
               </div>
             )}
             {workOrder.safety_notes && (
               <div>
-                <p className="text-xs text-yellow-700 font-medium mb-1">Safety Notes:</p>
+                <p className="text-xs text-yellow-700 font-medium mb-1">{t('safetyNotes', lang)}</p>
                 <p className="text-sm text-yellow-800">{workOrder.safety_notes}</p>
               </div>
             )}
@@ -249,7 +252,7 @@ export default function TeamTaskDetail() {
               onClick={() => handleStatusChange('In Progress')}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
-              Start
+              {t('startTask', lang)}
             </Button>
           )}
           {task.status !== 'Completed' && (
@@ -257,7 +260,7 @@ export default function TeamTaskDetail() {
               onClick={() => handleStatusChange('Completed')}
               className="flex-1 bg-green-600 hover:bg-green-700"
             >
-              Done
+              {t('doneTask', lang)}
             </Button>
           )}
         </div>

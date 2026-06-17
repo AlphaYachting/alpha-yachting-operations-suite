@@ -11,7 +11,16 @@
         "customer"
       ],
       "default": "technician",
-      "description": "User role: admin = full access, lead_technician = projects+leads+offers+schedule, technician = my tasks+schedule only, customer = mobile portal only"
+      "description": "User role"
+    },
+    "preferred_language": {
+      "type": "string",
+      "enum": [
+        "de",
+        "en"
+      ],
+      "default": "de",
+      "description": "Preferred UI language for mobile app (de=German, en=English)"
     }
   },
   "required": []

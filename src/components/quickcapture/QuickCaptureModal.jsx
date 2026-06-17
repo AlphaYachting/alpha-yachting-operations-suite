@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Mic, MicOff, Camera, X, Loader2, Zap, CheckCircle2, Edit2, AlertCircle, User, Ship, MapPin, Search, Receipt, UserPlus, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { t, getQuickCapturePrompt, getSpeechLang } from '@/lib/mobileTranslations';
 
 const TYPE_CONFIG = {
   material_entry: { label: 'Material / Parts', color: 'bg-amber-100 text-amber-800' },
@@ -18,15 +19,15 @@ const TYPE_CONFIG = {
   internal_note: { label: 'Internal Note', color: 'bg-slate-100 text-slate-700' }
 };
 
-const VOICE_STATES = {
+const VOICE_STATES_BASE = {
   idle: null,
-  listening: 'Listening... speak now',
-  ended: 'Voice ended — continue typing or restart',
-  error: 'Voice error — type or try again'
+  listening: { de: 'Höre zu... sprich jetzt', en: 'Listening... speak now' },
+  ended: { de: 'Aufnahme beendet — weiter tippen oder neu starten', en: 'Voice ended — continue typing or restart' },
+  error: { de: 'Sprachfehler — tippen oder erneut versuchen', en: 'Voice error — type or try again' }
 };
 
 // ── Searchable Customer Picker ─────────────────────────────────────────────
-function CustomerPicker({ customers, value, onChange, label = 'Customer', confidenceBadge }) {
+function CustomerPicker({ customers, value, onChange, label = 'Customer', confidenceBadge, lang = 'de' }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -78,32 +79,32 @@ function CustomerPicker({ customers, value, onChange, label = 'Customer', confid
           className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm border rounded-md bg-white hover:bg-slate-50 text-left">
           
           <span className={selected ? 'text-slate-900' : 'text-slate-400'}>
-            {selected ? displayName(selected) : 'None — tap to search'}
+            {selected ? displayName(selected) : t('noMatchTap', lang)}
           </span>
           <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
-        </button>
+          </button>
 
-        {open &&
-        <div className="absolute z-50 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
+          {open &&
+          <div className="absolute z-50 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
             <div className="p-2 border-b">
               <Input
               autoFocus
-              placeholder="Search customer..."
+              placeholder={t('searchCustomer', lang)}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 text-sm" />
-            
+
             </div>
             <div className="max-h-56 overflow-y-auto">
               <button
               type="button"
               onClick={() => handleSelect(null)}
               className="w-full px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 text-left">
-              
-                — Clear / None
+
+                {t('clearNone', lang)}
               </button>
               {filtered.length === 0 &&
-            <p className="px-3 py-2 text-sm text-slate-400">No results</p>
+            <p className="px-3 py-2 text-sm text-slate-400">{t('noResults', lang)}</p>
             }
               {filtered.map((c) =>
             <button
@@ -124,7 +125,7 @@ function CustomerPicker({ customers, value, onChange, label = 'Customer', confid
 }
 
 // ── Searchable Boat Picker ─────────────────────────────────────────────
-function BoatPicker({ boats, value, onChange, customerId, label = 'Boat' }) {
+function BoatPicker({ boats, value, onChange, customerId, label = 'Boat', lang = 'de' }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
@@ -168,7 +169,7 @@ function BoatPicker({ boats, value, onChange, customerId, label = 'Boat' }) {
           onClick={() => setOpen((o) => !o)}
           className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm border rounded-md bg-white hover:bg-slate-50 text-left">
           <span className={selected ? 'text-slate-900' : 'text-slate-400'}>
-            {selected ? selected.vessel_name : 'None — tap to search'}
+            {selected ? selected.vessel_name : t('noMatchTap', lang)}
           </span>
           <Search className="h-4 w-4 text-slate-400 flex-shrink-0" />
         </button>
@@ -178,7 +179,7 @@ function BoatPicker({ boats, value, onChange, customerId, label = 'Boat' }) {
             <div className="p-2 border-b">
               <Input
               autoFocus
-              placeholder="Search boat..."
+              placeholder={t('searchBoat', lang)}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-8 text-sm" />
@@ -188,10 +189,10 @@ function BoatPicker({ boats, value, onChange, customerId, label = 'Boat' }) {
               type="button"
               onClick={() => handleSelect(null)}
               className="w-full px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 text-left">
-                — Clear / None
+                {t('clearNone', lang)}
               </button>
               {filtered.length === 0 &&
-            <p className="px-3 py-2 text-sm text-slate-400">No results</p>
+            <p className="px-3 py-2 text-sm text-slate-400">{t('noResults', lang)}</p>
             }
               {filtered.map((b) =>
             <button
@@ -247,7 +248,7 @@ function matchBoat(boats, extractedName, customerId) {
 }
 
 // ── STEP 1: Input ──────────────────────────────────────────────────────────
-function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
+function InputStep({ onParsed, customers, boats, invoiceMode = false, lang = 'de' }) {
   const [text, setText] = useState('');
   const [voiceState, setVoiceState] = useState('idle'); // idle | listening | ended | error
   const [interim, setInterim] = useState('');
@@ -270,7 +271,7 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
   const createRecognition = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const r = new SR();
-    r.lang = 'de-DE';
+    r.lang = getSpeechLang(lang);
     r.continuous = true;
     r.interimResults = true;
 
@@ -306,13 +307,13 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
       if (e.error === 'not-allowed') {
         setVoiceState('error');
         recordingActiveRef.current = false;
-        toast.error('Mikrofon-Zugriff verweigert');
+        toast.error(t('micDenied', lang));
         return;
       }
       if (e.error === 'network') {
         setVoiceState('error');
         recordingActiveRef.current = false;
-        toast.error('Netzwerkfehler – bitte später versuchen');
+        toast.error(t('networkError', lang));
         return;
       }
       // Fallback for other errors
@@ -359,7 +360,7 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
   };
 
   const startRecording = () => {
-    if (!voiceSupported) {toast.error('Spracheingabe nicht unterstützt');return;}
+    if (!voiceSupported) {toast.error(t('voiceNotSupported', lang));return;}
     recordingActiveRef.current = true;
     committedTextRef.current = text;
     const r = createRecognition();
@@ -380,7 +381,7 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       setPhotoUrls((prev) => [...prev, file_url]);
-    } catch {toast.error('Photo upload failed');} finally
+    } catch {toast.error(t('photoUploadFailed', lang));} finally
     {setUploading(false);}
   };
 
@@ -391,13 +392,13 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       setInvoiceUrls((prev) => [...prev, file_url]);
-    } catch {toast.error('Rechnung-Upload fehlgeschlagen');} finally
+    } catch {toast.error(t('receiptUploadFailed', lang));} finally
     {setUploadingInvoice(false);}
   };
 
   const handleProcess = async () => {
-    if (!text.trim() && mode !== 'invoice') {toast.error('Bitte zuerst Text eingeben');return;}
-    if (mode === 'invoice' && invoiceUrls.length === 0) {toast.error('Bitte zuerst eine Rechnung hochladen');return;}
+    if (!text.trim() && mode !== 'invoice') {toast.error(t('enterText', lang));return;}
+    if (mode === 'invoice' && invoiceUrls.length === 0) {toast.error(t('uploadReceipt', lang));return;}
     // Stop voice if still running
     recognitionRef.current?.stop();
     setProcessing(true);
@@ -427,33 +428,9 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
     try {
       let aiResult = null;
       try {
+        const promptTemplate = getQuickCapturePrompt(lang);
         aiResult = await base44.integrations.Core.InvokeLLM({
-          prompt: `You are an operational classifier for a marine yacht service company (Alpha Yachting).
-
-          Parse this field note and extract ALL relevant information:
-          "${text}"
-
-          CLASSIFICATION TYPES:
-          - material_entry: consumables/parts/materials left at customer
-          - tool_tracking: company equipment/machines/tools left on site
-          - task_candidate: work that needs to be done (cleaning, repair, inspection)
-          - customer_request: customer asked for new service
-          - project_intake: site visit/inspection with multiple work areas
-          - internal_note: informational only
-          - new_customer: user wants to create a new customer record
-          - daily_report: mechanic describes their work day across multiple boats/customers with hours worked ("war heute bei...", "5 Stunden...", "dann bei...")
-
-          IMPORTANT daily_report detection: If the text describes multiple visits to different customers/boats with hours worked for each, set entry_type to "daily_report". Extract each visit into the visits array.
-
-          Extract: customer_name, boat_name, location, item_names, work_hints, urgency (low/normal/high/urgent), billable, short_summary (1 sentence), suggested_target.
-          For new_customer: intent_new_customer, new_customer_phone, new_customer_email, new_customer_boat.
-
-          For daily_report, fill the visits array. Each visit object has:
-          - customer_name: "Müller" or similar
-          - boat_name: "Bavaria 38" or similar
-          - work_description: "Motor repariert" or similar (short, in the language of the input)
-          - hours: number of hours worked (e.g. 5, 2.5). If "Viertelstunde" ≈ 0.25, "halbe Stunde" ≈ 0.5, "dreiviertel Stunde" ≈ 0.75.
-          - location: marina or city if mentioned`,
+          prompt: promptTemplate.replace('___TEXT___', text),
           response_json_schema: {
             type: 'object',
             properties: {
@@ -510,7 +487,7 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
     }
   };
 
-  const voiceMsg = VOICE_STATES[voiceState];
+  const voiceMsg = VOICE_STATES_BASE[voiceState]?.[lang] || VOICE_STATES_BASE[voiceState]?.de;
   const canSubmit = mode === 'invoice' ? invoiceUrls.length > 0 : text.trim().length > 0;
 
   return (
@@ -528,7 +505,7 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
             }`}
           >
             <Mic className="h-5 w-5" />
-            <span>Text / Sprache</span>
+            <span>{t('textVoiceMode', lang)}</span>
           </button>
         )}
         <button
@@ -541,7 +518,7 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
           }`}
         >
           {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
-          <span>Foto{photoUrls.length > 0 ? ` (${photoUrls.length})` : ''}</span>
+          <span>{t('photoMode', lang)}{photoUrls.length > 0 ? ` (${photoUrls.length})` : ''}</span>
         </button>
         <button
           type="button"
@@ -553,7 +530,7 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
           }`}
         >
           {uploadingInvoice ? <Loader2 className="h-5 w-5 animate-spin" /> : <Receipt className="h-5 w-5" />}
-          <span>Rechnung{invoiceUrls.length > 0 ? ` (${invoiceUrls.length})` : ''}</span>
+          <span>{t('receiptMode', lang)}{invoiceUrls.length > 0 ? ` (${invoiceUrls.length})` : ''}</span>
         </button>
       </div>
 
@@ -591,7 +568,7 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
           className="w-full flex flex-col items-center justify-center gap-2 py-8 border-2 border-dashed border-emerald-300 rounded-xl text-emerald-600 hover:bg-emerald-50 transition-colors"
         >
           {uploadingInvoice ? <Loader2 className="h-8 w-8 animate-spin" /> : <Receipt className="h-8 w-8" />}
-          <span className="text-sm font-medium">{uploadingInvoice ? 'Wird hochgeladen…' : 'Rechnung / Lieferschein fotografieren'}</span>
+          <span className="text-sm font-medium">{uploadingInvoice ? t('uploadingPhoto', lang) : t('uploadPhotoHint', lang)}</span>
         </button>
       )}
 
@@ -599,8 +576,8 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
       <div className="relative">
         <Textarea
           placeholder={mode === 'invoice'
-            ? 'Optionale Notiz zur Rechnung, z.B. "Victron-Rechnung für Blümel, Marina Vrsar"…'
-            : 'Was ist passiert? z.B. "Blümel, Hochdruckreiniger in Vrsar gelassen"…'
+            ? t('receiptPhotoPlaceholder', lang)
+            : t('textPlaceholder', lang)
           }
           value={text + (interim ? ' ' + interim : '')}
           onChange={(e) => {
@@ -638,8 +615,8 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
             }`}
           >
             {voiceState === 'listening'
-              ? <><MicOff className="h-5 w-5" /><span>Aufnahme stoppen</span></>
-              : <><Mic className="h-5 w-5" /><span>{voiceState === 'ended' || voiceState === 'error' ? 'Erneut aufnehmen' : 'Spracheingabe starten'}</span></>
+              ? <><MicOff className="h-5 w-5" /><span>{t('stopRecording', lang)}</span></>
+              : <><Mic className="h-5 w-5" /><span>{voiceState === 'ended' || voiceState === 'error' ? t('recordAgain', lang) : t('startRecording', lang)}</span></>
             }
           </button>
         </>
@@ -666,10 +643,10 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
         className={`w-full h-12 text-base ${mode === 'invoice' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'} text-white`}
       >
         {processing
-          ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />Verarbeite…</>
+          ? <><Loader2 className="h-5 w-5 mr-2 animate-spin" />{t('processing', lang)}</>
           : mode === 'invoice'
-            ? <><Receipt className="h-5 w-5 mr-2" />In Review ablegen</>
-            : <><Zap className="h-5 w-5 mr-2" />Analysieren &amp; Prüfen</>
+            ? <><Receipt className="h-5 w-5 mr-2" />{t('saveToReview', lang)}</>
+            : <><Zap className="h-5 w-5 mr-2" />{t('analyzeAndCheck', lang)}</>
         }
       </Button>
     </div>);
@@ -677,7 +654,7 @@ function InputStep({ onParsed, customers, boats, invoiceMode = false }) {
 }
 
 // ── STEP 2: Result Card ────────────────────────────────────────────────────
-function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderContext = null }) {
+function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderContext = null, lang = 'de' }) {
   const { rawText, photoUrls, inputMethod, aiResult, customerMatch, boatMatch } = parsed;
   const [overrideCustomerId, setOverrideCustomerId] = useState(customerMatch?.customer?.id || '');
   const [overrideBoatId, setOverrideBoatId] = useState(boatMatch?.boat?.id || '');
@@ -717,7 +694,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
   boats;
 
   const handleCreateNewCustomer = async () => {
-    if (!newCustName.trim()) { toast.error('Name ist erforderlich'); return; }
+    if (!newCustName.trim()) { toast.error(t('nameRequired', lang)); return; }
     setCreatingCust(true);
     try {
       const nameParts = newCustName.trim().split(' ');
@@ -739,9 +716,9 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
       }
       setOverrideCustomerId(customer.id);
       setNewCustCreated(true);
-      toast.success(`Kunde "${newCustName.trim()}" angelegt!`);
+      toast.success(`${t('customerCreatedToast', lang)} "${newCustName.trim()}"`);
     } catch (err) {
-      toast.error('Fehler beim Anlegen: ' + err.message);
+      toast.error(t('customerCreateFailed', lang) + ' ' + err.message);
     } finally {
       setCreatingCust(false);
     }
@@ -775,7 +752,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
         });
         await Promise.all(entries.map(e => base44.entities.QuickCaptureEntry.create(e)));
         onConfirm();
-        toast.success(`${entries.length} Einträge gespeichert`);
+        toast.success(`${entries.length} ${t('saved', lang)}`);
         setSaving(false);
         return;
       }
@@ -804,15 +781,23 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
       };
       await base44.entities.QuickCaptureEntry.create(entry);
       onConfirm();
-      toast.success('Captured and added to Review Queue');
+      toast.success(t('saved', lang));
     } catch {
-      toast.error('Failed to save capture');
+      toast.error(t('saveFailed', lang));
     } finally {
       setSaving(false);
     }
   };
 
-  const typeConf = TYPE_CONFIG[overrideType] || TYPE_CONFIG.internal_note;
+  const translatedTypeConfig = {
+    material_entry: { label: t('qcMaterialParts', lang), color: 'bg-amber-100 text-amber-800' },
+    tool_tracking: { label: t('qcToolEquipment', lang), color: 'bg-blue-100 text-blue-800' },
+    task_candidate: { label: t('qcTaskCandidate', lang), color: 'bg-orange-100 text-orange-800' },
+    customer_request: { label: t('qcCustomerRequest', lang), color: 'bg-purple-100 text-purple-800' },
+    project_intake: { label: t('qcProjectIntake', lang), color: 'bg-green-100 text-green-800' },
+    internal_note: { label: t('qcInternalNote', lang), color: 'bg-slate-100 text-slate-700' }
+  };
+  const typeConf = translatedTypeConfig[overrideType] || translatedTypeConfig.internal_note;
 
   const confidenceBadge = customerMatch ?
   <Badge className={customerMatch.confidence === 'high' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
@@ -829,7 +814,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
       <div className="rounded-lg border border-amber-200 bg-amber-50 divide-y divide-amber-100">
         {/* Header */}
         <div className="p-3 flex items-center justify-between gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Parsed Result</span>
+          <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">{t('parsedResult', lang)}</span>
           <div className="flex items-center gap-2 flex-wrap">
             {overrideType && <Badge className={typeConf.color}>{typeConf.label}</Badge>}
             {aiResult?.urgency && aiResult.urgency !== 'normal' &&
@@ -850,7 +835,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
             <div className="flex items-center gap-2 mb-3">
               <Clock className="h-4 w-4 text-blue-600" />
               <span className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-                Tagesbericht · {visitOverrides.length} {visitOverrides.length === 1 ? 'Besuch' : 'Besuche'}
+                {t('dailyReport', lang)} · {visitOverrides.length} {visitOverrides.length === 1 ? t('visitSingular', lang) : t('visitsLabel', lang)}
               </span>
             </div>
             <div className="space-y-3">
@@ -859,13 +844,13 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
                   <div key={idx} className="p-3 bg-white rounded-lg border border-blue-100 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-blue-600 bg-blue-100 rounded-full w-5 h-5 flex items-center justify-center">{idx + 1}</span>
-                      <span className="text-xs text-blue-700 font-medium">Besuch {idx + 1}</span>
+                      <span className="text-xs text-blue-700 font-medium">{t('visit', lang)} {idx + 1}</span>
                     </div>
 
                     {/* Hours + Work */}
                     <div className="flex gap-2">
                       <div className="w-20 flex-shrink-0">
-                        <label className="text-[10px] text-slate-400 block mb-0.5">Stunden</label>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">{t('hours', lang)}</label>
                         <Input
                           type="number"
                           step="0.25"
@@ -879,12 +864,12 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <label className="text-[10px] text-slate-400 block mb-0.5">Arbeit</label>
+                        <label className="text-[10px] text-slate-400 block mb-0.5">{t('workLabel', lang)}</label>
                         <Input
                           value={vo.workDescription}
                           onChange={e => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, workDescription: e.target.value } : p))}
                           className="h-7 text-sm"
-                          placeholder="Was wurde gemacht?"
+                          placeholder={t('whatWasDone', lang)}
                         />
                       </div>
                     </div>
@@ -894,7 +879,8 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
                       customers={customers}
                       value={vo.customerId}
                       onChange={id => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, customerId: id, boatId: '' } : p))}
-                      label="Kunde"
+                      label={t('customerLabel', lang)}
+                      lang={lang}
                     />
 
                     {/* Boat — eigene Zeile mit Suchfeld */}
@@ -903,7 +889,8 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
                       value={vo.boatId}
                       onChange={id => setVisitOverrides(prev => prev.map((p, i) => i === idx ? { ...p, boatId: id } : p))}
                       customerId={vo.customerId}
-                      label="Boot"
+                      label={t('boatLabel', lang)}
+                      lang={lang}
                     />
                   </div>
                 );
@@ -921,7 +908,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
             <div className="flex items-center gap-2 mb-2">
               <UserPlus className={`h-4 w-4 ${newCustCreated ? 'text-green-600' : 'text-blue-600'}`} />
               <span className={`text-xs font-semibold uppercase tracking-wide ${newCustCreated ? 'text-green-700' : 'text-blue-700'}`}>
-                {newCustCreated ? '✓ Kunde angelegt' : 'Neuen Kunden anlegen'}
+                {newCustCreated ? t('customerCreated', lang) : t('newCustomerBanner', lang)}
               </span>
             </div>
             {!newCustCreated ? (
@@ -929,25 +916,25 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
                 <Input
                   value={newCustName}
                   onChange={e => setNewCustName(e.target.value)}
-                  placeholder="Name *"
+                  placeholder={t('namePlaceholder', lang)}
                   className="h-8 text-sm bg-white"
                 />
                 <Input
                   value={newCustPhone}
                   onChange={e => setNewCustPhone(e.target.value)}
-                  placeholder="Telefon"
+                  placeholder={t('phonePlaceholder', lang)}
                   className="h-8 text-sm bg-white"
                 />
                 <Input
                   value={newCustEmail}
                   onChange={e => setNewCustEmail(e.target.value)}
-                  placeholder="E-Mail"
+                  placeholder={t('emailPlaceholder', lang)}
                   className="h-8 text-sm bg-white"
                 />
                 <Input
                   value={newCustBoat}
                   onChange={e => setNewCustBoat(e.target.value)}
-                  placeholder="Boot (optional)"
+                  placeholder={t('boatOptionalPlaceholder', lang)}
                   className="h-8 text-sm bg-white"
                 />
                 <Button
@@ -956,11 +943,11 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
                   className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {creatingCust ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <UserPlus className="h-3 w-3 mr-1" />}
-                  {creatingCust ? 'Wird angelegt…' : 'Kunden jetzt anlegen'}
+                  {creatingCust ? t('creating', lang) : t('createNow', lang)}
                 </Button>
               </div>
             ) : (
-              <p className="text-xs text-green-700">Kunde wurde angelegt und verknüpft.</p>
+              <p className="text-xs text-green-700">{t('customerLinked', lang)}</p>
             )}
           </div>
         )}
@@ -971,12 +958,13 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
             customers={customers}
             value={overrideCustomerId}
             onChange={(id) => {setOverrideCustomerId(id);setOverrideBoatId('');}}
-            label="Customer"
-            confidenceBadge={confidenceBadge} />
+            label={t('customerLabel', lang)}
+            confidenceBadge={confidenceBadge}
+            lang={lang} />
           
           {customerMatch &&
           <p className="text-xs text-slate-400 mt-1 ml-6">
-              Auto-detected: "{aiResult?.customer_name}" → {customerMatch.confidence} confidence
+              {t('autoDetected', lang)} "{aiResult?.customer_name}" → {customerMatch.confidence} {t('confidence', lang)}
             </p>
           }
         </div>
@@ -985,7 +973,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
         <div className="p-3">
           <div className="flex items-center gap-2 mb-1">
             <Ship className="h-4 w-4 text-slate-400" />
-            <span className="text-sm font-medium text-slate-700">Boat</span>
+            <span className="text-sm font-medium text-slate-700">{t('boatLabel', lang)}</span>
             {boatMatch &&
             <Badge className={boatMatch.confidence === 'high' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
                 {boatMatch.confidence} match
@@ -994,10 +982,10 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
           </div>
           <Select value={overrideBoatId} onValueChange={setOverrideBoatId}>
             <SelectTrigger className="h-8 text-sm bg-white">
-              <SelectValue placeholder={boatMatch ? `Auto: ${boatMatch.boat.vessel_name}` : 'Select boat (optional)'} />
+              <SelectValue placeholder={boatMatch ? `${t('autoBoat', lang)} ${boatMatch.boat.vessel_name}` : t('selectBoat', lang)} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={null}>None / Not matched</SelectItem>
+              <SelectItem value={null}>{t('noneNotMatched', lang)}</SelectItem>
               {availableBoats.map((b) =>
               <SelectItem key={b.id} value={b.id}>{b.vessel_name}</SelectItem>
               )}
@@ -1016,7 +1004,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
         {/* Secondary signals */}
         {aiResult?.secondary_signals?.length > 0 &&
         <div className="p-3">
-            <p className="text-xs font-semibold text-amber-700 mb-1">⚡ Multiple signals detected:</p>
+            <p className="text-xs font-semibold text-amber-700 mb-1">{t('multipleSignals', lang)}</p>
             <div className="flex flex-wrap gap-1">
               {aiResult.secondary_signals.map((s, i) =>
             <Badge key={i} className="bg-slate-100 text-slate-600 text-xs">{s}</Badge>
@@ -1027,13 +1015,13 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
 
         {/* Classification */}
         <div className="p-3">
-          <p className="text-xs font-semibold text-amber-700 mb-1">Classification</p>
+          <p className="text-xs font-semibold text-amber-700 mb-1">{t('classification', lang)}</p>
           <Select value={overrideType} onValueChange={setOverrideType}>
             <SelectTrigger className="h-8 text-sm bg-white">
-              <SelectValue placeholder="Select type..." />
+              <SelectValue placeholder={t('selectType', lang)} />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(TYPE_CONFIG).map(([key, conf]) =>
+              {Object.entries(translatedTypeConfig).map(([key, conf]) =>
               <SelectItem key={key} value={key}>{conf.label}</SelectItem>
               )}
             </SelectContent>
@@ -1042,7 +1030,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
 
         {aiResult?.suggested_target &&
         <div className="p-3">
-            <p className="text-xs text-amber-700">→ Suggested destination: {aiResult.suggested_target}</p>
+            <p className="text-xs text-amber-700">{t('suggestedDest', lang)} {aiResult.suggested_target}</p>
           </div>
         }
 
@@ -1052,7 +1040,7 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
       {!aiResult &&
       <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
           <AlertCircle className="h-4 w-4 flex-shrink-0" />
-          AI unavailable — entry saved unclassified for manual review.
+          {t('aiUnavailable', lang)}
         </div>
       }
 
@@ -1066,13 +1054,13 @@ function ResultStep({ parsed, customers, boats, onConfirm, onEdit, workOrderCont
 
       <div className="flex gap-2 pt-1">
         <Button variant="outline" onClick={onEdit} className="flex-1 h-12">
-          <Edit2 className="h-4 w-4 mr-1" /> Text bearbeiten
+          <Edit2 className="h-4 w-4 mr-1" /> {t('editText', lang)}
         </Button>
         <Button onClick={handleConfirm} disabled={saving} className="flex-1 h-12 bg-amber-500 hover:bg-amber-600 text-white text-base">
           {saving ?
           <Loader2 className="h-4 w-4 mr-1 animate-spin" /> :
           <CheckCircle2 className="h-4 w-4 mr-1" />}
-          Speichern
+          {t('save', lang)}
         </Button>
       </div>
     </div>);
@@ -1087,20 +1075,21 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
   const [parsed, setParsed] = useState(null);
   const [customers, setCustomers] = useState(customersProp);
   const [boats, setBoats] = useState(boatsProp);
+  const [lang, setLang] = useState('de');
 
   useEffect(() => {
     if (open) {
       setStep('input');
       setParsed(null);
-      // Always fetch fresh full customer/boat list when modal opens
+      // Load user language + fetch customers/boats
       Promise.all([
-      base44.entities.Customer.list('-last_name', 2000),
-      base44.entities.Boat.list('-created_date', 2000)]
-      ).then(([c, b]) => {
+        base44.auth.me().then(u => setLang(u?.preferred_language || 'de')).catch(() => {}),
+        base44.entities.Customer.list('-last_name', 2000),
+        base44.entities.Boat.list('-created_date', 2000)
+      ]).then(([_u, c, b]) => {
         setCustomers(c || []);
         setBoats(b || []);
       }).catch(() => {
-        // fallback to props if fetch fails
         setCustomers(customersProp);
         setBoats(boatsProp);
       });
@@ -1129,8 +1118,8 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
         <DialogHeader>
           <DialogTitle className="py-3 text-lg font-semibold tracking-tight leading-none flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-500" />
-            Quick Capture
-            {step === 'result' && <span className="text-sm font-normal text-slate-500 ml-1">— Review Result</span>}
+            {t('quickCaptureTitle', lang)}
+            {step === 'result' && <span className="text-sm font-normal text-slate-500 ml-1">{t('reviewResult', lang)}</span>}
           </DialogTitle>
         </DialogHeader>
 
@@ -1138,16 +1127,16 @@ export default function QuickCaptureModal({ open, onClose, onOpenChange, custome
         {workOrderContext?.work_order_id && (
           <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 mb-1">
             <Zap className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
-            <span>Linked to: <strong>{workOrderContext.display_label || `WO ${workOrderContext.work_order_id.slice(-6)}`}</strong></span>
+            <span>{t('linkedTo', lang)} <strong>{workOrderContext.display_label || `WO ${workOrderContext.work_order_id.slice(-6)}`}</strong></span>
           </div>
         )}
 
         {step === 'input' && (
-          <InputStep customers={customers} boats={boats}
+          <InputStep customers={customers} boats={boats} lang={lang}
             onParsed={(p) => { setParsed(p); setStep('result'); }} />
         )}
         {step === 'result' && parsed &&
-          <ResultStep parsed={parsed} customers={customers} boats={boats}
+          <ResultStep parsed={parsed} customers={customers} boats={boats} lang={lang}
             workOrderContext={workOrderContext}
             onConfirm={() => handleClose(false)} onEdit={() => setStep('input')} />
         }
