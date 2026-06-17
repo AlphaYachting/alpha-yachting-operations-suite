@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Clock, MapPin, AlertCircle, Settings, X, ChevronRight, CheckCircle2, Users, WifiOff, Wifi, Calendar, Ship, Zap } from 'lucide-react';
@@ -20,6 +21,7 @@ import { connectionMonitor } from '@/components/offline/connectionMonitor';
 import { syncQueue } from '@/components/offline/syncQueue';
 
 export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUserChange }) {
+  const { user: authUser } = useAuth(); // Use AuthContext user — avoids redundant auth.me() call
   const [user, setUser] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [workOrders, setWorkOrders] = useState([]);
@@ -55,6 +57,31 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
     return unsubscribe;
   }, [previewUserId]);
 
+  // Admin search data — loaded AFTER main UI renders (non-blocking, secondary feature)
+  useEffect(() => {
+    if (!user || !technicianLookupDone) return;
+    const isPrivileged = user?.role === 'admin' || user?.role === 'lead_technician';
+    if (!isPrivileged) return;
+    if (allSearchWorkOrders.length > 0) return; // already loaded
+
+    (async () => {
+      try {
+        const [allWOs, allJs, allBs, allLs, allCs] = await Promise.all([
+          base44.entities.WorkOrder.list('-created_date', 500),
+          base44.entities.Job.list('-created_date', 500),
+          base44.entities.Boat.list('-created_date', 200),
+          base44.entities.Location.list('-created_date', 200),
+          base44.entities.Customer.list('-created_date', 200),
+        ]);
+        setAllSearchWorkOrders(allWOs || []);
+        setAllSearchJobs(allJs || []);
+        setAllSearchBoats(allBs || []);
+        setAllSearchLocations(allLs || []);
+        setAllSearchCustomers(allCs || []);
+      } catch {/* silent — search just stays limited to user's own data */}
+    })();
+  }, [user, technicianLookupDone]);
+
   const syncPendingChanges = async () => {
     await syncQueue.processQueue();
     await syncQueue.clearCompletedItems();
@@ -63,7 +90,8 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
   const loadData = async (showCachedFirst = false) => {
     setTechnicianLookupDone(false);
     try {
-      const currentUser = await base44.auth.me();
+      // Use AuthContext user (already verified) — skip redundant auth.me() API call
+      const currentUser = authUser || await base44.auth.me();
       setUser(currentUser);
 
       // Show cached data immediately for instant load
@@ -100,18 +128,30 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
       let tasksData, workOrdersData, locationsData, boatsData, jobsData;
 
       try {
-        // Find technician efficiently
+        // Find technician efficiently — use cached ID to skip filter when possible
         let technicianId;
         if (previewUserId) {
           technicianId = previewUserId;
         } else {
-          const matchedTechs = await base44.entities.Technician.filter({
-            $or: [
-              { user_id: currentUser?.id },
-              { email: currentUser?.email }
-            ]
-          });
-          technicianId = matchedTechs?.[0]?.id;
+          const cachedTechId = localStorage.getItem('last_technician_id');
+          // Start Technician.filter in parallel with cache load — don't block UI on it
+          if (cachedTechId && !showCachedFirst) {
+            technicianId = cachedTechId; // Use cached immediately
+            // Kick off fresh lookup in background (non-blocking)
+            base44.entities.Technician.filter({
+              $or: [{ user_id: currentUser?.id }, { email: currentUser?.email }]
+            }).then(matched => {
+              if (matched?.[0]?.id && matched[0].id !== cachedTechId) {
+                setResolvedTechnicianId(matched[0].id);
+                localStorage.setItem('last_technician_id', matched[0].id);
+              }
+            }).catch(() => {});
+          } else {
+            const matchedTechs = await base44.entities.Technician.filter({
+              $or: [{ user_id: currentUser?.id }, { email: currentUser?.email }]
+            });
+            technicianId = matchedTechs?.[0]?.id;
+          }
         }
 
         setResolvedTechnicianId(technicianId);
@@ -181,22 +221,6 @@ export default function TeamMobileHome({ onNavigate, previewUserId, onPreviewUse
         setBoats(boatsData || []);
         setTasks(tasksData || []);
         setCustomers(customersData || []);
-
-        // For admin users: load ALL work orders for global search
-        if (currentUser?.role === 'admin' || currentUser?.role === 'lead_technician') {
-          const [allWOs, allJs, allBs, allLs, allCs] = await Promise.all([
-            base44.entities.WorkOrder.list('-created_date', 500),
-            base44.entities.Job.list('-created_date', 500),
-            base44.entities.Boat.list('-created_date', 200),
-            base44.entities.Location.list('-created_date', 200),
-            base44.entities.Customer.list('-created_date', 200),
-          ]);
-          setAllSearchWorkOrders(allWOs || []);
-          setAllSearchJobs(allJs || []);
-          setAllSearchBoats(allBs || []);
-          setAllSearchLocations(allLs || []);
-          setAllSearchCustomers(allCs || []);
-        }
 
         // Cache in background (non-blocking)
         Promise.all([

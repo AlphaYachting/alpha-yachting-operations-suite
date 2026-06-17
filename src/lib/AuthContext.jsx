@@ -1,6 +1,10 @@
 import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 
+// Admin access cache — skips redundant checkUserAccess calls for admins (TTL: 1 hour)
+const ADMIN_CACHE_KEY = '_auth_admin_checked';
+const ADMIN_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -51,7 +55,22 @@ export const AuthProvider = ({ children }) => {
         // SECURITY GATE: verify user has a valid accepted invite (or is admin)
         // Skip check on the InviteAccept page so the flow can complete
         const isInvitePage = window.location.pathname === '/InviteAccept';
+        const isAdmin = currentUser.role === 'admin';
         if (!isInvitePage) {
+          // Admin cache: skip redundant backend call within TTL window
+          const cachedEntry = isAdmin ? localStorage.getItem(ADMIN_CACHE_KEY) : null;
+          const cachedData = cachedEntry ? JSON.parse(cachedEntry) : null;
+          const cacheValid = cachedData && (Date.now() - cachedData.ts) < ADMIN_CACHE_TTL;
+
+          if (isAdmin && cacheValid) {
+            // Admin already verified — skip backend roundtrip
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            isCheckingRef.current = false;
+            setIsLoadingAuth(false);
+            return;
+          }
+
           try {
             const accessRes = await base44.functions.invoke('checkUserAccess', {});
             if (!accessRes.data?.allowed) {
@@ -75,6 +94,10 @@ export const AuthProvider = ({ children }) => {
               return;
             }
           }
+        }
+        // Cache admin access result to avoid future roundtrips
+        if (isAdmin) {
+          try { localStorage.setItem(ADMIN_CACHE_KEY, JSON.stringify({ ts: Date.now() })); } catch {}
         }
         setUser(currentUser);
         setIsAuthenticated(true);
