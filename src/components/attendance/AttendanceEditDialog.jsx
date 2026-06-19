@@ -51,7 +51,14 @@ export default function AttendanceEditDialog({ open, onOpenChange, record, techn
     setSaving(true);
     try {
       let duration = 0;
-      if (form.record_type === 'manual_entry' && form.work_start_time && form.work_end_time) {
+      const payload = {
+        technician_id: form.technician_id,
+        work_date: form.work_date,
+        record_type: form.record_type,
+        notes: form.notes || undefined,
+      };
+
+      if ((form.record_type === 'manual_entry' || form.record_type === 'clock_in') && form.work_start_time && form.work_end_time) {
         const [sh, sm] = form.work_start_time.split(':').map(Number);
         const [eh, em] = form.work_end_time.split(':').map(Number);
         duration = (eh * 60 + em) - (sh * 60 + sm) - (form.break_minutes || 0);
@@ -66,16 +73,21 @@ export default function AttendanceEditDialog({ open, onOpenChange, record, techn
         duration = form.duration_minutes || 480; // default 8h for vacation/sick
       }
 
-      const payload = {
-        technician_id: form.technician_id,
-        work_date: form.work_date,
-        record_type: form.record_type,
-        duration_minutes: duration,
-        work_start_time: form.record_type === 'manual_entry' ? form.work_start_time : undefined,
-        work_end_time: form.record_type === 'manual_entry' ? form.work_end_time : undefined,
-        break_minutes: form.record_type === 'manual_entry' ? (form.break_minutes || 0) : undefined,
-        notes: form.notes || undefined,
-      };
+      payload.duration_minutes = duration;
+
+      if (form.record_type === 'manual_entry') {
+        payload.work_start_time = form.work_start_time;
+        payload.work_end_time = form.work_end_time;
+        payload.break_minutes = form.break_minutes || 0;
+      }
+
+      // For GPS clock_in records: rebuild clock_in/clock_out timestamps from edited times
+      if (form.record_type === 'clock_in' && form.work_date && form.work_start_time) {
+        payload.clock_in = new Date(`${form.work_date}T${form.work_start_time}:00`).toISOString();
+        payload.clock_out = form.work_end_time
+          ? new Date(`${form.work_date}T${form.work_end_time}:00`).toISOString()
+          : null;
+      }
 
       // Get technician name
       const tech = technicians?.find(t => t.id === form.technician_id);
@@ -99,7 +111,7 @@ export default function AttendanceEditDialog({ open, onOpenChange, record, techn
     }
   };
 
-  const isReadonlyClockIn = form.record_type === 'clock_in' && !isNew;
+  const showAddressInfo = form.record_type === 'clock_in' && !isNew && record?.clock_in_address;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,12 +174,12 @@ export default function AttendanceEditDialog({ open, onOpenChange, record, techn
             />
           </div>
 
-          {/* Manual Entry Fields */}
-          {form.record_type === 'manual_entry' && (
+          {/* Time Fields — manual entry & GPS clock-in (both editable / correctable) */}
+          {(form.record_type === 'manual_entry' || form.record_type === 'clock_in') && (
             <>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label>Von</Label>
+                  <Label>{form.record_type === 'clock_in' ? 'Kommen' : 'Von'}</Label>
                   <Input
                     type="time"
                     value={form.work_start_time}
@@ -175,22 +187,24 @@ export default function AttendanceEditDialog({ open, onOpenChange, record, techn
                   />
                 </div>
                 <div>
-                  <Label>Bis</Label>
+                  <Label>{form.record_type === 'clock_in' ? 'Gehen' : 'Bis'}</Label>
                   <Input
                     type="time"
                     value={form.work_end_time}
                     onChange={(e) => setForm({ ...form, work_end_time: e.target.value })}
                   />
                 </div>
-                <div>
-                  <Label>Pause (min)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={form.break_minutes}
-                    onChange={(e) => setForm({ ...form, break_minutes: Number(e.target.value) })}
-                  />
-                </div>
+                {form.record_type === 'manual_entry' && (
+                  <div>
+                    <Label>Pause (min)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={form.break_minutes}
+                      onChange={(e) => setForm({ ...form, break_minutes: Number(e.target.value) })}
+                    />
+                  </div>
+                )}
               </div>
               {form.work_start_time && form.work_end_time && (
                 <p className="text-xs text-slate-500">
@@ -235,16 +249,11 @@ export default function AttendanceEditDialog({ open, onOpenChange, record, techn
             />
           </div>
 
-          {/* Read-only clock-in info */}
-          {isReadonlyClockIn && (
-            <div className="bg-slate-50 rounded-lg p-3 space-y-1 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-3 w-3 text-slate-400" />
-                <span>{record.clock_in_address || 'Keine Adresse'}</span>
-              </div>
-              {record.clock_in && <p>Kommen: {format(parseISO(record.clock_in), 'dd.MM.yyyy HH:mm')} Uhr</p>}
-              {record.clock_out && <p>Gehen: {format(parseISO(record.clock_out), 'dd.MM.yyyy HH:mm')} Uhr</p>}
-              <p className="text-slate-400 italic">GPS-Daten können nicht manuell geändert werden. Um Zeiten zu korrigieren, wechsle auf "Manuelle Eingabe".</p>
+          {/* GPS address info (read-only reference) */}
+          {showAddressInfo && (
+            <div className="bg-slate-50 rounded-lg p-3 flex items-center gap-2 text-xs text-slate-500">
+              <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+              <span className="truncate">{record.clock_in_address}</span>
             </div>
           )}
         </div>
