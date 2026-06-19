@@ -13,7 +13,7 @@
     "clock_in": {
       "type": "string",
       "format": "date-time",
-      "description": "Clock-in timestamp (UTC)"
+      "description": "Clock-in timestamp (UTC) \u2014 null if manual/vacation entry"
     },
     "clock_out": {
       "type": "string",
@@ -56,11 +56,34 @@
       "type": "string",
       "format": "date",
       "description": "Date of work (derived from clock_in, used for grouping)"
+    },
+    "record_type": {
+      "type": "string",
+      "enum": [
+        "clock_in",
+        "manual_entry",
+        "vacation",
+        "sick_leave"
+      ],
+      "default": "clock_in",
+      "description": "Type of attendance record"
+    },
+    "work_start_time": {
+      "type": "string",
+      "description": "HH:MM \u2014 manual work start time (for manual_entry)"
+    },
+    "work_end_time": {
+      "type": "string",
+      "description": "HH:MM \u2014 manual work end time (for manual_entry)"
+    },
+    "break_minutes": {
+      "type": "number",
+      "default": 0,
+      "description": "Break time in minutes (for manual_entry)"
     }
   },
   "required": [
     "technician_id",
-    "clock_in",
     "work_date"
   ]
 }
