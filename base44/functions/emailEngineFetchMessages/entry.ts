@@ -317,7 +317,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const batchSize = Math.min(Math.max(parseInt(body.batch_size) || 8, 3), 15);
+    const batchSize = Math.min(Math.max(parseInt(body.batch_size) || 4, 2), 8);
 
     const host = Deno.env.get('EMAIL_ENGINE_IMAP_HOST');
     const port = parseInt(Deno.env.get('EMAIL_ENGINE_IMAP_PORT') || '993');
