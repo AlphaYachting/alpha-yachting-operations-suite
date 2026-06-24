@@ -343,12 +343,23 @@ Deno.serve(async (req) => {
       // ── STEP 4: Create optional CME lines ────────────────────────────────
       for (const cme of unbilledCME) {
         const purchasePrice = cme.unit_purchase_price || 0;
+
+        // Build description: type tag + supplier + document sender
+        const descParts = [];
+        if (cme.work_order_id) {
+          descParts.push('Benötigtes Material');
+        } else {
+          descParts.push('Customer Material');
+        }
+        if (cme.supplier_name) descParts.push(`Lieferant: ${cme.supplier_name}`);
+        if (cme.document_sender || cme.from_name) descParts.push(`Absender: ${cme.document_sender || cme.from_name}`);
+        if (cme.notes) descParts.push(cme.notes);
         
         await base44.asServiceRole.entities.OfferTask.create({
           offer_id: offerId,
           sequence_order: lineOrder++,
-          title: `Customer Material: ${cme.item_title}`,
-          description: cme.notes || '',
+          title: cme.item_title || 'Material',
+          description: descParts.join(' · '),
           item_type: 'Material',
           unit_type: normalizeUnit(cme.unit),
           quantity: cme.quantity || 1,
