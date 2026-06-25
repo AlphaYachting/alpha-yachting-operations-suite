@@ -74,23 +74,27 @@ export const AuthProvider = ({ children }) => {
           try {
             const accessRes = await base44.functions.invoke('checkUserAccess', {});
             if (!accessRes.data?.allowed) {
-              // User authenticated but not authorized — show error and force logout
-              console.warn('[AuthContext] Access denied for', currentUser.email, '— logging out');
+              const reason = accessRes.data?.reason || 'access_denied';
+              console.warn('[AuthContext] Access denied for', currentUser.email, '— reason:', reason);
               setUser(null);
               setIsAuthenticated(false);
-              setAuthError({ type: 'user_not_registered' });
-              // Delay logout so the error screen renders first
-              setTimeout(() => base44.auth.logout('/'), 3000);
+              setAuthError({
+                type: 'user_not_registered',
+                detail: `Zugang verweigert für ${currentUser.email} (Rolle: ${currentUser.role}). Grund: ${reason}. User-ID: ${currentUser.id}`
+              });
+              setTimeout(() => base44.auth.logout('/'), 4000);
               return;
             }
           } catch (accessErr) {
-            // If the check itself fails, fail closed for non-admins
             console.error('[AuthContext] checkUserAccess failed:', accessErr?.message);
             if (currentUser.role !== 'admin') {
               setUser(null);
               setIsAuthenticated(false);
-              setAuthError({ type: 'user_not_registered' });
-              setTimeout(() => base44.auth.logout('/'), 3000);
+              setAuthError({
+                type: 'user_not_registered',
+                detail: `checkUserAccess Fehler für ${currentUser.email} (Rolle: ${currentUser.role}, ID: ${currentUser.id}): ${accessErr?.message || 'Unbekannter Fehler'}`
+              });
+              setTimeout(() => base44.auth.logout('/'), 4000);
               return;
             }
           }

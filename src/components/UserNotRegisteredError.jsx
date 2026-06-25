@@ -1,6 +1,6 @@
 import React from 'react';
 
-const UserNotRegisteredError = () => {
+const UserNotRegisteredError = ({ detail }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white to-slate-50">
       <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-lg border border-slate-100">
@@ -22,6 +22,12 @@ const UserNotRegisteredError = () => {
             </a>
             <p className="text-xs text-slate-500">Falls Sie bereits eine Einladung erhalten haben, verwenden Sie bitte den Link in Ihrer E-Mail oder melden Sie sich mit der richtigen E-Mail-Adresse an.</p>
           </div>
+          {detail && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-left">
+              <p className="text-xs font-semibold text-red-700 mb-1">🔍 Fehler-Details (bitte screenshot und weiterleiten):</p>
+              <p className="text-xs font-mono text-red-600 break-all">{detail}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

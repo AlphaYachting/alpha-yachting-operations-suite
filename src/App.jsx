@@ -81,7 +81,7 @@ const AuthenticatedApp = () => {
 
   // Auth error
   if (authError?.type === 'user_not_registered') {
-    return <UserNotRegisteredError />;
+    return <UserNotRegisteredError detail={authError.detail} />;
   }
 
   if (authError?.type === 'auth_error') {
