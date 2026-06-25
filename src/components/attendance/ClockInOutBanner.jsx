@@ -44,15 +44,14 @@ try {
 }
 }
 
-export default function ClockInOutBanner({ technicianId, technicianName, onNavigateToHistory }) {
+export default function ClockInOutBanner({ technicianId, technicianName, lang = 'de', onNavigateToHistory }) {
   const [activeRecord, setActiveRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [elapsed, setElapsed] = useState('');
-  const [lang, setLang] = useState('de');
 
-  // Start background position watcher on mount & load user language
-  useEffect(() => { startPositionWatch(); base44.auth.me().then(u => setLang(u?.preferred_language || 'de')).catch(() => {}); }, []);
+  // Start background position watcher on mount
+  useEffect(() => { startPositionWatch(); }, []);
 
   const loadActiveRecord = useCallback(async () => {
     if (!technicianId) { setLoading(false); return; }
