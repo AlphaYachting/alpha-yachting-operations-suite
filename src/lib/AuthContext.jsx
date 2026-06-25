@@ -99,6 +99,10 @@ export const AuthProvider = ({ children }) => {
         if (isAdmin) {
           try { localStorage.setItem(ADMIN_CACHE_KEY, JSON.stringify({ ts: Date.now() })); } catch {}
         }
+        // Auto-fix: if full_name has no space (e.g. email username), fix it silently
+        if (currentUser.full_name && !currentUser.full_name.includes(' ')) {
+          base44.functions.invoke('fixUserFullName', {}).catch(() => {});
+        }
         setUser(currentUser);
         setIsAuthenticated(true);
       } else {
