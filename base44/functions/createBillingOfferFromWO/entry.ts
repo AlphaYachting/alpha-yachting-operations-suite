@@ -344,21 +344,16 @@ Deno.serve(async (req) => {
       for (const cme of unbilledCME) {
         const purchasePrice = cme.unit_purchase_price || 0;
 
-        // Build description: type tag + supplier + document sender
+        // Build description: supplier + document sender + notes
         const descParts = [];
-        if (cme.work_order_id) {
-          descParts.push('Benötigtes Material');
-        } else {
-          descParts.push('Customer Material');
-        }
         if (cme.supplier_name) descParts.push(`Lieferant: ${cme.supplier_name}`);
         if (cme.document_sender || cme.from_name) descParts.push(`Absender: ${cme.document_sender || cme.from_name}`);
         if (cme.notes) descParts.push(cme.notes);
-        
+
         await base44.asServiceRole.entities.OfferTask.create({
           offer_id: offerId,
           sequence_order: lineOrder++,
-          title: cme.item_title || 'Material',
+          title: cme.item_title || cme.description || 'Material',
           description: descParts.join(' · '),
           item_type: 'Material',
           unit_type: normalizeUnit(cme.unit),
