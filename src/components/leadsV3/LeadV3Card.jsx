@@ -437,10 +437,15 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.preventDefault(); e.stopPropagation();
                       if (window.confirm(`Lead "${lead.name}" wirklich löschen?`)) {
-                        base44.entities.Lead.delete(lead.id).then(() => onDelete?.(lead.id));
+                        try {
+                          await base44.functions.invoke('deleteLead', { lead_id: lead.id });
+                          onDelete?.(lead.id);
+                        } catch (err) {
+                          alert('Löschen fehlgeschlagen: ' + err.message);
+                        }
                       }
                     }}
                     className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 border-slate-200"
