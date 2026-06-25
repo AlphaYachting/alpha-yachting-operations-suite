@@ -483,6 +483,22 @@ export default function LeadDetail() {
             <Edit className="h-4 w-4 mr-2" />
             Edit Lead
           </Button>
+          <Button
+            variant="outline"
+            className="border-red-300 text-red-600 hover:bg-red-50"
+            onClick={async () => {
+              if (!window.confirm(`Lead "${lead.name}" wirklich löschen?`)) return;
+              try {
+                await base44.functions.invoke('deleteLead', { lead_id: lead.id });
+                navigate(-1);
+              } catch (err) {
+                alert('Löschen fehlgeschlagen: ' + err.message);
+              }
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Lead löschen
+          </Button>
           {lead.converted_customer_id ? (
             <Button
               asChild
