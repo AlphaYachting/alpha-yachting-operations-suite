@@ -71,7 +71,24 @@ Deno.serve(async (req) => {
 
       // Set user role
       const roleToSet = invite.role === 'CUSTOMER' ? 'customer' : 'technician';
-      await base44.auth.updateMe({ role: roleToSet });
+      // Also fix full_name if it looks like an email username (no space = no real name)
+      const updatePayload = { role: roleToSet };
+      if (user.full_name && !user.full_name.includes(' ')) {
+        // Try to derive a proper name from the technician record (if linked)
+        try {
+          const techs = await base44.asServiceRole.entities.Technician.filter({
+            $or: [{ user_id: user.id }, { email: user.email }]
+          });
+          if (techs?.[0]) {
+            const t = techs[0];
+            const properName = [t.first_name, t.last_name].filter(Boolean).join(' ');
+            if (properName && properName !== user.full_name) {
+              updatePayload.full_name = properName;
+            }
+          }
+        } catch { /* ignore — role update still proceeds */ }
+      }
+      await base44.auth.updateMe(updatePayload);
 
       return Response.json({ success: true, role: invite.role });
     }

@@ -383,7 +383,7 @@ export default function Layout({ children, currentPageName }) {
                 <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-slate-200 text-slate-600 text-sm">
-                      {authUser?.full_name?.charAt(0) || 'U'}
+                      {(authUser?.full_name || authUser?.email || 'U').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 text-left">
