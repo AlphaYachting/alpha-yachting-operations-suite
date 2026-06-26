@@ -186,7 +186,7 @@ export default function BillingReview() {
     });
   }, [workOrders, jobs, customers, allCME]);
 
-  const handleCreateOffer = async (customerId, woIds, unlinkedCMEIds = []) => {
+  const handleCreateOffer = async (customerId, woIds, unlinkedCMEIds = [], materialMarkupPercent = 0) => {
     try {
       const work_order_meta = Object.fromEntries(
         workOrders
@@ -201,6 +201,7 @@ export default function BillingReview() {
       );
       const payload = { work_order_ids: woIds, work_order_meta };
       if (unlinkedCMEIds.length > 0) payload.unlinked_cme_ids = unlinkedCMEIds;
+      if (materialMarkupPercent > 0) payload.material_markup_percent = materialMarkupPercent;
       const response = await base44.functions.invoke('createBillingOfferFromWO', payload);
       const result = response.data;
 

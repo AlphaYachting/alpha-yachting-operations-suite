@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Users, Ship, Briefcase, Clock, Package, ChevronRight,
-  Receipt, Loader2, AlertTriangle, ExternalLink, ChevronDown, ChevronUp, CheckCircle2
+  Receipt, Loader2, AlertTriangle, ExternalLink, ChevronDown, ChevronUp, CheckCircle2, Percent
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
@@ -39,6 +40,7 @@ export default function CustomerBillingBlock({
   const [markingDoneId, setMarkingDoneId] = useState(null);
   const [confirmDoneId, setConfirmDoneId] = useState(null);
   const [doneWOIds, setDoneWOIds] = useState(new Set());
+  const [materialMarkupPercent, setMaterialMarkupPercent] = useState(0);
 
   const customerName = customer?.company_name ||
     `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown Customer';
@@ -46,6 +48,8 @@ export default function CustomerBillingBlock({
   const jobMap = useMemo(() => Object.fromEntries(jobs.map(j => [j.id, j])), [jobs]);
   const boatMap = useMemo(() => Object.fromEntries(boats.map(b => [b.id, b])), [boats]);
   const techMap = useMemo(() => Object.fromEntries(technicians.map(t => [t.id, t])), [technicians]);
+
+  const markupFactor = 1 + (materialMarkupPercent || 0) / 100;
 
   // Per-WO unbilled totals
   const woTotals = useMemo(() => {
@@ -63,11 +67,11 @@ export default function CustomerBillingBlock({
         const rate = techMap[te.technician_id]?.hourly_rate_billable || 0;
         return sum + rate * ((te.duration_minutes || 0) / 60);
       }, 0);
-      const materialTotal = woMU.reduce((sum, m) => sum + (m.unit_price || 0) * (m.quantity || 1), 0);
+      const materialTotal = woMU.reduce((sum, m) => sum + (m.unit_price || 0) * (m.quantity || 1), 0) * markupFactor;
       result[wo.id] = { laborTotal, materialTotal, teCount: woTE.length, muCount: woMU.length };
     }
     return result;
-  }, [workOrders, timeEntries, materialUsages, techMap]);
+  }, [workOrders, timeEntries, materialUsages, techMap, markupFactor]);
 
   const customerTotals = useMemo(() => {
     let labor = 0, material = 0;
@@ -76,10 +80,10 @@ export default function CustomerBillingBlock({
       material += woTotals[wo.id]?.materialTotal || 0;
     }
     const cmeTotal = linkedCME.filter(c => !c.billed_offer_id && !c.staged_offer_id)
-      .reduce((sum, c) => sum + (c.total_purchase_price || 0), 0);
+      .reduce((sum, c) => sum + (c.total_purchase_price || 0), 0) * markupFactor;
     const selectedUnlinkedTotal = unlinkedCME
       .filter(c => selectedUnlinkedCMEIds.has(c.id))
-      .reduce((sum, c) => sum + (c.total_purchase_price || 0), 0);
+      .reduce((sum, c) => sum + (c.total_purchase_price || 0), 0) * markupFactor;
     return { labor, material, cme: cmeTotal, selectedUnlinked: selectedUnlinkedTotal, total: labor + material + cmeTotal };
   }, [workOrders, woTotals, linkedCME, unlinkedCME, selectedUnlinkedCMEIds]);
 
@@ -106,7 +110,7 @@ export default function CustomerBillingBlock({
     if (selectedWOIds.size === 0 && selectedUnlinkedCMEIds.size === 0) return;
     setCreating(true);
     try {
-      await onCreateOffer([...selectedWOIds], [...selectedUnlinkedCMEIds]);
+      await onCreateOffer([...selectedWOIds], [...selectedUnlinkedCMEIds], materialMarkupPercent || 0);
       setSelectedWOIds(new Set());
       setSelectedUnlinkedCMEIds(new Set());
     } finally {
@@ -214,7 +218,7 @@ export default function CustomerBillingBlock({
           )}
 
           {/* WorkOrders header row */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
               <Checkbox
                 checked={selectedWOIds.size === workOrders.length && workOrders.length > 0}
@@ -222,7 +226,28 @@ export default function CustomerBillingBlock({
               />
               Select all WorkOrders
             </label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Material Markup Input */}
+              <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+                <Percent className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                <span className="text-xs text-amber-800 font-medium whitespace-nowrap">Material Aufschlag</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="500"
+                  step="1"
+                  value={materialMarkupPercent}
+                  onChange={e => setMaterialMarkupPercent(parseFloat(e.target.value) || 0)}
+                  onClick={e => e.stopPropagation()}
+                  className="w-16 h-6 text-xs text-center border-amber-300 bg-white px-1"
+                />
+                <span className="text-xs text-amber-700">%</span>
+                {materialMarkupPercent > 0 && (
+                  <span className="text-xs text-amber-600 font-semibold whitespace-nowrap">
+                    → ×{(1 + materialMarkupPercent / 100).toFixed(2)}
+                  </span>
+                )}
+              </div>
               {selectedWOIds.size > 0 && (
                 <span className="text-xs text-slate-500">
                   Selected: <strong>€{selectedTotal.toFixed(2)}</strong>

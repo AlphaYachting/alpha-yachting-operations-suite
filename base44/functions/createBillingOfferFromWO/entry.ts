@@ -50,7 +50,10 @@ Deno.serve(async (req) => {
       language = 'German',
       vat_rate = 0,
       valid_until_days = 30,
+      material_markup_percent = 0,
     } = body;
+
+    const markupFactor = 1 + (material_markup_percent || 0) / 100;
 
     if (!work_order_ids || work_order_ids.length === 0) {
       return Response.json({ error: 'At least one work_order_id is required' }, { status: 400 });
@@ -162,14 +165,14 @@ Deno.serve(async (req) => {
 
     unbilledMaterial.forEach(m => {
       const item = inventoryMap[m.inventory_item_id];
-      const salesPrice = m.unit_price || item?.sales_price || 0;
+      const salesPrice = (m.unit_price || item?.sales_price || 0) * markupFactor;
       const amount = salesPrice * (m.quantity || 1);
       overallTotal += amount;
       woTotals[m.work_order_id] = (woTotals[m.work_order_id] || 0) + amount;
     });
 
     unbilledCME.forEach(cme => {
-      const amount = cme.total_purchase_price || 0;
+      const amount = (cme.total_purchase_price || 0) * markupFactor;
       overallTotal += amount;
       if (cme.work_order_id) woTotals[cme.work_order_id] = (woTotals[cme.work_order_id] || 0) + amount;
     });
@@ -322,14 +325,15 @@ Deno.serve(async (req) => {
       // ── STEP 3: Create optional MaterialUsage lines ──────────────────────
       for (const m of unbilledMaterial) {
         const item = inventoryMap[m.inventory_item_id];
-        const salesPrice = m.unit_price || item?.sales_price || 0;
+        const baseSalesPrice = m.unit_price || item?.sales_price || 0;
+        const salesPrice = parseFloat((baseSalesPrice * markupFactor).toFixed(4));
         const itemName = item?.name || `Item ${m.inventory_item_id}`;
         
         await base44.asServiceRole.entities.OfferTask.create({
           offer_id: offerId,
           sequence_order: lineOrder++,
           title: `${woMap[m.work_order_id]?.work_order_number || 'WO'} — Material: ${itemName}`,
-          description: m.notes || '',
+          description: m.notes ? `${m.notes}${markupFactor > 1 ? ` [+${material_markup_percent}% Aufschlag]` : ''}` : (markupFactor > 1 ? `+${material_markup_percent}% Materialaufschlag` : ''),
           item_type: 'Material',
           unit_type: normalizeUnit(item?.unit),
           quantity: m.quantity || 1,
@@ -342,13 +346,14 @@ Deno.serve(async (req) => {
 
       // ── STEP 4: Create optional CME lines ────────────────────────────────
       for (const cme of unbilledCME) {
-        const purchasePrice = cme.unit_purchase_price || 0;
+        const purchasePrice = (cme.unit_purchase_price || 0) * markupFactor;
 
-        // Build description: supplier + document sender + notes
+        // Build description: supplier + document sender + notes + markup hint
         const descParts = [];
         if (cme.supplier_name) descParts.push(`Lieferant: ${cme.supplier_name}`);
         if (cme.document_sender || cme.from_name) descParts.push(`Absender: ${cme.document_sender || cme.from_name}`);
         if (cme.notes) descParts.push(cme.notes);
+        if (markupFactor > 1) descParts.push(`+${material_markup_percent}% Materialaufschlag`);
 
         await base44.asServiceRole.entities.OfferTask.create({
           offer_id: offerId,
