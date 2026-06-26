@@ -16,7 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Loader2, Receipt, AlertTriangle, Archive, ClipboardList } from 'lucide-react';
+import { AlertCircle, Loader2, Receipt, AlertTriangle, Archive, ClipboardList, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import CustomerBillingBlock from '@/components/billing/CustomerBillingBlock';
 import BillingArchiveView from '@/components/billing/BillingArchiveView';
@@ -40,6 +41,7 @@ export default function BillingReview() {
   const [createdOffers, setCreatedOffers] = useState({});
 
   const [activeTab, setActiveTab] = useState('open');
+  const [searchQuery, setSearchQuery] = useState('');
   const [reconciling, setReconciling] = useState(false);
   const [reconcileResult, setReconcileResult] = useState(null);
   const [showApplyConfirm, setShowApplyConfirm] = useState(false);
@@ -312,29 +314,56 @@ export default function BillingReview() {
             </Card>
           ) : (
             <>
-              <p className="text-sm text-slate-500">
-                <strong>{customerGroups.length}</strong> customer{customerGroups.length !== 1 ? 's' : ''} with billable WorkOrders
-              </p>
-              {customerGroups.map(([customerId, group]) => (
-                <CustomerBillingBlock
-                  key={customerId}
-                  customer={group.customer}
-                  workOrders={group.workOrders}
-                  jobs={jobs}
-                  boats={boats}
-                  technicians={technicians}
-                  timeEntries={timeEntries.filter(te =>
-                    group.workOrders.some(wo => wo.id === te.work_order_id)
-                  )}
-                  materialUsages={materialUsages.filter(m =>
-                    group.workOrders.some(wo => wo.id === m.work_order_id)
-                  )}
-                  linkedCME={group.linkedCME}
-                  unlinkedCME={group.unlinkedCME}
-                  onCreateOffer={(woIds, unlinkedCMEIds) => handleCreateOffer(customerId, woIds, unlinkedCMEIds)}
-                  createdOffer={createdOffers[customerId] || null}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <Input
+                  placeholder="Kunde suchen…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="pl-9"
                 />
-              ))}
+              </div>
+              {(() => {
+                const q = searchQuery.trim().toLowerCase();
+                const filtered = q
+                  ? customerGroups.filter(([, group]) => {
+                      const c = group.customer;
+                      return (
+                        c?.company_name?.toLowerCase().includes(q) ||
+                        c?.first_name?.toLowerCase().includes(q) ||
+                        c?.last_name?.toLowerCase().includes(q) ||
+                        c?.email?.toLowerCase().includes(q)
+                      );
+                    })
+                  : customerGroups;
+                return (
+                  <>
+                    <p className="text-sm text-slate-500">
+                      <strong>{filtered.length}</strong> von <strong>{customerGroups.length}</strong> Kund{customerGroups.length !== 1 ? 'en' : 'e'} mit abrechenbaren WorkOrders
+                    </p>
+                    {filtered.map(([customerId, group]) => (
+                      <CustomerBillingBlock
+                        key={customerId}
+                        customer={group.customer}
+                        workOrders={group.workOrders}
+                        jobs={jobs}
+                        boats={boats}
+                        technicians={technicians}
+                        timeEntries={timeEntries.filter(te =>
+                          group.workOrders.some(wo => wo.id === te.work_order_id)
+                        )}
+                        materialUsages={materialUsages.filter(m =>
+                          group.workOrders.some(wo => wo.id === m.work_order_id)
+                        )}
+                        linkedCME={group.linkedCME}
+                        unlinkedCME={group.unlinkedCME}
+                        onCreateOffer={(woIds, unlinkedCMEIds) => handleCreateOffer(customerId, woIds, unlinkedCMEIds)}
+                        createdOffer={createdOffers[customerId] || null}
+                      />
+                    ))}
+                  </>
+                );
+              })()}
             </>
           )}
         </>
