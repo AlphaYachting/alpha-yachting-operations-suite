@@ -5,18 +5,8 @@ import { Clock, MapPin, LogIn, LogOut, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { t } from '@/lib/mobileTranslations';
 
-// Module-level watcher — starts once, keeps position fresh silently
+// Module-level cache — populated only on demand (not on mount)
 let _cachedPosition = null;
-let _watchId = null;
-
-function startPositionWatch() {
-  if (!navigator.geolocation || _watchId !== null) return;
-  _watchId = navigator.geolocation.watchPosition(
-    (pos) => { _cachedPosition = { lat: pos.coords.latitude, lng: pos.coords.longitude }; },
-    (err) => { console.warn('GPS watch error:', err.code, err.message); },
-    { enableHighAccuracy: true, maximumAge: 30000, timeout: 15000 }
-  );
-}
 
 async function getGpsPosition() {
   if (_cachedPosition) return _cachedPosition;
@@ -50,8 +40,7 @@ export default function ClockInOutBanner({ technicianId, technicianName, lang = 
   const [processing, setProcessing] = useState(false);
   const [elapsed, setElapsed] = useState('');
 
-  // Start background position watcher on mount
-  useEffect(() => { startPositionWatch(); }, []);
+  // No automatic GPS on mount — only requested when user explicitly clicks Clock In/Out
 
   const loadActiveRecord = useCallback(async () => {
     if (!technicianId) { setLoading(false); return; }
