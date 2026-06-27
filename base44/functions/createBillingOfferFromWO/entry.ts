@@ -51,6 +51,7 @@ Deno.serve(async (req) => {
       vat_rate = 0,
       valid_until_days = 30,
       material_markup_percent = 0,
+      target_offer_id = null,
     } = body;
 
     const markupFactor = 1 + (material_markup_percent || 0) / 100;
@@ -189,7 +190,21 @@ Deno.serve(async (req) => {
       customer_id: sourceCustomerId,
       status: 'Draft',
     });
-    const existingDraft = allCustomerDrafts.find(o => o.source_type === 'READY_TO_INVOICE_REVIEW') || null;
+
+    // If a specific target offer was chosen by the user, use it (must belong to this customer & be a Draft).
+    // Otherwise fall back to the auto-managed READY_TO_INVOICE_REVIEW draft.
+    let existingDraft = null;
+    if (target_offer_id) {
+      existingDraft = allCustomerDrafts.find(o => o.id === target_offer_id) || null;
+      if (!existingDraft) {
+        return Response.json({
+          success: false,
+          error: 'Selected offer not found, not a Draft, or belongs to a different customer.',
+        }, { status: 400 });
+      }
+    } else {
+      existingDraft = allCustomerDrafts.find(o => o.source_type === 'READY_TO_INVOICE_REVIEW') || null;
+    }
     console.log(`[createBillingOfferFromWO] Found ${allCustomerDrafts.length} Draft offers for customer, ${existingDraft ? 'reusing ' + existingDraft.offer_number : 'creating new'}`);
 
     if (existingDraft) {

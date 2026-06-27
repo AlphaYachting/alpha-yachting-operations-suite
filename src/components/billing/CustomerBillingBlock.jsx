@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
@@ -30,7 +31,8 @@ export default function CustomerBillingBlock({
   materialUsages,
   linkedCME,
   unlinkedCME,
-  onCreateOffer,   // fn(work_order_ids, unlinked_cme_ids) => Promise
+  customerDraftOffers = [],
+  onCreateOffer,   // fn(work_order_ids, unlinked_cme_ids, markupPercent, targetOfferId) => Promise
   createdOffer,
 }) {
   const [selectedWOIds, setSelectedWOIds] = useState(new Set());
@@ -41,6 +43,7 @@ export default function CustomerBillingBlock({
   const [confirmDoneId, setConfirmDoneId] = useState(null);
   const [doneWOIds, setDoneWOIds] = useState(new Set());
   const [materialMarkupPercent, setMaterialMarkupPercent] = useState(0);
+  const [targetOfferId, setTargetOfferId] = useState('');
 
   const customerName = customer?.company_name ||
     `${customer?.first_name || ''} ${customer?.last_name || ''}`.trim() || 'Unknown Customer';
@@ -110,7 +113,7 @@ export default function CustomerBillingBlock({
     if (selectedWOIds.size === 0 && selectedUnlinkedCMEIds.size === 0) return;
     setCreating(true);
     try {
-      await onCreateOffer([...selectedWOIds], [...selectedUnlinkedCMEIds], materialMarkupPercent || 0);
+      await onCreateOffer([...selectedWOIds], [...selectedUnlinkedCMEIds], materialMarkupPercent || 0, targetOfferId || null);
       setSelectedWOIds(new Set());
       setSelectedUnlinkedCMEIds(new Set());
     } finally {
@@ -227,6 +230,24 @@ export default function CustomerBillingBlock({
               Select all WorkOrders
             </label>
             <div className="flex items-center gap-3 flex-wrap">
+              {/* Target Offer Selector — append to an existing Draft offer */}
+              {customerDraftOffers.length > 0 && (
+                <div onClick={e => e.stopPropagation()} className="flex items-center gap-1.5">
+                  <Select value={targetOfferId || 'auto'} onValueChange={v => setTargetOfferId(v === 'auto' ? '' : v)}>
+                    <SelectTrigger className="h-7 text-xs w-[220px] bg-white">
+                      <SelectValue placeholder="Neues Billing-Angebot" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Neues Billing-Angebot</SelectItem>
+                      {customerDraftOffers.map(o => (
+                        <SelectItem key={o.id} value={o.id}>
+                          + zu {o.offer_number || 'Entwurf'} {o.title ? `· ${o.title}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               {/* Material Markup Input */}
               <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
                 <Percent className="h-3.5 w-3.5 text-amber-600 shrink-0" />
@@ -263,7 +284,7 @@ export default function CustomerBillingBlock({
                 {creating
                   ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Creating…</>
                   : <><Receipt className="h-3.5 w-3.5 mr-1.5" />
-                      Create Billing Offer
+                      {targetOfferId ? 'Zu Angebot hinzufügen' : 'Create Billing Offer'}
                       {selectedWOIds.size > 0 && ` (${selectedWOIds.size} WO${selectedWOIds.size !== 1 ? 's' : ''})`}
                       {selectedUnlinkedCMEIds.size > 0 && ` + ${selectedUnlinkedCMEIds.size} Mat.`}
                     </>

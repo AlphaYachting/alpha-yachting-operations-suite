@@ -37,6 +37,7 @@ export default function BillingReview() {
   const [materialUsages, setMaterialUsages] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [allCME, setAllCME] = useState([]);
+  const [draftOffers, setDraftOffers] = useState([]);
 
   const [createdOffers, setCreatedOffers] = useState({});
 
@@ -59,6 +60,7 @@ export default function BillingReview() {
       setTimeEntries(d.timeEntries);
       setMaterialUsages(d.materialUsages);
       setAllCME(d.allCME);
+      setDraftOffers(d.draftOffers || []);
       setLoading(false);
     } else {
       loadAll();
@@ -109,7 +111,7 @@ export default function BillingReview() {
       const woIdSet = new Set(woIds);
       const customerIdSet = new Set(customerIds);
 
-      const [teAll, muAll, cmeAll] = await Promise.all([
+      const [teAll, muAll, cmeAll, draftAll] = await Promise.all([
         base44.entities.TimeEntry.list('-created_date', 2000)
           .then(all => all.filter(te => woIdSet.has(te.work_order_id)))
           .catch(() => []),
@@ -119,11 +121,14 @@ export default function BillingReview() {
         base44.entities.CustomerMaterialEntry.list('-created_date', 2000)
           .then(all => all.filter(c => !c.billed_offer_id && customerIdSet.has(c.customer_id)))
           .catch(() => []),
+        base44.entities.Offer.filter({ status: 'Draft' }, '-created_date', 500)
+          .catch(() => []),
       ]);
 
       setTimeEntries(teAll);
       setMaterialUsages(muAll);
       setAllCME(cmeAll);
+      setDraftOffers(draftAll);
 
       // Cache everything
       _cache.set({
@@ -135,6 +140,7 @@ export default function BillingReview() {
         timeEntries: teAll,
         materialUsages: muAll,
         allCME: cmeAll,
+        draftOffers: draftAll,
       });
     } catch (e) {
       setError(e.message);
@@ -186,7 +192,7 @@ export default function BillingReview() {
     });
   }, [workOrders, jobs, customers, allCME]);
 
-  const handleCreateOffer = async (customerId, woIds, unlinkedCMEIds = [], materialMarkupPercent = 0) => {
+  const handleCreateOffer = async (customerId, woIds, unlinkedCMEIds = [], materialMarkupPercent = 0, targetOfferId = null) => {
     try {
       const work_order_meta = Object.fromEntries(
         workOrders
@@ -202,6 +208,7 @@ export default function BillingReview() {
       const payload = { work_order_ids: woIds, work_order_meta };
       if (unlinkedCMEIds.length > 0) payload.unlinked_cme_ids = unlinkedCMEIds;
       if (materialMarkupPercent > 0) payload.material_markup_percent = materialMarkupPercent;
+      if (targetOfferId) payload.target_offer_id = targetOfferId;
       const response = await base44.functions.invoke('createBillingOfferFromWO', payload);
       const result = response.data;
 
@@ -358,7 +365,8 @@ export default function BillingReview() {
                         )}
                         linkedCME={group.linkedCME}
                         unlinkedCME={group.unlinkedCME}
-                        onCreateOffer={(woIds, unlinkedCMEIds, markupPercent) => handleCreateOffer(customerId, woIds, unlinkedCMEIds, markupPercent)}
+                        customerDraftOffers={draftOffers.filter(o => o.customer_id === customerId)}
+                        onCreateOffer={(woIds, unlinkedCMEIds, markupPercent, targetOfferId) => handleCreateOffer(customerId, woIds, unlinkedCMEIds, markupPercent, targetOfferId)}
                         createdOffer={createdOffers[customerId] || null}
                       />
                     ))}
