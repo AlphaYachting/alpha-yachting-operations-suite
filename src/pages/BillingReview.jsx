@@ -358,7 +358,7 @@ export default function BillingReview() {
                         )}
                         linkedCME={group.linkedCME}
                         unlinkedCME={group.unlinkedCME}
-                        onCreateOffer={(woIds, unlinkedCMEIds) => handleCreateOffer(customerId, woIds, unlinkedCMEIds)}
+                        onCreateOffer={(woIds, unlinkedCMEIds, markupPercent) => handleCreateOffer(customerId, woIds, unlinkedCMEIds, markupPercent)}
                         createdOffer={createdOffers[customerId] || null}
                       />
                     ))}
