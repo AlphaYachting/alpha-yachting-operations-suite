@@ -72,7 +72,13 @@ export const AuthProvider = ({ children }) => {
           }
 
           try {
-            const accessRes = await base44.functions.invoke('checkUserAccess', {});
+            const accessTimeout = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('access_timeout')), 5000)
+            );
+            const accessRes = await Promise.race([
+              base44.functions.invoke('checkUserAccess', {}),
+              accessTimeout
+            ]);
             if (!accessRes.data?.allowed) {
               const reason = accessRes.data?.reason || 'access_denied';
               console.warn('[AuthContext] Access denied for', currentUser.email, '— reason:', reason);
@@ -87,19 +93,8 @@ export const AuthProvider = ({ children }) => {
             }
           } catch (accessErr) {
             console.error('[AuthContext] checkUserAccess failed:', accessErr?.message);
-            // Network/timeout error — do NOT log out the user, just keep existing state
-            // Only block access on an explicit "user_not_registered" response, not on network failures
-            if (isInitial) {
-              // On initial cold boot with no existing session: show error
-              setUser(null);
-              setIsAuthenticated(false);
-              setAuthError({
-                type: 'auth_error',
-                detail: `Verbindungsfehler für ${currentUser.email}: ${accessErr?.message || 'Unbekannter Fehler'}`
-              });
-              return;
-            }
-            // On re-check (tab focus, pageshow): keep user logged in despite network error
+            // Network/timeout error — allow user in, do not log out
+            // Only block on explicit "user_not_registered" response, not network failures
             setUser(currentUser);
             setIsAuthenticated(true);
             isCheckingRef.current = false;
