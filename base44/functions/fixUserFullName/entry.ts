@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     let newName = null;
     if (techs?.[0]) {
       const t = techs[0];
-      const candidate = [t.first_name, t.last_name].filter(Boolean).join(' ');
+      const candidate = [t.first_name?.trim(), t.last_name?.trim()].filter(Boolean).join(' ');
       if (candidate && candidate.includes(' ')) {
         newName = candidate;
       }
