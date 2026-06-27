@@ -87,16 +87,24 @@ export const AuthProvider = ({ children }) => {
             }
           } catch (accessErr) {
             console.error('[AuthContext] checkUserAccess failed:', accessErr?.message);
-            if (currentUser.role !== 'admin') {
+            // Network/timeout error — do NOT log out the user, just keep existing state
+            // Only block access on an explicit "user_not_registered" response, not on network failures
+            if (isInitial) {
+              // On initial cold boot with no existing session: show error
               setUser(null);
               setIsAuthenticated(false);
               setAuthError({
-                type: 'user_not_registered',
-                detail: `checkUserAccess Fehler für ${currentUser.email} (Rolle: ${currentUser.role}, ID: ${currentUser.id}): ${accessErr?.message || 'Unbekannter Fehler'}`
+                type: 'auth_error',
+                detail: `Verbindungsfehler für ${currentUser.email}: ${accessErr?.message || 'Unbekannter Fehler'}`
               });
-              setTimeout(() => base44.auth.logout('/'), 4000);
               return;
             }
+            // On re-check (tab focus, pageshow): keep user logged in despite network error
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            isCheckingRef.current = false;
+            setIsLoadingAuth(false);
+            return;
           }
         }
         // Cache admin access result to avoid future roundtrips
