@@ -71,6 +71,7 @@ export default function BillingReview() {
   const loadAll = async (background = false) => {
     if (!background) setLoading(true);
     setError(null);
+    _cache.invalidate();
     try {
       // Fetch Ready-to-Invoice WOs
       const allWOs = await base44.entities.WorkOrder.filter({ status: 'Ready to Invoice' });
@@ -271,7 +272,7 @@ export default function BillingReview() {
             One customer, one billing offer. Select WorkOrders per customer → Create Offer → Finalize in Offer module.
           </p>
         </div>
-        <Button type="button" onClick={() => loadAll()} variant="outline" size="sm" disabled={loading}>
+        <Button type="button" onClick={() => { _cache.invalidate(); loadAll(); }} variant="outline" size="sm" disabled={loading}>
           Refresh
         </Button>
       </div>
