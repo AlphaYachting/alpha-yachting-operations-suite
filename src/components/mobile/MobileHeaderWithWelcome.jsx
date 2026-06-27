@@ -6,16 +6,20 @@ import { format } from 'date-fns';
 import MobileSearchBar from './MobileSearchBar';
 import { t } from '@/lib/mobileTranslations';
 
-export default function MobileHeaderWithWelcome({ user, taskCount, onSettingsClick, showSettings, onNavigate, workOrders, jobs, boats, locations, customers, tasks }) {
+export default function MobileHeaderWithWelcome({ user, lang: langProp, taskCount, onSettingsClick, showSettings, onNavigate, workOrders, jobs, boats, locations, customers, tasks }) {
   const [config, setConfig] = React.useState(null);
-  const [lang, setLang] = React.useState('de');
+  const [lang, setLang] = React.useState(langProp || user?.preferred_language || 'de');
 
   React.useEffect(() => {
-    base44.auth.me().then(u => setLang(u?.preferred_language || 'de')).catch(() => {});
     base44.entities.MobileHeaderConfig.list().then(configs => {
       if (configs.length > 0) setConfig(configs[0]);
     }).catch(() => {});
   }, []);
+
+  React.useEffect(() => {
+    if (langProp) setLang(langProp);
+    else if (user?.preferred_language) setLang(user.preferred_language);
+  }, [langProp, user?.preferred_language]);
 
   const now = new Date();
   const timeString = format(now, 'HH:mm');
