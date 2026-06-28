@@ -777,7 +777,7 @@ export default function LeadDetail() {
       </Card>
 
       {/* Lead Intelligence Panel — detachable AI module */}
-      <LeadIntelligencePanel lead={lead} />
+      <LeadIntelligencePanel lead={lead} currentUser={currentUser} onLeadUpdated={loadLeadDetails} />
 
       {/* Tasks Section */}
       <Card>

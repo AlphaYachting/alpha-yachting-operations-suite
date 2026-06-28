@@ -34,11 +34,29 @@ function ScoreBar({ value, color }) {
   );
 }
 
-export default function LeadIntelligencePanel({ lead }) {
+export default function LeadIntelligencePanel({ lead, currentUser, onLeadUpdated }) {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [copyDone, setCopyDone] = useState(false);
+  const [noteSaved, setNoteSaved] = useState(false);
+
+  // Append a traceable follow-up note to the lead's notes
+  const logFollowUpNote = async (channel) => {
+    try {
+      const ts = new Date().toLocaleString('de-DE', { timeZone: 'Europe/Zagreb' });
+      const who = currentUser?.full_name || currentUser?.email || 'Unbekannt';
+      const category = analysis?.request_category ? ` (${analysis.request_category})` : '';
+      const entry = `📋 NACHFRAGE-VERMERK — ${ts} — ${who} — KI-Analyse Rückfrage per ${channel}${category}`;
+      const existing = lead.notes ? lead.notes + '\n' : '';
+      await base44.entities.Lead.update(lead.id, { notes: existing + entry });
+      setNoteSaved(true);
+      setTimeout(() => setNoteSaved(false), 3000);
+      if (onLeadUpdated) onLeadUpdated();
+    } catch (e) {
+      console.error('Error logging follow-up note:', e);
+    }
+  };
 
   // Extract context-based questions from backend-generated notes (ONCE, shared across functions)
   const extractCriticalMissingInfo = () => {
@@ -270,6 +288,7 @@ export default function LeadIntelligencePanel({ lead }) {
 
     const subject = encodeURIComponent(`Re: ${lead.inquiry_type || 'Your inquiry'} – ${lead.boat_name || lead.name}`);
     const body = encodeURIComponent(analysis.reply_email_draft);
+    logFollowUpNote('E-Mail');
     window.location.href = `mailto:${lead.email}?subject=${subject}&body=${body}`;
   };
 
@@ -278,6 +297,7 @@ export default function LeadIntelligencePanel({ lead }) {
     navigator.clipboard.writeText(analysis.reply_email_draft);
     setCopyDone(true);
     setTimeout(() => setCopyDone(false), 2000);
+    logFollowUpNote('Kopie/Manuell');
   };
 
   const intentColor  = analysis?.intent_score >= 70  ? 'bg-emerald-500' : analysis?.intent_score >= 40 ? 'bg-amber-400' : 'bg-red-400';
@@ -337,6 +357,14 @@ export default function LeadIntelligencePanel({ lead }) {
               </Button>
             )}
           </div>
+
+          {/* Follow-up note confirmation */}
+          {noteSaved && (
+            <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              Nachfrage-Vermerk in den Lead-Notizen gespeichert.
+            </div>
+          )}
 
           {/* Error state */}
           {analysis?._error && (
