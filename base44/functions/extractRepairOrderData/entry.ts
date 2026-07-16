@@ -89,7 +89,41 @@ Aufgaben:
       model: file_urls.length > 0 ? "claude_sonnet_4_6" : "automatic"
     });
 
-    return Response.json({ success: true, ...result });
+    // Some models return the structured output directly, others wrap it in a
+    // "response" field (as an object OR as a JSON string). Normalize all cases
+    // so the frontend always receives flat { assistant_message, extracted }.
+    let normalized = result;
+    if (result && typeof result === 'object' && result.response !== undefined) {
+      normalized = result.response;
+    }
+    if (typeof normalized === 'string') {
+      try {
+        normalized = JSON.parse(normalized);
+      } catch (_e) {
+        normalized = { assistant_message: normalized, extracted: {} };
+      }
+    }
+    if (!normalized || typeof normalized !== 'object') {
+      normalized = { assistant_message: '', extracted: {} };
+    }
+
+    // Some models put the entire JSON payload (including the real "extracted")
+    // inside assistant_message as a string. Detect and unwrap that too.
+    const hasExtracted = normalized.extracted && typeof normalized.extracted === 'object'
+      && Object.keys(normalized.extracted).length > 0;
+    if (!hasExtracted && typeof normalized.assistant_message === 'string'
+        && normalized.assistant_message.trim().startsWith('{')) {
+      try {
+        const inner = JSON.parse(normalized.assistant_message);
+        if (inner && typeof inner === 'object') {
+          normalized = { ...normalized, ...inner };
+        }
+      } catch (_e) {
+        // leave as-is
+      }
+    }
+
+    return Response.json({ success: true, ...normalized });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
