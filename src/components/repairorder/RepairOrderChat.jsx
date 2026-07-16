@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Paperclip, Send, Loader2, FileText, Bot, User } from 'lucide-react';
+import { Paperclip, Send, Loader2, FileText, Bot, User, Mic, Square } from 'lucide-react';
 
 export default function RepairOrderChat({ data, onExtracted }) {
   const [messages, setMessages] = useState([
@@ -11,8 +11,46 @@ export default function RepairOrderChat({ data, onExtracted }) {
   const [input, setInput] = useState('');
   const [pendingFiles, setPendingFiles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const fileRef = useRef(null);
   const scrollRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const file = new File([blob], 'aufnahme.webm', { type: blob.type });
+        setTranscribing(true);
+        try {
+          const { file_url } = await base44.integrations.Core.UploadFile({ file });
+          const transcript = await base44.integrations.Core.TranscribeAudio({ audio_url: file_url });
+          const text = typeof transcript === 'string' ? transcript : (transcript?.text || '');
+          setInput((prev) => (prev ? prev + ' ' : '') + text.trim());
+        } catch (err) {
+          setMessages((m) => [...m, { role: 'assistant', content: 'Fehler bei der Spracherkennung: ' + err.message }]);
+        }
+        setTranscribing(false);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch (err) {
+      setMessages((m) => [...m, { role: 'assistant', content: 'Mikrofon-Zugriff nicht möglich: ' + err.message }]);
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setRecording(false);
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -113,13 +151,22 @@ export default function RepairOrderChat({ data, onExtracted }) {
 
       <div className="p-3 border-t flex gap-2">
         <input ref={fileRef} type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleFiles} />
-        <Button variant="outline" size="icon" onClick={() => fileRef.current?.click()} disabled={loading}><Paperclip className="h-4 w-4" /></Button>
+        <Button variant="outline" size="icon" onClick={() => fileRef.current?.click()} disabled={loading || recording || transcribing}><Paperclip className="h-4 w-4" /></Button>
+        <Button
+          variant={recording ? 'destructive' : 'outline'}
+          size="icon"
+          onClick={recording ? stopRecording : startRecording}
+          disabled={loading || transcribing}
+          title={recording ? 'Aufnahme stoppen' : 'Spracheingabe'}
+        >
+          {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </Button>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !loading && send()}
-          placeholder="Nachricht schreiben…"
-          disabled={loading}
+          placeholder={recording ? 'Aufnahme läuft…' : transcribing ? 'Transkribiere…' : 'Nachricht schreiben…'}
+          disabled={loading || recording || transcribing}
         />
         <Button onClick={send} disabled={loading}><Send className="h-4 w-4" /></Button>
       </div>
