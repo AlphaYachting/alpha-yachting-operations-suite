@@ -1,0 +1,220 @@
+{
+  "name": "RepairOrder",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string",
+      "description": "Auto-generated repair order reference e.g. RA-2026-0001"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Draft",
+        "Ready to Print",
+        "Signed",
+        "Converted"
+      ],
+      "default": "Draft",
+      "description": "Repair order lifecycle status"
+    },
+    "accepted_by": {
+      "type": "string",
+      "description": "Name of the staff member who accepted the order"
+    },
+    "order_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the order was accepted"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer name or company"
+    },
+    "customer_number": {
+      "type": "string",
+      "description": "Customer number"
+    },
+    "customer_address": {
+      "type": "string",
+      "description": "Street, postal code, city"
+    },
+    "customer_phone": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Reference to Customer entity (once linked/created)"
+    },
+    "boat_type_model": {
+      "type": "string",
+      "description": "Boat type / model"
+    },
+    "boat_name": {
+      "type": "string"
+    },
+    "boat_year": {
+      "type": "string",
+      "description": "Year of build"
+    },
+    "boat_registration": {
+      "type": "string",
+      "description": "Official registration / Kennzeichen"
+    },
+    "boat_hin": {
+      "type": "string",
+      "description": "Hull / HIN number"
+    },
+    "boat_length_m": {
+      "type": "number",
+      "description": "Length in meters"
+    },
+    "boat_location": {
+      "type": "string",
+      "description": "Current location"
+    },
+    "engine_make_type": {
+      "type": "string",
+      "description": "Engine manufacturer / type"
+    },
+    "engine_power": {
+      "type": "string",
+      "description": "Power kW/PS"
+    },
+    "engine_hours": {
+      "type": "string",
+      "description": "Operating hours"
+    },
+    "boat_id": {
+      "type": "string",
+      "description": "Reference to Boat entity (once linked/created)"
+    },
+    "trailer_on_arrival": {
+      "type": "boolean",
+      "default": false,
+      "description": "Boat arrives on trailer"
+    },
+    "trailer_stays": {
+      "type": "boolean",
+      "default": false,
+      "description": "Trailer stays at Alpha Yachting"
+    },
+    "trailer_registration": {
+      "type": "string"
+    },
+    "trailer_type": {
+      "type": "string"
+    },
+    "trailer_max_weight": {
+      "type": "string"
+    },
+    "trailer_work": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Beleuchtung / Elektrik",
+          "Reifen / R\u00e4der",
+          "Bremsen / Auflaufeinrichtung",
+          "Rahmen / Rost",
+          "St\u00fctzrad / Seilwinde",
+          "Sliprollen / Auflagen"
+        ]
+      },
+      "description": "Requested trailer work categories"
+    },
+    "work_categories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Motor / Antrieb",
+          "Elektrik / Elektronik",
+          "Rumpf / Gelcoat",
+          "Osmose / Unterwasserschiff",
+          "Antifouling",
+          "Rigg / Segel",
+          "Winterlager / Konservierung",
+          "Kranung / Transport",
+          "Anh\u00e4nger"
+        ]
+      },
+      "description": "Requested work categories"
+    },
+    "work_description": {
+      "type": "string",
+      "description": "Description of defect / requested works"
+    },
+    "positions": {
+      "type": "array",
+      "description": "Line items / positions to be executed",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "hourly_rate": {
+      "type": "number",
+      "description": "Hourly rate net EUR"
+    },
+    "cost_cap": {
+      "type": "number",
+      "description": "Cost ceiling before callback EUR"
+    },
+    "expected_completion": {
+      "type": "string",
+      "description": "Expected completion date/text"
+    },
+    "cost_estimate_wanted": {
+      "type": "boolean",
+      "default": false
+    },
+    "test_drive_wanted": {
+      "type": "boolean",
+      "default": false
+    },
+    "dispose_old_parts": {
+      "type": "boolean",
+      "default": false
+    },
+    "extracted_documents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs of uploaded source documents"
+    },
+    "chat_transcript": {
+      "type": "array",
+      "description": "AI chat conversation transcript",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "converted_job_id": {
+      "type": "string",
+      "description": "Reference to Job once converted"
+    }
+  },
+  "required": []
+}

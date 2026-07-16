@@ -40,7 +40,8 @@ import {
                     Zap,
                     Activity,
                     Calendar as CalendarIcon,
-                    Download
+                    Download,
+                    MessageSquare
                   } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -65,6 +66,7 @@ const navItems = [
   // OPERATIONS
   { header: 'OPERATIONS', technicianAllowed: true },
   { name: '+ New Case', icon: Briefcase, page: 'NewCaseWizard', leadTechAllowed: true },
+  { name: 'Auftrags-Chat', icon: MessageSquare, page: 'RepairOrderChat', leadTechAllowed: true },
   { name: 'Dashboard', icon: LayoutDashboard, page: 'DashboardV2', leadTechAllowed: true },
   { name: 'My Tasks', icon: ClipboardList, page: 'MyTasks', technicianAllowed: true },
   { name: 'Leads', icon: Phone, page: 'LeadsV3', leadTechAllowed: true },

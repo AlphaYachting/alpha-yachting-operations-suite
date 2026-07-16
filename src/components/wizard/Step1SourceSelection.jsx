@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Phone, Users, UserPlus, Calculator } from 'lucide-react';
+import { Phone, Users, UserPlus, Calculator, MessageSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useWizard } from './WizardContext';
 
 export function Step1SourceSelection() {
   const { wizardData, updateWizardData, setStep } = useWizard();
+  const navigate = useNavigate();
 
   const handleNext = () => {
     if (!wizardData.source) {
@@ -64,6 +66,18 @@ export function Step1SourceSelection() {
                   <p className="text-sm text-slate-500">Add a new customer and immediately create offer/job/boat</p>
                 </Label>
               </div>
+
+              <button
+                type="button"
+                onClick={() => navigate('/RepairOrderChat')}
+                className="w-full flex items-center space-x-2 p-4 border rounded-lg hover:bg-blue-50 border-blue-200 cursor-pointer text-left"
+              >
+                <MessageSquare className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="font-medium">Auftrags-Chat (KI)</div>
+                  <p className="text-sm text-slate-500">Dokumente per KI auslesen, Reparaturauftrag zum Unterschreiben erstellen und Projekt anlegen</p>
+                </div>
+              </button>
 
               <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-emerald-50 border-emerald-200 cursor-pointer">
                 <RadioGroupItem value="price_inquiry_storage" id="source-price-inquiry" />

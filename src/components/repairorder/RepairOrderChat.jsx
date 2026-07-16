@@ -1,0 +1,128 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Paperclip, Send, Loader2, FileText, Bot, User } from 'lucide-react';
+
+export default function RepairOrderChat({ data, onExtracted }) {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: 'Hallo! Lade Dokumente hoch (Zulassungsschein, Ausweis, bestehende Angebote) oder beschreibe den Auftrag. Ich lese die Daten aus und fülle das Auftragsblatt.' }
+  ]);
+  const [input, setInput] = useState('');
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const fileRef = useRef(null);
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, loading]);
+
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    setLoading(true);
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        uploaded.push({ name: file.name, url: file_url });
+      }
+      setPendingFiles((prev) => [...prev, ...uploaded]);
+    } catch (err) {
+      setMessages((m) => [...m, { role: 'assistant', content: 'Fehler beim Hochladen: ' + err.message }]);
+    }
+    setLoading(false);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const send = async () => {
+    if (!input.trim() && pendingFiles.length === 0) return;
+    const userContent = input.trim() || (pendingFiles.length > 0 ? `${pendingFiles.length} Dokument(e) hochgeladen` : '');
+    const fileUrls = pendingFiles.map((f) => f.url);
+    const historyForApi = messages.map((m) => ({ role: m.role, content: m.content }));
+
+    setMessages((m) => [...m, { role: 'user', content: userContent, files: pendingFiles }]);
+    setInput('');
+    setPendingFiles([]);
+    setLoading(true);
+
+    try {
+      const res = await base44.functions.invoke('extractRepairOrderData', {
+        file_urls: fileUrls,
+        current_data: data,
+        user_message: input.trim(),
+        chat_history: historyForApi
+      });
+      const payload = res.data;
+      if (payload?.error) throw new Error(payload.error);
+
+      const extracted = payload.extracted || {};
+      // Merge: only overwrite fields where AI returned a non-empty value
+      const merged = { ...data };
+      Object.entries(extracted).forEach(([k, v]) => {
+        if (v === null || v === undefined || v === '') return;
+        if (Array.isArray(v) && v.length === 0) return;
+        merged[k] = v;
+      });
+      // Merge new document URLs
+      merged.extracted_documents = [...(data.extracted_documents || []), ...fileUrls];
+      onExtracted(merged);
+
+      setMessages((m) => [...m, { role: 'assistant', content: payload.assistant_message || 'Daten wurden übernommen.' }]);
+    } catch (err) {
+      setMessages((m) => [...m, { role: 'assistant', content: 'Fehler: ' + err.message }]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="flex flex-col h-[600px] border rounded-lg bg-white">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg, i) => (
+          <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {msg.role === 'assistant' && <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0"><Bot className="h-4 w-4 text-blue-600" /></div>}
+            <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-800'}`}>
+              <p className="whitespace-pre-wrap">{msg.content}</p>
+              {msg.files?.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {msg.files.map((f, fi) => (
+                    <div key={fi} className="flex items-center gap-1 text-xs opacity-80"><FileText className="h-3 w-3" />{f.name}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {msg.role === 'user' && <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0"><User className="h-4 w-4 text-white" /></div>}
+          </div>
+        ))}
+        {loading && (
+          <div className="flex gap-2 justify-start">
+            <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center"><Bot className="h-4 w-4 text-blue-600" /></div>
+            <div className="bg-slate-100 rounded-lg px-3 py-2 flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Lese Dokumente…</div>
+          </div>
+        )}
+      </div>
+
+      {pendingFiles.length > 0 && (
+        <div className="px-4 py-2 border-t flex flex-wrap gap-2">
+          {pendingFiles.map((f, i) => (
+            <span key={i} className="inline-flex items-center gap-1 bg-slate-100 rounded px-2 py-1 text-xs"><FileText className="h-3 w-3" />{f.name}</span>
+          ))}
+        </div>
+      )}
+
+      <div className="p-3 border-t flex gap-2">
+        <input ref={fileRef} type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleFiles} />
+        <Button variant="outline" size="icon" onClick={() => fileRef.current?.click()} disabled={loading}><Paperclip className="h-4 w-4" /></Button>
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !loading && send()}
+          placeholder="Nachricht schreiben…"
+          disabled={loading}
+        />
+        <Button onClick={send} disabled={loading}><Send className="h-4 w-4" /></Button>
+      </div>
+    </div>
+  );
+}

@@ -31,6 +31,7 @@ import ActivityLogPage from './pages/ActivityLogPage';
 import TeamAttendance from './pages/TeamAttendance';
 import AttendanceAdmin from './pages/AttendanceAdmin';
 import StorageContractWizard from './pages/StorageContractWizard';
+import RepairOrderChatPage from './pages/RepairOrderChat';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -197,6 +198,7 @@ const AuthenticatedApp = () => {
         <Route path="/AttendanceAdmin" element={<LayoutWrapper currentPageName="AttendanceAdmin"><AttendanceAdmin /></LayoutWrapper>} />
         <Route path="/StorageContractWizard" element={<LayoutWrapper currentPageName="StorageContractWizard"><StorageContractWizard /></LayoutWrapper>} />
         <Route path="/AIAssistantSettings" element={<LayoutWrapper currentPageName="AIAssistantSettings"><AIAssistantSettings /></LayoutWrapper>} />
+        <Route path="/RepairOrderChat" element={<LayoutWrapper currentPageName="RepairOrderChat"><RepairOrderChatPage /></LayoutWrapper>} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </>
