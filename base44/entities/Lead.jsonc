@@ -128,6 +128,80 @@
     "auto_offer_error": {
       "type": "string",
       "description": "Error message if Ready-to-Offer automation failed"
+    },
+    "screening_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "screened",
+        "error"
+      ],
+      "description": "Status of the automatic incoming-lead screening"
+    },
+    "screening_completeness": {
+      "type": "string",
+      "enum": [
+        "complete",
+        "incomplete",
+        "unclear"
+      ],
+      "description": "Overall data-quality verdict from the automatic screening"
+    },
+    "screening_language": {
+      "type": "string",
+      "description": "Detected language of the lead inquiry (e.g. Deutsch, English)"
+    },
+    "screening_summary": {
+      "type": "string",
+      "description": "Short human-readable summary of the screening result"
+    },
+    "screening_checks": {
+      "type": "array",
+      "description": "Structured per-area screening results",
+      "items": {
+        "type": "object",
+        "properties": {
+          "area": {
+            "type": "string",
+            "description": "contact | boat | location"
+          },
+          "status": {
+            "type": "string",
+            "description": "ok | missing | unclear"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "screening_missing_info": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of missing or unclear data points"
+    },
+    "draft_followup_subject": {
+      "type": "string",
+      "description": "Auto-generated verification/follow-up email subject"
+    },
+    "draft_followup_body": {
+      "type": "string",
+      "description": "Auto-generated verification/follow-up email body"
+    },
+    "draft_rejection_subject": {
+      "type": "string",
+      "description": "Auto-generated polite rejection email subject"
+    },
+    "draft_rejection_body": {
+      "type": "string",
+      "description": "Auto-generated polite rejection email body"
+    },
+    "screened_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the automatic screening last ran"
     }
   },
   "required": [

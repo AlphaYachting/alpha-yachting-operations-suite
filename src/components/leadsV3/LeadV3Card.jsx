@@ -339,6 +339,13 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
                     {/* Offer badge */}
                     <OfferStageBadge offerIds={offerIds} />
 
+                    {/* Screening badge — shows drafts are ready */}
+                    {lead.screening_status === 'screened' && (
+                      <Badge className="text-xs bg-blue-50 text-blue-600 border border-blue-100" title="Automatisch geprüft · Entwürfe bereit">
+                        Geprüft ✓
+                      </Badge>
+                    )}
+
                     {/* Error indicator */}
                     {hasError && (
                       <span className="flex items-center gap-1 text-xs text-red-500 font-medium flex-shrink-0">

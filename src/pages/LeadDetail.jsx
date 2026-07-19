@@ -46,6 +46,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import LeadFormV2 from '@/components/leadsV2/LeadForm';
 import LeadIntelligencePanel from '@/components/leads/LeadIntelligencePanel';
+import LeadScreeningPanel from '@/components/leads/LeadScreeningPanel';
 import { toast } from 'sonner';
 import { RefreshCw } from 'lucide-react';
 
@@ -775,6 +776,9 @@ export default function LeadDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Automatic Lead Screening — data check + ready-to-send drafts */}
+      <LeadScreeningPanel lead={lead} onLeadUpdated={loadLeadDetails} />
 
       {/* Lead Intelligence Panel — detachable AI module */}
       <LeadIntelligencePanel lead={lead} currentUser={currentUser} onLeadUpdated={loadLeadDetails} />
