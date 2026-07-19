@@ -202,6 +202,29 @@
       "type": "string",
       "format": "date-time",
       "description": "When the automatic screening last ran"
+    },
+    "email_response_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "drafted",
+        "sent"
+      ],
+      "default": "none",
+      "description": "Tracks manual email response action: none = nothing yet, drafted = copied to clipboard, sent = Send button clicked (mail client opened)"
+    },
+    "email_response_type": {
+      "type": "string",
+      "enum": [
+        "followup",
+        "rejection"
+      ],
+      "description": "Which draft was last acted upon (nachfrage/absage)"
+    },
+    "email_response_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the send/copy action was last triggered"
     }
   },
   "required": [

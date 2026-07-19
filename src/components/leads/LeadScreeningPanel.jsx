@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 import {
   ShieldCheck,
   RefreshCw,
@@ -15,6 +16,7 @@ import {
   Phone,
   Ship,
   MapPin,
+  Send,
 } from 'lucide-react';
 
 const AREA_META = {
@@ -35,11 +37,19 @@ const COMPLETENESS_META = {
   unclear: { label: 'Unklar', cls: 'bg-orange-100 text-orange-700' },
 };
 
-function DraftBlock({ title, accent, subject, body, email, onSend, onCopy, copied }) {
+function DraftBlock({ title, accent, subject, body, email, onSend, onCopy, copied, sent }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
       <div className={`px-3 py-2 flex items-center justify-between ${accent}`}>
-        <span className="text-sm font-semibold">{title}</span>
+        <span className="text-sm font-semibold flex items-center gap-1.5">
+          {title}
+          {sent && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-600 text-white">
+              <CheckCircle2 className="h-3 w-3" />
+              Gesendet
+            </span>
+          )}
+        </span>
         <div className="flex gap-1">
           <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={onCopy}>
             <Copy className="h-3 w-3 mr-1" />
@@ -47,7 +57,7 @@ function DraftBlock({ title, accent, subject, body, email, onSend, onCopy, copie
           </Button>
           {email && (
             <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={onSend}>
-              <Mail className="h-3 w-3 mr-1" />
+              <Send className="h-3 w-3 mr-1" />
               Senden
             </Button>
           )}
@@ -83,17 +93,37 @@ export default function LeadScreeningPanel({ lead, onLeadUpdated }) {
     }
   };
 
+  // Persist the manual response action on the lead. 'sent' never gets downgraded to 'drafted'.
+  const markResponse = async (which, newStatus) => {
+    const updates = {
+      email_response_type: which,
+      email_response_at: new Date().toISOString(),
+    };
+    // Only upgrade status: sent > drafted > none
+    if (newStatus === 'sent' || lead.email_response_status !== 'sent') {
+      updates.email_response_status = newStatus;
+    }
+    try {
+      await base44.entities.Lead.update(lead.id, updates);
+      if (onLeadUpdated) await onLeadUpdated();
+    } catch (e) {
+      console.error('Failed to persist email response status:', e);
+    }
+  };
+
   const copyDraft = (which, subject, body) => {
     navigator.clipboard.writeText(`${subject ? subject + '\n\n' : ''}${body || ''}`);
     setCopied(which);
     setTimeout(() => setCopied(null), 2000);
+    markResponse(which, 'drafted');
   };
 
-  const sendDraft = (subject, body) => {
+  const sendDraft = (which, subject, body) => {
     if (!lead.email) return alert('Keine E-Mail-Adresse für diesen Lead vorhanden.');
     const s = encodeURIComponent(subject || '');
     const b = encodeURIComponent(body || '');
     window.location.href = `mailto:${lead.email}?subject=${s}&body=${b}`;
+    markResponse(which, 'sent');
   };
 
   const hasScreening = lead.screening_status === 'screened' &&
@@ -123,6 +153,29 @@ export default function LeadScreeningPanel({ lead, onLeadUpdated }) {
       </CardHeader>
 
       <CardContent className="space-y-4 pt-0">
+        {/* Response status banner */}
+        {lead.email_response_status && lead.email_response_status !== 'none' && (
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+            lead.email_response_status === 'sent'
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+              : 'bg-amber-50 border border-amber-200 text-amber-800'
+          }`}>
+            {lead.email_response_status === 'sent'
+              ? <Send className="h-4 w-4 flex-shrink-0" />
+              : <Copy className="h-4 w-4 flex-shrink-0" />}
+            <span className="font-medium">
+              {lead.email_response_status === 'sent' ? 'Antwort gesendet' : 'Entwurf kopiert'}
+              {lead.email_response_type === 'followup' && ' · Nachfrage'}
+              {lead.email_response_type === 'rejection' && ' · Absage'}
+            </span>
+            {lead.email_response_at && (
+              <span className="text-xs opacity-70 ml-auto">
+                {format(new Date(lead.email_response_at), 'dd.MM.yyyy HH:mm')}
+              </span>
+            )}
+          </div>
+        )}
+
         {!hasScreening && !screening && (
           <p className="text-sm text-slate-400 italic">
             Noch keine Prüfung vorhanden. Neue Leads werden automatisch geprüft — oder jetzt manuell „Erneut prüfen".
@@ -197,9 +250,10 @@ export default function LeadScreeningPanel({ lead, onLeadUpdated }) {
                 subject={lead.draft_followup_subject}
                 body={lead.draft_followup_body}
                 email={lead.email}
-                onSend={() => sendDraft(lead.draft_followup_subject, lead.draft_followup_body)}
+                onSend={() => sendDraft('followup', lead.draft_followup_subject, lead.draft_followup_body)}
                 onCopy={() => copyDraft('followup', lead.draft_followup_subject, lead.draft_followup_body)}
                 copied={copied === 'followup'}
+                sent={lead.email_response_status === 'sent' && lead.email_response_type === 'followup'}
               />
               <DraftBlock
                 title="✉️ Höfliche Absage"
@@ -207,9 +261,10 @@ export default function LeadScreeningPanel({ lead, onLeadUpdated }) {
                 subject={lead.draft_rejection_subject}
                 body={lead.draft_rejection_body}
                 email={lead.email}
-                onSend={() => sendDraft(lead.draft_rejection_subject, lead.draft_rejection_body)}
+                onSend={() => sendDraft('rejection', lead.draft_rejection_subject, lead.draft_rejection_body)}
                 onCopy={() => copyDraft('rejection', lead.draft_rejection_subject, lead.draft_rejection_body)}
                 copied={copied === 'rejection'}
+                sent={lead.email_response_status === 'sent' && lead.email_response_type === 'rejection'}
               />
             </div>
           </>

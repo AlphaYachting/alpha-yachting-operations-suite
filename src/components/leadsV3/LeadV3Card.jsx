@@ -346,6 +346,19 @@ export default function LeadV3Card({ lead, assignedUser, users = [], onStatusCha
                       </Badge>
                     )}
 
+                    {/* Email response badge */}
+                    {lead.email_response_status === 'sent' && (
+                      <Badge className="text-xs bg-emerald-50 text-emerald-600 border border-emerald-100" title="E-Mail-Antwort gesendet">
+                        <Mail className="h-3 w-3 mr-1" />
+                        Beantwortet
+                      </Badge>
+                    )}
+                    {lead.email_response_status === 'drafted' && (
+                      <Badge className="text-xs bg-amber-50 text-amber-600 border border-amber-100" title="Entwurf kopiert – noch nicht gesendet">
+                        Entwurf
+                      </Badge>
+                    )}
+
                     {/* Error indicator */}
                     {hasError && (
                       <span className="flex items-center gap-1 text-xs text-red-500 font-medium flex-shrink-0">
