@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Paperclip, Send, Loader2, FileText, Bot, User, Mic, Square } from 'lucide-react';
 
 export default function RepairOrderChat({ data, onExtracted }) {
@@ -149,26 +149,34 @@ export default function RepairOrderChat({ data, onExtracted }) {
         </div>
       )}
 
-      <div className="p-3 border-t flex gap-2">
+      <div className="p-3 border-t flex items-end gap-2">
         <input ref={fileRef} type="file" multiple accept="image/*,.pdf" className="hidden" onChange={handleFiles} />
-        <Button variant="outline" size="icon" onClick={() => fileRef.current?.click()} disabled={loading || recording || transcribing}><Paperclip className="h-4 w-4" /></Button>
+        <Button variant="outline" size="icon" className="flex-shrink-0" onClick={() => fileRef.current?.click()} disabled={loading || recording || transcribing}><Paperclip className="h-4 w-4" /></Button>
         <Button
           variant={recording ? 'destructive' : 'outline'}
           size="icon"
+          className="flex-shrink-0"
           onClick={recording ? stopRecording : startRecording}
           disabled={loading || transcribing}
           title={recording ? 'Aufnahme stoppen' : 'Spracheingabe'}
         >
           {transcribing ? <Loader2 className="h-4 w-4 animate-spin" /> : recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
         </Button>
-        <Input
+        <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !loading && send()}
-          placeholder={recording ? 'Aufnahme läuft…' : transcribing ? 'Transkribiere…' : 'Nachricht schreiben…'}
-          disabled={loading || recording || transcribing}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !loading) {
+              e.preventDefault();
+              send();
+            }
+          }}
+          rows={2}
+          placeholder={recording ? 'Aufnahme läuft…' : transcribing ? 'Transkribiere…' : 'Nachricht schreiben… (Enter zum Senden, Shift+Enter für neue Zeile)'}
+          disabled={loading}
+          className="flex-1 min-h-[44px] max-h-40 resize-none text-sm"
         />
-        <Button onClick={send} disabled={loading}><Send className="h-4 w-4" /></Button>
+        <Button className="flex-shrink-0" onClick={send} disabled={loading}><Send className="h-4 w-4" /></Button>
       </div>
     </div>
   );
