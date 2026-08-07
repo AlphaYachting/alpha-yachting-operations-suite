@@ -120,7 +120,7 @@ export default function BillingReview() {
           .then(all => all.filter(m => woIdSet.has(m.work_order_id)))
           .catch(() => []),
         base44.entities.CustomerMaterialEntry.list('-created_date', 2000)
-          .then(all => all.filter(c => !c.billed_offer_id && customerIdSet.has(c.customer_id)))
+          .then(all => all.filter(c => !c.billed_offer_id && !c.staged_offer_id))
           .catch(() => []),
         base44.entities.Offer.filter({ status: 'Draft' }, '-created_date', 500)
           .catch(() => []),
@@ -176,9 +176,18 @@ export default function BillingReview() {
 
     for (const cme of allCME) {
       const customerId = cme.customer_id;
-      if (!groups[customerId]) continue;
+      if (!customerId) continue;
       const isLinked = (cme.work_order_id && woIdSet.has(cme.work_order_id)) ||
         (cme.job_id && eligibleJobIds.has(cme.job_id));
+      // Ensure a group exists even for customers with only open material (no Ready-to-Invoice WorkOrder)
+      if (!groups[customerId]) {
+        groups[customerId] = {
+          customer: customerMap[customerId],
+          workOrders: [],
+          linkedCME: [],
+          unlinkedCME: [],
+        };
+      }
       if (isLinked) {
         groups[customerId].linkedCME.push(cme);
       } else if (!cme.staged_offer_id) {
@@ -317,8 +326,8 @@ export default function BillingReview() {
             <Card>
               <CardContent className="text-center py-16 text-slate-400">
                 <Receipt className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">No WorkOrders with status "Ready to Invoice"</p>
-                <p className="text-sm mt-1">WorkOrders transition here automatically when all tasks are complete.</p>
+                <p className="font-medium">Keine abrechenbaren WorkOrders oder offenes Material</p>
+                <p className="text-sm mt-1">WorkOrders erscheinen automatisch, sobald alle Aufgaben abgeschlossen sind — Kunden mit offenem Material erscheinen ebenfalls.</p>
               </CardContent>
             </Card>
           ) : (
@@ -348,7 +357,7 @@ export default function BillingReview() {
                 return (
                   <>
                     <p className="text-sm text-slate-500">
-                      <strong>{filtered.length}</strong> von <strong>{customerGroups.length}</strong> Kund{customerGroups.length !== 1 ? 'en' : 'e'} mit abrechenbaren WorkOrders
+                      <strong>{filtered.length}</strong> von <strong>{customerGroups.length}</strong> Kund{customerGroups.length !== 1 ? 'en' : 'e'} mit abrechenbaren WorkOrders oder offenem Material
                     </p>
                     {filtered.map(([customerId, group]) => (
                       <CustomerBillingBlock
