@@ -56,45 +56,61 @@ Deno.serve(async (req) => {
 
     const markupFactor = 1 + (material_markup_percent || 0) / 100;
 
-    if (!work_order_ids || work_order_ids.length === 0) {
-      return Response.json({ error: 'At least one work_order_id is required' }, { status: 400 });
+    const materialOnly = (!work_order_ids || work_order_ids.length === 0);
+
+    if (materialOnly && (!unlinked_cme_ids || unlinked_cme_ids.length === 0)) {
+      return Response.json({ error: 'At least one work_order_id or one unlinked_cme_id is required' }, { status: 400 });
     }
 
     const warnings = [];
 
     // ── 1. Resolve WorkOrders ─────────────────────────────────────────────────
     let targetWOs = [];
-    const metaKeys = Object.keys(work_order_meta);
-    const metaComplete = metaKeys.length === work_order_ids.length && work_order_ids.every(id => work_order_meta[id]);
+    if (!materialOnly) {
+      const metaKeys = Object.keys(work_order_meta);
+      const metaComplete = metaKeys.length === work_order_ids.length && work_order_ids.every(id => work_order_meta[id]);
 
-    if (metaComplete) {
-      targetWOs = work_order_ids.map(id => ({ id, ...work_order_meta[id] }));
-    } else {
-      const allWOs = await base44.asServiceRole.entities.WorkOrder.list('-scheduled_date', 1000);
-      targetWOs = allWOs.filter(wo => work_order_ids.includes(wo.id));
-    }
+      if (metaComplete) {
+        targetWOs = work_order_ids.map(id => ({ id, ...work_order_meta[id] }));
+      } else {
+        const allWOs = await base44.asServiceRole.entities.WorkOrder.list('-scheduled_date', 1000);
+        targetWOs = allWOs.filter(wo => work_order_ids.includes(wo.id));
+      }
 
-    if (targetWOs.length === 0) {
-      return Response.json({ error: 'No matching WorkOrders found' }, { status: 404 });
-    }
+      if (targetWOs.length === 0) {
+        return Response.json({ error: 'No matching WorkOrders found' }, { status: 404 });
+      }
 
-    const invalidWOs = targetWOs.filter(wo =>
-      wo.status !== 'Ready to Invoice' || wo.workorder_type === 'ORGANIZATION'
-    );
+      const invalidWOs = targetWOs.filter(wo =>
+        wo.status !== 'Ready to Invoice' || wo.workorder_type === 'ORGANIZATION'
+      );
 
-    if (invalidWOs.length > 0) {
-      return Response.json({
-        error: `Some WorkOrders ineligible: ${invalidWOs.map(w => `${w.number} (${w.status})`).join(', ')}`
-      }, { status: 400 });
+      if (invalidWOs.length > 0) {
+        return Response.json({
+          error: `Some WorkOrders ineligible: ${invalidWOs.map(w => `${w.number} (${w.status})`).join(', ')}`
+        }, { status: 400 });
+      }
     }
 
     // ── 2. Resolve Job, Customer ──────────────────────────────────────────────
-    const primaryWO = targetWOs[0];
-    const jobs = await base44.asServiceRole.entities.Job.filter({ id: primaryWO.job_id });
-    const job = jobs[0];
-    if (!job) return Response.json({ error: `Job not found for WO ${primaryWO.work_order_number}` }, { status: 404 });
-    const sourceCustomerId = job.customer_id;
+    let job = null;
+    let sourceCustomerId = null;
     const sourceJobIds = [...new Set(targetWOs.map(wo => wo.job_id).filter(Boolean))];
+
+    if (materialOnly) {
+      // Derive customer from the selected unlinked CME records
+      const firstCME = (await base44.asServiceRole.entities.CustomerMaterialEntry.filter({ id: unlinked_cme_ids[0] }))[0];
+      if (!firstCME || !firstCME.customer_id) {
+        return Response.json({ error: 'Could not resolve customer from selected material.' }, { status: 404 });
+      }
+      sourceCustomerId = firstCME.customer_id;
+    } else {
+      const primaryWO = targetWOs[0];
+      const jobs = await base44.asServiceRole.entities.Job.filter({ id: primaryWO.job_id });
+      job = jobs[0];
+      if (!job) return Response.json({ error: `Job not found for WO ${primaryWO.work_order_number}` }, { status: 404 });
+      sourceCustomerId = job.customer_id;
+    }
 
     // ── 3-5. Gather optional TimeEntries, MaterialUsage, CME ──────────────────
     const allTimeEntries = [];
@@ -222,7 +238,9 @@ Deno.serve(async (req) => {
     } else {
       // Create new Offer
       const validUntil = new Date(Date.now() + valid_until_days * 86400000).toISOString().split('T')[0];
-      const offerTitle = title || `Billing — ${targetWOs.map(w => w.work_order_number).join(', ')}`;
+      const offerTitle = title || (materialOnly
+        ? `Materialabrechnung — ${new Date().toLocaleDateString('de-AT')}`
+        : `Billing — ${targetWOs.map(w => w.work_order_number).join(', ')}`);
       const fallbackNumber = `BILL-${new Date().toISOString().split('T')[0].replace(/-/g, '')}-${Date.now().toString().slice(-4)}`;
 
       offerNumber = fallbackNumber;
@@ -251,7 +269,9 @@ Deno.serve(async (req) => {
         source_job_ids: sourceJobIds,
         fira_export_status: 'not_exported',
         fira_export_attempt_count: 0,
-        notes: `Auto-generated billing offer from: ${targetWOs.map(w => w.work_order_number).join(', ')}`,
+        notes: materialOnly
+          ? `Auto-generated material billing offer (no WorkOrder)`
+          : `Auto-generated billing offer from: ${targetWOs.map(w => w.work_order_number).join(', ')}`,
         ai_generated: false,
       });
       offerId = newOffer.id;
@@ -390,8 +410,9 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to create billing offer line items: ${taskErr.message}`);
     }
 
-    // ── 11. Validate we created at least the WorkOrder base lines ────────────
-    if (lineItemsCreated < targetWOs.length) {
+    // ── 11. Validate we created at least the WorkOrder base lines (or 1 material line) ──
+    const minRequiredLines = materialOnly ? 1 : targetWOs.length;
+    if (lineItemsCreated < minRequiredLines) {
       console.warn(`[createBillingOfferFromWO] INCOMPLETE: Expected ${targetWOs.length} base lines, got ${lineItemsCreated}`);
       await rollbackStagedRecords();
       return Response.json({
