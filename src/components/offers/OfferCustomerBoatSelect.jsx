@@ -114,7 +114,9 @@ export default function OfferCustomerBoatSelect({
             <SelectContent>
               {filteredBoats.map(b => (
                 <SelectItem key={b.id} value={b.id}>
-                  {b.vessel_name}
+                  {b.vessel_name?.trim() ||
+                    [b.manufacturer, b.model].filter(Boolean).join(' ').trim() ||
+                    'Boot ohne Namen'}
                 </SelectItem>
               ))}
             </SelectContent>
