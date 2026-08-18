@@ -125,6 +125,24 @@ export const calculateOffer = (params, rateCardItems, vatRate = 25) => {
                 lineItems.push({ code: storageItem.code, title: storageItem.title, quantity: 1, unit: storageItem.unit || 'flat', unit_price: storageBasePrice, total_price: storageBasePrice, category: 'STORAGE' });
             }
             subtotal += storageBasePrice;
+
+            // No-trailer fee: if the customer has no own trailer, the boat must be
+            // set on stands/blocks by the lift when stored — charge the stand fee.
+            if (params.trailer_present === false) {
+                const noTrailerFee = rateCardItems.find(i => i.category === 'NO_TRAILER_FEE' && i.is_active !== false);
+                if (noTrailerFee && noTrailerFee.price > 0) {
+                    lineItems.push({
+                        code: noTrailerFee.code,
+                        title: noTrailerFee.title,
+                        quantity: 1,
+                        unit: noTrailerFee.unit || 'flat',
+                        unit_price: noTrailerFee.price,
+                        total_price: noTrailerFee.price,
+                        category: 'NO_TRAILER_FEE'
+                    });
+                    subtotal += noTrailerFee.price;
+                }
+            }
         }
     }
     

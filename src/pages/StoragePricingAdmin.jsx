@@ -86,6 +86,7 @@ export default function StoragePricingAdmin() {
     const transportStartItems = items?.filter(i => i.category === 'TRANSPORT_START') || [];
     const transportKmItems = items?.filter(i => i.category === 'TRANSPORT_KM') || [];
     const roofRule = items?.find(i => i.category === 'ROOF_RULE');
+    const noTrailerFee = items?.find(i => i.category === 'NO_TRAILER_FEE');
     const optionItems = items?.filter(i => i.category === 'OPTION') || [];
 
     return (
@@ -114,9 +115,10 @@ export default function StoragePricingAdmin() {
             </div>
 
             <Tabs defaultValue="storage" className="w-full">
-                <TabsList className="grid w-full grid-cols-5 mb-8">
+                <TabsList className="grid w-full grid-cols-6 mb-8">
                     <TabsTrigger value="storage">Storage Matrix</TabsTrigger>
                     <TabsTrigger value="roof">Roof Rules</TabsTrigger>
+                    <TabsTrigger value="trailer">Stellgebühr</TabsTrigger>
                     <TabsTrigger value="transport">Transport Config</TabsTrigger>
                     <TabsTrigger value="options">Options</TabsTrigger>
                     <TabsTrigger value="test">Test Calculation</TabsTrigger>
@@ -135,6 +137,14 @@ export default function StoragePricingAdmin() {
                     <RoofRuleEditor 
                         item={roofRule} 
                         rateCardId={activeRateCardId} 
+                        onSave={(data) => saveItemMutation.mutate(data)}
+                    />
+                </TabsContent>
+
+                <TabsContent value="trailer">
+                    <NoTrailerFeeEditor
+                        item={noTrailerFee}
+                        rateCardId={activeRateCardId}
                         onSave={(data) => saveItemMutation.mutate(data)}
                     />
                 </TabsContent>
@@ -386,6 +396,50 @@ function RoofRuleEditor({ item, rateCardId, onSave }) {
                     <Input value={rule.title} onChange={e => setRule({...rule, title: e.target.value})} />
                 </div>
                 <Button onClick={handleSave}><Save className="w-4 h-4 mr-2"/> Save Roof Rule</Button>
+            </CardContent>
+        </Card>
+    );
+}
+
+function NoTrailerFeeEditor({ item, rateCardId, onSave }) {
+    const [rule, setRule] = useState(item || { code: 'NO_TRAILER_STAND_FEE', title: 'Aufbocken / Stellen (ohne eigenen Trailer)', price: 120 });
+
+    React.useEffect(() => { if (item) setRule(item); }, [item]);
+
+    const handleSave = () => {
+        if (!rule.title || !rule.code) return toast.error("Title and Code required");
+        onSave({
+            id: item?.id,
+            rate_card_id: rateCardId,
+            category: 'NO_TRAILER_FEE',
+            code: rule.code,
+            title: rule.title,
+            unit: 'flat',
+            price: parseFloat(rule.price),
+            is_active: true
+        });
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Stellgebühr ohne eigenen Trailer</CardTitle>
+                <CardDescription>
+                    Wird beim Einwintern automatisch berechnet, wenn der Kunde keinen eigenen Trailer hat und
+                    das Boot vom Lift auf Pfähle/Blöcke gestellt werden muss.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 max-w-lg">
+                <div>
+                    <label className="text-sm font-medium mb-1 block">Titel auf dem Angebot</label>
+                    <Input value={rule.title} onChange={e => setRule({...rule, title: e.target.value})} />
+                </div>
+                <div>
+                    <label className="text-sm font-medium mb-1 block">Preis (€, netto)</label>
+                    <Input type="number" step="0.01" value={rule.price} onChange={e => setRule({...rule, price: e.target.value})} />
+                    <p className="text-xs text-slate-400 mt-1">z. B. 90–120 € für das Stellen auf Pfähle/Blöcke.</p>
+                </div>
+                <Button onClick={handleSave}><Save className="w-4 h-4 mr-2"/> Stellgebühr speichern</Button>
             </CardContent>
         </Card>
     );
@@ -726,6 +780,7 @@ function TestCalculationPanel({ rateCard, items }) {
         storage_needed: true,
         storage_period: 'month',
         roof_option: false,
+        trailer_present: true,
         selected_options: []
     });
 
@@ -786,6 +841,10 @@ function TestCalculationPanel({ rateCard, items }) {
                                 <div className="flex items-center space-x-2 mt-6">
                                     <Checkbox id="roof" checked={params.roof_option} onCheckedChange={c => setParams({...params, roof_option: !!c})} />
                                     <label htmlFor="roof" className="text-sm">Indoor / Roof</label>
+                                </div>
+                                <div className="flex items-center space-x-2 col-span-2">
+                                    <Checkbox id="trailer_test" checked={params.trailer_present} onCheckedChange={c => setParams({...params, trailer_present: !!c})} />
+                                    <label htmlFor="trailer_test" className="text-sm">Kunde hat eigenen Trailer (sonst Stellgebühr)</label>
                                 </div>
                             </div>
                         )}
