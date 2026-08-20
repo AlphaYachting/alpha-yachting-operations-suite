@@ -59,7 +59,7 @@ export default function RepairOrderChatPage() {
   const mode = data.order_type || 'repair';
   const setMode = (m) => setData((d) => ({ ...d, order_type: m }));
 
-  const applyCustomer = (c) => {
+  const applyCustomer = async (c) => {
     const name = c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
     const address = [
       c.billing_address,
@@ -75,9 +75,32 @@ export default function RepairOrderChatPage() {
       customer_email: c.email || d.customer_email,
       customer_tax_id: c.vat_number || d.customer_tax_id
     }));
+    // Auto-select the customer's boat
+    try {
+      const boats = await base44.entities.Boat.filter({ customer_id: c.id });
+      if (boats.length > 0) {
+        const b = boats[0];
+        setData((d) => ({
+          ...d,
+          boat_id: b.id,
+          boat_name: b.vessel_name || d.boat_name,
+          boat_type_model: [b.manufacturer, b.model].filter(Boolean).join(' ') || d.boat_type_model,
+          boat_year: b.year ? String(b.year) : d.boat_year,
+          boat_registration: b.registration_number || d.boat_registration,
+          boat_length_m: b.length_m || d.boat_length_m,
+          boat_beam_m: b.beam_m || d.boat_beam_m,
+          boat_draft_m: b.draft_m || d.boat_draft_m,
+          engine_make_type: [b.engine_manufacturer, b.engine_model].filter(Boolean).join(' ') || d.engine_make_type,
+          engine_hours: b.engine_hours ? String(b.engine_hours) : d.engine_hours
+        }));
+        if (boats.length > 1) {
+          toast.info(`Kunde hat ${boats.length} Boote – das erste wurde übernommen, bitte ggf. anpassen.`);
+        }
+      }
+    } catch (_e) { /* boat lookup failed silently */ }
   };
 
-  const clearCustomer = () => setData((d) => ({ ...d, customer_id: '' }));
+  const clearCustomer = () => setData((d) => ({ ...d, customer_id: '', boat_id: '' }));
 
   const handlePrint = async () => {
     await persist(data);
