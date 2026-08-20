@@ -10,6 +10,7 @@ import CustomerPicker from '@/components/repairorder/CustomerPicker';
 import StorageOfferPicker from '@/components/repairorder/StorageOfferPicker';
 import { openRepairOrderPdf } from '@/components/repairorder/repairOrderPdf';
 import { openEinlagerungsvertragPdf } from '@/components/repairorder/einlagerungsvertragPdf';
+import StorageContractActions from '@/components/repairorder/StorageContractActions';
 import { toast } from 'sonner';
 
 export default function RepairOrderChatPage() {
@@ -138,6 +139,15 @@ export default function RepairOrderChatPage() {
     else openRepairOrderPdf(data);
   };
 
+  const ensureOrderId = async () => {
+    if (orderId) {
+      await persist(data);
+      return orderId;
+    }
+    const created = await persist(data);
+    return created?.id;
+  };
+
   const handleConvert = async () => {
     setConverting(true);
     try {
@@ -231,6 +241,13 @@ export default function RepairOrderChatPage() {
             <Printer className="h-4 w-4 mr-2" />
             {mode === 'storage' ? 'Einlagerungsvertrag drucken (PDF)' : 'Auftragsblatt + Arbeitszeiten drucken (PDF)'}
           </Button>
+          {mode === 'storage' && (
+            <StorageContractActions
+              data={data}
+              ensureOrderId={ensureOrderId}
+              onSaved={({ contract_pdf_url }) => setData((d) => ({ ...d, contract_pdf_url }))}
+            />
+          )}
           {convertedJobId ? (
             <Button asChild className="bg-green-600 hover:bg-green-700">
               <a href={`/JobDetail?id=${convertedJobId}`}><CheckCircle2 className="h-4 w-4 mr-2" /> Projekt öffnen</a>

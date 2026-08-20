@@ -350,6 +350,20 @@
       "type": "string",
       "description": "Reference to Job once converted"
     },
+    "contract_pdf_url": {
+      "type": "string",
+      "description": "URL of the saved/archived storage contract PDF"
+    },
+    "contract_saved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the contract PDF was archived"
+    },
+    "contract_sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the contract was emailed to the customer"
+    },
     "source_offer_id": {
       "type": "string",
       "description": "Reference to Offer whose data was applied (storage contracts)"

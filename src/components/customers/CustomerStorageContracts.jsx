@@ -56,6 +56,14 @@ export default function CustomerStorageContracts({ customerId }) {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge className={statusColors[c.status] || 'bg-slate-100 text-slate-700'}>{c.status}</Badge>
+                    {c.contract_pdf_url && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={c.contract_pdf_url} target="_blank" rel="noreferrer">
+                          <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                          Gespeichertes PDF
+                        </a>
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" onClick={() => openEinlagerungsvertragPdf(c)}>
                       <FileDown className="h-3.5 w-3.5 mr-1.5" />
                       PDF
