@@ -349,6 +349,10 @@
     "converted_job_id": {
       "type": "string",
       "description": "Reference to Job once converted"
+    },
+    "source_offer_id": {
+      "type": "string",
+      "description": "Reference to Offer whose data was applied (storage contracts)"
     }
   },
   "required": []

@@ -7,6 +7,7 @@ import RepairOrderChat from '@/components/repairorder/RepairOrderChat';
 import RepairOrderForm from '@/components/repairorder/RepairOrderForm';
 import StorageOrderForm from '@/components/repairorder/StorageOrderForm';
 import CustomerPicker from '@/components/repairorder/CustomerPicker';
+import StorageOfferPicker from '@/components/repairorder/StorageOfferPicker';
 import { openRepairOrderPdf } from '@/components/repairorder/repairOrderPdf';
 import { openEinlagerungsvertragPdf } from '@/components/repairorder/einlagerungsvertragPdf';
 import { toast } from 'sonner';
@@ -100,7 +101,36 @@ export default function RepairOrderChatPage() {
     } catch (_e) { /* boat lookup failed silently */ }
   };
 
-  const clearCustomer = () => setData((d) => ({ ...d, customer_id: '', boat_id: '' }));
+  const clearCustomer = () => setData((d) => ({ ...d, customer_id: '', boat_id: '', source_offer_id: '' }));
+
+  const applyOffer = (offer, tasks) => {
+    setData((d) => {
+      const serviceLines = (tasks || [])
+        .filter((t) => t.item_type !== 'Chapter')
+        .map((t) => {
+          const total = t.total_amount != null ? ` – ${t.total_amount} €` : '';
+          return `• ${t.title}${total}`;
+        });
+      const notesHeader = `Gemäß Angebot ${offer.offer_number || offer.title}:`;
+      return {
+        ...d,
+        source_offer_id: offer.id,
+        storage_price: offer.total_amount ?? offer.subtotal ?? d.storage_price,
+        storage_billing_type: d.storage_billing_type || 'Pauschalpreis',
+        storage_interval: d.storage_interval || (offer.storage_period ? 'Winterlagerung / Saisonlagerung' : d.storage_interval),
+        storage_interval_other: offer.storage_period || d.storage_interval_other,
+        storage_under_roof: offer.roof_option === true ? 'Ja' : (offer.roof_option === false ? d.storage_under_roof || 'Nein' : d.storage_under_roof),
+        boat_length_m: d.boat_length_m || offer.boat_length || '',
+        storage_services_notes: serviceLines.length > 0
+          ? [notesHeader, ...serviceLines].join('\n')
+          : d.storage_services_notes,
+        special_agreements: d.special_agreements
+          ? d.special_agreements
+          : `Preise und Leistungen gemäß Angebot ${offer.offer_number || offer.title}.`
+      };
+    });
+    toast.success(`Angebotsdaten aus ${offer.offer_number || offer.title} übernommen`);
+  };
 
   const handlePrint = async () => {
     await persist(data);
@@ -148,13 +178,24 @@ export default function RepairOrderChatPage() {
         <Button variant={mode === 'storage' ? 'default' : 'outline'} size="sm" onClick={() => setMode('storage')}>
           <Warehouse className="h-4 w-4 mr-2" /> Einlagerungsvertrag
         </Button>
-        <div className="ml-auto w-full sm:w-80">
-          <CustomerPicker
-            customerId={data.customer_id}
-            customerName={data.customer_name}
-            onSelect={applyCustomer}
-            onClear={clearCustomer}
-          />
+        <div className="ml-auto flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="w-full sm:w-72">
+            <CustomerPicker
+              customerId={data.customer_id}
+              customerName={data.customer_name}
+              onSelect={applyCustomer}
+              onClear={clearCustomer}
+            />
+          </div>
+          {data.customer_id && (
+            <div className="w-full sm:w-72">
+              <StorageOfferPicker
+                customerId={data.customer_id}
+                selectedOfferId={data.source_offer_id}
+                onApply={applyOffer}
+              />
+            </div>
+          )}
         </div>
       </div>
 
