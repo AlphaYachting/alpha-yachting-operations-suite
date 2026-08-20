@@ -3,13 +3,13 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Archive, FileDown, Calendar, Trash2 } from 'lucide-react';
+import { Archive, FileDown, Calendar, Trash2, RefreshCw } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
-import { openEinlagerungsvertragPdf } from '@/components/repairorder/einlagerungsvertragPdf';
+import { openEinlagerungsvertragPdf, generateEinlagerungsvertragPdf } from '@/components/repairorder/einlagerungsvertragPdf';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -20,6 +20,7 @@ const statusColors = {
 
 export default function CustomerStorageContracts({ customerId }) {
   const [contracts, setContracts] = useState([]);
+  const [regenerating, setRegenerating] = useState(null);
 
   useEffect(() => {
     if (!customerId) return;
@@ -32,6 +33,22 @@ export default function CustomerStorageContracts({ customerId }) {
   const handleDelete = async (id) => {
     await base44.entities.RepairOrder.delete(id);
     setContracts((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const handleRegenerate = async (c) => {
+    setRegenerating(c.id);
+    try {
+      const doc = generateEinlagerungsvertragPdf(c);
+      const blob = doc.output('blob');
+      const fileName = `Einlagerungsvertrag_${(c.customer_name || 'Kunde').replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const saved_at = new Date().toISOString();
+      await base44.entities.RepairOrder.update(c.id, { contract_pdf_url: file_url, contract_saved_at: saved_at });
+      setContracts((prev) => prev.map((x) => x.id === c.id ? { ...x, contract_pdf_url: file_url, contract_saved_at: saved_at } : x));
+    } finally {
+      setRegenerating(null);
+    }
   };
 
   const fmt = (d) => {
@@ -71,6 +88,16 @@ export default function CustomerStorageContracts({ customerId }) {
                           <FileDown className="h-3.5 w-3.5 mr-1.5" />
                           Gespeichertes PDF
                         </a>
+                      </Button>
+                    )}
+                    {c.contract_pdf_url && (
+                      <Button
+                        variant="outline" size="sm"
+                        disabled={regenerating === c.id}
+                        onClick={() => handleRegenerate(c)}
+                        title="Gespeichertes PDF neu generieren"
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 ${regenerating === c.id ? 'animate-spin' : ''}`} />
                       </Button>
                     )}
                     <Button variant="outline" size="sm" onClick={() => openEinlagerungsvertragPdf(c)}>
