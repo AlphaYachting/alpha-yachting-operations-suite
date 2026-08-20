@@ -99,6 +99,32 @@ export function generateEinlagerungsvertragPdf(data) {
     y += 9;
   };
 
+  // Multi-line notes field: wraps text, draws each line on its own ruled line, paginates
+  const notesField = (label, value, minLines = 2) => {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const lh = 6.5;
+    const lines = value ? doc.splitTextToSize(String(value), contentW) : [];
+    const count = Math.max(lines.length, minLines);
+    for (let i = 0; i < count; i++) {
+      ensure(lh + 5);
+      if (lines[i]) {
+        doc.setTextColor(30, 35, 40);
+        doc.text(lines[i], margin, y - 1.5);
+      }
+      doc.setDrawColor(LINE_GREY[0], LINE_GREY[1], LINE_GREY[2]);
+      doc.setLineWidth(0.3);
+      doc.line(margin, y, margin + contentW, y);
+      y += lh;
+    }
+    y -= lh;
+    doc.setTextColor(LABEL_GREY[0], LABEL_GREY[1], LABEL_GREY[2]);
+    doc.setFontSize(6.8);
+    doc.text(label, margin, y + 3.2);
+    doc.setTextColor(0, 0, 0);
+    y += 9;
+  };
+
   // Horizontal checkbox options, one selected value
   const checkOptions = (options, selected, perRow = 3) => {
     doc.setFont('helvetica', 'normal');
@@ -190,7 +216,7 @@ export function generateEinlagerungsvertragPdf(data) {
     { label: 'Motor / Antrieb', value: [data.engine_make_type, data.engine_power].filter(Boolean).join(' / ') },
     { label: 'Wert des Bootes', value: data.boat_value }
   ]);
-  fieldRow([{ label: 'Besondere Hinweise zum Boot', value: data.boat_notes }]);
+  notesField('Besondere Hinweise zum Boot', data.boat_notes, 1);
   y += 1;
 
   // ---------- 3 TRAILER ----------
@@ -210,7 +236,7 @@ export function generateEinlagerungsvertragPdf(data) {
     { label: 'Trailertyp / Hersteller', value: data.trailer_type },
     { label: 'Kennzeichen, falls vorhanden', value: data.trailer_registration }
   ]);
-  fieldRow([{ label: 'Zustand / Hinweise zum Trailer', value: data.trailer_condition_notes }]);
+  notesField('Zustand / Hinweise zum Trailer', data.trailer_condition_notes, 1);
   para('Der Kunde bestätigt, dass Trailer, Stützen, Böcke oder sonstige Transport- und Lagerhilfen, sofern vom Kunden gestellt, für das Boot geeignet und verkehrs- bzw. standsicher sind.');
 
   // ---------- 4 ART & DAUER ----------
@@ -248,7 +274,7 @@ export function generateEinlagerungsvertragPdf(data) {
   doc.setTextColor(0, 0, 0);
   y += 5;
   checkOptions(BILLING_TYPES, data.storage_billing_type, 3);
-  fieldRow([{ label: 'Sonstige vereinbarte Kosten / Nebenkosten', value: data.storage_extra_costs }]);
+  notesField('Sonstige vereinbarte Kosten / Nebenkosten', data.storage_extra_costs, 1);
   para('Die Zahlung ist, sofern nicht anders schriftlich vereinbart, nach Rechnungsstellung sofort ohne Abzug fällig. Bis zur vollständigen Zahlung sämtlicher offener Forderungen aus diesem Vertrag ist der Lagerhalter berechtigt, die Herausgabe des Bootes und/oder Zubehörs zurückzuhalten, soweit dies gesetzlich zulässig ist.');
 
   // ---------- 6 ZUSATZLEISTUNGEN ----------
@@ -282,8 +308,8 @@ export function generateEinlagerungsvertragPdf(data) {
     doc.line(margin, y + rowH, margin + contentW, y + rowH);
     y += rowH;
   });
-  y += 3;
-  fieldRow([{ label: 'Weitere Aufträge / freie Liste', value: data.storage_services_notes }]);
+  y += 5;
+  notesField('Weitere Aufträge / freie Liste', data.storage_services_notes, 3);
   para('Zusatzleistungen werden, sofern nicht ausdrücklich als Pauschale vereinbart, gesondert nach Aufwand, Materialverbrauch und jeweils gültigem Angebot bzw. Preisstand abgerechnet.');
 
   // ---------- 7 ZUSTAND ----------
@@ -298,7 +324,7 @@ export function generateEinlagerungsvertragPdf(data) {
   doc.text('Mit folgenden sichtbaren Schäden / Mängeln:', margin + 4.5, y);
   doc.setTextColor(0, 0, 0);
   y += 7;
-  fieldRow([{ label: 'Schäden / Mängel', value: data.boat_condition_damages }]);
+  notesField('Schäden / Mängel', data.boat_condition_damages, 1);
   ensure(12);
   doc.setFontSize(7.5);
   doc.setTextColor(LABEL_GREY[0], LABEL_GREY[1], LABEL_GREY[2]);
