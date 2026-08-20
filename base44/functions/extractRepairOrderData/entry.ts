@@ -1,5 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.39';
 
+const STORAGE_SERVICES = [
+  'Bootsreinigung außen',
+  'Bootsreinigung innen',
+  'Motor-Konservierung / Einwinterung',
+  'Batterie ausbauen / laden / prüfen',
+  'Batterieservice während der Lagerzeit',
+  'Kontrolle von Bilge / Feuchtigkeit',
+  'Abdeckung / Plane montieren',
+  'Antifouling prüfen / Angebot erstellen',
+  'Politur / Pflegearbeiten',
+  'Motorservice / Wartung',
+  'Sonstige Arbeiten gemäß separatem Angebot'
+];
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -8,14 +22,14 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { file_urls = [], current_data = {}, user_message = '', chat_history = [] } = body;
+    const isStorage = current_data?.order_type === 'storage';
 
-    // Schema of the fields the AI should try to fill from documents + conversation
     const responseSchema = {
       type: "object",
       properties: {
         assistant_message: {
           type: "string",
-          description: "A short, friendly reply in German to the user summarizing what was extracted or asking for missing key info."
+          description: "Kurze, freundliche Antwort auf Deutsch: was übernommen wurde. Fehlende Angaben höchstens in einem kurzen Nebensatz erwähnen und ausdrücklich als optional/später nachtragbar kennzeichnen. Niemals nach der Adresse drängen."
         },
         extracted: {
           type: "object",
@@ -34,11 +48,7 @@ Deno.serve(async (req) => {
             engine_make_type: { type: "string" },
             engine_power: { type: "string" },
             engine_hours: { type: "string" },
-            work_description: { type: "string" },
-            work_categories: {
-              type: "array",
-              items: { type: "string" }
-            },
+            work_categories: { type: "array", items: { type: "string" } },
             positions: {
               type: "array",
               items: {
@@ -55,7 +65,7 @@ Deno.serve(async (req) => {
             boat_beam_m: { type: "number" },
             boat_draft_m: { type: "number" },
             boat_value: { type: "string" },
-            trailer_on_arrival: { type: "boolean", description: "Eigener Trailer vorhanden / Boot kommt am Anhänger" },
+            trailer_on_arrival: { type: "boolean" },
             trailer_type: { type: "string" },
             trailer_registration: { type: "string" },
             storage_interval: { type: "string", description: "Nur exakt: Täglich | Wöchentlich | Monatlich | Jährlich | Winterlagerung / Saisonlagerung | Sonstiges" },
@@ -68,15 +78,19 @@ Deno.serve(async (req) => {
             storage_services: {
               type: "array",
               items: { type: "string" },
-              description: "Nur exakt diese Werte: Bootsreinigung außen, Bootsreinigung innen, Motor-Konservierung / Einwinterung, Batterie ausbauen / laden / prüfen, Batterieservice während der Lagerzeit, Kontrolle von Bilge / Feuchtigkeit, Abdeckung / Plane montieren, Antifouling prüfen / Angebot erstellen, Politur / Pflegearbeiten, Motorservice / Wartung, Sonstige Arbeiten gemäß separatem Angebot"
+              description: `Nur exakt diese Werte: ${STORAGE_SERVICES.join(', ')}`
             },
-            storage_services_notes: {
+            storage_services_notes_append: {
               type: "string",
-              description: "Strukturierte Liste weiterer Service-/Zusatzaufträge, die nicht in der Standardliste storage_services enthalten sind. Jede Position in einer eigenen Zeile im Format '- Beschreibung (Menge/Details)'. Bereits vorhandene Positionen aus current_data.storage_services_notes müssen unverändert übernommen und die neuen Positionen ergänzt werden."
+              description: "NEUE Zusatz-/Servicearbeiten, die zu keinem Standardwert von storage_services passen. Strukturierte Liste: jede Position in eigener Zeile, beginnend mit '- ', Menge/Details in Klammern. Nur die NEUEN Positionen, keine bereits erfassten."
             },
             work_description_append: {
               type: "string",
-              description: "Nur bei Reparaturauftrag: neue gewünschte Arbeiten als strukturierte Liste, jede Position in eigener Zeile im Format '- Beschreibung'."
+              description: "NEUE gewünschte Reparatur-/Servicearbeiten als strukturierte Liste, jede Position in eigener Zeile beginnend mit '- '. Nur bei Reparaturauftrag verwenden."
+            },
+            special_agreements_append: {
+              type: "string",
+              description: "NEUE besondere Vereinbarungen / Absprachen (z.B. Zugangsregelungen, Sonderwünsche, Fristen) als strukturierte Liste, jede Zeile beginnend mit '- '."
             },
             insurance_company: { type: "string" },
             insurance_policy_number: { type: "string" }
@@ -90,8 +104,8 @@ Deno.serve(async (req) => {
       .map((m: any) => `${m.role === 'user' ? 'Nutzer' : 'Assistent'}: ${m.content}`)
       .join('\n');
 
-    const prompt = `Du bist ein Assistent für Alpha Yachting, der beim Ausfüllen eines Reparaturauftrags hilft.
-Du erhältst ggf. hochgeladene Dokumente (Zulassungsschein/Bootspapiere, Ausweis/Personaldokument, bestehende Angebote/Kostenvoranschläge) und eine Nachricht des Nutzers.
+    const prompt = `Du bist ein Assistent für Alpha Yachting, der beim Ausfüllen eines ${isStorage ? 'Einlagerungsvertrags (Einlagerung/Winterlagerung)' : 'Reparaturauftrags'} hilft.
+Du erhältst ggf. hochgeladene Dokumente (Zulassungsschein/Bootspapiere, Ausweis, Angebote) und eine Nachricht des Nutzers.
 
 Bereits erfasste Daten (nicht überschreiben, wenn du nichts Besseres findest):
 ${JSON.stringify(current_data, null, 2)}
@@ -102,19 +116,17 @@ ${historyText || '(noch kein Verlauf)'}
 Neue Nachricht des Nutzers:
 "${user_message || '(keine Nachricht, nur Dokumente)'}"
 
-Aufgaben:
-1. Lies alle beigefügten Dokumente sorgfältig aus.
-2. Aus Zulassungsschein/Bootspapieren: Bootstyp/Modell, Bootsname, Baujahr, amtl. Kennzeichen, HIN-Nr., Länge, Motor, Leistung.
-3. Aus Ausweis/Personaldokument: Name, Adresse des Kunden.
-4. Aus Angeboten/Kostenvoranschlägen: Positionen (Beschreibung, Menge, Preis) und Stundensatz.
-5. Extrahiere alle gefundenen Felder. Felder, die du nicht findest, lass leer/weg.
-6. Ordne gewünschte Arbeiten den Kategorien zu (nur exakt diese Werte verwenden): "Motor / Antrieb", "Elektrik / Elektronik", "Rumpf / Gelcoat", "Osmose / Unterwasserschiff", "Antifouling", "Rigg / Segel", "Winterlager / Konservierung", "Kranung / Transport", "Anhänger".
-7. WICHTIG: Wenn es um eine Einlagerung / Winterlagerung / einen Einlagerungsvertrag geht (order_type "storage" in den erfassten Daten oder aus dem Gespräch erkennbar), extrahiere zusätzlich die Einlagerungsfelder: storage_interval, storage_start_date, storage_end_date, storage_under_roof, storage_location, storage_price, storage_billing_type, storage_services (Zusatzleistungen), trailer_on_arrival, boat_beam_m, boat_draft_m, boat_value, Versicherungsdaten (insurance_company, insurance_policy_number) und customer_tax_id.
-8. ZUSATZLEISTUNGEN / SERVICEAUFTRÄGE: Wenn der Nutzer zusätzliche Servicearbeiten nennt (z.B. "Bitte auch Motor warten und Batterie prüfen"), dann:
-   a) Ordne jede Arbeit, wenn möglich, exakt einem Wert aus der Standardliste storage_services zu und gib alle passenden Werte (inkl. der bereits in current_data.storage_services vorhandenen) zurück.
-   b) Alle Arbeiten, die zu keinem Standardwert passen, kommen in storage_services_notes als strukturierte Liste: jede Position in einer eigenen Zeile, beginnend mit "- ", mit Menge/Details in Klammern falls genannt. Übernimm dabei die bereits vorhandenen Zeilen aus current_data.storage_services_notes unverändert und ergänze nur die neuen. Nie Freitext-Absätze, immer Listenzeilen.
-   c) Bei einem Reparaturauftrag (order_type "repair") liefere neue gewünschte Arbeiten stattdessen als Listenzeilen in work_description_append.
-9. Antworte im Feld assistant_message auf Deutsch, freundlich und kurz: fasse zusammen, was du erkannt hast, und frage nach den wichtigsten noch fehlenden Angaben (z.B. Kundenadresse, gewünschte Arbeiten bzw. bei Einlagerung: Zeitraum, Preis, Zusatzleistungen).`;
+Regeln:
+1. Lies alle beigefügten Dokumente aus: Bootsdaten (Typ/Modell, Name, Baujahr, Kennzeichen, HIN, Länge/Breite/Tiefgang, Motor, Leistung), Kundendaten, Positionen/Stundensatz aus Angeboten.
+2. Felder, die du nicht findest, LASS KOMPLETT WEG. Gib niemals leere Strings oder 0 zurück.
+3. JEDE inhaltliche Information aus der Nachricht MUSS in einem Feld landen — nichts darf verloren gehen:
+   - Genannte Zusatz-/Servicearbeiten: passende Werte exakt aus dieser Liste in storage_services: ${STORAGE_SERVICES.join(' | ')}.
+   - Alle Arbeiten, die zu keinem dieser Werte passen, gehören in storage_services_notes_append${isStorage ? '' : ' bzw. bei Reparaturauftrag in work_description_append'} — als Listenzeilen, jede beginnend mit "- ".
+   - Absprachen, Bedingungen, Sonderwünsche (z.B. Zugang, Fristen, Haftung, Zahlungsdetails) gehören in special_agreements_append — ebenfalls als Listenzeilen mit "- ".
+   - Gib in den *_append-Feldern NUR die neuen Positionen zurück, nicht die bereits in den erfassten Daten vorhandenen. Nie Freitext-Absätze, immer Listenzeilen.
+4. Ordne Arbeiten zusätzlich diesen Kategorien zu (nur exakt): "Motor / Antrieb", "Elektrik / Elektronik", "Rumpf / Gelcoat", "Osmose / Unterwasserschiff", "Antifouling", "Rigg / Segel", "Winterlager / Konservierung", "Kranung / Transport", "Anhänger".
+5. Bei Einlagerung zusätzlich: storage_interval, storage_start_date, storage_end_date, storage_under_roof, storage_location, storage_price, storage_billing_type, trailer_on_arrival, Versicherungsdaten, customer_tax_id.
+6. assistant_message: kurz auf Deutsch bestätigen, was du in welche Liste übernommen hast. Frage NICHT nach der Adresse oder anderen Stammdaten — diese können jederzeit später ergänzt werden. Höchstens ein kurzer Hinweis, welche Angaben für den Vertrag noch nützlich wären (optional).`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,
@@ -123,12 +135,9 @@ Aufgaben:
       model: file_urls.length > 0 ? "claude_sonnet_4_6" : "automatic"
     });
 
-    // Some models return the structured output directly, others wrap it in a
-    // "response" field (as an object OR as a JSON string). Normalize all cases
-    // so the frontend always receives flat { assistant_message, extracted }.
-    let normalized = result;
-    if (result && typeof result === 'object' && result.response !== undefined) {
-      normalized = result.response;
+    let normalized: any = result;
+    if (result && typeof result === 'object' && (result as any).response !== undefined) {
+      normalized = (result as any).response;
     }
     if (typeof normalized === 'string') {
       try {
@@ -141,8 +150,6 @@ Aufgaben:
       normalized = { assistant_message: '', extracted: {} };
     }
 
-    // Some models put the entire JSON payload (including the real "extracted")
-    // inside assistant_message as a string. Detect and unwrap that too.
     const hasExtracted = normalized.extracted && typeof normalized.extracted === 'object'
       && Object.keys(normalized.extracted).length > 0;
     if (!hasExtracted && typeof normalized.assistant_message === 'string'
@@ -154,6 +161,16 @@ Aufgaben:
         }
       } catch (_e) {
         // leave as-is
+      }
+    }
+
+    // Strip placeholder values some models emit instead of omitting fields
+    const PLACEHOLDERS = ['nicht angegeben', 'unbekannt', 'n/a', 'k.a.', 'keine angabe', '-', '–'];
+    if (normalized.extracted && typeof normalized.extracted === 'object') {
+      for (const [k, v] of Object.entries(normalized.extracted)) {
+        if (typeof v === 'string' && PLACEHOLDERS.includes(v.trim().toLowerCase())) {
+          delete normalized.extracted[k];
+        }
       }
     }
 

@@ -102,7 +102,7 @@ export default function RepairOrderChat({ data, onExtracted }) {
         if (v === null || v === undefined || v === '') return;
         if (typeof v === 'number' && v === 0) return;
         if (Array.isArray(v) && v.length === 0) return;
-        if (k === 'work_description_append') return;
+        if (k.endsWith('_append')) return;
         merged[k] = v;
       });
 
@@ -115,11 +115,14 @@ export default function RepairOrderChat({ data, onExtracted }) {
         return [...existingLines, ...newLines].join('\n');
       };
 
-      if (extracted.storage_services_notes) {
-        merged.storage_services_notes = appendLines(data.storage_services_notes, extracted.storage_services_notes);
+      if (extracted.storage_services_notes_append) {
+        merged.storage_services_notes = appendLines(data.storage_services_notes, extracted.storage_services_notes_append);
       }
       if (extracted.work_description_append) {
         merged.work_description = appendLines(data.work_description, extracted.work_description_append);
+      }
+      if (extracted.special_agreements_append) {
+        merged.special_agreements = appendLines(data.special_agreements, extracted.special_agreements_append);
       }
       if (Array.isArray(extracted.storage_services)) {
         merged.storage_services = Array.from(new Set([...(data.storage_services || []), ...extracted.storage_services]));
