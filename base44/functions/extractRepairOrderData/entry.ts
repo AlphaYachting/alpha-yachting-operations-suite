@@ -70,6 +70,14 @@ Deno.serve(async (req) => {
               items: { type: "string" },
               description: "Nur exakt diese Werte: Bootsreinigung außen, Bootsreinigung innen, Motor-Konservierung / Einwinterung, Batterie ausbauen / laden / prüfen, Batterieservice während der Lagerzeit, Kontrolle von Bilge / Feuchtigkeit, Abdeckung / Plane montieren, Antifouling prüfen / Angebot erstellen, Politur / Pflegearbeiten, Motorservice / Wartung, Sonstige Arbeiten gemäß separatem Angebot"
             },
+            storage_services_notes: {
+              type: "string",
+              description: "Strukturierte Liste weiterer Service-/Zusatzaufträge, die nicht in der Standardliste storage_services enthalten sind. Jede Position in einer eigenen Zeile im Format '- Beschreibung (Menge/Details)'. Bereits vorhandene Positionen aus current_data.storage_services_notes müssen unverändert übernommen und die neuen Positionen ergänzt werden."
+            },
+            work_description_append: {
+              type: "string",
+              description: "Nur bei Reparaturauftrag: neue gewünschte Arbeiten als strukturierte Liste, jede Position in eigener Zeile im Format '- Beschreibung'."
+            },
             insurance_company: { type: "string" },
             insurance_policy_number: { type: "string" }
           }
@@ -102,7 +110,11 @@ Aufgaben:
 5. Extrahiere alle gefundenen Felder. Felder, die du nicht findest, lass leer/weg.
 6. Ordne gewünschte Arbeiten den Kategorien zu (nur exakt diese Werte verwenden): "Motor / Antrieb", "Elektrik / Elektronik", "Rumpf / Gelcoat", "Osmose / Unterwasserschiff", "Antifouling", "Rigg / Segel", "Winterlager / Konservierung", "Kranung / Transport", "Anhänger".
 7. WICHTIG: Wenn es um eine Einlagerung / Winterlagerung / einen Einlagerungsvertrag geht (order_type "storage" in den erfassten Daten oder aus dem Gespräch erkennbar), extrahiere zusätzlich die Einlagerungsfelder: storage_interval, storage_start_date, storage_end_date, storage_under_roof, storage_location, storage_price, storage_billing_type, storage_services (Zusatzleistungen), trailer_on_arrival, boat_beam_m, boat_draft_m, boat_value, Versicherungsdaten (insurance_company, insurance_policy_number) und customer_tax_id.
-8. Antworte im Feld assistant_message auf Deutsch, freundlich und kurz: fasse zusammen, was du erkannt hast, und frage nach den wichtigsten noch fehlenden Angaben (z.B. Kundenadresse, gewünschte Arbeiten bzw. bei Einlagerung: Zeitraum, Preis, Zusatzleistungen).`;
+8. ZUSATZLEISTUNGEN / SERVICEAUFTRÄGE: Wenn der Nutzer zusätzliche Servicearbeiten nennt (z.B. "Bitte auch Motor warten und Batterie prüfen"), dann:
+   a) Ordne jede Arbeit, wenn möglich, exakt einem Wert aus der Standardliste storage_services zu und gib alle passenden Werte (inkl. der bereits in current_data.storage_services vorhandenen) zurück.
+   b) Alle Arbeiten, die zu keinem Standardwert passen, kommen in storage_services_notes als strukturierte Liste: jede Position in einer eigenen Zeile, beginnend mit "- ", mit Menge/Details in Klammern falls genannt. Übernimm dabei die bereits vorhandenen Zeilen aus current_data.storage_services_notes unverändert und ergänze nur die neuen. Nie Freitext-Absätze, immer Listenzeilen.
+   c) Bei einem Reparaturauftrag (order_type "repair") liefere neue gewünschte Arbeiten stattdessen als Listenzeilen in work_description_append.
+9. Antworte im Feld assistant_message auf Deutsch, freundlich und kurz: fasse zusammen, was du erkannt hast, und frage nach den wichtigsten noch fehlenden Angaben (z.B. Kundenadresse, gewünschte Arbeiten bzw. bei Einlagerung: Zeitraum, Preis, Zusatzleistungen).`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,

@@ -102,8 +102,28 @@ export default function RepairOrderChat({ data, onExtracted }) {
         if (v === null || v === undefined || v === '') return;
         if (typeof v === 'number' && v === 0) return;
         if (Array.isArray(v) && v.length === 0) return;
+        if (k === 'work_description_append') return;
         merged[k] = v;
       });
+
+      // Append new work items as structured list lines (never overwrite existing ones)
+      const appendLines = (existing, addition) => {
+        const existingLines = (existing || '').split('\n').map((l) => l.trim()).filter(Boolean);
+        const newLines = (addition || '').split('\n').map((l) => l.trim()).filter(Boolean)
+          .map((l) => (l.startsWith('-') || l.startsWith('•') ? l : `- ${l}`))
+          .filter((l) => !existingLines.includes(l));
+        return [...existingLines, ...newLines].join('\n');
+      };
+
+      if (extracted.storage_services_notes) {
+        merged.storage_services_notes = appendLines(data.storage_services_notes, extracted.storage_services_notes);
+      }
+      if (extracted.work_description_append) {
+        merged.work_description = appendLines(data.work_description, extracted.work_description_append);
+      }
+      if (Array.isArray(extracted.storage_services)) {
+        merged.storage_services = Array.from(new Set([...(data.storage_services || []), ...extracted.storage_services]));
+      }
       // Merge new document URLs
       merged.extracted_documents = [...(data.extracted_documents || []), ...fileUrls];
       onExtracted(merged);
