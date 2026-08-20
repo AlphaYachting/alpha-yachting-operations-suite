@@ -6,7 +6,7 @@ import { Paperclip, Send, Loader2, FileText, Bot, User, Mic, Square } from 'luci
 
 export default function RepairOrderChat({ data, onExtracted }) {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hallo! Lade Dokumente hoch (Zulassungsschein, Ausweis, bestehende Angebote) oder beschreibe den Auftrag. Ich lese die Daten aus und fülle das Auftragsblatt.' }
+    { role: 'assistant', content: 'Hallo! Lade Dokumente hoch (Bootsschein/Zulassung, Ausweis, bestehende Angebote) oder beschreibe den Auftrag bzw. die gewünschte Einlagerung. Ich lese die Daten aus und fülle das Formular.' }
   ]);
   const [input, setInput] = useState('');
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -100,6 +100,7 @@ export default function RepairOrderChat({ data, onExtracted }) {
       const merged = { ...data };
       Object.entries(extracted).forEach(([k, v]) => {
         if (v === null || v === undefined || v === '') return;
+        if (typeof v === 'number' && v === 0) return;
         if (Array.isArray(v) && v.length === 0) return;
         merged[k] = v;
       });

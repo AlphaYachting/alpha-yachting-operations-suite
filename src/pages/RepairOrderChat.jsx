@@ -2,18 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Printer, Briefcase, Loader2, CheckCircle2, FileText } from 'lucide-react';
+import { MessageSquare, Printer, Briefcase, Loader2, CheckCircle2, FileText, Warehouse } from 'lucide-react';
 import RepairOrderChat from '@/components/repairorder/RepairOrderChat';
 import RepairOrderForm from '@/components/repairorder/RepairOrderForm';
+import StorageOrderForm from '@/components/repairorder/StorageOrderForm';
+import CustomerPicker from '@/components/repairorder/CustomerPicker';
 import { openRepairOrderPdf } from '@/components/repairorder/repairOrderPdf';
+import { openEinlagerungsvertragPdf } from '@/components/repairorder/einlagerungsvertragPdf';
 import { toast } from 'sonner';
 
 export default function RepairOrderChatPage() {
   const [data, setData] = useState({
+    order_type: 'repair',
     order_date: new Date().toISOString().slice(0, 10),
     positions: [],
     work_categories: [],
-    trailer_work: []
+    trailer_work: [],
+    storage_services: []
   });
   const [orderId, setOrderId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -51,9 +56,33 @@ export default function RepairOrderChatPage() {
     setData(updated);
   };
 
+  const mode = data.order_type || 'repair';
+  const setMode = (m) => setData((d) => ({ ...d, order_type: m }));
+
+  const applyCustomer = (c) => {
+    const name = c.company_name || `${c.first_name || ''} ${c.last_name || ''}`.trim();
+    const address = [
+      c.billing_address,
+      [c.billing_postal_code, c.billing_city].filter(Boolean).join(' '),
+      c.billing_country
+    ].filter(Boolean).join(', ');
+    setData((d) => ({
+      ...d,
+      customer_id: c.id,
+      customer_name: name,
+      customer_address: address || d.customer_address,
+      customer_phone: c.phone || d.customer_phone,
+      customer_email: c.email || d.customer_email,
+      customer_tax_id: c.vat_number || d.customer_tax_id
+    }));
+  };
+
+  const clearCustomer = () => setData((d) => ({ ...d, customer_id: '' }));
+
   const handlePrint = async () => {
     await persist(data);
-    openRepairOrderPdf(data);
+    if (mode === 'storage') openEinlagerungsvertragPdf(data);
+    else openRepairOrderPdf(data);
   };
 
   const handleConvert = async () => {
@@ -89,6 +118,23 @@ export default function RepairOrderChatPage() {
         {saving && <Loader2 className="h-4 w-4 animate-spin text-slate-400 ml-auto" />}
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant={mode === 'repair' ? 'default' : 'outline'} size="sm" onClick={() => setMode('repair')}>
+          <FileText className="h-4 w-4 mr-2" /> Reparaturauftrag
+        </Button>
+        <Button variant={mode === 'storage' ? 'default' : 'outline'} size="sm" onClick={() => setMode('storage')}>
+          <Warehouse className="h-4 w-4 mr-2" /> Einlagerungsvertrag
+        </Button>
+        <div className="ml-auto w-full sm:w-80">
+          <CustomerPicker
+            customerId={data.customer_id}
+            customerName={data.customer_name}
+            onSelect={applyCustomer}
+            onClear={clearCustomer}
+          />
+        </div>
+      </div>
+
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Chat */}
         <div>
@@ -99,11 +145,13 @@ export default function RepairOrderChatPage() {
         {/* Form preview */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-slate-600 flex items-center gap-2"><FileText className="h-4 w-4" /> Auftragsblatt (bearbeitbar)</h2>
+            <h2 className="text-sm font-semibold text-slate-600 flex items-center gap-2"><FileText className="h-4 w-4" /> {mode === 'storage' ? 'Einlagerungsvertrag (bearbeitbar)' : 'Auftragsblatt (bearbeitbar)'}</h2>
           </div>
           <Card>
             <CardContent className="p-4 max-h-[520px] overflow-y-auto">
-              <RepairOrderForm data={data} onChange={handleFormChange} />
+              {mode === 'storage'
+                ? <StorageOrderForm data={data} onChange={handleFormChange} />
+                : <RepairOrderForm data={data} onChange={handleFormChange} />}
             </CardContent>
           </Card>
         </div>
@@ -116,7 +164,8 @@ export default function RepairOrderChatPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3 items-center">
           <Button onClick={handlePrint} variant="outline">
-            <Printer className="h-4 w-4 mr-2" /> Auftragsblatt + Arbeitszeiten drucken (PDF)
+            <Printer className="h-4 w-4 mr-2" />
+            {mode === 'storage' ? 'Einlagerungsvertrag drucken (PDF)' : 'Auftragsblatt + Arbeitszeiten drucken (PDF)'}
           </Button>
           {convertedJobId ? (
             <Button asChild className="bg-green-600 hover:bg-green-700">
@@ -128,7 +177,11 @@ export default function RepairOrderChatPage() {
               Projekt (Job) mit Kunde + Boot anlegen
             </Button>
           )}
-          <p className="text-xs text-slate-400 ml-auto">Das PDF enthält Seite 1: Reparaturauftrag zum Unterschreiben, Seite 2: Arbeitszeitenblatt für den Mechaniker.</p>
+          <p className="text-xs text-slate-400 ml-auto">
+            {mode === 'storage'
+              ? 'Das PDF enthält den vollständigen Einlagerungsvertrag inkl. aller Vertragsbedingungen zum Unterschreiben.'
+              : 'Das PDF enthält Seite 1: Reparaturauftrag zum Unterschreiben, Seite 2: Arbeitszeitenblatt für den Mechaniker.'}
+          </p>
         </CardContent>
       </Card>
     </div>

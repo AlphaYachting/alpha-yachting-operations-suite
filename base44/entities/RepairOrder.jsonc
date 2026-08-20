@@ -6,6 +6,15 @@
       "type": "string",
       "description": "Auto-generated repair order reference e.g. RA-2026-0001"
     },
+    "order_type": {
+      "type": "string",
+      "enum": [
+        "repair",
+        "storage"
+      ],
+      "default": "repair",
+      "description": "Type of order: repair order or boat storage contract (Einlagerungsvertrag)"
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -44,6 +53,10 @@
     "customer_email": {
       "type": "string"
     },
+    "customer_tax_id": {
+      "type": "string",
+      "description": "OIB / Steuernummer / VAT-ID of the customer"
+    },
     "customer_id": {
       "type": "string",
       "description": "Reference to Customer entity (once linked/created)"
@@ -71,6 +84,22 @@
       "type": "number",
       "description": "Length in meters"
     },
+    "boat_beam_m": {
+      "type": "number",
+      "description": "Beam in meters"
+    },
+    "boat_draft_m": {
+      "type": "number",
+      "description": "Draft in meters"
+    },
+    "boat_value": {
+      "type": "string",
+      "description": "Declared value of the boat"
+    },
+    "boat_notes": {
+      "type": "string",
+      "description": "Special notes about the boat"
+    },
     "boat_location": {
       "type": "string",
       "description": "Current location"
@@ -94,7 +123,7 @@
     "trailer_on_arrival": {
       "type": "boolean",
       "default": false,
-      "description": "Boat arrives on trailer"
+      "description": "Boat arrives on trailer / customer has own trailer"
     },
     "trailer_stays": {
       "type": "boolean",
@@ -109,6 +138,10 @@
     },
     "trailer_max_weight": {
       "type": "string"
+    },
+    "trailer_condition_notes": {
+      "type": "string",
+      "description": "Condition / notes about the trailer"
     },
     "trailer_work": {
       "type": "array",
@@ -188,6 +221,108 @@
     "dispose_old_parts": {
       "type": "boolean",
       "default": false
+    },
+    "storage_interval": {
+      "type": "string",
+      "enum": [
+        "T\u00e4glich",
+        "W\u00f6chentlich",
+        "Monatlich",
+        "J\u00e4hrlich",
+        "Winterlagerung / Saisonlagerung",
+        "Sonstiges"
+      ],
+      "description": "Desired storage interval (Einlagerung)"
+    },
+    "storage_interval_other": {
+      "type": "string",
+      "description": "Free text if storage_interval is Sonstiges"
+    },
+    "storage_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Storage start date"
+    },
+    "storage_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Expected storage end date"
+    },
+    "storage_under_roof": {
+      "type": "string",
+      "enum": [
+        "Ja",
+        "Nein",
+        "Nach Verf\u00fcgbarkeit"
+      ],
+      "description": "Storage under roof"
+    },
+    "storage_location": {
+      "type": "string",
+      "description": "Storage site / location"
+    },
+    "storage_price": {
+      "type": "number",
+      "description": "Agreed storage price EUR"
+    },
+    "storage_billing_type": {
+      "type": "string",
+      "enum": [
+        "Pro Tag",
+        "Pro Woche",
+        "Pro Monat",
+        "Pro Jahr / Saison",
+        "Pauschalpreis"
+      ],
+      "description": "Storage billing type"
+    },
+    "storage_extra_costs": {
+      "type": "string",
+      "description": "Other agreed costs / Nebenkosten"
+    },
+    "storage_services": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Selected additional storage services (Zusatzleistungen)"
+    },
+    "storage_services_notes": {
+      "type": "string",
+      "description": "Additional service orders / free list"
+    },
+    "boat_condition_ok": {
+      "type": "boolean",
+      "description": "Boat handed over without visible external damage"
+    },
+    "boat_condition_damages": {
+      "type": "string",
+      "description": "Visible damages / defects at handover"
+    },
+    "photos_status": {
+      "type": "string",
+      "enum": [
+        "Wurden erstellt",
+        "Werden noch erstellt",
+        "Nicht erstellt"
+      ],
+      "description": "Status of handover photos / protocol"
+    },
+    "boat_insured": {
+      "type": "boolean",
+      "description": "Boat is insured"
+    },
+    "insurance_company": {
+      "type": "string",
+      "description": "Insurance company"
+    },
+    "insurance_policy_number": {
+      "type": "string",
+      "description": "Insurance policy / contract number"
+    },
+    "special_agreements": {
+      "type": "string",
+      "description": "Special agreements (Besondere Vereinbarungen)"
     },
     "extracted_documents": {
       "type": "array",

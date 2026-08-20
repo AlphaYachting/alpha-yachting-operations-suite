@@ -80,11 +80,22 @@ Deno.serve(async (req) => {
       job_number: jobNumber,
       customer_id: customerId,
       boat_id: boatId,
-      title: ro.work_description
-        ? ro.work_description.slice(0, 80)
-        : `Reparaturauftrag ${ro.order_number || ''}`.trim(),
-      description: ro.work_description || '',
-      job_type: 'Mobile Service',
+      title: ro.order_type === 'storage'
+        ? `Einlagerung ${ro.boat_name || ro.boat_type_model || ro.customer_name || ''}`.trim()
+        : (ro.work_description
+          ? ro.work_description.slice(0, 80)
+          : `Reparaturauftrag ${ro.order_number || ''}`.trim()),
+      description: ro.order_type === 'storage'
+        ? [
+            ro.storage_interval && `Einlagerung: ${ro.storage_interval}`,
+            ro.storage_start_date && `Zeitraum: ${ro.storage_start_date} bis ${ro.storage_end_date || 'offen'}`,
+            ro.storage_under_roof && `Unter Dach: ${ro.storage_under_roof}`,
+            ro.storage_location && `Lagerort: ${ro.storage_location}`,
+            ro.storage_price && `Preis: ${ro.storage_price} EUR (${ro.storage_billing_type || ''})`.trim(),
+            (ro.storage_services || []).length > 0 && `Zusatzleistungen: ${(ro.storage_services || []).join(', ')}`
+          ].filter(Boolean).join('\n')
+        : (ro.work_description || ''),
+      job_type: ro.order_type === 'storage' ? 'Winter Storage' : 'Mobile Service',
       status: 'New',
       intake_source: 'Drive-In',
       intake_date: new Date().toISOString(),

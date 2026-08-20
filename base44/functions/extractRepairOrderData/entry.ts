@@ -50,7 +50,28 @@ Deno.serve(async (req) => {
                 }
               }
             },
-            hourly_rate: { type: "number" }
+            hourly_rate: { type: "number" },
+            customer_tax_id: { type: "string", description: "OIB / Steuernummer / VAT-ID" },
+            boat_beam_m: { type: "number" },
+            boat_draft_m: { type: "number" },
+            boat_value: { type: "string" },
+            trailer_on_arrival: { type: "boolean", description: "Eigener Trailer vorhanden / Boot kommt am Anhänger" },
+            trailer_type: { type: "string" },
+            trailer_registration: { type: "string" },
+            storage_interval: { type: "string", description: "Nur exakt: Täglich | Wöchentlich | Monatlich | Jährlich | Winterlagerung / Saisonlagerung | Sonstiges" },
+            storage_start_date: { type: "string", description: "YYYY-MM-DD" },
+            storage_end_date: { type: "string", description: "YYYY-MM-DD" },
+            storage_under_roof: { type: "string", description: "Nur exakt: Ja | Nein | Nach Verfügbarkeit" },
+            storage_location: { type: "string" },
+            storage_price: { type: "number" },
+            storage_billing_type: { type: "string", description: "Nur exakt: Pro Tag | Pro Woche | Pro Monat | Pro Jahr / Saison | Pauschalpreis" },
+            storage_services: {
+              type: "array",
+              items: { type: "string" },
+              description: "Nur exakt diese Werte: Bootsreinigung außen, Bootsreinigung innen, Motor-Konservierung / Einwinterung, Batterie ausbauen / laden / prüfen, Batterieservice während der Lagerzeit, Kontrolle von Bilge / Feuchtigkeit, Abdeckung / Plane montieren, Antifouling prüfen / Angebot erstellen, Politur / Pflegearbeiten, Motorservice / Wartung, Sonstige Arbeiten gemäß separatem Angebot"
+            },
+            insurance_company: { type: "string" },
+            insurance_policy_number: { type: "string" }
           }
         }
       },
@@ -80,7 +101,8 @@ Aufgaben:
 4. Aus Angeboten/Kostenvoranschlägen: Positionen (Beschreibung, Menge, Preis) und Stundensatz.
 5. Extrahiere alle gefundenen Felder. Felder, die du nicht findest, lass leer/weg.
 6. Ordne gewünschte Arbeiten den Kategorien zu (nur exakt diese Werte verwenden): "Motor / Antrieb", "Elektrik / Elektronik", "Rumpf / Gelcoat", "Osmose / Unterwasserschiff", "Antifouling", "Rigg / Segel", "Winterlager / Konservierung", "Kranung / Transport", "Anhänger".
-7. Antworte im Feld assistant_message auf Deutsch, freundlich und kurz: fasse zusammen, was du erkannt hast, und frage nach den wichtigsten noch fehlenden Angaben (z.B. Kundenadresse, gewünschte Arbeiten).`;
+7. WICHTIG: Wenn es um eine Einlagerung / Winterlagerung / einen Einlagerungsvertrag geht (order_type "storage" in den erfassten Daten oder aus dem Gespräch erkennbar), extrahiere zusätzlich die Einlagerungsfelder: storage_interval, storage_start_date, storage_end_date, storage_under_roof, storage_location, storage_price, storage_billing_type, storage_services (Zusatzleistungen), trailer_on_arrival, boat_beam_m, boat_draft_m, boat_value, Versicherungsdaten (insurance_company, insurance_policy_number) und customer_tax_id.
+8. Antworte im Feld assistant_message auf Deutsch, freundlich und kurz: fasse zusammen, was du erkannt hast, und frage nach den wichtigsten noch fehlenden Angaben (z.B. Kundenadresse, gewünschte Arbeiten bzw. bei Einlagerung: Zeitraum, Preis, Zusatzleistungen).`;
 
     const result = await base44.integrations.Core.InvokeLLM({
       prompt,
