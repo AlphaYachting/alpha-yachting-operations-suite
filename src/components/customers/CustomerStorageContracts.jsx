@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Archive, FileDown, Calendar, Trash2, RefreshCw } from 'lucide-react';
+import { Archive, FileDown, Calendar, Trash2, RefreshCw, Mail } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
@@ -55,6 +55,28 @@ export default function CustomerStorageContracts({ customerId }) {
     try { return format(new Date(d), 'dd.MM.yyyy'); } catch (_e) { return d; }
   };
 
+  const handleEmail = (c) => {
+    const name = c.customer_name ? ` ${c.customer_name}` : '';
+    const period = [c.storage_start_date ? fmt(c.storage_start_date) : null, c.storage_end_date ? fmt(c.storage_end_date) : null]
+      .filter(Boolean).join(' bis ');
+    const subject = `Ihr Einlagerungsvertrag${c.order_number ? ` ${c.order_number}` : ''} – Alpha Yachting`;
+    const bodyLines = [
+      `Sehr geehrte/r${name},`,
+      '',
+      `anbei erhalten Sie Ihren Einlagerungsvertrag${c.boat_name ? ` für Ihr Boot "${c.boat_name}"` : ''}${period ? ` (Zeitraum: ${period})` : ''}.`,
+      '',
+      'Bitte prüfen Sie die Angaben und senden Sie uns den unterschriebenen Vertrag zurück. Bei Fragen stehen wir Ihnen gerne zur Verfügung.',
+      ...(c.contract_pdf_url ? ['', `Vertrag als PDF: ${c.contract_pdf_url}`] : []),
+      '',
+      'Mit freundlichen Grüßen',
+      'Ihr Alpha Yachting Team',
+      'AQS GROUP d.o.o. / Alpha Yachting',
+      'Bužinija 32A, 52466 Novigrad, Kroatien'
+    ];
+    const mailto = `mailto:${encodeURIComponent(c.customer_email || '')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+    window.location.href = mailto;
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -103,6 +125,10 @@ export default function CustomerStorageContracts({ customerId }) {
                     <Button variant="outline" size="sm" onClick={() => openEinlagerungsvertragPdf(c)}>
                       <FileDown className="h-3.5 w-3.5 mr-1.5" />
                       PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleEmail(c)} title="Per E-Mail an den Kunden senden">
+                      <Mail className="h-3.5 w-3.5 mr-1.5" />
+                      E-Mail
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
