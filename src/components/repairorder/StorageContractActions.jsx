@@ -38,18 +38,33 @@ export default function StorageContractActions({ data, ensureOrderId, onSaved })
   };
 
   const handleSend = async () => {
-    if (!data.customer_email) {
-      toast.error('Keine E-Mail-Adresse beim Kunden hinterlegt');
-      return;
-    }
     setSending(true);
     try {
-      const { id } = await savePdf();
-      const res = await base44.functions.invoke('sendStorageContractEmail', { repair_order_id: id });
-      if (res.data?.error) throw new Error(res.data.error);
-      toast.success(`Vertrag per E-Mail an ${res.data.to} gesendet`);
+      const { id, file_url } = await savePdf();
+      const boatLabel = [data.boat_name, data.boat_type_model].filter(Boolean).join(' – ') || 'Ihr Boot';
+      const period = [data.storage_start_date, data.storage_end_date].filter(Boolean).join(' bis ');
+      const subject = `Einlagerungsvertrag ${data.order_number ? data.order_number + ' ' : ''}– ${boatLabel}`;
+      const body = [
+        'Sehr geehrte Damen und Herren,',
+        '',
+        `nachstehend erhalten Sie den Einlagerungsvertrag für ${boatLabel}.`,
+        period ? `Vereinbarter Lagerzeitraum: ${period}.` : null,
+        data.storage_location ? `Lagerort: ${data.storage_location}.` : null,
+        '',
+        'Bitte prüfen Sie den Vertrag, unterzeichnen Sie ihn und senden Sie uns ein unterschriebenes Exemplar zurück.',
+        '',
+        `Vertrag als PDF: ${file_url}`,
+        '',
+        'Mit freundlichen Grüßen',
+        'Alpha Yachting'
+      ].filter((l) => l !== null).join('\n');
+
+      window.location.href = `mailto:${encodeURIComponent(data.customer_email || '')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      await base44.entities.RepairOrder.update(id, { contract_sent_at: new Date().toISOString() });
+      toast.success('E-Mail-Programm wurde mit dem Vertrag geöffnet');
     } catch (err) {
-      toast.error('Fehler beim Senden: ' + err.message);
+      toast.error('Fehler: ' + err.message);
     }
     setSending(false);
   };
@@ -62,7 +77,7 @@ export default function StorageContractActions({ data, ensureOrderId, onSaved })
       </Button>
       <Button onClick={handleSend} disabled={sending} className="bg-emerald-600 hover:bg-emerald-700">
         {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
-        Per E-Mail an Kunden senden
+        E-Mail an Kunden vorbereiten
       </Button>
       {data.contract_sent_at && (
         <span className="flex items-center gap-1 text-xs text-emerald-600">
