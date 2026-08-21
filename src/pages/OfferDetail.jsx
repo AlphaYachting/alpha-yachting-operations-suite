@@ -51,6 +51,7 @@ import FiraExportButton from '@/components/fira/FiraExportButton';
 import OfferFollowUpDraft from '@/components/offers/OfferFollowUpDraft';
 import CreateProjectDialog from '@/components/offers/CreateProjectDialog';
 import OfferCustomerBoatSelect from '@/components/offers/OfferCustomerBoatSelect';
+import TranslateOfferDialog from '@/components/offers/TranslateOfferDialog';
 
 // Safe upsert: update existing tasks, create new ones, delete removed ones.
 // Never deletes ALL tasks first — prevents data loss on network errors.
@@ -122,6 +123,7 @@ export default function OfferDetail() {
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showFollowUpDraft, setShowFollowUpDraft] = useState(false);
+  const [showTranslateDialog, setShowTranslateDialog] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [showEditCustomerDialog, setShowEditCustomerDialog] = useState(false);
   const [showEditBoatDialog, setShowEditBoatDialog] = useState(false);
@@ -1208,6 +1210,12 @@ Alpha Yachting Service Team`);
               </Button>
             )}
             {formData.title && (
+              <Button onClick={() => setShowTranslateDialog(true)} variant="outline" className="border-purple-500 text-purple-600 hover:bg-purple-50">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Übersetzen (KI)
+              </Button>
+            )}
+            {formData.title && (
               <Button onClick={handleSendMarinaEmail} variant="outline" className="border-teal-500 text-teal-600 hover:bg-teal-50">
                 <Mail className="h-4 w-4 mr-2" />
                 Marina E-Mail
@@ -1862,6 +1870,34 @@ Alpha Yachting Service Team`);
           </Card>
         </div>
       </div>
+
+      {/* Translate Offer Dialog */}
+      <TranslateOfferDialog
+        open={showTranslateDialog}
+        onOpenChange={setShowTranslateDialog}
+        formData={formData}
+        tasks={tasks}
+        onTranslated={(result, targetLanguage) => {
+          setFormData(prev => ({
+            ...prev,
+            language: targetLanguage,
+            title: result.title || prev.title,
+            description: result.description ?? prev.description,
+            customer_notes: result.customer_notes ?? prev.customer_notes,
+            safety_compliance_clause: result.safety_compliance_clause ?? prev.safety_compliance_clause,
+            payment_schedule: result.payment_schedule ?? prev.payment_schedule,
+            retention_of_title_text: result.retention_of_title_text ?? prev.retention_of_title_text,
+          }));
+          if (Array.isArray(result.tasks) && result.tasks.length === tasks.length) {
+            setTasks(tasks.map((t, i) => ({
+              ...t,
+              title: result.tasks[i].title || t.title,
+              description: result.tasks[i].description ?? t.description,
+              notes: result.tasks[i].notes ?? t.notes,
+            })));
+          }
+        }}
+      />
 
       {/* Follow-up Email Draft */}
       <OfferFollowUpDraft
