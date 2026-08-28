@@ -39,6 +39,8 @@ export default function CustomerMaterialSection({ customerId }) {
 
   if (!customerId) return null;
 
+  const totalSum = entries.reduce((sum, e) => sum + (e.total_purchase_price != null ? Number(e.total_purchase_price) : 0), 0);
+
   return (
     <div className="border-t border-slate-200 pt-6 mt-6">
       <div className="flex items-center justify-between mb-4">
@@ -131,6 +133,13 @@ export default function CustomerMaterialSection({ customerId }) {
                     </tr>
                     ))}
             </tbody>
+            <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+              <tr>
+                <td colSpan={5} className="px-3 py-2 font-semibold text-slate-700 text-right">Summe</td>
+                <td className="px-3 py-2 text-right font-bold text-slate-900">€ {totalSum.toFixed(2)}</td>
+                <td colSpan={4}></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       )}
