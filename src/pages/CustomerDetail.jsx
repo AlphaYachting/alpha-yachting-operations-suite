@@ -21,7 +21,8 @@ import {
   Camera,
   MessageSquare,
   StickyNote,
-  Zap
+  Zap,
+  Truck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -240,6 +241,12 @@ export default function CustomerDetail() {
             <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50">
               <FileText className="h-4 w-4 mr-2" />
               Create Offer
+            </Button>
+          </Link>
+          <Link to={`/MaterialImportDetail?customer=${customerId}`}>
+            <Button variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+              <Truck className="h-4 w-4 mr-2" />
+              Material Import
             </Button>
           </Link>
           <Button onClick={() => setShowEditForm(true)}>

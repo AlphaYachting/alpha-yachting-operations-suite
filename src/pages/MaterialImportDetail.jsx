@@ -99,6 +99,7 @@ export default function MaterialImportDetail() {
   const navigate = useNavigate();
   const urlParams = new URLSearchParams(window.location.search);
   const docId = urlParams.get('id');
+  const preselectedCustomerId = urlParams.get('customer');
 
   const [uploading, setUploading] = useState(false);
   const [extracting, setExtracting] = useState(false);
@@ -107,7 +108,7 @@ export default function MaterialImportDetail() {
   const [translating, setTranslating] = useState(false);
   const [translationLanguage, setTranslationLanguage] = useState('none');
   const [bookingMode, setBookingMode] = useState('customer'); // 'customer' | 'inventory'
-  const [defaultCustomerId, setDefaultCustomerId] = useState('');
+  const [defaultCustomerId, setDefaultCustomerId] = useState(preselectedCustomerId || '');
   const [defaultCustomerSearch, setDefaultCustomerSearch] = useState('');
 
   const [header, setHeader] = useState({
