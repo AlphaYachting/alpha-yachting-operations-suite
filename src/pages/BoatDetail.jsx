@@ -16,7 +16,8 @@ import {
   Briefcase,
   Calendar,
   FileText,
-  Navigation
+  Navigation,
+  Warehouse
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -230,10 +231,20 @@ export default function BoatDetail() {
             )}
           </div>
         </div>
-        <Button onClick={() => setShowEditDialog(true)}>
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Boat
-        </Button>
+        <div className="flex items-center gap-2">
+          {customer && (
+            <Button asChild variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+              <Link to={`/StorageTransportWizard?customer=${customer.id}&boat=${boat.id}`}>
+                <Warehouse className="h-4 w-4 mr-2" />
+                Einlagerungsangebot
+              </Link>
+            </Button>
+          )}
+          <Button onClick={() => setShowEditDialog(true)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Boat
+          </Button>
+        </div>
       </div>
 
       {/* Main Content */}

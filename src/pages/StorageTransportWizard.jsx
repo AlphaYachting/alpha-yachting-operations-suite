@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -40,8 +40,13 @@ export default function StorageTransportWizard() {
     });
 
     // Wizard State
+    const urlParams = new URLSearchParams(window.location.search);
+    const presetCustomerId = urlParams.get('customer') || '';
+    const presetBoatId = urlParams.get('boat') || '';
+
     const [formData, setFormData] = useState({
-        customer_id: '',
+        customer_id: presetCustomerId,
+        boat_id: presetBoatId,
         title: 'Storage & Transport Offer',
         boat_length: 0,
         trailer_present: false,
@@ -57,6 +62,21 @@ export default function StorageTransportWizard() {
 
     const [calculation, setCalculation] = useState(null);
 
+    // Prefill boat length & title from a linked boat (opened from BoatDetail)
+    useEffect(() => {
+        if (!presetBoatId) return;
+        base44.entities.Boat.filter({ id: presetBoatId }).then(res => {
+            const b = res?.[0];
+            if (!b) return;
+            setFormData(prev => ({
+                ...prev,
+                customer_id: prev.customer_id || b.customer_id || '',
+                boat_length: b.length_m || prev.boat_length,
+                title: b.vessel_name ? `Einlagerungsangebot ${b.vessel_name}` : prev.title
+            }));
+        });
+    }, [presetBoatId]);
+
     const createOfferMutation = useMutation({
         mutationFn: async (data) => {
             // 1. Generate offer number
@@ -71,6 +91,7 @@ export default function StorageTransportWizard() {
             // 2. Create Offer
             const offer = await base44.entities.Offer.create({
                 customer_id: formData.customer_id,
+                boat_id: formData.boat_id || undefined,
                 title: formData.title,
                 offer_number: offerNumber,
                 rate_card_id: activeRateCard.id,
