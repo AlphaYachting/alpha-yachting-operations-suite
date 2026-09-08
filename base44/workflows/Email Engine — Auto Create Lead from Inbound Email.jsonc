@@ -1,0 +1,37 @@
+{
+  "name": "Email Engine \u2014 Auto Create Lead from Inbound Email",
+  "description": "When a new inbound EmailMessageSandbox record is created, automatically run lead extraction and create a Lead record. Isolated to Email Engine module only.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "create"
+      ],
+      "entity_name": "EmailMessageSandbox"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "email_engine_auto_create_lead_from_inbound_email",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "emailEngineAutoCreateLead",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "emailEngineAutoCreateLead"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "name": "Email Engine - Fetch Inbound Messages (Active)",
+  "description": "Fetches new inbound emails via IMAP every 10 minutes. Uses bodyParts strategy for edis.at compatibility.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "interval",
+      "cron_expression": null,
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": 10,
+      "interval_unit": "minutes",
+      "interval_anchor": "2026-05-03T14:32:56.835000",
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "email_engine_fetch_inbound_messages_active",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "emailEngineFetchMessages",
+            "args": {
+              "batch_size": 10
+            }
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "emailEngineFetchMessages"
+  }
+}

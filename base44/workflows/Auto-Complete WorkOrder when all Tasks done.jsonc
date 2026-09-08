@@ -1,0 +1,37 @@
+{
+  "name": "Auto-Complete WorkOrder when all Tasks done",
+  "description": "When a Task is updated, checks if all Tasks of the WorkOrder are in a terminal state (Completed/Skipped/Not Possible). If yes, sets the WorkOrder to Completed.",
+  "trigger": {
+    "condition": "${ (.trigger.data.status == \"Completed\" or .trigger.data.status == \"Skipped\" or .trigger.data.status == \"Not Possible\") }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Task"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auto_complete_workorder_when_all_tasks_done",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "autoCompleteWorkOrder",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "autoCompleteWorkOrder"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "Offer Rejected/Expired \u2192 Lead Rejected",
+  "description": "When an Offer is set to Rejected or Expired, set the originating Lead to Rejected (unless another active offer exists or Lead is already Ordered/Confirmed).",
+  "trigger": {
+    "condition": "${ ((.trigger.data.status == \"Rejected\" or .trigger.data.status == \"Expired\") and (.trigger.changed_fields | index(\"status\") != null)) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Offer"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "offer_rejected_expired_lead_rejected",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "markLeadRejectedOnOfferClosure",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "markLeadRejectedOnOfferClosure"
+  }
+}

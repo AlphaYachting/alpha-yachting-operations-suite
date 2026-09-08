@@ -1,0 +1,37 @@
+{
+  "name": "Notify: Termin\u00e4nderung Work Order",
+  "description": "Benachrichtigt alle zugewiesenen Techniker wenn sich das scheduled_date einer Work Order \u00e4ndert.",
+  "trigger": {
+    "condition": "${ (.trigger.changed_fields | index(\"scheduled_date\") != null) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "WorkOrder"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "notify_termin_nderung_work_order",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "notifyScheduleDateChange",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "notifyScheduleDateChange"
+  }
+}

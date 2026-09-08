@@ -1,0 +1,37 @@
+{
+  "name": "Reset WorkOrders when Billing Offer deleted",
+  "description": "When a READY_TO_INVOICE_REVIEW Offer is deleted, reset all source WorkOrders back to 'Ready to Invoice' and clear staged reservations.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "delete"
+      ],
+      "entity_name": "Offer"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "reset_workorders_when_billing_offer_deleted",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "onBillingOfferDeleted",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "onBillingOfferDeleted"
+  }
+}

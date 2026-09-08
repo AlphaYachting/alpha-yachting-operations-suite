@@ -1,0 +1,37 @@
+{
+  "name": "Mark Lead Won when Offer Approved",
+  "description": "When an Offer is updated to status Approved, automatically set the originating Lead status to Won via the linked Offer.lead_id field.",
+  "trigger": {
+    "condition": "${ ((.trigger.changed_fields | index(\"status\") != null) and (.trigger.data.status == \"Approved\")) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Offer"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "mark_lead_won_when_offer_approved",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "markLeadWonOnOfferApproval",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "markLeadWonOnOfferApproval"
+  }
+}

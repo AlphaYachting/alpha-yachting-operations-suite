@@ -1,0 +1,37 @@
+{
+  "name": "Ready to Offer \u2192 Auto-Create Offer",
+  "description": "When a Lead is set to 'Ready to Offer', automatically create Customer (if missing), Boat (if available), and Offer \u2014 then set Lead to 'Offered'.",
+  "trigger": {
+    "condition": "${ ((.trigger.data.status == \"Ready to Offer\") and (.trigger.old_data.status != \"Ready to Offer\")) }",
+    "config": {
+      "trigger_type": "entity",
+      "events": [
+        "update"
+      ],
+      "entity_name": "Lead"
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "ready_to_offer_auto_create_offer",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "processReadyToOffer",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "processReadyToOffer"
+  }
+}
