@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -24,6 +24,7 @@ export function StorageTransportFlow() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [calculation, setCalculation] = useState(null);
+    const [selectedBoat, setSelectedBoat] = useState(null);
 
     const [formData, setFormData] = useState({
         title: 'Storage & Transport Offer',
@@ -62,11 +63,35 @@ export function StorageTransportFlow() {
         queryFn: () => base44.entities.ModuleComponent.list()
     });
 
+    // Resolve selected existing boat id from wizard context
+    const existingBoatId = typeof wizardData.vessel?.existing === 'string'
+        ? wizardData.vessel.existing
+        : (wizardData.vessel?.existing?.id || null);
+
+    // Load the selected existing boat and take over its data (length, name)
+    useEffect(() => {
+        if (!existingBoatId) return;
+        base44.entities.Boat.filter({ id: existingBoatId }).then(res => {
+            const b = res?.[0];
+            if (!b) return;
+            setSelectedBoat(b);
+            setFormData(prev => ({
+                ...prev,
+                boat_length: prev.boat_length > 0 ? prev.boat_length : (b.length_m || 0),
+                title: b.vessel_name ? `Einlagerungsangebot ${b.vessel_name}` : prev.title
+            }));
+        });
+    }, [existingBoatId]);
+
     // Resolve customer_id from wizard context — optional for storage offers
     const getCustomerId = () => {
-        if (wizardData.source === 'customer') return wizardData.sourceData?.customer?.id || null;
-        if (wizardData.source === 'lead') return wizardData.sourceData?.lead?.customer_id || null;
-        return null;
+        if (wizardData.source === 'customer') return wizardData.sourceData?.customer?.id || selectedBoat?.customer_id || null;
+        if (wizardData.source === 'lead') {
+            return wizardData.sourceData?.lead?.customer_id
+                || wizardData.sourceData?.lead?.converted_customer_id
+                || null;
+        }
+        return selectedBoat?.customer_id || null;
     };
 
     const availableOptions = rateCardItems?.filter(i => i.category === 'OPTION' && i.is_active !== false) || [];
@@ -323,6 +348,22 @@ export function StorageTransportFlow() {
                     {/* SUB-STEP 1: Boat Details */}
                     {subStep === 1 && (
                         <div className="space-y-4">
+                            {(selectedBoat || wizardData.sourceData?.customer) && (
+                                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-sm space-y-0.5">
+                                    {wizardData.sourceData?.customer && (
+                                        <p><span className="text-slate-500">Kunde: </span>
+                                            {[wizardData.sourceData.customer.first_name, wizardData.sourceData.customer.last_name].filter(Boolean).join(' ')}
+                                            {wizardData.sourceData.customer.company_name ? ` (${wizardData.sourceData.customer.company_name})` : ''}
+                                        </p>
+                                    )}
+                                    {selectedBoat && (
+                                        <p><span className="text-slate-500">Boot: </span>
+                                            {[selectedBoat.vessel_name, selectedBoat.manufacturer, selectedBoat.model].filter(Boolean).join(' · ')}
+                                            {selectedBoat.length_m ? ` · ${selectedBoat.length_m}m` : ''}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                             <div>
                                 <label className="text-sm font-medium mb-1 block">Offer Title</label>
                                 <Input
@@ -339,9 +380,9 @@ export function StorageTransportFlow() {
                                     value={formData.boat_length || ''}
                                     onChange={e => setFormData({ ...formData, boat_length: parseFloat(e.target.value) || 0 })}
                                 />
-                                {wizardData.vessel?.new?.length_m > 0 && (
+                                {(selectedBoat?.length_m > 0 || wizardData.vessel?.new?.length_m > 0) && (
                                     <p className="text-xs text-emerald-600 mt-1">
-                                        Pre-filled from selected vessel ({wizardData.vessel.new.length_m}m)
+                                        Aus ausgewähltem Boot übernommen ({selectedBoat?.length_m || wizardData.vessel.new.length_m}m)
                                     </p>
                                 )}
                             </div>

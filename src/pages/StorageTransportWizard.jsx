@@ -62,6 +62,23 @@ export default function StorageTransportWizard() {
 
     const [calculation, setCalculation] = useState(null);
 
+    // Boats of the selected customer — used to take over boat data
+    const { data: customerBoats } = useQuery({
+        queryKey: ['CustomerBoats', formData?.customer_id],
+        queryFn: () => base44.entities.Boat.filter({ customer_id: formData.customer_id }),
+        enabled: !!formData?.customer_id
+    });
+
+    const selectBoat = (boatId) => {
+        const b = customerBoats?.find(x => x.id === boatId);
+        setFormData(prev => ({
+            ...prev,
+            boat_id: boatId,
+            boat_length: b?.length_m || prev.boat_length,
+            title: b?.vessel_name ? `Einlagerungsangebot ${b.vessel_name}` : prev.title
+        }));
+    };
+
     // Prefill boat length & title from a linked boat (opened from BoatDetail)
     useEffect(() => {
         if (!presetBoatId) return;
@@ -322,6 +339,21 @@ export default function StorageTransportWizard() {
                                     </SelectContent>
                                 </Select>
                             </div>
+                            {formData.customer_id && (
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Boat (data will be taken over)</label>
+                                    <Select value={formData.boat_id} onValueChange={selectBoat}>
+                                        <SelectTrigger><SelectValue placeholder={customerBoats?.length ? 'Select Boat' : 'No boats for this customer'} /></SelectTrigger>
+                                        <SelectContent>
+                                            {customerBoats?.map(b => (
+                                                <SelectItem key={b.id} value={b.id}>
+                                                    {[b.vessel_name, b.manufacturer, b.model].filter(Boolean).join(' · ')}{b.length_m ? ` (${b.length_m}m)` : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                             <div>
                                 <label className="text-sm font-medium mb-1 block">Offer Title</label>
                                 <Input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
