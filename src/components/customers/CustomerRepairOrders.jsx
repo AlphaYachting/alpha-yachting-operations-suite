@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Wrench, FileDown, Calendar, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { openRepairOrderPdf } from '@/components/repairorder/repairOrderPdf';
+import RepairOrderEmailButton from '@/components/repairorder/RepairOrderEmailButton';
 
 const statusColors = {
   Draft: 'bg-slate-100 text-slate-700',
@@ -68,6 +69,13 @@ export default function CustomerRepairOrders({ customerId }) {
                       <FileDown className="h-3.5 w-3.5 mr-1.5" />
                       PDF
                     </Button>
+                    <RepairOrderEmailButton
+                      order={o}
+                      size="sm"
+                      onSaved={({ contract_pdf_url }) =>
+                        setOrders((prev) => prev.map((x) => x.id === o.id ? { ...x, contract_pdf_url } : x))
+                      }
+                    />
                     {o.converted_job_id && (
                       <Button variant="outline" size="sm" asChild>
                         <a href={`/JobDetail?id=${o.converted_job_id}`}>

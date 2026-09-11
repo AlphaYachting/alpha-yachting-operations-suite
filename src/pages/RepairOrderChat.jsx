@@ -11,6 +11,7 @@ import StorageOfferPicker from '@/components/repairorder/StorageOfferPicker';
 import { openRepairOrderPdf, generateRepairOrderPdf } from '@/components/repairorder/repairOrderPdf';
 import { openEinlagerungsvertragPdf, generateEinlagerungsvertragPdf } from '@/components/repairorder/einlagerungsvertragPdf';
 import StorageContractActions from '@/components/repairorder/StorageContractActions';
+import RepairOrderEmailButton from '@/components/repairorder/RepairOrderEmailButton';
 import { toast } from 'sonner';
 
 export default function RepairOrderChatPage() {
@@ -259,6 +260,13 @@ export default function RepairOrderChatPage() {
             <Printer className="h-4 w-4 mr-2" />
             {mode === 'storage' ? 'Einlagerungsvertrag drucken (PDF)' : 'Auftragsblatt + Arbeitszeiten drucken (PDF)'}
           </Button>
+          {mode === 'repair' && (
+            <RepairOrderEmailButton
+              order={data}
+              ensureOrderId={ensureOrderId}
+              onSaved={({ contract_pdf_url }) => setData((d) => ({ ...d, contract_pdf_url }))}
+            />
+          )}
           {mode === 'storage' && (
             <StorageContractActions
               data={data}
