@@ -89,11 +89,18 @@ export function Step2ContactInfo() {
       // Create customer immediately and store in wizard context
       setIsSaving(true);
       try {
+        const extra = wizardData.sourceData.newContact;
         const newCustomer = await base44.entities.Customer.create({
           first_name,
           last_name,
           email,
           phone,
+          company_name: extra.company_name || undefined,
+          billing_address: extra.billing_address || undefined,
+          billing_postal_code: extra.billing_postal_code || undefined,
+          billing_city: extra.billing_city || undefined,
+          billing_country: extra.billing_country || undefined,
+          vat_number: extra.vat_number || undefined,
           status: 'Active',
           preferred_language: 'German'
         });

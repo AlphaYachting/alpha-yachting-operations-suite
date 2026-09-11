@@ -3,13 +3,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Phone, Users, UserPlus, Calculator, MessageSquare } from 'lucide-react';
+import { Phone, Users, UserPlus, Calculator, MessageSquare, Scan } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWizard } from './WizardContext';
+import ScanDocumentDialog from './ScanDocumentDialog';
 
 export function Step1SourceSelection() {
   const { wizardData, updateWizardData, setStep } = useWizard();
   const navigate = useNavigate();
+  const [scanOpen, setScanOpen] = React.useState(false);
+
+  const handleScanned = ({ owner = {}, boat = {} }) => {
+    updateWizardData('source', 'new');
+    updateWizardData('sourceData.newContact', {
+      first_name: owner.first_name || '',
+      last_name: owner.last_name || '',
+      email: owner.email || '',
+      phone: owner.phone || '',
+      company_name: owner.company_name || '',
+      billing_address: owner.billing_address || '',
+      billing_postal_code: owner.billing_postal_code || '',
+      billing_city: owner.billing_city || '',
+      billing_country: owner.billing_country || '',
+      vat_number: owner.vat_number || ''
+    });
+    if (Object.values(boat).some(v => v !== null && v !== undefined && v !== '')) {
+      updateWizardData('vessel.new', { ...boat, vessel_type: boat.vessel_type || 'Sailboat', status: 'Active' });
+      updateWizardData('vessel.existing', null);
+    }
+    setStep(2);
+  };
 
   const handleNext = () => {
     if (!wizardData.source) {
@@ -27,6 +50,20 @@ export function Step1SourceSelection() {
 
   return (
     <div className="space-y-6">
+      <ScanDocumentDialog open={scanOpen} onOpenChange={setScanOpen} onDataExtracted={handleScanned} />
+
+      <button
+        type="button"
+        onClick={() => setScanOpen(true)}
+        className="w-full flex items-center gap-3 p-4 border rounded-lg border-blue-300 bg-blue-50 hover:bg-blue-100 text-left"
+      >
+        <Scan className="h-5 w-5 text-blue-600 flex-shrink-0" />
+        <div>
+          <div className="font-medium">Dokument scannen (Seebrief / Zulassungsschein)</div>
+          <p className="text-sm text-slate-500">KI liest Kontakt- und Bootsdaten aus und füllt neuen Kontakt + Boot automatisch aus</p>
+        </div>
+      </button>
+
       <Card>
         <CardHeader>
           <CardTitle>Where is this case coming from?</CardTitle>
