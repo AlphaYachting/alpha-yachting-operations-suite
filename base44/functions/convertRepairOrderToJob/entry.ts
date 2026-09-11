@@ -6,7 +6,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { repair_order_id } = await req.json();
+    const { repair_order_id, create_work_order, require_existing_customer } = await req.json();
     if (!repair_order_id) {
       return Response.json({ error: 'repair_order_id is required' }, { status: 400 });
     }
@@ -20,6 +20,9 @@ Deno.serve(async (req) => {
 
     // 1. Resolve / create Customer
     let customerId = ro.customer_id;
+    if (!customerId && require_existing_customer) {
+      return Response.json({ error: 'Kein bestehender Kunde ausgewählt.' }, { status: 400 });
+    }
     if (!customerId) {
       // Try to match by email
       let existing = [];
@@ -103,6 +106,36 @@ Deno.serve(async (req) => {
       internal_notes: `Erstellt aus Reparaturauftrag ${ro.order_number || repair_order_id}.`
     });
 
+    // 4b. Optionally create a Work Order for this job
+    let workOrderId = null;
+    let workOrderNumber = '';
+    if (create_work_order) {
+      try {
+        const recentWOs = await base44.asServiceRole.entities.WorkOrder.list('-created_date', 100);
+        const woNumbers = recentWOs
+          .map((w: any) => w.work_order_number)
+          .filter((num: string) => num && /^WO\d{5}$/.test(num))
+          .map((num: string) => parseInt(num.substring(2), 10))
+          .filter((num: number) => !isNaN(num));
+        const maxWO = woNumbers.length > 0 ? Math.max(...woNumbers) : 0;
+        workOrderNumber = `WO${String(maxWO + 1).padStart(5, '0')}`;
+      } catch (_e) {
+        workOrderNumber = `WO${String(Date.now()).slice(-5)}`;
+      }
+
+      const workOrder = await base44.entities.WorkOrder.create({
+        work_order_number: workOrderNumber,
+        job_id: job.id,
+        title: job.title,
+        description: job.description || '',
+        workorder_type: 'STANDARD',
+        scheduled_date: new Date().toISOString().slice(0, 10),
+        status: 'Draft',
+        internal_notes: `Erstellt aus Auftrags-Chat ${ro.order_number || repair_order_id}.`
+      });
+      workOrderId = workOrder.id;
+    }
+
     // 5. Update repair order
     await base44.entities.RepairOrder.update(repair_order_id, {
       status: 'Converted',
@@ -116,7 +149,9 @@ Deno.serve(async (req) => {
       job_id: job.id,
       job_number: jobNumber,
       customer_id: customerId,
-      boat_id: boatId
+      boat_id: boatId,
+      work_order_id: workOrderId,
+      work_order_number: workOrderNumber
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

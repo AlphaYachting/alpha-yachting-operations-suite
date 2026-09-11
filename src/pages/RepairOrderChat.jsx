@@ -148,7 +148,7 @@ export default function RepairOrderChatPage() {
     return created?.id;
   };
 
-  const handleConvert = async () => {
+  const handleConvert = async (options = {}) => {
     setConverting(true);
     try {
       let id = orderId;
@@ -158,10 +158,14 @@ export default function RepairOrderChatPage() {
       } else {
         await persist(data);
       }
-      const res = await base44.functions.invoke('convertRepairOrderToJob', { repair_order_id: id });
+      const res = await base44.functions.invoke('convertRepairOrderToJob', { repair_order_id: id, ...options });
       if (res.data?.error) throw new Error(res.data.error);
       setConvertedJobId(res.data.job_id);
-      toast.success(`Projekt ${res.data.job_number} angelegt`);
+      toast.success(
+        res.data.work_order_number
+          ? `Projekt ${res.data.job_number} mit Work Order ${res.data.work_order_number} angelegt`
+          : `Projekt ${res.data.job_number} angelegt`
+      );
     } catch (err) {
       toast.error('Fehler: ' + err.message);
     }
@@ -252,8 +256,17 @@ export default function RepairOrderChatPage() {
             <Button asChild className="bg-green-600 hover:bg-green-700">
               <a href={`/JobDetail?id=${convertedJobId}`}><CheckCircle2 className="h-4 w-4 mr-2" /> Projekt öffnen</a>
             </Button>
+          ) : data.customer_id ? (
+            <Button
+              onClick={() => handleConvert({ create_work_order: true, require_existing_customer: true })}
+              disabled={converting}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              {converting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Briefcase className="h-4 w-4 mr-2" />}
+              Auftrag für bestehenden Kunden anlegen (Projekt + Work Order)
+            </Button>
           ) : (
-            <Button onClick={handleConvert} disabled={converting} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={() => handleConvert()} disabled={converting} className="bg-blue-600 hover:bg-blue-700">
               {converting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Briefcase className="h-4 w-4 mr-2" />}
               Projekt (Job) mit Kunde + Boot anlegen
             </Button>
