@@ -68,20 +68,45 @@ export function StorageTransportFlow() {
         ? wizardData.vessel.existing
         : (wizardData.vessel?.existing?.id || null);
 
+    // Customer from wizard context (existing customer / lead)
+    const wizardCustomerId = wizardData.sourceData?.customer?.id
+        || wizardData.sourceData?.lead?.customer_id
+        || wizardData.sourceData?.lead?.converted_customer_id
+        || null;
+
+    // All boats of that customer — lets the user pick/change the boat here
+    const { data: customerBoats } = useQuery({
+        queryKey: ['StorageFlowCustomerBoats', wizardCustomerId],
+        queryFn: () => base44.entities.Boat.filter({ customer_id: wizardCustomerId }),
+        enabled: !!wizardCustomerId
+    });
+
+    const applyBoat = (b) => {
+        if (!b) return;
+        setSelectedBoat(b);
+        setFormData(prev => ({
+            ...prev,
+            boat_length: b.length_m || prev.boat_length,
+            title: b.vessel_name ? `Einlagerungsangebot ${b.vessel_name}` : prev.title
+        }));
+    };
+
     // Load the selected existing boat and take over its data (length, name)
     useEffect(() => {
-        if (!existingBoatId) return;
-        base44.entities.Boat.filter({ id: existingBoatId }).then(res => {
-            const b = res?.[0];
-            if (!b) return;
-            setSelectedBoat(b);
-            setFormData(prev => ({
-                ...prev,
-                boat_length: prev.boat_length > 0 ? prev.boat_length : (b.length_m || 0),
-                title: b.vessel_name ? `Einlagerungsangebot ${b.vessel_name}` : prev.title
-            }));
-        });
-    }, [existingBoatId]);
+        if (!existingBoatId || selectedBoat?.id === existingBoatId) return;
+        const fromList = customerBoats?.find(b => b.id === existingBoatId);
+        if (fromList) {
+            applyBoat(fromList);
+            return;
+        }
+        base44.entities.Boat.get(existingBoatId).then(applyBoat).catch(() => {});
+    }, [existingBoatId, customerBoats]);
+
+    // No boat chosen in the wizard but customer has exactly one → take it over
+    useEffect(() => {
+        if (existingBoatId || selectedBoat || !customerBoats?.length) return;
+        applyBoat(customerBoats[0]);
+    }, [customerBoats, existingBoatId, selectedBoat]);
 
     // Resolve customer_id from wizard context — optional for storage offers
     const getCustomerId = () => {
@@ -191,9 +216,9 @@ export function StorageTransportFlow() {
             const offerNumber = `OFF-${currentYear}-${String(maxNumber + 1).padStart(4, '0')}`;
 
             // Resolve boat_id and location_id from wizard context
-            const boatId = typeof wizardData.vessel?.existing === 'string'
+            const boatId = (typeof wizardData.vessel?.existing === 'string'
                 ? wizardData.vessel.existing
-                : (wizardData.vessel?.existing?.id || null);
+                : wizardData.vessel?.existing?.id) || selectedBoat?.id || null;
             const locationId = typeof wizardData.location?.existing === 'string'
                 ? wizardData.location.existing
                 : (wizardData.location?.existing?.id || null);
@@ -362,6 +387,24 @@ export function StorageTransportFlow() {
                                             {selectedBoat.length_m ? ` · ${selectedBoat.length_m}m` : ''}
                                         </p>
                                     )}
+                                </div>
+                            )}
+                            {customerBoats?.length > 0 && (
+                                <div>
+                                    <label className="text-sm font-medium mb-1 block">Boot des Kunden (Daten werden übernommen)</label>
+                                    <Select
+                                        value={selectedBoat?.id || ''}
+                                        onValueChange={(id) => applyBoat(customerBoats.find(b => b.id === id))}
+                                    >
+                                        <SelectTrigger><SelectValue placeholder="Boot auswählen" /></SelectTrigger>
+                                        <SelectContent>
+                                            {customerBoats.map(b => (
+                                                <SelectItem key={b.id} value={b.id}>
+                                                    {[b.vessel_name, b.manufacturer, b.model].filter(Boolean).join(' · ')}{b.length_m ? ` (${b.length_m}m)` : ''}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
                             <div>
