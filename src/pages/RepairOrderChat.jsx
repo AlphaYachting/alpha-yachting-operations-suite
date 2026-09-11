@@ -8,8 +8,8 @@ import RepairOrderForm from '@/components/repairorder/RepairOrderForm';
 import StorageOrderForm from '@/components/repairorder/StorageOrderForm';
 import CustomerPicker from '@/components/repairorder/CustomerPicker';
 import StorageOfferPicker from '@/components/repairorder/StorageOfferPicker';
-import { openRepairOrderPdf } from '@/components/repairorder/repairOrderPdf';
-import { openEinlagerungsvertragPdf } from '@/components/repairorder/einlagerungsvertragPdf';
+import { openRepairOrderPdf, generateRepairOrderPdf } from '@/components/repairorder/repairOrderPdf';
+import { openEinlagerungsvertragPdf, generateEinlagerungsvertragPdf } from '@/components/repairorder/einlagerungsvertragPdf';
 import StorageContractActions from '@/components/repairorder/StorageContractActions';
 import { toast } from 'sonner';
 
@@ -158,13 +158,27 @@ export default function RepairOrderChatPage() {
       } else {
         await persist(data);
       }
+      // Archive the original PDF in the customer file before converting
+      if (id) {
+        const doc = mode === 'storage' ? generateEinlagerungsvertragPdf(data) : generateRepairOrderPdf(data);
+        const label = mode === 'storage' ? 'Einlagerungsvertrag' : 'Reparaturauftrag';
+        const fileName = `${label}_${(data.customer_name || 'Kunde').replace(/[^\w]+/g, '_')}_${data.order_date || ''}.pdf`;
+        const file = new File([doc.output('blob')], fileName, { type: 'application/pdf' });
+        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        await base44.entities.RepairOrder.update(id, {
+          contract_pdf_url: file_url,
+          contract_saved_at: new Date().toISOString()
+        });
+        setData((d) => ({ ...d, contract_pdf_url: file_url }));
+      }
+
       const res = await base44.functions.invoke('convertRepairOrderToJob', { repair_order_id: id, ...options });
       if (res.data?.error) throw new Error(res.data.error);
       setConvertedJobId(res.data.job_id);
       toast.success(
         res.data.work_order_number
-          ? `Projekt ${res.data.job_number} mit Work Order ${res.data.work_order_number} angelegt`
-          : `Projekt ${res.data.job_number} angelegt`
+          ? `Projekt ${res.data.job_number} mit Work Order ${res.data.work_order_number} angelegt – PDF im Kundenakt archiviert`
+          : `Projekt ${res.data.job_number} angelegt – PDF im Kundenakt archiviert`
       );
     } catch (err) {
       toast.error('Fehler: ' + err.message);

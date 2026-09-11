@@ -41,6 +41,7 @@ import JobForm from '@/components/jobs/JobForm';
 import BoatForm from '@/components/boats/BoatForm';
 import SendInviteButton from '@/components/invites/SendInviteButton';
 import CustomerStorageContracts from '@/components/customers/CustomerStorageContracts';
+import CustomerRepairOrders from '@/components/customers/CustomerRepairOrders';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -774,6 +775,8 @@ export default function CustomerDetail() {
 
       {/* Storage Contracts (Einlagerungsverträge) */}
       <CustomerStorageContracts customerId={customerId} />
+
+      <CustomerRepairOrders customerId={customerId} />
 
       {/* Create Project Dialog */}
       <Dialog open={showJobForm} onOpenChange={setShowJobForm}>
