@@ -10,8 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Sparkles } from 'lucide-react';
+import EmailToCustomerParser from './EmailToCustomerParser';
 
 export default function CustomerForm({ customer, onSave, onCancel }) {
+  const [showParser, setShowParser] = useState(false);
   const [formData, setFormData] = useState({
     company_name: customer?.company_name || '',
     first_name: customer?.first_name || '',
@@ -43,8 +46,25 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const applyParsed = (data) => {
+    setFormData(prev => ({ ...prev, ...data }));
+    setShowParser(false);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* E-Mail zu Kunde */}
+      {showParser ? (
+        <div className="border rounded-lg p-4 bg-blue-50/50">
+          <EmailToCustomerParser onCustomerParsed={applyParsed} onCancel={() => setShowParser(false)} />
+        </div>
+      ) : (
+        <Button type="button" variant="outline" onClick={() => setShowParser(true)} className="w-full border-blue-300 text-blue-700 hover:bg-blue-50">
+          <Sparkles className="h-4 w-4 mr-2" />
+          E-Mail zu Kunde — Text mit KI auswerten
+        </Button>
+      )}
+
       {/* Customer Type */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
