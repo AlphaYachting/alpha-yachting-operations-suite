@@ -60,7 +60,8 @@ ${text}
       const parsed = (result && typeof result === 'object' && !Array.isArray(result)) ? result : {};
       const cleaned = {};
       for (const [k, v] of Object.entries(parsed)) {
-        if (v !== null && v !== undefined && v !== '') cleaned[k] = v;
+        const isEmpty = v === null || v === undefined || (typeof v === 'string' && ['', 'null', 'undefined', 'n/a', '-'].includes(v.trim().toLowerCase()));
+        if (!isEmpty) cleaned[k] = typeof v === 'string' ? v.trim() : v;
       }
       setPreview(cleaned);
     } catch (err) {
