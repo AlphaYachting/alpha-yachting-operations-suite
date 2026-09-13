@@ -332,8 +332,8 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
                 item_type: { type: 'string', enum: ['Labor', 'Material', 'Chapter'], description: 'Chapter = TOP-LEVEL section heading only (e.g. "Motor & Technik", "Unterwasserschiff & Service", "Navigation & Elektronik", "Decksausrüstung", "Pflege & Werterhalt", "Diverses / Innen & Sicherheit"). These are the MAIN chapters of the document. Do NOT create Chapter entries for sub-phases (PHASE 1, PHASE 2, PHASE 3), sub-sections (a, b), or headings that describe work scope (Leistungsumfang, Kalkulation, etc.). Only create ONE Chapter per top-level section. Material = physical part/product/consumable. Labor = any service work performed.' },
                 quantity: { type: 'number' },
                 unit: { type: 'string' },
-                unit_price_raw: { type: 'string' },
-                total_price_raw: { type: 'string' },
+                unit_price_raw: { type: 'string', description: 'NET unit price for this line AFTER any discount (Rabatt/Rabat) and WITHOUT VAT (MwSt/PDV/USt). If the document has several price columns (e.g. VP Cijena / MP cijena / Rabat / MP iznos, or Listenpreis / Rabatt / Netto), take the net price the customer actually pays per unit, i.e. the discounted net line amount divided by the quantity. Never take a gross/VAT-inclusive or pre-discount list price.' },
+                total_price_raw: { type: 'string', description: 'NET line total AFTER discount and WITHOUT VAT for this position (e.g. the discounted line amount column). Never the gross/VAT-inclusive amount.' },
                 group: { type: 'string' },
                 source_excerpt: { type: 'string' },
                 confidence: { type: 'string', enum: ['High', 'Medium', 'Low'] }

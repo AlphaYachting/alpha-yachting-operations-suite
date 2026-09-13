@@ -94,7 +94,13 @@ export function processExtractedPosition(position, defaultUnitPrice) {
   let finalUnitPrice = defaultUnitPrice;
   let priceSource = 'fallback';
   
-  if (unitPriceParsed) {
+  if (unitPriceParsed && totalPriceParsed && quantity > 0
+      && !validatePrice(unitPriceParsed, quantity, totalPriceParsed)) {
+    // Unit price column disagrees with the line total (typical for documents with
+    // list/gross price columns next to a discounted net amount) → trust the line total
+    finalUnitPrice = totalPriceParsed / quantity;
+    priceSource = 'total_calculated';
+  } else if (unitPriceParsed) {
     finalUnitPrice = unitPriceParsed;
     priceSource = 'unit_price';
   } else if (totalPriceParsed && quantity > 0) {
