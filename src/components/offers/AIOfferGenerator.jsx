@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, AlertCircle, FileText, Upload, Trash2, Edit2, DollarSign, Percent, Bot, Mic, MicOff } from 'lucide-react';
 import { processExtractedPosition } from './priceParser';
 import { calculateFinalPrice } from './markupCalculator';
+import { normalizeUnitType, VALID_UNIT_TYPES as UNIT_ENUM } from './normalizeUnitType';
 import { Switch } from '@/components/ui/switch';
 import {
   Select,
@@ -36,7 +37,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 
-const VALID_UNIT_TYPES = ['Hour', 'Piece', 'Square Meter', 'Linear Meter', 'Liter', 'Kilogram', 'Set', 'Lump Sum', 'km', 'day', 'month', 'season', 'flat'];
+const VALID_UNIT_TYPES = UNIT_ENUM;
 
 export default function AIOfferGenerator({ formData, customers, boats, jobs, onTasksGenerated, onDescriptionGenerated, existingTasks = [] }) {
   const [mode, setMode] = useState('text'); // 'text', 'pdf', or 'assistant'
@@ -234,9 +235,7 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
           }
           const isMaterial = task.item_type === 'Material';
           // Normalize unit_type to valid enum value
-          const rawUnit = task.unit_type || '';
-          const validUnit = VALID_UNIT_TYPES.find(u => u.toLowerCase() === rawUnit.toLowerCase())
-            || (isMaterial ? 'Piece' : 'Hour');
+          const validUnit = normalizeUnitType(task.unit_type, task.item_type);
           // Use KI price if given, else defaultUnitPrice (user-set), else 0
           const unitPrice = (task.unit_price != null && task.unit_price > 0)
             ? task.unit_price
@@ -331,7 +330,7 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
                 description: { type: 'string' },
                 item_type: { type: 'string', enum: ['Labor', 'Material', 'Chapter'], description: 'Chapter = TOP-LEVEL section heading only (e.g. "Motor & Technik", "Unterwasserschiff & Service", "Navigation & Elektronik", "Decksausrüstung", "Pflege & Werterhalt", "Diverses / Innen & Sicherheit"). These are the MAIN chapters of the document. Do NOT create Chapter entries for sub-phases (PHASE 1, PHASE 2, PHASE 3), sub-sections (a, b), or headings that describe work scope (Leistungsumfang, Kalkulation, etc.). Only create ONE Chapter per top-level section. Material = physical part/product/consumable. Labor = any service work performed.' },
                 quantity: { type: 'number' },
-                unit: { type: 'string' },
+                unit: { type: 'string', description: `Unit of measure mapped to one of: ${['Hour','Piece','Square Meter','Linear Meter','Liter','Kilogram','Set','Lump Sum','km','day','month','season','flat'].join(', ')}. Translate the document's unit (Std/h/sat → Hour, Stk/kom/pcs → Piece, m²/qm → Square Meter, lfm/m → Linear Meter, L → Liter, kg → Kilogram, Satz/set → Set, Pauschal/paušal → Lump Sum).` },
                 unit_price_raw: { type: 'string', description: 'NET unit price for this line AFTER any discount (Rabatt/Rabat) and WITHOUT VAT (MwSt/PDV/USt). If the document has several price columns (e.g. VP Cijena / MP cijena / Rabat / MP iznos, or Listenpreis / Rabatt / Netto), take the net price the customer actually pays per unit, i.e. the discounted net line amount divided by the quantity. Never take a gross/VAT-inclusive or pre-discount list price.' },
                 total_price_raw: { type: 'string', description: 'NET line total AFTER discount and WITHOUT VAT for this position (e.g. the discounted line amount column). Never the gross/VAT-inclusive amount.' },
                 group: { type: 'string' },
@@ -393,7 +392,7 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
           description: pos.description || '',
           item_type: pos.item_type || 'Labor',
           quantity: pos.quantity || 1,
-          unit: pos.unit || 'Piece',
+          unit: normalizeUnitType(pos.unit, pos.item_type),
           group: pos.group || '',
           source_excerpt: pos.source_excerpt || '',
           confidence: pos.confidence || 'Medium',
@@ -473,7 +472,7 @@ REMEMBER: Write ALL content (titles, descriptions, client description) in ${lang
         description: pos.description,
         item_type: pos.item_type || 'Labor',
         quantity: pos.quantity,
-        unit_type: pos.unit,
+        unit_type: normalizeUnitType(pos.unit, pos.item_type),
         unit_price: finalUnitPrice,
         total_amount: finalUnitPrice * pos.quantity
       };
