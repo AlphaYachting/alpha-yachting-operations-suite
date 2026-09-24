@@ -52,6 +52,7 @@ import OfferFollowUpDraft from '@/components/offers/OfferFollowUpDraft';
 import CreateProjectDialog from '@/components/offers/CreateProjectDialog';
 import OfferCustomerBoatSelect from '@/components/offers/OfferCustomerBoatSelect';
 import TranslateOfferDialog from '@/components/offers/TranslateOfferDialog';
+import CustomerNotesGenerator from '@/components/offers/CustomerNotesGenerator';
 
 // Safe upsert: update existing tasks, create new ones, delete removed ones.
 // Never deletes ALL tasks first — prevents data loss on network errors.
@@ -1583,7 +1584,14 @@ Alpha Yachting Service Team`);
               </div>
 
               <div className="space-y-2">
-                <Label>Customer Notes</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="flex-shrink-0">Customer Notes</Label>
+                  <CustomerNotesGenerator
+                    formData={formData}
+                    tasks={tasks}
+                    onGenerated={(text) => updateField('customer_notes', text)}
+                  />
+                </div>
                 <Textarea
                   value={formData.customer_notes || ''}
                   onChange={(e) => updateField('customer_notes', e.target.value)}
