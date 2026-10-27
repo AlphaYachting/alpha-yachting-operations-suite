@@ -28,6 +28,18 @@ export default function RepairOrderChatPage() {
   const [converting, setConverting] = useState(false);
   const [convertedJobId, setConvertedJobId] = useState(null);
 
+  // Reopen an existing order via ?id=
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (!id) return;
+    base44.entities.RepairOrder.get(id).then((o) => {
+      const { id: _id, created_date, updated_date, created_by_id, created_by, is_sample, ...rest } = o;
+      setData((d) => ({ ...d, ...rest }));
+      setOrderId(o.id);
+      if (o.converted_job_id) setConvertedJobId(o.converted_job_id);
+    });
+  }, []);
+
   // Load acceptor name from current user
   useEffect(() => {
     base44.auth.me().then((u) => {
