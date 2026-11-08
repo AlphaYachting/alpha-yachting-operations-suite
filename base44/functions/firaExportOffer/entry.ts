@@ -231,7 +231,8 @@ function buildFiraPayload(offer, tasks, customer, location) {
     invoiceType: 'PONUDA',
     paymentGatewayCode: 'TRANSAKCIJSKI',
     paymentGatewayName: 'Bank Transfer / Banküberweisung',
-    createdAt: offer.created_date ? new Date(offer.created_date).toISOString() : now,
+    // Angebotsdatum in FIRA = Tag der Übermittlung (nicht Anlagedatum in der App)
+    createdAt: now,
     dueDate,
     validTo,
     currency: 'EUR',
